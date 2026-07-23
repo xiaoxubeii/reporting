@@ -1,0 +1,50 @@
+- generic:
+  - generic:
+    - generic:
+      - combobox [expanded]:
+        - generic: English
+    - generic:
+      - generic:
+        - generic:
+          - link:
+            - /url: /
+            - heading [level=1]: Portfolio Reporting
+        - generic:
+          - generic:
+            - generic: Sign in with your account
+            - generic: Sign in with a password or a one-time code.
+          - generic:
+            - generic:
+              - text: Email
+              - textbox:
+                - /placeholder: you@example.com
+            - generic:
+              - generic:
+                - generic: Password
+                - link:
+                  - /url: /auth/forgot-password
+                  - text: Forgot password?
+              - textbox
+            - button: Sign in
+            - generic: or
+            - link:
+              - /url: /auth/magic-link
+              - button: Sign in with a one-time code
+            - paragraph:
+              - text: Don't have an account?
+              - link:
+                - /url: /auth/signup
+                - text: Create an account
+        - paragraph:
+          - link:
+            - /url: /
+            - text: ← Back to home
+        - paragraph:
+          - link:
+            - /url: /license
+            - text: License
+  - region "Notifications alt+T"
+  - alert
+  - listbox [ref=e48]:
+    - option "English" [active] [selected] [ref=e49]
+    - option "简体中文" [ref=e55]

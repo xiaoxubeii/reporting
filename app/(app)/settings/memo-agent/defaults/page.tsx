@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DefaultsEditor } from './editor'
 
-export const metadata: Metadata = { title: 'Diligence Defaults' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Settings.defaults')
+  return { title: t('metadataTitle') }
+}
 
 export default async function DefaultsPage() {
   const supabase = createClient()

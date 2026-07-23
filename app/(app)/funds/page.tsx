@@ -1,9 +1,13 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { requireAccountingAccess } from './guard'
 import { FundOverview } from './fund-overview'
 import { AccountingPageHeader, AccountingBody } from '@/components/accounting-chrome'
 
-export const metadata: Metadata = { title: 'Funds' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Funds.pages.overview')
+  return { title: t('metadataTitle') }
+}
 
 /**
  * The fund overview — the landing page for the whole accounting section.
@@ -20,14 +24,15 @@ export const metadata: Metadata = { title: 'Funds' }
  */
 export default async function AccountingPage() {
   await requireAccountingAccess()
+  const t = await getTranslations('Funds.pages.overview')
 
   return (
     // The overview owns its own layout, in the /dashboard shape: the header sits ABOVE the body,
     // so the title goes all the way to the top with the toggle inline at its right, and the Analyst
     // panel opens below it rather than level with it. AccountingChrome steps aside on this route.
     <div className="pt-4 md:pt-8 pb-8 w-full">
-      <AccountingPageHeader title="Funds">
-        Performance per vehicle, derived from fund accounting or LP capital accounts.
+      <AccountingPageHeader title={t('title')}>
+        {t('description')}
       </AccountingPageHeader>
 
       <AccountingBody>

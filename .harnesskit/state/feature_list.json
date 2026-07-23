@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "status_values": ["not_started", "in_progress", "blocked", "passing"],
+  "features": [
+    {
+      "id": "harness-bootstrap",
+      "title": "Initialize HarnessKit",
+      "status": "in_progress",
+      "current_task": "Validate the harness on this project",
+      "definition_of_done": [
+        "AGENTS.md contains the HarnessKit managed entrypoint block",
+        ".harnesskit/scripts/init.sh runs project health checks",
+        ".harnesskit/state/feature_list.json tracks active work",
+        ".harnesskit/state/progress.md records handoff state",
+        ".harnesskit/rules/feature-plan.md defines the feature planning and parallelization contract",
+        ".harnesskit/rules/skills.md defines skill, gstack, agent, and MCP routing",
+        ".harnesskit/rules/mcp.md records required startup MCP servers",
+        ".harnesskit/rules/workflow.md records main-goal and design-first execution rules",
+        ".harnesskit/rules/verification.md records end-to-end verification and final-report rules",
+        ".harnesskit/rules/browser.md records browser-visible failure investigation rules",
+        "feature planning and worktree scripts isolate one feature per plan entry and one feature agent per worktree",
+        "Project-owned OpenSpec root exists under openspec/",
+        "Implementation behavior flows through the intended architecture path",
+        "No bootstrap shortcut markers remain in completed code",
+        "Required verification tier passes"
+      ],
+      "evidence": [],
+      "blocked_by": [],
+      "notes": "Do not set status to passing until evidence records verification commands and results."
+    },
+    {
+      "id": "ui-localization",
+      "title": "Persistent English and Simplified Chinese UI switching",
+      "status": "in_progress",
+      "current_task": "Inventory and migrate every user-visible page after completing Import as the reference page",
+      "definition_of_done": [
+        "Locale resolution accepts only en and zh-CN and safely falls back to English",
+        "Language selection preserves the current URL and persists across reloads and same-origin tabs",
+        "Shared public, portal, authenticated, and authentication chrome uses matching English and Chinese catalogs",
+        "Every authenticated, public/legal/explainer/setup/token, and LP portal visual page uses a complete English and Chinese semantic namespace",
+        "The document lang and compact selector accessible name reflect the active locale",
+        "Focused tests, typecheck, OpenSpec strict validation, and real desktop/mobile browser verification pass",
+        "Required review findings are resolved or explicitly accepted by the owner"
+      ],
+      "evidence": [
+        "npm test -- tests/ui-localization-action.test.ts tests/middleware-access-gate.test.ts tests/ui-localization.test.ts tests/navigation-chrome.test.ts lib/access/route-domains.test.ts lib/access/match-route.test.ts: 74 passed",
+        "npx tsc --noEmit: passed",
+        "targeted ESLint for all i18n-touched files: 0 errors (one pre-existing app-header img warning)",
+        "openspec validate add-zh-en-i18n --strict: passed",
+        "./.harnesskit/scripts/verify-fast.sh: passed",
+        "real Chrome: en to zh-CN preserved /auth?next=%2Fsettings#credentials, updated html lang immediately, and persisted after reload and a same-origin new tab",
+        "real Chrome: public desktop/mobile and auth desktop/mobile layouts verified; mobile menu opened and closed with localized accessible labels; dark mode persisted",
+        "real authenticated Chrome: session and exact dynamic pathname/query/hash survived language switches; cross-page persistence, mobile drawer, keyboard selection, and close-focus restoration passed",
+        ".harnesskit/evidence/add-zh-en-i18n contains ten browser screenshots",
+        "code and security reviews completed; all in-scope critical/high findings were resolved and low-risk locale endpoint findings were hardened",
+        "temporary local-only viewer identity and its membership were deleted and verified absent",
+        "Import and embedded Analyst namespace contracts plus related locale/access tests: 76 passed",
+        "Import page/layout, Analyst panel/trigger/proposal/pending-action components, static catalog loader, and locale contract targeted ESLint: 0 errors",
+        "npx next build --no-lint: passed after the normal build compiled successfully but stopped on pre-existing repository-wide lint debt",
+        "real authenticated Chrome: /import rendered zh-CN metadata, document lang, all four workflow sections, actions, help text, and placeholders; embedded Analyst conversation controls also rendered in Chinese; reload persistence passed",
+        "temporary Import browser user and membership were deleted after acceptance"
+      ],
+      "blocked_by": [],
+      "notes": "Shared chrome/authentication and the complete Import reference page are implemented. The user clarified that completion means every user-visible system page, so authenticated, public/legal/explainer/setup/token, and LP portal migrations remain in progress. The locale write uses a bounded origin-validated API and adds no Server Action exposure. Static catalog imports avoid missing RSC message chunks during development refreshes. Repository-wide lint and one unrelated full-suite assertion remain pre-existing project maintenance items."
+    },
+    {
+      "id": "feeds-product",
+      "title": "Personal Miniflux feeds product",
+      "status": "passing",
+      "current_task": "Merged implementation is ready for main",
+      "definition_of_done": [
+        "Each approved Reporting user has an automatically managed personal Miniflux account",
+        "Reporting accesses feed data and state only through the Miniflux API",
+        "Today supports unread, all, saved, search, read, save, and article detail flows",
+        "Follow sources supports website discovery, subscriptions, and Miniflux categories",
+        "Focused tests, typecheck, production build, strict OpenSpec validation, review, and browser acceptance pass"
+      ],
+      "evidence": [
+        "openspec validate add-feeds-product --strict: passed",
+        "Focused Feeds and authentication tests: passed",
+        "npx tsc --noEmit: passed",
+        "npm run build: passed before integration with main",
+        "Real desktop and mobile browser flows passed against local Supabase and Miniflux",
+        "Code and security reviews completed with no remaining blockers"
+      ],
+      "blocked_by": [],
+      "notes": "Miniflux remains the system of record for subscriptions, categories, entries, read state, and saved state; Reporting provides an authenticated BFF only."
+    },
+    {
+      "id": "curated-explore",
+      "title": "Global read-only Curated Explore backed by Miniflux",
+      "status": "passing",
+      "current_task": "Merged implementation is ready for main",
+      "definition_of_done": [
+        "One server-only collector token resolves to a non-admin Miniflux user",
+        "Authorized users can browse shared categories, latest articles, and read-only article detail without a personal Miniflux connection",
+        "Collector read state, saved state, subscriptions, and categories are never mutated by Explore",
+        "Namespaced collector references are strictly parsed and source ownership is revalidated before Follow",
+        "Follow resolves the feed URL server-side and writes idempotently only through the current user's personal Miniflux",
+        "Me and Explore are URL-backed sibling Today views with independent state and failure handling",
+        "No Reporting feed persistence, AEAD, trending, clustering, AI summaries, webhooks, or article mirror is added",
+        "Focused and full verification, code/security review, and real desktop/mobile browser acceptance pass or pre-existing blockers are recorded"
+      ],
+      "evidence": [
+        "openspec validate add-curated-explore --strict: passed",
+        "Focused Explore contract, API, and UI tests: passed",
+        "Real desktop and mobile Me/Explore browser flows passed",
+        "Code and security reviews completed with no remaining blockers"
+      ],
+      "blocked_by": [],
+      "notes": "V1 uses one global non-admin Miniflux collector and namespaced server-validated references; no Reporting feed persistence or intelligence layer was added."
+    }
+  ]
+}

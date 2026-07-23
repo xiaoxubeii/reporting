@@ -3,11 +3,13 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ArrowLeft } from 'lucide-react'
+import { getFormatter, getTranslations } from 'next-intl/server'
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const t = await getTranslations('CompanyDetail')
   const supabase = createClient()
   const { data } = await supabase.from('companies').select('name').eq('id', params.id).maybeSingle() as { data: { name: string } | null }
-  return { title: data?.name ?? 'Company' }
+  return { title: data?.name ?? t('metadata.fallbackTitle') }
 }
 import { Badge } from '@/components/ui/badge'
 import { getCurrencySymbol } from '@/components/currency-context'
@@ -26,7 +28,12 @@ import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import type { FeatureVisibilityMap } from '@/lib/types/features'
 
-function formatHighlightValue(value: number, metric: Metric, fundCurrency: string) {
+function formatHighlightValue(
+  value: number,
+  metric: Metric,
+  fundCurrency: string,
+  formatNumber: (value: number, options?: { maximumFractionDigits?: number }) => string,
+) {
   let formatted: string
   if (metric.value_type === 'percentage') {
     formatted = `${value}%`
@@ -35,7 +42,7 @@ function formatHighlightValue(value: number, metric: Metric, fundCurrency: strin
   } else if (Math.abs(value) >= 1_000) {
     formatted = `${(value / 1_000).toFixed(0)}K`
   } else {
-    formatted = value.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    formatted = formatNumber(value, { maximumFractionDigits: 2 })
   }
 
   // Use explicit metric unit if set, otherwise fall back to metric/fund currency for currency-type metrics
@@ -54,6 +61,10 @@ export default async function CompanyDetailPage({
 }: {
   params: { id: string }
 }) {
+  const [t, format] = await Promise.all([
+    getTranslations('CompanyDetail'),
+    getFormatter(),
+  ])
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
@@ -114,12 +125,12 @@ export default async function CompanyDetailPage({
   async function getLatestValue(metricId: string) {
     const { data } = await supabase
       .from('metric_values')
-      .select('value_number, period_label')
+      .select('value_number, period_label, period_year, period_month')
       .eq('metric_id', metricId)
       .not('value_number', 'is', null)
       .order('period_year', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(1) as { data: { value_number: number; period_label: string }[] | null }
+      .limit(1) as { data: { value_number: number; period_label: string; period_year: number; period_month: number | null }[] | null }
     return data?.[0] ?? null
   }
 
@@ -129,10 +140,22 @@ export default async function CompanyDetailPage({
   ])
 
   if (mrrRow && mrrMetric) {
-    latestMrr = { value: mrrRow.value_number!, period: mrrRow.period_label, metric: mrrMetric }
+    latestMrr = {
+      value: mrrRow.value_number!,
+      period: mrrRow.period_month
+        ? format.dateTime(new Date(Date.UTC(mrrRow.period_year, mrrRow.period_month - 1, 1)), { month: 'short', year: 'numeric', timeZone: 'UTC' })
+        : t('dataPoint.fiscalYear', { year: mrrRow.period_year }),
+      metric: mrrMetric,
+    }
   }
   if (cashRow && cashMetric) {
-    latestCash = { value: cashRow.value_number!, period: cashRow.period_label, metric: cashMetric }
+    latestCash = {
+      value: cashRow.value_number!,
+      period: cashRow.period_month
+        ? format.dateTime(new Date(Date.UTC(cashRow.period_year, cashRow.period_month - 1, 1)), { month: 'short', year: 'numeric', timeZone: 'UTC' })
+        : t('dataPoint.fiscalYear', { year: cashRow.period_year }),
+      metric: cashMetric,
+    }
   }
 
   return (
@@ -145,7 +168,7 @@ export default async function CompanyDetailPage({
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Portfolio
+          {t('backToPortfolio')}
         </Link>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -168,15 +191,15 @@ export default async function CompanyDetailPage({
           <div className="flex items-center gap-4 mt-1.5">
             {latestMrr && (
               <span className="text-sm">
-                <span className="text-muted-foreground">MRR:</span>{' '}
-                <span className="font-medium">{formatHighlightValue(latestMrr.value, latestMrr.metric, fundCurrency)}</span>
+                <span className="text-muted-foreground">{t('highlights.mrr')}:</span>{' '}
+                <span className="font-medium">{formatHighlightValue(latestMrr.value, latestMrr.metric, fundCurrency, (value, options) => format.number(value, options))}</span>
                 <span className="text-xs text-muted-foreground ml-1">({latestMrr.period})</span>
               </span>
             )}
             {latestCash && (
               <span className="text-sm">
-                <span className="text-muted-foreground">Cash:</span>{' '}
-                <span className="font-medium">{formatHighlightValue(latestCash.value, latestCash.metric, fundCurrency)}</span>
+                <span className="text-muted-foreground">{t('highlights.cash')}:</span>{' '}
+                <span className="font-medium">{formatHighlightValue(latestCash.value, latestCash.metric, fundCurrency, (value, options) => format.number(value, options))}</span>
                 <span className="text-xs text-muted-foreground ml-1">({latestCash.period})</span>
               </span>
             )}
@@ -224,14 +247,14 @@ export default async function CompanyDetailPage({
             <div className="mt-6 space-y-3">
               {company.founders && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Founders</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('details.founders')}</h3>
                   <p className="text-sm">{company.founders}</p>
                 </div>
               )}
 
               {company.contact_email && company.contact_email.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Contact{company.contact_email.length > 1 ? 's' : ''}</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('details.contacts', { count: company.contact_email.length })}</h3>
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     {company.contact_email.map((email) => (
                       <p key={email} className="text-sm">
@@ -246,21 +269,21 @@ export default async function CompanyDetailPage({
 
               {company.overview && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Overview</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('details.overview')}</h3>
                   <p className="text-sm">{company.overview}</p>
                 </div>
               )}
 
               {company.why_invested && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Why We Invested</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('details.whyInvested')}</h3>
                   <p className="text-sm">{company.why_invested}</p>
                 </div>
               )}
 
               {company.current_update && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Current Business Update</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('details.currentUpdate')}</h3>
                   <p className="text-sm">{company.current_update}</p>
                 </div>
               )}

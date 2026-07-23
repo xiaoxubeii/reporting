@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useTranslations } from 'next-intl'
 
 /**
  * Reusable 6-digit one-time-code entry. Used by every email OTP flow
@@ -27,6 +28,7 @@ export function OtpCodeForm({
 }) {
   const [code, setCode] = useState('')
   const [resent, setResent] = useState(false)
+  const t = useTranslations('Auth')
 
   return (
     <div className="space-y-4">
@@ -38,12 +40,12 @@ export function OtpCodeForm({
 
       <Alert>
         <AlertDescription>
-          We emailed a 6-digit code to <strong>{email}</strong>. Enter it below, it expires in 1 hour.
+          {t('otpSent', { email })}
         </AlertDescription>
       </Alert>
 
       <div className="space-y-2">
-        <Label htmlFor="otp-code">Verification code</Label>
+        <Label htmlFor="otp-code">{t('verificationCode')}</Label>
         <Input
           id="otp-code"
           inputMode="numeric"
@@ -59,7 +61,7 @@ export function OtpCodeForm({
       </div>
 
       <Button className="w-full" onClick={() => onVerify(code)} disabled={verifying || code.length !== 6}>
-        {verifying ? 'Verifying…' : 'Verify & continue'}
+        {verifying ? t('verifying') : t('verifyContinue')}
       </Button>
 
       <button
@@ -67,7 +69,7 @@ export function OtpCodeForm({
         onClick={() => { onResend(); setResent(true) }}
         className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
       >
-        {resent ? 'Code resent, check your email' : "Didn't get a code? Resend"}
+        {resent ? t('codeResent') : t('resendCode')}
       </button>
     </div>
   )

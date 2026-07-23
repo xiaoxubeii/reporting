@@ -2,10 +2,11 @@
 
 import { Loader2, Check, AlertTriangle, Lock } from 'lucide-react'
 import {
-  CHECKLIST_STATUSES, CHECKLIST_LABEL, CHECKLIST_COLOR,
-  DOC_LABEL, DOC_COLOR,
+  CHECKLIST_STATUSES, CHECKLIST_COLOR,
+  DOC_COLOR,
   type ChecklistStatus, type DocBucket, type StageInfo,
 } from '@/lib/diligence/progress'
+import { useFormatter, useTranslations } from 'next-intl'
 
 // ---------------------------------------------------------------------------
 // SegmentedBar — a COMPOSITION bar. Segment widths are proportional to counts.
@@ -17,19 +18,22 @@ export interface Segment { key: string; label: string; count: number; color: str
 export function SegmentedBar({
   segments,
   total,
-  emptyLabel = 'Nothing yet',
+  emptyLabel,
 }: {
   segments: Segment[]
   total: number
   emptyLabel?: string
 }) {
+  const t = useTranslations('Diligence.progress')
+  const format = useFormatter()
   const shown = segments.filter(s => s.count > 0)
+  const resolvedEmptyLabel = emptyLabel ?? t('nothingYet')
 
   if (total === 0) {
     return (
       <div className="space-y-1.5">
         <div className="h-2 w-full rounded-full bg-muted" />
-        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
+        <p className="text-xs text-muted-foreground">{resolvedEmptyLabel}</p>
       </div>
     )
   }
@@ -42,7 +46,7 @@ export function SegmentedBar({
             key={s.key}
             className={s.color}
             style={{ width: `${(s.count / total) * 100}%` }}
-            title={`${s.label}: ${s.count} of ${total}`}
+            title={t('segmentTitle', { label: s.label, count: s.count, total })}
           />
         ))}
       </div>
@@ -50,23 +54,28 @@ export function SegmentedBar({
         {shown.map(s => (
           <span key={s.key} className="inline-flex items-center gap-1.5">
             <span className={`h-2 w-2 rounded-full ${s.color}`} />
-            {s.count} {s.label.toLowerCase()}
+            {format.number(s.count)} {s.label}
           </span>
         ))}
-        <span className="text-muted-foreground/60">· {total} total</span>
+        <span className="text-muted-foreground/60">· {t('total', { count: total })}</span>
       </div>
     </div>
   )
 }
 
 export function ChecklistBar({ counts, total }: { counts: Record<ChecklistStatus, number>; total: number }) {
+  const t = useTranslations('Diligence.progress')
+  const labels: Record<ChecklistStatus, string> = {
+    found: t('checklist.found'), partial: t('checklist.partial'), missing: t('checklist.missing'),
+    unknown: t('checklist.unknown'), not_applicable: t('checklist.notApplicable'),
+  }
   return (
     <SegmentedBar
       total={total}
-      emptyLabel="No checklist items yet."
+      emptyLabel={t('checklist.empty')}
       segments={CHECKLIST_STATUSES.map(s => ({
         key: s,
-        label: CHECKLIST_LABEL[s],
+        label: labels[s],
         count: counts[s] ?? 0,
         color: CHECKLIST_COLOR[s],
       }))}
@@ -77,13 +86,18 @@ export function ChecklistBar({ counts, total }: { counts: Record<ChecklistStatus
 const DOC_ORDER: DocBucket[] = ['processed', 'partial', 'failed', 'pending', 'skipped']
 
 export function DataRoomBar({ counts, total }: { counts: Record<DocBucket, number>; total: number }) {
+  const t = useTranslations('Diligence.progress')
+  const labels: Record<DocBucket, string> = {
+    processed: t('documents.processed'), partial: t('documents.partial'), failed: t('documents.failed'),
+    pending: t('documents.pending'), skipped: t('documents.skipped'),
+  }
   return (
     <SegmentedBar
       total={total}
-      emptyLabel="No documents uploaded yet."
+      emptyLabel={t('documents.empty')}
       segments={DOC_ORDER.map(b => ({
         key: b,
-        label: DOC_LABEL[b],
+        label: labels[b],
         count: counts[b] ?? 0,
         color: DOC_COLOR[b],
       }))}
@@ -120,6 +134,12 @@ export function StageBar({
   stages: StageInfo[]
   onJump?: (tab: string) => void
 }) {
+  const t = useTranslations('Diligence.progress')
+  const format = useFormatter()
+  const stageLabels: Record<StageInfo['key'], string> = {
+    data_room: t('stageLabels.dataRoom'), checklist: t('stageLabels.checklist'), research: t('stageLabels.research'),
+    scoring: t('stageLabels.scoring'), memo: t('stageLabels.memo'),
+  }
   const done = stages.filter(s => s.state === 'done').length
   const running = stages.find(s => s.state === 'running')
 
@@ -127,12 +147,12 @@ export function StageBar({
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-medium">
-          {done} of {stages.length} stages complete
+          {t('stagesComplete', { done, total: stages.length })}
         </p>
         {running && (
           <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Running {running.label.toLowerCase()}…
+            {t('runningStage', { stage: stageLabels[running.key] })}
           </p>
         )}
       </div>
@@ -150,7 +170,9 @@ export function StageBar({
               type="button"
               onClick={onJump ? () => onJump(s.tab) : undefined}
               disabled={!onJump}
-              title={s.state === 'partial' ? `${s.label}: ${pct}% — ${s.hint}` : s.hint}
+              title={s.state === 'partial'
+                ? t('partialTitle', { label: stageLabels[s.key], percent: format.number(pct / 100, { style: 'percent', maximumFractionDigits: 0 }) })
+                : stageLabels[s.key]}
               className="group text-left disabled:cursor-default"
             >
               <div className={`h-1.5 w-full overflow-hidden rounded-full ${s.state === 'blocked' ? 'bg-muted-foreground/10' : 'bg-muted-foreground/20'}`}>
@@ -161,9 +183,9 @@ export function StageBar({
               </div>
               <span className={`mt-1.5 flex items-center gap-1 text-[11px] leading-tight ${st.text} ${onJump ? 'group-hover:text-foreground' : ''}`}>
                 {Icon && <Icon className={`h-3 w-3 shrink-0 ${s.state === 'running' ? 'animate-spin' : ''}`} />}
-                <span className="truncate">{s.label}</span>
+                <span className="truncate">{stageLabels[s.key]}</span>
                 {s.state === 'partial' && (
-                  <span className="shrink-0 tabular-nums text-amber-600 dark:text-amber-500">{pct}%</span>
+                  <span className="shrink-0 tabular-nums text-amber-600 dark:text-amber-500">{format.number(pct / 100, { style: 'percent', maximumFractionDigits: 0 })}</span>
                 )}
               </span>
             </button>

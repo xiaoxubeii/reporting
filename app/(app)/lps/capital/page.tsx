@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { LpCapitalView } from './view'
 
-export const metadata: Metadata = { title: 'LP capital accounts' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('LPs.capital')
+  return { title: t('metadataTitle') }
+}
 
 /**
  * LP capital accounts, in the LPs section — the canonical home for them.

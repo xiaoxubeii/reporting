@@ -1,0 +1,8 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - combobox "语言：简体中文" [ref=f2e3] [cursor=pointer]
+    - combobox [ref=f2e9]
+  - generic [ref=f2e12]:
+    - heading "设置检查清单" [level=1] [ref=f2e17]
+    - button "刷新" [disabled]
+  - region "Notifications alt+T"

@@ -1,0 +1,9 @@
+- generic [active] [ref=f4e1]:
+  - 'combobox "Language: English" [ref=f4e32] [cursor=pointer]'
+  - generic [ref=f4e11]:
+    - generic [ref=f4e12]:
+      - heading "Setup Checklist" [level=1] [ref=f4e33]
+      - button "Refresh" [ref=f4e34] [cursor=pointer]
+    - generic [ref=f4e36]: Failed to fetch setup status
+  - region "Notifications alt+T"
+  - alert [ref=f4e21]: Setup Checklist | Powered by Hemrock

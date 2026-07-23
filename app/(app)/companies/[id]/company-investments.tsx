@@ -20,6 +20,7 @@ import { SECURITY_LABELS } from '@/lib/accounting/soi'
 import { useCanRead } from '@/components/access-context'
 import type { InvestmentTransaction, CompanyStatus } from '@/lib/types/database'
 import type { CompanyInvestmentSummary } from '@/lib/types/investments'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 
 interface Props {
   companyId: string
@@ -32,22 +33,12 @@ interface Props {
 // `converts_from_txn_id` (the SAFE/note it converted). See handleSave.
 type TransactionType = 'investment' | 'conversion' | 'proceeds' | 'unrealized_gain_change' | 'round_info'
 
-const TYPE_LABELS: Record<TransactionType, string> = {
-  investment: 'Investment',
-  conversion: 'Conversion',
-  proceeds: 'Proceeds',
-  unrealized_gain_change: 'Valuation Update',
-  round_info: 'Round',
-}
-
-function fmtNum(val: number | null | undefined): string {
-  if (val == null) return '-'
-  return val.toLocaleString('en-US', { maximumFractionDigits: 2 })
-}
-
-function fmtMoic(val: number | null | undefined): string {
-  if (val == null) return '-'
-  return `${val.toFixed(2)}x`
+type InvestmentTransactionWithTerms = InvestmentTransaction & {
+  converts_from_txn_id?: string | null
+  security_type?: string | null
+  interest_rate?: number | null
+  maturity_date?: string | null
+  dividend_rate?: number | null
 }
 
 const CURRENCY_OPTIONS = [
@@ -101,12 +92,31 @@ const EMPTY_FORM: Record<string, string> = {
 }
 
 export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, adminOnly }: Props) {
+  const tr = useTranslations('CompanyDetail.investments')
+  const locale = useLocale()
+  const format = useFormatter()
   const currency = useCurrency()
   const symbol = getCurrencySymbol(currency)
-  const fmt = (val: number | null | undefined) => val == null ? '-' : formatCurrencyFull(val, currency)
-  const fmtPrice = (val: number | null | undefined) => val == null ? '-' : formatCurrencyPrice(val, currency)
+  const fmt = (val: number | null | undefined) => val == null ? '-' : formatCurrencyFull(val, currency, locale)
+  const fmtPrice = (val: number | null | undefined) => val == null ? '-' : formatCurrencyPrice(val, currency, locale)
+  const fmtNum = (val: number | null | undefined) => val == null
+    ? '-'
+    : format.number(val, { maximumFractionDigits: 2 })
+  const fmtMoic = (val: number | null | undefined) => val == null
+    ? '-'
+    : tr('moicValue', { value: format.number(val, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) })
+  const securityLabels: Record<string, string> = {
+    preferred: tr('securityTypes.preferred'),
+    common: tr('securityTypes.common'),
+    safe: tr('securityTypes.safe'),
+    convertible_note: tr('securityTypes.convertibleNote'),
+    warrant: tr('securityTypes.warrant'),
+    option: tr('securityTypes.option'),
+    llc_units: tr('securityTypes.llcUnits'),
+    other: tr('securityTypes.other'),
+  }
 
-  const [transactions, setTransactions] = useState<InvestmentTransaction[]>([])
+  const [transactions, setTransactions] = useState<InvestmentTransactionWithTerms[]>([])
   const [summary, setSummary] = useState<CompanyInvestmentSummary | null>(null)
   const [groupSummaries, setGroupSummaries] = useState<Record<string, CompanyInvestmentSummary> | null>(null)
   const [loading, setLoading] = useState(true)
@@ -117,16 +127,16 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
 
   // Which terms an instrument actually has. Blank security_type shows everything: rows predating
   // the column never set it, and hiding their fields would look like data loss.
-  const t = form.security_type
-  const showNoteTerms = t === 'convertible_note'
-  const showDividend = t === 'preferred'
+  const securityType = form.security_type
+  const showNoteTerms = securityType === 'convertible_note'
+  const showDividend = securityType === 'preferred'
   // An unpriced instrument has no shares and no per-share price — that is what makes it unpriced.
   // computeSummary() already values SAFEs and notes as cost + value change rather than
   // shares × price, so these inputs never reach the valuation for them anyway.
-  const showSharePricing = !(t === 'safe' || t === 'convertible_note')
+  const showSharePricing = !(securityType === 'safe' || securityType === 'convertible_note')
   // Ownership is a claim on the cap table. A note or a derivative doesn't hold one until it
   // converts or is exercised; a number here would be a guess at a future round's arithmetic.
-  const showOwnership = !(t === 'convertible_note' || t === 'warrant' || t === 'option')
+  const showOwnership = !(securityType === 'convertible_note' || securityType === 'warrant' || securityType === 'option')
 
   // SAFEs / notes that can still be converted: an investment in an unpriced instrument that
   // nothing has converted yet. Feeds the "Converts from" picker in conversion mode.
@@ -138,7 +148,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       tx.id !== editingId &&
       // Exclude instruments already converted by SOME OTHER row — but keep the one this row (when
       // editing a conversion) already points to, so it stays selectable.
-      !transactions.some(x => x.id !== editingId && (x as any).converts_from_txn_id === tx.id)
+      !transactions.some(x => x.id !== editingId && x.converts_from_txn_id === tx.id)
     ),
     [transactions, editingId]
   )
@@ -251,12 +261,12 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
     setDialogOpen(true)
   }
 
-  function openEdit(txn: InvestmentTransaction) {
+  function openEdit(txn: InvestmentTransactionWithTerms) {
     setEditingId(txn.id)
     // A conversion is stored as an `investment` row with a converts_from link. Recognize it so the
     // dialog reopens in Conversion mode with its fields — otherwise editing shows plain-investment
     // fields and, worse, saving nulls the link (turning it back into a $0-cost investment).
-    const convertsFrom = (txn as any).converts_from_txn_id ?? ''
+    const convertsFrom = txn.converts_from_txn_id ?? ''
     setForm({
       transaction_type: convertsFrom ? 'conversion' : txn.transaction_type,
       converts_from_txn_id: convertsFrom,
@@ -265,11 +275,11 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       notes: txn.notes ?? '',
       investment_cost: txn.investment_cost?.toString() ?? '',
       interest_converted: txn.interest_converted?.toString() ?? '',
-      security_type: (txn as any).security_type ?? '',
+      security_type: txn.security_type ?? '',
       // Stored as fractions, shown as percentages — nobody thinks in 0.08.
-      interest_rate: (txn as any).interest_rate != null ? String(Number((txn as any).interest_rate) * 100) : '',
-      maturity_date: (txn as any).maturity_date ?? '',
-      dividend_rate: (txn as any).dividend_rate != null ? String(Number((txn as any).dividend_rate) * 100) : '',
+      interest_rate: txn.interest_rate != null ? String(Number(txn.interest_rate) * 100) : '',
+      maturity_date: txn.maturity_date ?? '',
+      dividend_rate: txn.dividend_rate != null ? String(Number(txn.dividend_rate) * 100) : '',
       shares_acquired: txn.shares_acquired?.toString() ?? '',
       share_price: txn.share_price?.toString() ?? '',
       postmoney_valuation: txn.postmoney_valuation?.toString() ?? '',
@@ -387,16 +397,16 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
 
   async function handleSave() {
     if (isFxReval && !form.original_currency) {
-      setError('Select the currency this position is denominated in.')
+      setError(tr('errors.selectCurrency'))
       return
     }
     if (isFxReval && !fxPreview) {
-      setError('Enter a position value, a prior rate, and a new rate to compute the change.')
+      setError(tr('errors.fxFieldsRequired'))
       return
     }
     const isConversion = form.transaction_type === 'conversion'
     if (isConversion && !form.converts_from_txn_id) {
-      setError('Select the SAFE or note being converted.')
+      setError(tr('errors.selectConvertible'))
       return
     }
 
@@ -481,7 +491,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
 
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error ?? 'Failed to save')
+        setError(data.error ?? tr('errors.save'))
         return
       }
 
@@ -496,7 +506,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       setDialogOpen(false)
       load()
     } catch {
-      setError('Failed to save transaction')
+      setError(tr('errors.saveTransaction'))
     } finally {
       setSaving(false)
     }
@@ -521,7 +531,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       <div className="mt-6">
         <div className="flex items-center gap-2 mb-2">
           <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-sm font-medium text-muted-foreground">Investment Details</span>
+          <span className="text-sm font-medium text-muted-foreground">{tr('title')}</span>
           {adminOnly && <Lock className="h-3 w-3 text-amber-500" />}
         </div>
         <div className="animate-pulse space-y-2">
@@ -532,12 +542,12 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
     )
   }
 
-  const LEDGER_KIND_LABEL: Record<string, string> = {
-    investment: 'an investment purchase',
-    conversion: 'a conversion to equity',
-    valuation: 'a mark to fair value',
-    fx_revaluation: 'a foreign currency revaluation',
-    proceeds: 'an exit',
+  const ledgerKindLabels: Record<string, string> = {
+    investment: tr('ledger.kinds.investment'),
+    conversion: tr('ledger.kinds.conversion'),
+    valuation: tr('ledger.kinds.valuation'),
+    fx_revaluation: tr('ledger.kinds.fxRevaluation'),
+    proceeds: tr('ledger.kinds.proceeds'),
   }
 
   return (
@@ -547,17 +557,18 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       {canReadAccounting && ledger?.drafted && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm">
           <FileText className="h-4 w-4 shrink-0 text-blue-700 dark:text-blue-400" />
-          <span>
-            Drafted {LEDGER_KIND_LABEL[ledger.kind ?? ''] ?? 'a journal entry'} in{' '}
-            <strong>{ledger.vehicle}</strong>&rsquo;s ledger. It is <strong>not posted</strong> until you review it.
-          </span>
+          <span>{tr.rich('ledger.drafted', {
+            kind: ledgerKindLabels[ledger.kind ?? ''] ?? tr('ledger.kinds.journalEntry'),
+            vehicle: ledger.vehicle ?? '',
+            strong: chunks => <strong>{chunks}</strong>,
+          })}</span>
           <Link
             href="/funds/journal"
             className="ml-auto text-xs underline underline-offset-2 hover:text-foreground"
           >
-            Review the entry
+            {tr('ledger.reviewEntry')}
           </Link>
-          <button onClick={() => setLedger(null)} className="text-muted-foreground hover:text-foreground" aria-label="Dismiss">
+          <button onClick={() => setLedger(null)} className="text-muted-foreground hover:text-foreground" aria-label={tr('dismiss')}>
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -569,14 +580,14 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       {canReadAccounting && ledger && !ledger.drafted && ledger.notOnboarded && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
           <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span>
-            Saved. Onboard <strong>{ledger.vehicle}</strong> to accounting to create full financial
-            statements.
-          </span>
+          <span>{tr.rich('ledger.onboardDescription', {
+            vehicle: ledger.vehicle ?? '',
+            strong: chunks => <strong>{chunks}</strong>,
+          })}</span>
           <Link href="/funds/status" className="ml-auto text-xs underline underline-offset-2 hover:text-foreground">
-            Onboard
+            {tr('ledger.onboard')}
           </Link>
-          <button onClick={() => setLedger(null)} className="text-muted-foreground hover:text-foreground" aria-label="Dismiss">
+          <button onClick={() => setLedger(null)} className="text-muted-foreground hover:text-foreground" aria-label={tr('dismiss')}>
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -588,14 +599,13 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       {canReadAccounting && ledger && !ledger.drafted && !ledger.notOnboarded && ledger.reason && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
-          <span>
-            Saved to the tracker, but <strong>nothing was booked</strong> to the ledger.{' '}
-            {ledger.reason}
-          </span>
+          <span>{tr.rich('ledger.notBooked', {
+            strong: chunks => <strong>{chunks}</strong>,
+          })}{' '}{ledger.reason}</span>
           <button
             onClick={() => setLedger(null)}
             className="ml-auto text-muted-foreground hover:text-foreground"
-            aria-label="Dismiss"
+            aria-label={tr('dismiss')}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -609,7 +619,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
         >
           {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
           <DollarSign className="h-3.5 w-3.5" />
-          Investment Details
+          {tr('title')}
           {adminOnly && <Lock className="h-3 w-3 text-amber-500" />}
           {transactions.length > 0 && (
             <span className="text-xs bg-muted rounded-full px-1.5 py-0.5">{transactions.length}</span>
@@ -617,7 +627,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
         </button>
         <Button size="sm" variant="outline" onClick={openAdd} className="h-7 px-2 text-xs">
           <Plus className="h-3.5 w-3.5 mr-1" />
-          Add
+          {tr('add')}
         </Button>
       </div>
 
@@ -688,7 +698,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
 
       {expanded && transactions.length === 0 && (
         <p className="text-xs text-muted-foreground px-3 py-2">
-          No investment transactions recorded yet.
+          {tr('empty')}
         </p>
       )}
 
@@ -696,9 +706,9 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Transaction' : 'Add Transaction'}</DialogTitle>
+            <DialogTitle>{editingId ? tr('dialog.editTitle') : tr('dialog.addTitle')}</DialogTitle>
             <DialogDescription>
-              {editingId ? 'Update the transaction details.' : 'Record a new investment transaction.'}
+              {editingId ? tr('dialog.editDescription') : tr('dialog.addDescription')}
             </DialogDescription>
           </DialogHeader>
 
@@ -707,22 +717,22 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                 "Round" that should be a "Valuation Update") can be reclassified. changeTransactionType
                 clears the previous type's amounts so nothing lingers. */}
             <div>
-              <Label>Transaction Type</Label>
+              <Label>{tr('fields.transactionType')}</Label>
               <Select value={form.transaction_type} onValueChange={changeTransactionType}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="investment">Investment</SelectItem>
-                    <SelectItem value="conversion">Conversion (SAFE / note → equity)</SelectItem>
-                    <SelectItem value="proceeds">Proceeds</SelectItem>
-                    <SelectItem value="unrealized_gain_change">Valuation Update</SelectItem>
-                    <SelectItem value="round_info">Round</SelectItem>
+                    <SelectItem value="investment">{tr('transactionTypes.investment')}</SelectItem>
+                    <SelectItem value="conversion">{tr('transactionTypes.conversionLong')}</SelectItem>
+                    <SelectItem value="proceeds">{tr('transactionTypes.proceeds')}</SelectItem>
+                    <SelectItem value="unrealized_gain_change">{tr('transactionTypes.valuationUpdate')}</SelectItem>
+                    <SelectItem value="round_info">{tr('transactionTypes.round')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Round Name</Label>
+                <Label>{tr('fields.roundName')}</Label>
                 {/* Free text for every type, with existing rounds as autocomplete suggestions. It
                     used to be a dropdown of INVESTMENT round names for non-investment types, so a
                     Valuation Update / Round whose round the fund never invested in (e.g. an
@@ -732,7 +742,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   className="mt-1"
                   value={form.round_name}
                   onChange={e => setForm(f => ({ ...f, round_name: e.target.value }))}
-                  placeholder="e.g. Series A"
+                  placeholder={tr('fields.roundPlaceholder')}
                   list="round-name-suggestions"
                 />
                 <datalist id="round-name-suggestions">
@@ -742,7 +752,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                 </datalist>
               </div>
               <div>
-                <Label>Date</Label>
+                <Label>{tr('fields.date')}</Label>
                 <Input
                   className="mt-1"
                   type="date"
@@ -754,12 +764,12 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
 
             {portfolioGroups.length > 0 && (
               <div>
-                <Label>Portfolio Group</Label>
+                <Label>{tr('fields.portfolioGroup')}</Label>
                 <Select
                   value={form.portfolio_group || undefined}
                   onValueChange={v => setForm(f => ({ ...f, portfolio_group: v }))}
                 >
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={tr('fields.none')} /></SelectTrigger>
                   <SelectContent>
                     {portfolioGroups.map(g => (
                       <SelectItem key={g} value={g}>{g}</SelectItem>
@@ -772,7 +782,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
             {txnType === 'investment' && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Investment Cost ({symbol.trim()})</Label>
+                  <Label>{tr('fields.investmentCost', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -782,7 +792,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div>
-                  <Label>Interest Converted ({symbol.trim()})</Label>
+                  <Label>{tr('fields.interestConverted', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -792,7 +802,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div>
-                  <Label>Security Type</Label>
+                  <Label>{tr('fields.securityType')}</Label>
                   {/* A select, not free text: the column has a CHECK constraint, so anything but
                       these exact values is rejected on insert. It used to be an Input whose
                       placeholder ("Preferred, Convertible note, SAFE…") suggested three values
@@ -803,12 +813,12 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                     value={form.security_type}
                     onChange={e => onSecurityTypeChange(e.target.value)}
                   >
-                    <option value="">Not set</option>
-                    {Object.entries(SECURITY_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
+                    <option value="">{tr('fields.notSet')}</option>
+                    {Object.keys(SECURITY_LABELS).map(value => (
+                      <option key={value} value={value}>{securityLabels[value]}</option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-muted-foreground mt-1">Feeds the Schedule of Investments breakout. Leave unset to let it derive one.</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">{tr('help.securityType')}</p>
                 </div>
                 {/* Note terms belong to a note. Shown only for one, so the form stops asking about
                     an interest rate on common stock — and `onSecurityTypeChange` clears them when
@@ -817,7 +827,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                 {showNoteTerms && (
                   <>
                     <div>
-                      <Label>Note Interest Rate (%)</Label>
+                      <Label>{tr('fields.noteInterestRate')}</Label>
                       <Input
                         className="mt-1"
                         type="number"
@@ -829,25 +839,24 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                       {/* This is the ONLY rate the ledger accrues on. Say so plainly, or someone will
                           type a preferred dividend rate here and the close will book it as income. */}
                       <p className="text-[11px] text-muted-foreground mt-1">
-                        The close accrues interest on this, simple actual/365, until conversion or
-                        maturity.
+                        {tr('help.noteInterest')}
                       </p>
                     </div>
                     <div>
-                      <Label>Note Maturity</Label>
+                      <Label>{tr('fields.noteMaturity')}</Label>
                       <Input
                         className="mt-1"
                         type="date"
                         value={form.maturity_date}
                         onChange={e => setForm(f => ({ ...f, maturity_date: e.target.value }))}
                       />
-                      <p className="text-[11px] text-muted-foreground mt-1">Interest stops here. Leave blank to accrue until conversion.</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">{tr('help.noteMaturity')}</p>
                     </div>
                   </>
                 )}
                 {showDividend && (
                   <div>
-                    <Label>Preferred Dividend Rate (%)</Label>
+                    <Label>{tr('fields.preferredDividendRate')}</Label>
                     <Input
                       className="mt-1"
                       type="number"
@@ -857,16 +866,14 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                       onChange={e => setForm(f => ({ ...f, dividend_rate: e.target.value }))}
                     />
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      Accrues to the liquidation preference. <strong>Does not hit the books</strong> —
-                      an undeclared preferred dividend is not income; its effect reaches the
-                      statements through the valuation.
+                      {tr.rich('help.preferredDividend', { strong: chunks => <strong>{chunks}</strong> })}
                     </p>
                   </div>
                 )}
                 {showSharePricing && (
                   <>
                     <div>
-                      <Label>Shares Acquired</Label>
+                      <Label>{tr('fields.sharesAcquired')}</Label>
                       <Input
                         className="mt-1"
                         type="number"
@@ -876,7 +883,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                       />
                     </div>
                     <div>
-                      <Label>Share Price ({symbol.trim()})</Label>
+                      <Label>{tr('fields.sharePrice', { symbol: symbol.trim() })}</Label>
                       <Input
                         className="mt-1"
                         type="number"
@@ -888,26 +895,26 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   </>
                 )}
                 <div>
-                  <Label>Post-Money Valuation ({symbol.trim()})</Label>
+                  <Label>{tr('fields.postMoneyValuation', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
                     step="any"
                     value={form.postmoney_valuation}
                     onChange={e => setForm(f => ({ ...f, postmoney_valuation: e.target.value }))}
-                    placeholder="Post-money valuation of the round"
+                    placeholder={tr('fields.postMoneyPlaceholder')}
                   />
                 </div>
                 {showOwnership && (
                   <div>
-                    <Label>Ownership %</Label>
+                    <Label>{tr('fields.ownership')}</Label>
                     <Input
                       className="mt-1"
                       type="number"
                       step="any"
                       value={form.ownership_pct}
                       onChange={e => setForm(f => ({ ...f, ownership_pct: e.target.value }))}
-                      placeholder="e.g. 15.5"
+                      placeholder={tr('fields.ownershipPlaceholder')}
                     />
                   </div>
                 )}
@@ -929,61 +936,61 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
               return (
                 <div className="space-y-3">
                   <div>
-                    <Label>Converts From</Label>
+                    <Label>{tr('fields.convertsFrom')}</Label>
                     <select
                       className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
                       value={form.converts_from_txn_id}
                       onChange={e => setForm(f => ({ ...f, converts_from_txn_id: e.target.value }))}
                     >
-                      <option value="">Select the SAFE or note being converted…</option>
+                      <option value="">{tr('fields.selectConvertible')}</option>
                       {convertibleSources.map(s => (
                         <option key={s.id} value={s.id}>
-                          {(s.round_name || (s.security_type === 'convertible_note' ? 'Note' : 'SAFE'))} · {symbol.trim()}{fmtNum(s.investment_cost)}{s.transaction_date ? ` · ${s.transaction_date}` : ''}
+                          {(s.round_name || (s.security_type === 'convertible_note' ? tr('securityTypes.noteShort') : 'SAFE'))} · {symbol.trim()}{fmtNum(s.investment_cost)}{s.transaction_date ? ` · ${s.transaction_date}` : ''}
                         </option>
                       ))}
                     </select>
                     {convertibleSources.length === 0 && (
                       <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
-                        No open SAFE or note on this company. Record the SAFE/note as an Investment first.
+                        {tr('help.noConvertible')}
                       </p>
                     )}
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      The instrument&rsquo;s basis carries into this round. Its original cash outflow stays on its own date.
+                      {tr('help.conversionBasis')}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Shares Acquired</Label>
+                      <Label>{tr('fields.sharesAcquired')}</Label>
                       <Input className="mt-1" type="number" step="any" value={form.shares_acquired}
                         onChange={e => setForm(f => ({ ...f, shares_acquired: e.target.value }))} />
                     </div>
                     <div>
-                      <Label>Share Price ({symbol.trim()})</Label>
+                      <Label>{tr('fields.sharePrice', { symbol: symbol.trim() })}</Label>
                       <Input className="mt-1" type="number" step="any" value={form.share_price}
                         onChange={e => setForm(f => ({ ...f, share_price: e.target.value }))} />
                     </div>
                     <div>
-                      <Label>Interest Converted ({symbol.trim()})</Label>
+                      <Label>{tr('fields.interestConverted', { symbol: symbol.trim() })}</Label>
                       <Input className="mt-1" type="number" step="any" value={form.interest_converted}
                         onChange={e => setForm(f => ({ ...f, interest_converted: e.target.value }))} />
-                      <p className="text-[11px] text-muted-foreground mt-1">Accrued note interest capitalizing into basis at this date. 0 for a SAFE.</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">{tr('help.interestConverted')}</p>
                     </div>
                     <div>
-                      <Label>Security Type</Label>
+                      <Label>{tr('fields.securityType')}</Label>
                       <select
                         className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
                         value={form.security_type}
                         onChange={e => onSecurityTypeChange(e.target.value)}
                       >
-                        <option value="">Not set</option>
-                        {Object.entries(SECURITY_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
+                        <option value="">{tr('fields.notSet')}</option>
+                        {Object.keys(SECURITY_LABELS).map(value => (
+                          <option key={value} value={value}>{securityLabels[value]}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <Label>Post-Money Valuation ({symbol.trim()})</Label>
+                      <Label>{tr('fields.postMoneyValuation', { symbol: symbol.trim() })}</Label>
                       <Input className="mt-1" type="number" step="any" value={form.postmoney_valuation}
                         onChange={e => setForm(f => ({ ...f, postmoney_valuation: e.target.value }))} />
                     </div>
@@ -992,13 +999,13 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   {/* Live preview so the arithmetic of the conversion is obvious before saving. */}
                   {form.converts_from_txn_id && (
                     <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Carried basis (principal + interest)</span><span className="font-mono">{symbol.trim()}{fmtNum(carriedBasis)}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Round value ({shares > 0 && price > 0 ? `${fmtNum(shares)} × ${symbol.trim()}${fmtNum(price)}` : 'held at cost'})</span><span className="font-mono">{symbol.trim()}{fmtNum(roundValue)}</span></div>
-                      <div className="flex justify-between font-medium"><span>{stepUp >= 0 ? 'Step-up recognized' : 'Down-round loss'} at {form.transaction_date || 'conversion date'}</span><span className={`font-mono ${stepUp >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{stepUp >= 0 ? '+' : ''}{symbol.trim()}{fmtNum(stepUp)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{tr('preview.carriedBasis')}</span><span className="font-mono">{symbol.trim()}{fmtNum(carriedBasis)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{tr('preview.roundValue', { calculation: shares > 0 && price > 0 ? `${fmtNum(shares)} × ${symbol.trim()}${fmtNum(price)}` : tr('preview.heldAtCost') })}</span><span className="font-mono">{symbol.trim()}{fmtNum(roundValue)}</span></div>
+                      <div className="flex justify-between font-medium"><span>{tr('preview.changeAt', { change: stepUp >= 0 ? tr('preview.stepUp') : tr('preview.downRoundLoss'), date: form.transaction_date || tr('preview.conversionDate') })}</span><span className={`font-mono ${stepUp >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{stepUp >= 0 ? '+' : ''}{symbol.trim()}{fmtNum(stepUp)}</span></div>
                     </div>
                   )}
                   <p className="text-[11px] text-muted-foreground">
-                    Wrote a new check at this round too? Add it as a separate <strong>Investment</strong> with the same round name — it stays its own line.
+                    {tr.rich('help.newCheck', { strong: chunks => <strong>{chunks}</strong> })}
                   </p>
                 </div>
               )
@@ -1007,7 +1014,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
             {txnType === 'proceeds' && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Cost Basis Exited ({symbol.trim()})</Label>
+                  <Label>{tr('fields.costBasisExited', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -1017,7 +1024,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div>
-                  <Label>Proceeds Received ({symbol.trim()})</Label>
+                  <Label>{tr('fields.proceedsReceived', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -1027,7 +1034,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div>
-                  <Label>Proceeds Escrow ({symbol.trim()})</Label>
+                  <Label>{tr('fields.proceedsEscrow', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -1037,7 +1044,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div>
-                  <Label>Written Off ({symbol.trim()})</Label>
+                  <Label>{tr('fields.writtenOff', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -1047,7 +1054,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div>
-                  <Label>Proceeds Per Share ({symbol.trim()})</Label>
+                  <Label>{tr('fields.proceedsPerShare', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -1057,14 +1064,14 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div className="col-span-2">
-                  <Label>Exit Valuation ({symbol.trim()})</Label>
+                  <Label>{tr('fields.exitValuation', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
                     step="any"
                     value={form.exit_valuation}
                     onChange={e => setForm(f => ({ ...f, exit_valuation: e.target.value }))}
-                    placeholder="Total company exit price"
+                    placeholder={tr('fields.exitValuationPlaceholder')}
                   />
                 </div>
               </div>
@@ -1073,7 +1080,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
             {txnType === 'round_info' && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Share Price ({symbol.trim()})</Label>
+                  <Label>{tr('fields.sharePrice', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
@@ -1083,25 +1090,25 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                   />
                 </div>
                 <div>
-                  <Label>Post-Money Valuation ({symbol.trim()})</Label>
+                  <Label>{tr('fields.postMoneyValuation', { symbol: symbol.trim() })}</Label>
                   <Input
                     className="mt-1"
                     type="number"
                     step="any"
                     value={form.postmoney_valuation}
                     onChange={e => setForm(f => ({ ...f, postmoney_valuation: e.target.value }))}
-                    placeholder="Post-money valuation of the round"
+                    placeholder={tr('fields.postMoneyPlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label>Ownership %</Label>
+                  <Label>{tr('fields.ownership')}</Label>
                   <Input
                     className="mt-1"
                     type="number"
                     step="any"
                     value={form.ownership_pct}
                     onChange={e => setForm(f => ({ ...f, ownership_pct: e.target.value }))}
-                    placeholder="e.g. 15.5"
+                    placeholder={tr('fields.ownershipPlaceholder')}
                   />
                 </div>
               </div>
@@ -1110,12 +1117,12 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
             {txnType === 'unrealized_gain_change' && (
               <div className="space-y-4">
                 <div>
-                  <Label>Change Driven By</Label>
+                  <Label>{tr('fields.changeDrivenBy')}</Label>
                   <Select value={form.valuation_change_source} onValueChange={setValuationSource}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mark">New mark / revaluation</SelectItem>
-                      <SelectItem value="fx">Foreign exchange rate change</SelectItem>
+                      <SelectItem value="mark">{tr('valuationSources.mark')}</SelectItem>
+                      <SelectItem value="fx">{tr('valuationSources.fx')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1123,7 +1130,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                 {form.valuation_change_source === 'mark' && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Unrealized Value Change ({symbol.trim()})</Label>
+                      <Label>{tr('fields.unrealizedValueChange', { symbol: symbol.trim() })}</Label>
                       <Input
                         className="mt-1"
                         type="number"
@@ -1133,7 +1140,7 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                       />
                     </div>
                     <div>
-                      <Label>Current Share Price ({symbol.trim()})</Label>
+                      <Label>{tr('fields.currentSharePrice', { symbol: symbol.trim() })}</Label>
                       <Input
                         className="mt-1"
                         type="number"
@@ -1143,14 +1150,14 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label>Latest Post-Money Valuation ({symbol.trim()})</Label>
+                      <Label>{tr('fields.latestPostMoneyValuation', { symbol: symbol.trim() })}</Label>
                       <Input
                         className="mt-1"
                         type="number"
                         step="any"
                         value={form.latest_postmoney_valuation}
                         onChange={e => setForm(f => ({ ...f, latest_postmoney_valuation: e.target.value }))}
-                        placeholder="Latest post-money valuation"
+                        placeholder={tr('fields.latestPostMoneyPlaceholder')}
                       />
                     </div>
                   </div>
@@ -1178,27 +1185,27 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                 onClick={() => setShowOrigCurrency(true)}
                 className="text-xs text-muted-foreground hover:text-foreground"
               >
-                + Different currency?
+                {tr('differentCurrency')}
               </button>
             ) : (
               <div className="border rounded-lg p-3 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Original Currency Amounts</span>
+                  <span className="text-xs font-medium text-muted-foreground">{tr('originalCurrency.title')}</span>
                   <button
                     type="button"
                     onClick={() => setShowOrigCurrency(false)}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Remove
+                    {tr('remove')}
                   </button>
                 </div>
                 <div>
-                  <Label>Currency</Label>
+                  <Label>{tr('fields.currency')}</Label>
                   <Select
                     value={form.original_currency}
                     onValueChange={v => setForm(f => ({ ...f, original_currency: v }))}
                   >
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select currency" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tr('fields.selectCurrency')} /></SelectTrigger>
                     <SelectContent>
                       {CURRENCY_OPTIONS.map(c => (
                         <SelectItem key={c} value={c}>{c} ({getCurrencySymbol(c).trim()})</SelectItem>
@@ -1211,15 +1218,15 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                     {txnType === 'investment' && (
                       <>
                         <div>
-                          <Label>Investment Cost ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.investmentCost', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_investment_cost} onChange={e => setForm(f => ({ ...f, original_investment_cost: e.target.value }))} />
                         </div>
                         <div>
-                          <Label>Share Price ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.sharePrice', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_share_price} onChange={e => setForm(f => ({ ...f, original_share_price: e.target.value }))} />
                         </div>
                         <div className="col-span-2">
-                          <Label>Post-Money Valuation ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.postMoneyValuation', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_postmoney_valuation} onChange={e => setForm(f => ({ ...f, original_postmoney_valuation: e.target.value }))} />
                         </div>
                       </>
@@ -1227,15 +1234,15 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                     {txnType === 'proceeds' && (
                       <>
                         <div>
-                          <Label>Proceeds Received ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.proceedsReceived', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_proceeds_received} onChange={e => setForm(f => ({ ...f, original_proceeds_received: e.target.value }))} />
                         </div>
                         <div>
-                          <Label>Proceeds Per Share ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.proceedsPerShare', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_proceeds_per_share} onChange={e => setForm(f => ({ ...f, original_proceeds_per_share: e.target.value }))} />
                         </div>
                         <div className="col-span-2">
-                          <Label>Exit Valuation ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.exitValuation', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_exit_valuation} onChange={e => setForm(f => ({ ...f, original_exit_valuation: e.target.value }))} />
                         </div>
                       </>
@@ -1243,15 +1250,15 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
                     {txnType === 'unrealized_gain_change' && (
                       <>
                         <div>
-                          <Label>Value Change ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.valueChange', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_unrealized_value_change} onChange={e => setForm(f => ({ ...f, original_unrealized_value_change: e.target.value }))} />
                         </div>
                         <div>
-                          <Label>Current Share Price ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.currentSharePrice', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_current_share_price} onChange={e => setForm(f => ({ ...f, original_current_share_price: e.target.value }))} />
                         </div>
                         <div className="col-span-2">
-                          <Label>Latest Post-Money ({getCurrencySymbol(form.original_currency).trim()})</Label>
+                          <Label>{tr('fields.latestPostMoney', { symbol: getCurrencySymbol(form.original_currency).trim() })}</Label>
                           <Input className="mt-1" type="number" step="any" value={form.original_latest_postmoney_valuation} onChange={e => setForm(f => ({ ...f, original_latest_postmoney_valuation: e.target.value }))} />
                         </div>
                       </>
@@ -1262,12 +1269,12 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
             )}
 
             <div>
-              <Label>Notes</Label>
+              <Label>{tr('fields.notes')}</Label>
               <Input
                 className="mt-1"
                 value={form.notes}
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Optional notes"
+                placeholder={tr('fields.notesPlaceholder')}
               />
             </div>
 
@@ -1275,10 +1282,10 @@ export function CompanyInvestments({ companyId, companyStatus, portfolioGroups, 
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{tr('cancel')}</Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {editingId ? 'Update' : 'Add'}
+              {editingId ? tr('update') : tr('add')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1335,6 +1342,8 @@ function FxRevaluationFields({
   fmt: (v: number | null | undefined) => string
   fmtPrice: (v: number | null | undefined) => string
 }) {
+  const tr = useTranslations('CompanyDetail.investments')
+  const locale = useLocale()
   const ccy = form.original_currency
   const origSymbol = ccy ? getCurrencySymbol(ccy).trim() : ''
   const missingSharePrice = needsSharePrice && !(parseFloat(form.original_current_share_price) > 0)
@@ -1342,9 +1351,9 @@ function FxRevaluationFields({
   return (
     <div className="border rounded-lg p-3 space-y-3">
       <div>
-        <Label>Deal Currency</Label>
+        <Label>{tr('fx.dealCurrency')}</Label>
         <Select value={ccy || undefined} onValueChange={setFxCurrency}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Select currency" /></SelectTrigger>
+          <SelectTrigger className="mt-1"><SelectValue placeholder={tr('fields.selectCurrency')} /></SelectTrigger>
           <SelectContent>
             {CURRENCY_OPTIONS.filter(c => c !== fundCurrency).map(c => (
               <SelectItem key={c} value={c}>{c} ({getCurrencySymbol(c).trim()})</SelectItem>
@@ -1357,7 +1366,7 @@ function FxRevaluationFields({
         <>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Prior FX Rate</Label>
+              <Label>{tr('fx.priorRate')}</Label>
               <Input
                 className="mt-1"
                 type="number"
@@ -1366,10 +1375,10 @@ function FxRevaluationFields({
                 value={form.prior_fx_rate}
                 onChange={e => setForm(f => ({ ...f, prior_fx_rate: e.target.value }))}
               />
-              <p className="mt-1 text-xs text-muted-foreground">Rate the position is carried at</p>
+              <p className="mt-1 text-xs text-muted-foreground">{tr('fx.priorRateHelp')}</p>
             </div>
             <div>
-              <Label>New FX Rate</Label>
+              <Label>{tr('fx.newRate')}</Label>
               <Input
                 className="mt-1"
                 type="number"
@@ -1386,7 +1395,7 @@ function FxRevaluationFields({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Position Value ({origSymbol})</Label>
+              <Label>{tr('fx.positionValue', { symbol: origSymbol })}</Label>
               <Input
                 className="mt-1"
                 type="number"
@@ -1394,10 +1403,10 @@ function FxRevaluationFields({
                 value={form.original_position_value}
                 onChange={e => setForm(f => ({ ...f, original_position_value: e.target.value }))}
               />
-              <p className="mt-1 text-xs text-muted-foreground">Held constant — only the rate moves</p>
+              <p className="mt-1 text-xs text-muted-foreground">{tr('fx.positionValueHelp')}</p>
             </div>
             <div>
-              <Label>Share Price ({origSymbol})</Label>
+              <Label>{tr('fields.sharePrice', { symbol: origSymbol })}</Label>
               <Input
                 className="mt-1"
                 type="number"
@@ -1410,25 +1419,24 @@ function FxRevaluationFields({
 
           {missingSharePrice && (
             <p className="text-xs text-amber-600 dark:text-amber-500">
-              This position is priced equity, so its FMV tracks share price. Enter the share price
-              in {ccy} or the revalued mark won&apos;t reach FMV.
+              {tr('fx.missingSharePrice', { currency: ccy })}
             </p>
           )}
 
           {preview && (
             <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
               <PreviewLine
-                label={`Local value held at`}
-                value={formatCurrencyFull(parseFloat(form.original_position_value), ccy)}
+                label={tr('fx.localValueHeldAt')}
+                value={formatCurrencyFull(parseFloat(form.original_position_value), ccy, locale)}
               />
-              <PreviewLine label="Prior carrying value" value={fmt(preview.priorFundValue)} />
-              <PreviewLine label="New carrying value" value={fmt(preview.newFundValue)} />
+              <PreviewLine label={tr('fx.priorCarryingValue')} value={fmt(preview.priorFundValue)} />
+              <PreviewLine label={tr('fx.newCarryingValue')} value={fmt(preview.newFundValue)} />
               {preview.newFundSharePrice != null && (
-                <PreviewLine label="New share price" value={fmtPrice(preview.newFundSharePrice)} />
+                <PreviewLine label={tr('fx.newSharePrice')} value={fmtPrice(preview.newFundSharePrice)} />
               )}
               <div className="border-t pt-1 mt-1">
                 <PreviewLine
-                  label="FX change"
+                  label={tr('fx.change')}
                   value={signedFmt(preview.fxValueChange, v => fmt(v))}
                   emphasis={preview.fxValueChange >= 0 ? 'positive' : 'negative'}
                 />
@@ -1447,11 +1455,13 @@ function FxDetailPanel({
   fmt,
   fmtPrice,
 }: {
-  txn: InvestmentTransaction
+  txn: InvestmentTransactionWithTerms
   fundCurrency: string
   fmt: (v: number | null | undefined) => string
   fmtPrice: (v: number | null | undefined) => string
 }) {
+  const tr = useTranslations('CompanyDetail.investments')
+  const locale = useLocale()
   const ccy = txn.original_currency ?? ''
   const positionValue = txn.original_position_value
   const priorRate = txn.prior_fx_rate
@@ -1464,30 +1474,30 @@ function FxDetailPanel({
 
   return (
     <div className="max-w-md space-y-1 text-sm">
-      <PreviewLine label="Deal currency" value={ccy || '-'} />
+      <PreviewLine label={tr('fx.dealCurrency')} value={ccy || '-'} />
       <PreviewLine
-        label="Position value (held)"
-        value={positionValue != null && ccy ? formatCurrencyFull(positionValue, ccy) : '-'}
+        label={tr('fx.positionValueHeld')}
+        value={positionValue != null && ccy ? formatCurrencyFull(positionValue, ccy, locale) : '-'}
       />
       <PreviewLine
-        label="Prior FX rate"
+        label={tr('fx.priorRate')}
         value={priorRate != null ? `${formatFxRate(priorRate)}  (1 ${ccy} = ${formatFxRate(priorRate)} ${fundCurrency})` : '-'}
       />
       <PreviewLine
-        label="New FX rate"
+        label={tr('fx.newRate')}
         value={newRate != null ? `${formatFxRate(newRate)}  (1 ${ccy} = ${formatFxRate(newRate)} ${fundCurrency})` : '-'}
       />
       {localSharePrice != null && (
         <PreviewLine
-          label="Share price"
-          value={`${formatCurrencyPrice(localSharePrice, ccy)} → ${fmtPrice(txn.current_share_price)}`}
+          label={tr('fx.sharePrice')}
+          value={`${formatCurrencyPrice(localSharePrice, ccy, locale)} → ${fmtPrice(txn.current_share_price)}`}
         />
       )}
       <div className="border-t pt-1 mt-1 space-y-1">
-        <PreviewLine label="Prior carrying value" value={fmt(priorFundValue)} />
-        <PreviewLine label="New carrying value" value={fmt(newFundValue)} />
+        <PreviewLine label={tr('fx.priorCarryingValue')} value={fmt(priorFundValue)} />
+        <PreviewLine label={tr('fx.newCarryingValue')} value={fmt(newFundValue)} />
         <PreviewLine
-          label="FX change"
+          label={tr('fx.change')}
           value={change != null ? signedFmt(change, v => fmt(v)) : '-'}
           emphasis={change == null ? undefined : change >= 0 ? 'positive' : 'negative'}
         />
@@ -1514,53 +1524,55 @@ function SummaryLine({
   asOfDate: string
   setAsOfDate: (v: string) => void
 }) {
+  const tr = useTranslations('CompanyDetail.investments')
+  const format = useFormatter()
   if (summary.totalInvested <= 0) return null
   return (
     <div className="flex items-center gap-4 mb-3 text-sm flex-wrap">
       <span>
-        <span className="text-muted-foreground">Invested:</span>{' '}
+        <span className="text-muted-foreground">{tr('summary.invested')}:</span>{' '}
         <span className="font-medium">{fmt(summary.totalInvested)}</span>
       </span>
       {summary.totalRealized > 0 ? (
         <>
           <span>
-            <span className="text-muted-foreground">Realized:</span>{' '}
+            <span className="text-muted-foreground">{tr('summary.realized')}:</span>{' '}
             <span className="font-medium">{fmt(summary.totalRealized)}</span>
           </span>
           {summary.unrealizedValue > 0 && (
             <span>
-              <span className="text-muted-foreground">Unrealized:</span>{' '}
+              <span className="text-muted-foreground">{tr('summary.unrealized')}:</span>{' '}
               <span className="font-medium">{fmt(summary.unrealizedValue)}</span>
             </span>
           )}
         </>
       ) : (
         <span>
-          <span className="text-muted-foreground">FMV:</span>{' '}
+          <span className="text-muted-foreground">{tr('summary.fmv')}:</span>{' '}
           <span className="font-medium">{fmt(summary.fmv)}</span>
         </span>
       )}
       {summary.moic != null && (
         <span>
-          <span className="text-muted-foreground">Gross MOIC:</span>{' '}
+          <span className="text-muted-foreground">{tr('summary.grossMoic')}:</span>{' '}
           <span className="font-medium">{fmtMoicFn(summary.moic)}</span>
         </span>
       )}
       {summary.grossIrr != null && Math.abs(summary.grossIrr) >= 0.0005 && (
         <span>
-          <span className="text-muted-foreground">Gross IRR:</span>{' '}
-          <span className="font-medium">{(summary.grossIrr * 100).toFixed(1)}%</span>
+          <span className="text-muted-foreground">{tr('summary.grossIrr')}:</span>{' '}
+          <span className="font-medium">{format.number(summary.grossIrr, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
         </span>
       )}
       {summary.rounds.reduce((sum, r) => sum + r.totalEscrow, 0) > 0 && (
         <span>
-          <span className="text-muted-foreground">Escrow:</span>{' '}
+          <span className="text-muted-foreground">{tr('summary.escrow')}:</span>{' '}
           <span className="font-medium">{fmt(summary.rounds.reduce((sum, r) => sum + r.totalEscrow, 0))}</span>
         </span>
       )}
       {summary.grossIrr != null && Math.abs(summary.grossIrr) >= 0.0005 && summary.unrealizedValue > 0 && (
         <span className="flex items-center gap-1">
-          <span className="text-muted-foreground">as of</span>
+          <span className="text-muted-foreground">{tr('summary.asOf')}</span>
           <input
             type="date"
             value={asOfDate}
@@ -1585,18 +1597,27 @@ function TransactionTable({
   handleDelete,
   deletingId,
 }: {
-  transactions: InvestmentTransaction[]
+  transactions: InvestmentTransactionWithTerms[]
   summary: CompanyInvestmentSummary | null
   companyStatus: CompanyStatus
   showGroup: boolean
   fundCurrency: string
   fmt: (v: number | null | undefined) => string
   fmtPrice: (v: number | null | undefined) => string
-  openEdit: (txn: InvestmentTransaction) => void
+  openEdit: (txn: InvestmentTransactionWithTerms) => void
   handleDelete: (id: string) => void
   deletingId: string | null
 }) {
+  const tr = useTranslations('CompanyDetail.investments')
+  const format = useFormatter()
   const [openRows, setOpenRows] = useState<Set<string>>(new Set())
+  const transactionTypeLabels: Record<TransactionType, string> = {
+    investment: tr('transactionTypes.investment'),
+    conversion: tr('transactionTypes.conversion'),
+    proceeds: tr('transactionTypes.proceeds'),
+    unrealized_gain_change: tr('transactionTypes.valuationUpdate'),
+    round_info: tr('transactionTypes.round'),
+  }
 
   function toggleRow(id: string) {
     setOpenRows(prev => {
@@ -1618,22 +1639,22 @@ function TransactionTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
-            {showGroup && <th className="text-left px-3 py-2 font-medium">Group</th>}
-            <th className="text-left px-3 py-2 font-medium">Type</th>
-            <th className="text-left px-3 py-2 font-medium">Round</th>
-            <th className="text-left px-3 py-2 font-medium">Date</th>
+            {showGroup && <th className="text-left px-3 py-2 font-medium">{tr('table.group')}</th>}
+            <th className="text-left px-3 py-2 font-medium">{tr('table.type')}</th>
+            <th className="text-left px-3 py-2 font-medium">{tr('table.round')}</th>
+            <th className="text-left px-3 py-2 font-medium">{tr('table.date')}</th>
             {companyStatus === 'exited' ? (
               <>
-                <th className="text-right px-3 py-2 font-medium">Cost</th>
-                <th className="text-right px-3 py-2 font-medium">Proceeds</th>
+                <th className="text-right px-3 py-2 font-medium">{tr('table.cost')}</th>
+                <th className="text-right px-3 py-2 font-medium">{tr('table.proceeds')}</th>
               </>
             ) : (
               <>
-                <th className="text-right px-3 py-2 font-medium">Invested</th>
-                {hasPostmoney && <th className="text-right px-3 py-2 font-medium">Postmoney</th>}
-                <th className="text-right px-3 py-2 font-medium">Shares</th>
-                <th className="text-right px-3 py-2 font-medium">Price</th>
-                <th className="text-right px-3 py-2 font-medium">FMV</th>
+                <th className="text-right px-3 py-2 font-medium">{tr('table.invested')}</th>
+                {hasPostmoney && <th className="text-right px-3 py-2 font-medium">{tr('table.postmoney')}</th>}
+                <th className="text-right px-3 py-2 font-medium">{tr('table.shares')}</th>
+                <th className="text-right px-3 py-2 font-medium">{tr('table.price')}</th>
+                <th className="text-right px-3 py-2 font-medium">{tr('table.fmv')}</th>
               </>
             )}
             <th className="w-16" />
@@ -1655,7 +1676,7 @@ function TransactionTable({
                         type="button"
                         onClick={() => toggleRow(txn.id)}
                         aria-expanded={isOpen}
-                        aria-label={isOpen ? 'Hide FX detail' : 'Show FX detail'}
+                        aria-label={isOpen ? tr('table.hideFxDetail') : tr('table.showFxDetail')}
                         className="text-muted-foreground hover:text-foreground"
                       >
                         {isOpen
@@ -1668,9 +1689,9 @@ function TransactionTable({
                     <span className="text-xs text-muted-foreground">
                       {/* A conversion is stored as an investment; surface it as a Conversion so the
                           row is identifiable and distinct from a plain investment. */}
-                      {(txn as any).converts_from_txn_id
-                        ? TYPE_LABELS.conversion
-                        : TYPE_LABELS[txn.transaction_type as TransactionType] ?? txn.transaction_type}
+                      {txn.converts_from_txn_id
+                        ? transactionTypeLabels.conversion
+                        : transactionTypeLabels[txn.transaction_type as TransactionType] ?? txn.transaction_type}
                     </span>
                     {isFx && (
                       <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -1682,7 +1703,7 @@ function TransactionTable({
                 <td className="px-3 py-2">{txn.round_name ?? '-'}</td>
                 <td className="px-3 py-2 text-muted-foreground">
                   {txn.transaction_date
-                    ? new Date(txn.transaction_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                    ? format.dateTime(new Date(txn.transaction_date + 'T00:00:00'), { month: 'short', day: 'numeric', year: 'numeric' })
                     : '-'}
                 </td>
                 {companyStatus === 'exited' ? (
@@ -1707,7 +1728,7 @@ function TransactionTable({
                       </td>
                     )}
                     <td className="px-3 py-2 text-right font-mono">
-                      {txn.transaction_type === 'investment' ? fmtNum(txn.shares_acquired) : '-'}
+                      {txn.transaction_type === 'investment' ? format.number(txn.shares_acquired ?? 0, { maximumFractionDigits: 2 }) : '-'}
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
                       {txn.transaction_type === 'investment'
@@ -1797,11 +1818,13 @@ function RoundSummaryTable({
   fmtMoic: fmtMoicFn,
 }: {
   summary: CompanyInvestmentSummary
-  transactions: InvestmentTransaction[]
+  transactions: InvestmentTransactionWithTerms[]
   showGroup: boolean
   fmt: (v: number | null | undefined) => string
   fmtMoic: (v: number | null | undefined) => string
 }) {
+  const tr = useTranslations('CompanyDetail.investments')
+  const format = useFormatter()
   const rounds = summary.rounds
   const totInvested = rounds.reduce((s, r) => s + r.investmentCost, 0)
   const totRealized = rounds.reduce((s, r) => s + r.totalRealized, 0)
@@ -1818,13 +1841,13 @@ function RoundSummaryTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
-            {showGroup && <th className="text-left px-3 py-2 font-medium">Group</th>}
-            <th className="text-left px-3 py-2 font-medium">Round</th>
-            <th className="text-right px-3 py-2 font-medium">Invested</th>
-            <th className="text-right px-3 py-2 font-medium">Proceeds</th>
-            <th className="text-right px-3 py-2 font-medium">Escrow</th>
-            <th className="text-right px-3 py-2 font-medium">Gross MOIC</th>
-            <th className="text-right px-3 py-2 font-medium">Gross IRR</th>
+            {showGroup && <th className="text-left px-3 py-2 font-medium">{tr('table.group')}</th>}
+            <th className="text-left px-3 py-2 font-medium">{tr('table.round')}</th>
+            <th className="text-right px-3 py-2 font-medium">{tr('table.invested')}</th>
+            <th className="text-right px-3 py-2 font-medium">{tr('table.proceeds')}</th>
+            <th className="text-right px-3 py-2 font-medium">{tr('summary.escrow')}</th>
+            <th className="text-right px-3 py-2 font-medium">{tr('summary.grossMoic')}</th>
+            <th className="text-right px-3 py-2 font-medium">{tr('summary.grossIrr')}</th>
           </tr>
         </thead>
         <tbody>
@@ -1840,7 +1863,7 @@ function RoundSummaryTable({
                 <td className="px-3 py-2 text-right font-mono">{fmtMoicFn(roundMoic)}</td>
                 <td className="px-3 py-2 text-right font-mono">
                   {r.grossIrr != null && Math.abs(r.grossIrr) >= 0.0005
-                    ? `${(r.grossIrr * 100).toFixed(1)}%`
+                    ? format.number(r.grossIrr, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 })
                     : '-'}
                 </td>
               </tr>
@@ -1850,14 +1873,14 @@ function RoundSummaryTable({
         <tfoot>
           <tr className="bg-muted/30 font-medium">
             {showGroup && <td className="px-3 py-2" />}
-            <td className="px-3 py-2">Total</td>
+            <td className="px-3 py-2">{tr('table.total')}</td>
             <td className="px-3 py-2 text-right font-mono">{fmt(totInvested)}</td>
             <td className="px-3 py-2 text-right font-mono">{fmt(totRealized)}</td>
             <td className="px-3 py-2 text-right font-mono">{totEscrow > 0 ? fmt(totEscrow) : '-'}</td>
             <td className="px-3 py-2 text-right font-mono">{fmtMoicFn(totMoic)}</td>
             <td className="px-3 py-2 text-right font-mono">
               {summary.grossIrr != null && Math.abs(summary.grossIrr) >= 0.0005
-                ? `${(summary.grossIrr * 100).toFixed(1)}%`
+                ? format.number(summary.grossIrr, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 })
                 : '-'}
             </td>
           </tr>

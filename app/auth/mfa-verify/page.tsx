@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { safeNextPath } from '@/lib/safe-redirect'
 import { Button } from '@/components/ui/button'
@@ -12,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2 } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 
 export default function MfaVerifyPage() {
   return (
@@ -27,6 +27,8 @@ function MfaVerifyForm() {
   const [checking, setChecking] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const t = useTranslations('Auth')
+  const locale = useLocale()
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -55,7 +57,7 @@ function MfaVerifyForm() {
   async function verify() {
     setError(null)
     if (code.length !== 6) {
-      setError('Enter a 6-digit code.')
+      setError(t('sixDigitCode'))
       return
     }
     setLoading(true)
@@ -63,13 +65,13 @@ function MfaVerifyForm() {
       const { data: factors } = await supabase.auth.mfa.listFactors()
       const totp = factors?.totp?.find(f => f.status === 'verified')
       if (!totp) {
-        setError('No verified TOTP factor found.')
+        setError(t('noTotp'))
         setLoading(false)
         return
       }
       const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totp.id })
       if (challengeError) {
-        setError(challengeError.message)
+        setError(locale === 'en' ? challengeError.message : t('genericError'))
         setLoading(false)
         return
       }
@@ -79,7 +81,7 @@ function MfaVerifyForm() {
         code,
       })
       if (verifyError) {
-        setError(verifyError.message)
+        setError(locale === 'en' ? verifyError.message : t('genericError'))
         setCode('')
         inputRef.current?.focus()
       } else {
@@ -95,7 +97,7 @@ function MfaVerifyForm() {
         return
       }
     } catch {
-      setError('Verification failed. Please try again.')
+      setError(t('verificationFailed'))
       setCode('')
       inputRef.current?.focus()
     }
@@ -120,8 +122,8 @@ function MfaVerifyForm() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Two-factor authentication</CardTitle>
-            <CardDescription>Enter the 6-digit code from your authenticator app.</CardDescription>
+            <CardTitle className="text-lg">{t('mfaTitle')}</CardTitle>
+            <CardDescription>{t('mfaDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
@@ -131,7 +133,7 @@ function MfaVerifyForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="mfa-code">Verification code</Label>
+              <Label htmlFor="mfa-code">{t('verificationCode')}</Label>
               <Input
                 ref={inputRef}
                 id="mfa-code"
@@ -149,7 +151,7 @@ function MfaVerifyForm() {
             </div>
 
             <Button className="w-full" onClick={verify} disabled={loading}>
-              {loading ? 'Verifying…' : 'Verify'}
+              {loading ? t('verifying') : t('verify')}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
@@ -158,7 +160,7 @@ function MfaVerifyForm() {
                 onClick={signOutAndRedirect}
                 className="text-primary underline underline-offset-4 hover:text-primary/80"
               >
-                Sign in with a different account
+                {t('differentAccount')}
               </button>
             </p>
           </CardContent>

@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -36,13 +38,17 @@ interface ReviewData {
   needsReviewEmails: NeedsReviewEmail[]
 }
 
-const ISSUE_LABELS: Record<string, string> = {
-  new_company_detected: 'New Company',
-  low_confidence: 'Low Confidence',
-  ambiguous_period: 'Ambiguous Period',
-  metric_not_found: 'Metric Not Found',
-  company_not_identified: 'Unidentified Company',
-  duplicate_period: 'Duplicate Period',
+const ISSUE_KEYS = {
+  new_company_detected: 'newCompany',
+  low_confidence: 'lowConfidence',
+  ambiguous_period: 'ambiguousPeriod',
+  metric_not_found: 'metricNotFound',
+  company_not_identified: 'unidentifiedCompany',
+  duplicate_period: 'duplicatePeriod',
+} as const
+
+function issueKey(issueType: string) {
+  return ISSUE_KEYS[issueType as keyof typeof ISSUE_KEYS]
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -55,7 +61,11 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default function ReviewPage() {
+  const t = useTranslations('Review')
+  const locale = useLocale()
+  const dateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' })
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [data, setData] = useState<ReviewData | null>(null)
   const [resolving, setResolving] = useState<Record<string, boolean>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -64,12 +74,14 @@ export default function ReviewPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const res = await fetch('/api/review')
       if (!res.ok) throw new Error('Failed to load')
       setData(await res.json())
     } catch {
       setData(null)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -104,7 +116,7 @@ export default function ReviewPage() {
           : prev,
       )
     } catch {
-      // ignore
+      toast.error(t('errors.resolve'))
     } finally {
       setResolving(prev => ({ ...prev, [item.id]: false }))
       setEditingId(null)
@@ -117,9 +129,9 @@ export default function ReviewPage() {
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Review</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Items that need your attention, metrics AI wasn&apos;t sure about, unidentified companies, and more.
+            {t('description')}
           </p>
         </div>
         <AnalystToggleButton />
@@ -133,9 +145,15 @@ export default function ReviewPage() {
         </div>
       )}
 
-      {!loading && items.length === 0 && (data?.needsReviewEmails ?? []).length === 0 && (
+      {!loading && loadError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {t('errors.load')}
+        </div>
+      )}
+
+      {!loading && !loadError && items.length === 0 && (data?.needsReviewEmails ?? []).length === 0 && (
         <div className="rounded-lg border border-dashed p-12 text-center">
-          <p className="text-muted-foreground">All clear, nothing to review.</p>
+          <p className="text-muted-foreground">{t('empty')}</p>
         </div>
       )}
 
@@ -145,6 +163,7 @@ export default function ReviewPage() {
             const isEditing = editingId === item.id
             const isResolving = !!resolving[item.id]
             const hasValue = !!item.extracted_value
+            const translatedIssueKey = issueKey(item.issue_type)
 
             return (
               <div key={item.id} className="rounded-lg border bg-card p-4 space-y-3">
@@ -153,7 +172,7 @@ export default function ReviewPage() {
                   <span
                     className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[item.issue_type] ?? ''}`}
                   >
-                    {ISSUE_LABELS[item.issue_type] ?? item.issue_type}
+                    {translatedIssueKey ? t(`issues.${translatedIssueKey}`) : item.issue_type}
                   </span>
                   {item.company && (
                     <Link
@@ -172,7 +191,7 @@ export default function ReviewPage() {
                   )}
                   {item.email && (
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {item.email.subject ?? '(no subject)'}, {new Date(item.email.received_at).toLocaleDateString()}
+                      {item.email.subject ?? t('noSubject')}, {dateFormatter.format(new Date(item.email.received_at))}
                     </span>
                   )}
                 </div>
@@ -180,7 +199,7 @@ export default function ReviewPage() {
                 {/* Extracted value */}
                 {hasValue && !isEditing && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Value</span>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">{t('value')}</span>
                     <span className="font-mono text-sm bg-muted px-2 py-0.5 rounded">
                       {item.extracted_value}
                       {item.metric?.unit ? ` ${item.metric.unit}` : ''}
@@ -207,10 +226,10 @@ export default function ReviewPage() {
                       disabled={isResolving || !editValue.trim()}
                     >
                       <Check className="h-3.5 w-3.5 mr-1" />
-                      Save
+                      {t('actions.save')}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
-                      Cancel
+                      {t('actions.cancel')}
                     </Button>
                   </div>
                 )}
@@ -228,19 +247,19 @@ export default function ReviewPage() {
                     {item.issue_type === 'new_company_detected' || item.issue_type === 'company_not_identified' ? (
                       <Button size="sm" variant="outline" onClick={() => resolve(item, 'rejected')} disabled={isResolving} className="gap-1.5">
                         <X className="h-3.5 w-3.5" />
-                        Dismiss
+                        {t('actions.dismiss')}
                       </Button>
                     ) : (
                       <>
                         {item.issue_type !== 'metric_not_found' && hasValue && (
                           <Button size="sm" onClick={() => resolve(item, 'accepted')} disabled={isResolving} className="gap-1.5">
                             <Check className="h-3.5 w-3.5" />
-                            Accept
+                            {t('actions.accept')}
                           </Button>
                         )}
                         <Button size="sm" variant="outline" onClick={() => resolve(item, 'rejected')} disabled={isResolving} className="gap-1.5">
                           <X className="h-3.5 w-3.5" />
-                          {item.issue_type === 'metric_not_found' ? 'Dismiss' : 'Reject'}
+                          {item.issue_type === 'metric_not_found' ? t('actions.dismiss') : t('actions.reject')}
                         </Button>
                         {hasValue && (
                           <Button
@@ -254,7 +273,7 @@ export default function ReviewPage() {
                             className="gap-1.5"
                           >
                             <Pencil className="h-3.5 w-3.5" />
-                            Edit &amp; Accept
+                            {t('actions.editAccept')}
                           </Button>
                         )}
                       </>
@@ -270,7 +289,7 @@ export default function ReviewPage() {
       {!loading && (data?.needsReviewEmails ?? []).length > 0 && (
         <div className="mt-6">
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
-            Emails needing review ({data!.needsReviewEmails.length})
+            {t('emailsNeedingReview', { count: data!.needsReviewEmails.length })}
           </h2>
           <div className="space-y-2">
             {data!.needsReviewEmails.map(email => (
@@ -283,20 +302,20 @@ export default function ReviewPage() {
                   <Mail className="h-4 w-4 text-amber-500 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">
-                      {email.subject || '(no subject)'}
+                      {email.subject || t('noSubject')}
                     </p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                       <span>{email.from_address}</span>
-                      <span>{new Date(email.received_at).toLocaleDateString()}</span>
+                      <span>{dateFormatter.format(new Date(email.received_at))}</span>
                       {email.company ? (
                         <span>{email.company.name}</span>
                       ) : (
-                        <span className="text-amber-600">No company assigned</span>
+                        <span className="text-amber-600">{t('noCompanyAssigned')}</span>
                       )}
                     </div>
                   </div>
                   <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 shrink-0">
-                    Needs Review
+                    {t('needsReview')}
                   </Badge>
                 </div>
               </button>

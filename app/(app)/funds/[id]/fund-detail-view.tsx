@@ -2,17 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell,
   LineChart, Line, ReferenceLine,
 } from 'recharts'
 import { Loader2, ArrowRight } from 'lucide-react'
-import { useCurrency, formatCurrency, formatCurrencyFull } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useVehicle, FundSwitcher } from '@/components/accounting-vehicle'
 import { AnalystToggleButton } from '@/components/analyst-button'
 import { AccountingBody } from '@/components/accounting-chrome'
 import { Card, CardContent } from '@/components/ui/card'
+import { formatCompactMoney, formatMoney, formatNumber, formatPercent } from '../format'
 
 // The fund detail (lead) page. Everything here is READ-ONLY and derived — the same numbers as the
 // /funds overview (fund-economics), the schedule of investments (statements), and the growth
@@ -72,17 +74,18 @@ const INVEST_FOLLOW = 'hsl(var(--chart-3) / 0.5)'
 const GAINS_HUE = HUE.chart1
 const PROCEEDS_HUE = HUE.chart2
 
-const moic = (v: number | null | undefined) => (v == null ? '—' : `${v.toFixed(2)}x`)
-const irrPct = (v: number | null | undefined) => {
+const moic = (v: number | null | undefined, locale: string) => (v == null ? '—' : `${formatNumber(v, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`)
+const irrPct = (v: number | null | undefined, locale: string) => {
   if (v == null) return '—'
-  const p = v * 100
-  return `${(Object.is(p, -0) ? 0 : p).toFixed(1)}%`
+  return formatPercent(v, locale)
 }
 
 export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicleId: string | null }) {
+  const locale = useLocale()
+  const t = useTranslations('Funds.detail')
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrency(v, currency)
-  const fmtFull = (v: number) => formatCurrencyFull(v, currency)
+  const fmt = (v: number) => formatCompactMoney(v, currency, locale)
+  const fmtFull = (v: number) => formatMoney(v, currency, locale, 0)
   const { setVehicle } = useVehicle()
 
   const [econ, setEcon] = useState<VehicleEconomics | null>(null)
@@ -125,13 +128,13 @@ export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicl
   // stays full width.
   const body = loading ? (
     <div className="rounded-lg border p-6 flex items-center gap-2 text-sm text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin" /> Loading fund detail…
+      <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
     </div>
   ) : (notFound || !econ || !m) ? (
     <div className="rounded-lg border p-6 space-y-3 max-w-lg">
-      <p className="text-sm">No vehicle named <strong>{vehicle}</strong> was found, or it carries no capital yet.</p>
+      <p className="text-sm">{t.rich('notFound', { vehicle, strong: chunks => <strong>{chunks}</strong> })}</p>
       <Link href="/funds" className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent transition-colors">
-        Back to all funds <ArrowRight className="h-3.5 w-3.5" />
+        {t('back')} <ArrowRight className="h-3.5 w-3.5" />
       </Link>
     </div>
   ) : (
@@ -139,14 +142,14 @@ export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicl
       {/* Key metrics — same Card treatment as the /funds overview and the LP snapshot.
           These are the ONLY surface the Net-to-LP / Whole-fund lens drives. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricBox label="Committed" value={fmt(m.committed)} />
-        <MetricBox label="Called" value={fmt(m.paidIn)} />
-        <MetricBox label="Uncalled" value={fmt(m.uncalled)} />
-        <MetricBox label="Distributed" value={fmt(m.distributions)} />
-        <MetricBox label="NAV" value={fmt(m.nav)} />
-        <MetricBox label="TVPI" value={moic(m.tvpi)} />
-        <MetricBox label="DPI" value={moic(m.dpi)} />
-        <MetricBox label="IRR" value={irrPct(m.irr)} />
+        <MetricBox label={t('metrics.committed')} value={fmt(m.committed)} />
+        <MetricBox label={t('metrics.called')} value={fmt(m.paidIn)} />
+        <MetricBox label={t('metrics.uncalled')} value={fmt(m.uncalled)} />
+        <MetricBox label={t('metrics.distributed')} value={fmt(m.distributions)} />
+        <MetricBox label={t('metrics.nav')} value={fmt(m.nav)} />
+        <MetricBox label={t('metrics.tvpi')} value={moic(m.tvpi, locale)} />
+        <MetricBox label={t('metrics.dpi')} value={moic(m.dpi, locale)} />
+        <MetricBox label={t('metrics.irr')} value={irrPct(m.irr, locale)} />
       </div>
 
       {/* Growth over time — two charts. Hidden entirely (rather than shown as an empty box) when the
@@ -162,9 +165,9 @@ export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicl
           when the vehicle tracks no per-company detail, rather than showing an empty placeholder. */}
       {soi && soi.source === 'tracker' && soi.rows.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <BreakdownChart title="By industry" groups={soi.byIndustry} fmt={fmt} fmtFull={fmtFull} />
+          <BreakdownChart title={t('byIndustry')} groups={soi.byIndustry} fmt={fmt} fmtFull={fmtFull} />
           <BreakdownChart
-            title={soi.byAssetType.length > 1 ? 'By asset type' : 'By geography'}
+            title={soi.byAssetType.length > 1 ? t('byAssetType') : t('byGeography')}
             groups={soi.byAssetType.length > 1 ? soi.byAssetType : soi.byGeography}
             fmt={fmt}
             fmtFull={fmtFull}
@@ -185,7 +188,7 @@ export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicl
       )}
 
       <p className="text-xs text-muted-foreground max-w-3xl">
-        Metrics and charts are reported through the last closed accounting period.
+        {t('closedPeriodHelp')}
       </p>
     </div>
   )
@@ -200,8 +203,8 @@ export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicl
           <h1 className="text-2xl font-semibold tracking-tight truncate" title={vehicle}>{vehicle}</h1>
           {econ && (
             <p className="text-sm text-muted-foreground">
-              {econ.vintageYear ? <>Vintage {econ.vintageYear} · </> : null}
-              {econ.source === 'ledger' ? 'Fund accounting' : 'LP capital tracking'} · {econ.lpCount} {econ.lpCount === 1 ? 'partner' : 'partners'}
+              {econ.vintageYear ? <>{t('vintage', { year: formatNumber(econ.vintageYear, locale, { useGrouping: false }) })} · </> : null}
+              {econ.source === 'ledger' ? t('fundAccounting') : t('lpTracking')} · {t('partnerCount', { count: econ.lpCount })}
             </p>
           )}
         </div>
@@ -214,7 +217,7 @@ export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicl
                   onClick={() => setLens(l)}
                   className={`px-2 py-1 rounded ${lens === l ? 'bg-muted font-medium' : 'text-muted-foreground'}`}
                 >
-                  {l === 'lp' ? 'Net to LP' : 'Whole fund'}
+                  {l === 'lp' ? t('netToLp') : t('wholeFund')}
                 </button>
               ))}
             </div>
@@ -273,6 +276,7 @@ function EmptyPlot({ label }: { label: string }) {
 function CashFlowsChart({
   points, hasGross, isAccounting, fmt, fmtFull,
 }: { points: TsPoint[]; hasGross: boolean; isAccounting: boolean; fmt: (v: number) => string; fmtFull: (v: number) => string }) {
+  const t = useTranslations('Funds.detail.charts')
   // Net metrics (called capital, distributed) only mean something on a fund with accounting; a
   // capital-tracking vehicle has no called capital, so it shows the gross (deal-level) view only.
   const canNet = isAccounting
@@ -289,7 +293,7 @@ function CashFlowsChart({
           onClick={() => setMode(mo)}
           className={`px-2 py-1 rounded ${view === mo ? 'bg-muted font-medium' : 'text-muted-foreground'}`}
         >
-          {mo === 'net' ? 'Called & distributed' : 'Invested & proceeds'}
+          {mo === 'net' ? t('calledDistributed') : t('investedProceeds')}
         </button>
       ))}
     </div>
@@ -312,19 +316,19 @@ function CashFlowsChart({
 
   const series = view === 'net'
     ? [
-        { key: 'calledCapital', name: 'Called capital', color: INVEST_NEW },
-        { key: 'distributed', name: 'Distributed', color: PROCEEDS_HUE },
+        { key: 'calledCapital', name: t('series.calledCapital'), color: INVEST_NEW },
+        { key: 'distributed', name: t('series.distributed'), color: PROCEEDS_HUE },
       ]
     : [
-        { key: 'newInvested', name: 'New capital', color: INVEST_NEW },
-        { key: 'followOnInvested', name: 'Follow-on capital', color: INVEST_FOLLOW },
-        { key: 'proceeds', name: 'Proceeds', color: PROCEEDS_HUE },
+        { key: 'newInvested', name: t('series.newCapital'), color: INVEST_NEW },
+        { key: 'followOnInvested', name: t('series.followOnCapital'), color: INVEST_FOLLOW },
+        { key: 'proceeds', name: t('series.proceeds'), color: PROCEEDS_HUE },
       ]
 
   return (
-    <ChartCard title="Fund cash flows per period" action={toggle}>
+    <ChartCard title={t('cashFlowsTitle')} action={toggle}>
       {points.length === 0 ? (
-        <EmptyPlot label="No dated activity yet." />
+        <EmptyPlot label={t('noDatedActivity')} />
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} stackOffset="sign">
@@ -348,31 +352,32 @@ function CashFlowsChart({
 
 // The accounting (partners'-capital) composition, signed so the segments sum to NAV.
 const NAV_SERIES = [
-  { key: 'netPaidIn', name: 'Net paid-in capital', color: HUE.chart3 },
-  { key: 'realizedGains', name: 'Realized gains', color: HUE.chart2 },
-  { key: 'unrealizedGains', name: 'Unrealized gains', color: HUE.chart1 },
-  { key: 'operatingIncome', name: 'Operating income', color: HUE.chart5 },
-  { key: 'expenses', name: 'Expenses & fees', color: HUE.chart4 },
-  { key: 'other', name: 'Other', color: HUE.muted },
+  { key: 'netPaidIn', color: HUE.chart3 },
+  { key: 'realizedGains', color: HUE.chart2 },
+  { key: 'unrealizedGains', color: HUE.chart1 },
+  { key: 'operatingIncome', color: HUE.chart5 },
+  { key: 'expenses', color: HUE.chart4 },
+  { key: 'other', color: HUE.muted },
 ] as const
 
 // Capital-tracking assets: portfolio carrying value split into cost (new + follow-on) and gain.
 const GROSS_ASSET_SERIES = [
-  { key: 'newInvested', name: 'New invested', color: INVEST_NEW },
-  { key: 'followOnInvested', name: 'Follow-on invested', color: INVEST_FOLLOW },
-  { key: 'unrealizedGains', name: 'Unrealized gains', color: GAINS_HUE },
+  { key: 'newInvested', color: INVEST_NEW },
+  { key: 'followOnInvested', color: INVEST_FOLLOW },
+  { key: 'unrealizedGains', color: GAINS_HUE },
 ] as const
 
 function AssetsChart({
   points, isAccounting, fmt, fmtFull,
 }: { points: TsPoint[]; isAccounting: boolean; fmt: (v: number) => string; fmtFull: (v: number) => string }) {
+  const t = useTranslations('Funds.detail.charts')
   const { data, series } = useMemo(() => {
     if (isAccounting) {
       // Net paid-in = contributions net of capital returned; the rest is already signed so the
       // stack sums to NAV (partners' capital), which is the fund's assets under accounting.
       const d = points.map(p => ({ ...p, netPaidIn: Math.round((p.contributions + p.distributions) * 100) / 100 }))
       const s = NAV_SERIES.filter(se => d.some(x => Math.abs(Number((x as any)[se.key])) > 0.5))
-      return { data: d as any[], series: s as readonly { key: string; name: string; color: string }[] }
+      return { data: d as any[], series: s as readonly { key: string; color: string }[] }
     }
     // Assets = portfolio carrying value = invested cost + unrealized gain. Underwater (gain < 0)
     // scales the cost segments down so the stack still totals the carrying value rather than
@@ -384,13 +389,13 @@ function AssetsChart({
       const f = invested > 0 ? p.portfolioValue / invested : 0
       return { label: p.label, newInvested: p.newInvested * f, followOnInvested: p.followOnInvested * f, unrealizedGains: 0 }
     })
-    return { data: d as any[], series: GROSS_ASSET_SERIES as readonly { key: string; name: string; color: string }[] }
+    return { data: d as any[], series: GROSS_ASSET_SERIES }
   }, [points, isAccounting])
 
   return (
-    <ChartCard title="Fund assets end of period">
+    <ChartCard title={t('assetsTitle')}>
       {points.length === 0 ? (
-        <EmptyPlot label="No dated activity yet." />
+        <EmptyPlot label={t('noDatedActivity')} />
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} stackOffset="sign">
@@ -400,7 +405,7 @@ function AssetsChart({
             <Tooltip cursor={{ fill: 'hsl(var(--muted) / 0.4)' }} contentStyle={tooltipStyle} formatter={(v: any, n: any) => [fmtFull(v as number), n]} />
             <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
             {series.map(s => (
-              <Bar key={s.key} dataKey={s.key} name={s.name} stackId="assets" fill={s.color} stroke={HUE.surface} strokeWidth={1} />
+              <Bar key={s.key} dataKey={s.key} name={t(`series.${s.key}`)} stackId="assets" fill={s.color} stroke={HUE.surface} strokeWidth={1} />
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -414,16 +419,18 @@ function AssetsChart({
 function NewVsFollowOnPie({
   point, fmt, fmtFull,
 }: { point: TsPoint; fmt: (v: number) => string; fmtFull: (v: number) => string }) {
+  const locale = useLocale()
+  const t = useTranslations('Funds.detail.charts')
   const data = [
-    { name: 'New capital', value: Math.max(0, point.newInvested), color: INVEST_NEW },
-    { name: 'Follow-on capital', value: Math.max(0, point.followOnInvested), color: INVEST_FOLLOW },
+    { name: t('series.newCapital'), value: Math.max(0, point.newInvested), color: INVEST_NEW },
+    { name: t('series.followOnCapital'), value: Math.max(0, point.followOnInvested), color: INVEST_FOLLOW },
   ].filter(d => d.value > 0)
   const total = data.reduce((s, d) => s + d.value, 0)
 
   return (
-    <ChartCard title="New vs follow-on capital">
+    <ChartCard title={t('newVsFollowOnTitle')}>
       {total === 0 ? (
-        <EmptyPlot label="No invested capital yet." />
+        <EmptyPlot label={t('noInvestedCapital')} />
       ) : (
         <div className="flex items-center gap-4">
           <ResponsiveContainer width="55%" height={220}>
@@ -441,7 +448,7 @@ function NewVsFollowOnPie({
                 <span className="truncate flex-1">{d.name}</span>
                 <span className="font-mono text-muted-foreground shrink-0">{fmt(d.value)}</span>
                 <span className="font-mono text-muted-foreground/70 shrink-0 w-10 text-right">
-                  {total ? `${Math.round((d.value / total) * 100)}%` : '—'}
+                  {total ? formatPercent(d.value / total, locale, 0) : '—'}
                 </span>
               </li>
             ))}
@@ -457,6 +464,8 @@ function NewVsFollowOnPie({
 function IrrOverTimeChart({
   points, isAccounting,
 }: { points: TsPoint[]; isAccounting: boolean }) {
+  const locale = useLocale()
+  const t = useTranslations('Funds.detail.charts')
   const [mode, setMode] = useState<'net' | 'gross'>('net')
   const view: 'net' | 'gross' = isAccounting ? mode : 'gross'
 
@@ -468,7 +477,7 @@ function IrrOverTimeChart({
           onClick={() => setMode(mo)}
           className={`px-2 py-1 rounded ${mode === mo ? 'bg-muted font-medium' : 'text-muted-foreground'}`}
         >
-          {mo === 'net' ? 'Net IRR' : 'Gross IRR'}
+          {mo === 'net' ? t('netIrr') : t('grossIrr')}
         </button>
       ))}
     </div>
@@ -476,7 +485,7 @@ function IrrOverTimeChart({
 
   // Net is always the whole-fund net IRR (the header lens drives only the metric boxes);
   // gross is the deal-level IRR.
-  const seriesName = view === 'gross' ? 'Gross IRR' : 'Net IRR — whole fund'
+  const seriesName = view === 'gross' ? t('grossIrr') : t('netIrrWholeFund')
   const data = points.map(p => {
     const v = view === 'net' ? p.netIrrFund : p.grossIrr
     return { label: p.label, irr: v == null ? null : Math.round(v * 1000) / 10 }
@@ -484,16 +493,16 @@ function IrrOverTimeChart({
   const hasAny = data.some(d => d.irr != null)
 
   return (
-    <ChartCard title="IRR over time" action={toggle}>
+    <ChartCard title={t('irrTitle')} action={toggle}>
       {!hasAny ? (
-        <EmptyPlot label="Not enough dated activity to compute IRR." />
+        <EmptyPlot label={t('irrEmpty')} />
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
             <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} interval="equidistantPreserveStart" className="text-muted-foreground" />
-            <YAxis tick={AXIS} tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => `${Math.round(v)}%`} className="text-muted-foreground" />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`${Number(v).toFixed(1)}%`, seriesName]} />
+            <YAxis tick={AXIS} tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => formatPercent(v / 100, locale, 0)} className="text-muted-foreground" />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [formatPercent(Number(v) / 100, locale), seriesName]} />
             <ReferenceLine y={0} stroke="hsl(var(--border))" />
             <Line type="monotone" dataKey="irr" name={seriesName} stroke={INVEST_NEW} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} connectNulls isAnimationActive={false} />
           </LineChart>
@@ -508,20 +517,22 @@ function IrrOverTimeChart({
 function BreakdownChart({
   title, groups, fmt, fmtFull,
 }: { title: string; groups: SoiGroup[]; fmt: (v: number) => string; fmtFull: (v: number) => string }) {
+  const locale = useLocale()
+  const t = useTranslations('Funds.detail.charts')
   // Cap the legend: keep the top 5 slices by fair value, fold the tail into "Other".
   const data = useMemo(() => {
     const sorted = [...groups].filter(g => g.fairValue > 0).sort((a, b) => b.fairValue - a.fairValue)
     if (sorted.length <= 6) return sorted
     const head = sorted.slice(0, 5)
     const tail = sorted.slice(5).reduce((s, g) => s + g.fairValue, 0)
-    return [...head, { name: 'Other', cost: 0, fairValue: tail, pctOfNetAssets: 0 }]
-  }, [groups])
+    return [...head, { name: t('series.other'), cost: 0, fairValue: tail, pctOfNetAssets: 0 }]
+  }, [groups, t])
   const total = data.reduce((s, g) => s + g.fairValue, 0)
 
   return (
     <ChartCard title={title}>
       {data.length === 0 ? (
-        <EmptyPlot label="Nothing to break down." />
+        <EmptyPlot label={t('nothingToBreakDown')} />
       ) : (
         <div className="flex items-center gap-4">
           <ResponsiveContainer width="55%" height={220}>
@@ -540,7 +551,7 @@ function BreakdownChart({
                 <span className="truncate flex-1" title={gp.name}>{gp.name}</span>
                 <span className="font-mono text-muted-foreground shrink-0">{fmt(gp.fairValue)}</span>
                 <span className="font-mono text-muted-foreground/70 shrink-0 w-10 text-right">
-                  {total ? `${Math.round((gp.fairValue / total) * 100)}%` : '—'}
+                  {total ? formatPercent(gp.fairValue / total, locale, 0) : '—'}
                 </span>
               </li>
             ))}
@@ -558,12 +569,7 @@ function BreakdownChart({
 // so this gross, per-company chart always says proceeds.
 type HoldingMetric = 'total' | 'invested' | 'residual' | 'proceeds'
 
-const HOLDING_METRICS: { key: HoldingMetric; label: string }[] = [
-  { key: 'total', label: 'Total value' },
-  { key: 'invested', label: 'Invested' },
-  { key: 'residual', label: 'Residual value' },
-  { key: 'proceeds', label: 'Proceeds' },
-]
+const HOLDING_METRICS: HoldingMetric[] = ['total', 'invested', 'residual', 'proceeds']
 
 // Reuse the fixed hues the other charts use, so "total value" reads as its parts stacked:
 // proceeds keep the teal they use elsewhere, residual its "Unrealized" colour.
@@ -590,15 +596,15 @@ type Holding = { name: string } & ReturnType<typeof holdingParts>
 // The coloured segments that make up one bar. "Residual value" stacks invested capital + unrealized
 // gains (blue); "Total value" stacks the same two, then adds realized proceeds so the bar still
 // sums to total value. "Invested" and "Proceeds" are a single dimension in their own colour.
-function holdingSegments(h: Holding, metric: HoldingMetric): { label: string; value: number; color: string }[] {
+function holdingSegments(h: Holding, metric: HoldingMetric): { label: 'investedCapital' | 'unrealizedGains' | 'proceeds' | HoldingMetric; value: number; color: string }[] {
   if (metric === 'total' || metric === 'residual') {
     // residual = invested + unrealized gain; if underwater, show it all as invested (no gain segment).
     const investedSeg = h.unrealized >= 0 ? h.invested : h.residual
-    const segs = [
-      { label: 'Invested capital', value: investedSeg, color: HOLDING_HUE.invested },
-      { label: 'Unrealized gains', value: Math.max(0, h.unrealized), color: HOLDING_HUE.residual },
+    const segs: { label: 'investedCapital' | 'unrealizedGains' | 'proceeds'; value: number; color: string }[] = [
+      { label: 'investedCapital' as const, value: investedSeg, color: HOLDING_HUE.invested },
+      { label: 'unrealizedGains' as const, value: Math.max(0, h.unrealized), color: HOLDING_HUE.residual },
     ]
-    if (metric === 'total') segs.push({ label: 'Proceeds', value: h.proceeds, color: HOLDING_HUE.proceeds })
+    if (metric === 'total') segs.push({ label: 'proceeds', value: h.proceeds, color: HOLDING_HUE.proceeds })
     return segs
   }
   const color = metric === 'invested' ? HOLDING_HUE.invested : HOLDING_HUE.proceeds
@@ -608,6 +614,8 @@ function holdingSegments(h: Holding, metric: HoldingMetric): { label: string; va
 function TopHoldings({
   rows, fmt, fmtFull,
 }: { rows: SoiRow[]; fmt: (v: number) => string; fmtFull: (v: number) => string }) {
+  const locale = useLocale()
+  const t = useTranslations('Funds.detail.charts')
   const [metric, setMetric] = useState<HoldingMetric>('total')
 
   // "Largest holdings by X": rank every company on the selected metric, largest first. No cap —
@@ -624,11 +632,11 @@ function TopHoldings({
     <div className="inline-flex rounded-md border p-0.5 text-xs">
       {HOLDING_METRICS.map(mo => (
         <button
-          key={mo.key}
-          onClick={() => setMetric(mo.key)}
-          className={`px-2 py-1 rounded ${metric === mo.key ? 'bg-muted font-medium' : 'text-muted-foreground'}`}
+          key={mo}
+          onClick={() => setMetric(mo)}
+          className={`px-2 py-1 rounded ${metric === mo ? 'bg-muted font-medium' : 'text-muted-foreground'}`}
         >
-          {mo.label}
+          {t(`holdings.${mo}`)}
         </button>
       ))}
     </div>
@@ -639,19 +647,19 @@ function TopHoldings({
   const legendItems: { label: string; color: string }[] =
     metric === 'total'
       ? [
-          { label: 'Invested capital', color: HOLDING_HUE.invested },
-          { label: 'Unrealized gains', color: HOLDING_HUE.residual },
-          { label: 'Proceeds', color: HOLDING_HUE.proceeds },
+          { label: t('holdings.investedCapital'), color: HOLDING_HUE.invested },
+          { label: t('holdings.unrealizedGains'), color: HOLDING_HUE.residual },
+          { label: t('holdings.proceeds'), color: HOLDING_HUE.proceeds },
         ]
       : metric === 'residual'
         ? [
-            { label: 'Invested capital', color: HOLDING_HUE.invested },
-            { label: 'Unrealized gains', color: HOLDING_HUE.residual },
+            { label: t('holdings.investedCapital'), color: HOLDING_HUE.invested },
+            { label: t('holdings.unrealizedGains'), color: HOLDING_HUE.residual },
           ]
         : []
 
   return (
-    <ChartCard title="Largest holdings" action={toggle}>
+    <ChartCard title={t('largestHoldings')} action={toggle}>
       {legendItems.length > 0 && (
         <div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
           {legendItems.map(item => (
@@ -674,7 +682,7 @@ function TopHoldings({
             </div>
             <div className="w-24 shrink-0 text-right font-mono" title={fmtFull(h[metric])}>{fmt(h[metric])}</div>
             <div className="w-12 shrink-0 text-right font-mono text-muted-foreground/70">
-              {fundTotal ? `${Math.round((h[metric] / fundTotal) * 100)}%` : '—'}
+              {fundTotal ? formatPercent(h[metric] / fundTotal, locale, 0) : '—'}
             </div>
           </div>
         ))}

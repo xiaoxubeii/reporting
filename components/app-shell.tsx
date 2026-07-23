@@ -7,7 +7,6 @@ import { AnalystProvider } from '@/components/analyst-context'
 import { VehicleProvider } from '@/components/accounting-vehicle'
 import { AppHeader } from '@/components/app-header'
 import { AppSidebar } from '@/components/app-sidebar'
-import { AppFooter } from '@/components/app-footer'
 import { FeatureVisibilityProvider } from '@/components/feature-visibility-context'
 import { AccessProvider, type ClientAccess } from '@/components/access-context'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
@@ -107,7 +106,6 @@ function AppShellInner({ fundName, fundLogo, userEmail, reviewBadge, settingsBad
           <div className="flex-1">
             {children}
           </div>
-          <AppFooter />
         </main>
       </div>
     </>

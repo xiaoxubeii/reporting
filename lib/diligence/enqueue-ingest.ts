@@ -14,37 +14,29 @@ import { kickWorker } from '@/lib/memo-agent/kick'
  */
 export async function enqueueIngestForDocuments(
   admin: SupabaseClient,
-  params: { fundId: string; dealId: string; documentIds: string[]; enqueuedBy?: string | null }
+  params: { fundId: string; dealId: string; documentIds: string[]; enqueuedBy?: string | null; dedupeKey?: string }
 ): Promise<{ enqueued: boolean; reason?: string }> {
   if (params.documentIds.length === 0) return { enqueued: false, reason: 'no new documents' }
 
-  // The worker claims one job per deal at a time. If a job is already in flight,
-  // enqueueing a second would have it race the first over the same draft row —
-  // so we defer, and the documents stay parse_status 'pending' for the next run.
-  const { data: activeJob } = await admin
-    .from('memo_agent_jobs')
-    .select('id')
-    .eq('deal_id', params.dealId)
-    .eq('fund_id', params.fundId)
-    .in('status', ['pending', 'running'])
-    .limit(1)
-    .maybeSingle()
+  // New deployments serialize this decision per Deal inside Postgres. This is
+  // stronger than the old check-then-insert sequence: two different external
+  // sources arriving together cannot both enqueue jobs that race on one draft.
+  const atomic = await admin.rpc('enqueue_ingest_if_deal_idle', {
+    p_fund_id: params.fundId,
+    p_deal_id: params.dealId,
+    p_document_ids: params.documentIds,
+    p_enqueued_by: params.enqueuedBy ?? null,
+    p_dedupe_key: params.dedupeKey ?? null,
+  })
+  if (!atomic.error) {
+    const result = atomic.data as { enqueued?: boolean; reason?: string } | null
+    if (!result?.enqueued) return { enqueued: false, reason: result?.reason ?? 'ingest was not queued' }
+    await kickWorker()
+    return { enqueued: true }
+  }
 
-  if (activeJob) return { enqueued: false, reason: 'another agent job is already running on this deal' }
-
-  const { error } = await admin
-    .from('memo_agent_jobs')
-    .insert({
-      fund_id: params.fundId,
-      deal_id: params.dealId,
-      kind: 'ingest',
-      payload: { document_ids: params.documentIds },
-      enqueued_by: params.enqueuedBy ?? null,
-    } as any)
-
-  if (error) return { enqueued: false, reason: error.message }
-
-  // Drain now rather than waiting up to 3 minutes for the cron tick.
-  await kickWorker()
-  return { enqueued: true }
+  // The RPC is the concurrency boundary. If the migration is missing or the
+  // database rejects the call, keep the document pending and fail closed rather
+  // than reviving the old check-then-insert race during a rolling deploy.
+  return { enqueued: false, reason: atomic.error.message }
 }

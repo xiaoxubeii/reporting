@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Save, Loader2, AlertCircle, Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/confirm-dialog'
@@ -31,15 +32,15 @@ interface HistoryEntry {
   is_active: boolean
 }
 
-const SCHEMA_LABELS: Record<string, string> = {
-  rubric: 'Rubric',
-  qa_library: 'Q&A Library',
-  data_room_ingestion: 'Data Room Ingestion',
-  research_dossier: 'Research Dossier',
-  memo_output: 'Memo Output',
-  style_anchors: 'Style Anchors',
-  instructions: 'Instructions',
-}
+const SCHEMA_MESSAGE_KEYS = {
+  rubric: 'schemaNames.rubric',
+  qa_library: 'schemaNames.qa_library',
+  data_room_ingestion: 'schemaNames.data_room_ingestion',
+  research_dossier: 'schemaNames.research_dossier',
+  memo_output: 'schemaNames.memo_output',
+  style_anchors: 'schemaNames.style_anchors',
+  instructions: 'schemaNames.instructions',
+} as const
 
 export function SchemaEditor({ schemaName, initialContent, initialVersion, embedded }: {
   schemaName: string
@@ -49,6 +50,8 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
 }) {
   const router = useRouter()
   const confirm = useConfirm()
+  const locale = useLocale()
+  const t = useTranslations('Settings.schemaEditor')
   const [content, setContent] = useState(initialContent)
   const [version, setVersion] = useState(initialVersion)
   const [editNote, setEditNote] = useState('')
@@ -63,6 +66,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const dirty = content !== initialContent
+  const schemaLabelKey = SCHEMA_MESSAGE_KEYS[schemaName as keyof typeof SCHEMA_MESSAGE_KEYS]
 
   const validate = useCallback(async (yaml: string) => {
     setValidating(true)
@@ -75,14 +79,15 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
       try {
         yamlLib.load(yaml)
         setErrors([])
-      } catch (err: any) {
-        const line = err?.mark?.line !== undefined ? err.mark.line + 1 : undefined
-        setErrors([{ message: err?.reason ?? err?.message ?? 'YAML syntax error', line, kind: 'syntax' }])
+      } catch (err: unknown) {
+        const yamlError = err as { mark?: { line?: number }; reason?: string; message?: string }
+        const line = yamlError.mark?.line !== undefined ? yamlError.mark.line + 1 : undefined
+        setErrors([{ message: yamlError.reason ?? yamlError.message ?? t('yamlSyntaxError'), line, kind: 'syntax' }])
       }
     } finally {
       setValidating(false)
     }
-  }, [])
+  }, [t])
 
   // Debounced syntax validation on every change.
   useEffect(() => {
@@ -108,7 +113,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
         return
       }
       if (!res.ok || !body.ok) {
-        setErrors(body.errors ?? [{ message: 'Save failed.', kind: 'schema' }])
+        setErrors(body.errors ?? [{ message: t('saveFailed'), kind: 'schema' }])
         return
       }
       setSaved(true)
@@ -117,7 +122,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
       setTimeout(() => setSaved(false), 2000)
       router.refresh()
     } catch (err) {
-      setErrors([{ message: err instanceof Error ? err.message : 'Network error', kind: 'schema' }])
+      setErrors([{ message: err instanceof Error ? err.message : t('networkError'), kind: 'schema' }])
     } finally {
       setSaving(false)
     }
@@ -133,9 +138,11 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
 
   async function rollback(entry: HistoryEntry) {
     const ok = await confirm({
-      title: `Rollback to ${entry.schema_version}?`,
-      description: `This restores the YAML from ${new Date(entry.edited_at).toLocaleString()}. The current version stays in history.`,
-      confirmLabel: 'Rollback',
+      title: t('rollbackTitle', { version: entry.schema_version }),
+      description: t('rollbackDescription', {
+        date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(entry.edited_at)),
+      }),
+      confirmLabel: t('rollback'),
       variant: 'destructive',
     })
     if (!ok) return
@@ -158,13 +165,13 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
     <div className={embedded ? '' : 'p-4 md:py-8 md:pl-8 md:pr-4 max-w-6xl'}>
       {!embedded && (
         <Link href="/settings/memo-agent/schemas" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="h-3.5 w-3.5" /> All schemas
+          <ArrowLeft className="h-3.5 w-3.5" /> {t('allSchemas')}
         </Link>
       )}
 
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
-          {!embedded && <h1 className="text-2xl font-semibold tracking-tight">{SCHEMA_LABELS[schemaName] ?? schemaName}</h1>}
+          {!embedded && <h1 className="text-2xl font-semibold tracking-tight">{schemaLabelKey ? t(schemaLabelKey) : schemaName}</h1>}
           <div className="text-xs text-muted-foreground mt-1 font-mono">{schemaName} · {version}</div>
         </div>
         <div className="flex items-center gap-2">
@@ -173,7 +180,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
             size="sm"
             onClick={() => { if (!showHistory) loadHistory(); setShowHistory(s => !s); setDiffAgainst(null) }}
           >
-            <Clock className="h-3.5 w-3.5 mr-1" /> History
+            <Clock className="h-3.5 w-3.5 mr-1" /> {t('history')}
           </Button>
         </div>
       </div>
@@ -188,7 +195,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
             // (rarely) without the Monaco bundle weight.
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div>
-                <div className="text-[11px] font-medium text-muted-foreground mb-1 font-mono">{diffAgainst.schema_version} (historical)</div>
+                <div className="text-[11px] font-medium text-muted-foreground mb-1 font-mono">{t('historicalVersion', { version: diffAgainst.schema_version })}</div>
                 <textarea
                   readOnly
                   value={diffAgainst.yaml_content}
@@ -197,7 +204,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
                 />
               </div>
               <div>
-                <div className="text-[11px] font-medium text-muted-foreground mb-1 font-mono">{version} (current draft)</div>
+                <div className="text-[11px] font-medium text-muted-foreground mb-1 font-mono">{t('currentDraft', { version })}</div>
                 <textarea
                   readOnly
                   value={content}
@@ -219,7 +226,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
           {errors.length > 0 && (
             <div className="mt-3 rounded-md border border-destructive/50 bg-destructive/5 p-3">
               <div className="flex items-center gap-2 text-sm font-medium text-destructive">
-                <AlertCircle className="h-4 w-4" /> {errors.length} error{errors.length === 1 ? '' : 's'}
+                <AlertCircle className="h-4 w-4" /> {t('errorCount', { count: errors.length })}
               </div>
               <ul className="mt-2 space-y-1 text-sm">
                 {errors.map((e, i) => (
@@ -236,14 +243,14 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
           {warnings.length > 0 && (
             <div className="mt-3 rounded-md border border-amber-500/50 bg-amber-500/5 p-3">
               <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-300">
-                <AlertTriangle className="h-4 w-4" /> {warnings.length} cross-reference warning{warnings.length === 1 ? '' : 's'}
+                <AlertTriangle className="h-4 w-4" /> {t('warningCount', { count: warnings.length })}
               </div>
               <ul className="mt-2 space-y-1 text-sm">
                 {warnings.map((w, i) => <li key={i} className="text-xs">{w.message}</li>)}
               </ul>
               <div className="mt-3 flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setWarnings([])}>Cancel</Button>
-                <Button size="sm" onClick={() => handleSave(true)}>Save anyway</Button>
+                <Button size="sm" variant="outline" onClick={() => setWarnings([])}>{t('cancel')}</Button>
+                <Button size="sm" onClick={() => handleSave(true)}>{t('saveAnyway')}</Button>
               </div>
             </div>
           )}
@@ -252,49 +259,49 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
             <input
               value={editNote}
               onChange={e => setEditNote(e.target.value)}
-              placeholder="Edit note (optional)"
+              placeholder={t('editNotePlaceholder')}
               className="flex-1 h-9 px-3 rounded-md border border-input bg-transparent text-sm"
             />
             <Button onClick={() => handleSave(false)} disabled={saving || !dirty || errors.length > 0}>
               {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-              {saved ? 'Saved' : 'Save'}
+              {saved ? t('saved') : t('save')}
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2">
-            {validating ? 'Checking syntax…' : errors.length === 0 ? (dirty ? 'Ready to save' : 'No changes') : ''}
+            {validating ? t('checkingSyntax') : errors.length === 0 ? (dirty ? t('readyToSave') : t('noChanges')) : ''}
           </p>
         </div>
 
         {showHistory && (
           <aside className="rounded-md border bg-card p-3">
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">Versions</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">{t('versions')}</div>
             {history.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Loading…</p>
+              <p className="text-xs text-muted-foreground">{t('loading')}</p>
             ) : (
               <ul className="space-y-1">
                 {history.map(h => (
                   <li key={h.id} className={`group rounded p-2 text-xs ${h.is_active ? 'bg-muted/50' : 'hover:bg-muted/30'}`}>
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-mono">{h.schema_version}</span>
-                      {h.is_active && <span className="text-[9px] uppercase text-muted-foreground">active</span>}
+                      {h.is_active && <span className="text-[9px] uppercase text-muted-foreground">{t('active')}</span>}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                      {new Date(h.edited_at).toLocaleString()}
+                      {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(h.edited_at))}
                     </div>
-                    {h.edit_note && <div className="text-[11px] text-muted-foreground italic mt-0.5">"{h.edit_note}"</div>}
+                    {h.edit_note && <div className="text-[11px] text-muted-foreground italic mt-0.5">&quot;{h.edit_note}&quot;</div>}
                     <div className="flex gap-1 mt-1.5">
                       <button
                         onClick={() => setDiffAgainst(diffAgainst?.id === h.id ? null : h)}
                         className="text-[10px] underline text-muted-foreground hover:text-foreground"
                       >
-                        {diffAgainst?.id === h.id ? 'Hide diff' : 'Diff'}
+                        {diffAgainst?.id === h.id ? t('hideDiff') : t('diff')}
                       </button>
                       {!h.is_active && (
                         <button
                           onClick={() => rollback(h)}
                           className="text-[10px] underline text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"
                         >
-                          <RotateCcw className="h-2.5 w-2.5" /> Rollback
+                          <RotateCcw className="h-2.5 w-2.5" /> {t('rollback')}
                         </button>
                       )}
                     </div>

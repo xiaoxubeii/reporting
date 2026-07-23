@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Users, Mail, ChevronDown, ChevronRight, Lock } from 'lucide-react'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface IntroContact {
   name: string
@@ -20,22 +21,9 @@ interface Interaction {
   interaction_date: string
 }
 
-function formatRelativeTime(dateStr: string) {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHr = Math.floor(diffMs / 3600000)
-  const diffDay = Math.floor(diffMs / 86400000)
-
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  if (diffHr < 24) return `${diffHr}h ago`
-  if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 export function CompanyInteractions({ companyId, adminOnly }: { companyId: string; adminOnly?: boolean }) {
+  const t = useTranslations('CompanyDetail.interactions')
+  const format = useFormatter()
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -58,7 +46,7 @@ export function CompanyInteractions({ companyId, adminOnly }: { companyId: strin
       const body = payload.TextBody || payload.HtmlBody || ''
       setFetchedBodies(prev => ({ ...prev, [emailId]: body }))
     } catch {
-      setFetchedBodies(prev => ({ ...prev, [emailId]: 'Failed to load email body.' }))
+      setFetchedBodies(prev => ({ ...prev, [emailId]: t('emailLoadFailed') }))
     } finally {
       setEmailLoading(null)
     }
@@ -74,11 +62,25 @@ export function CompanyInteractions({ companyId, adminOnly }: { companyId: strin
       .catch(() => setLoading(false))
   }, [companyId])
 
+  function formatRelativeTime(dateStr: string) {
+    const date = new Date(dateStr)
+    const diffMs = Date.now() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    const diffHr = Math.floor(diffMs / 3600000)
+    const diffDay = Math.floor(diffMs / 86400000)
+
+    if (diffMin < 1) return t('relative.justNow')
+    if (diffMin < 60) return t('relative.minutes', { count: diffMin })
+    if (diffHr < 24) return t('relative.hours', { count: diffHr })
+    if (diffDay < 7) return t('relative.days', { count: diffDay })
+    return format.dateTime(date, { month: 'short', day: 'numeric' })
+  }
+
   if (loading) {
     return (
       <div className="mt-6">
-        <h2 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">Recent Interactions{adminOnly && <Lock className="h-3 w-3 text-amber-500" />}</h2>
-        <p className="text-xs text-muted-foreground">Loading...</p>
+        <h2 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">{t('title')}{adminOnly && <Lock className="h-3 w-3 text-amber-500" />}</h2>
+        <p className="text-xs text-muted-foreground">{t('loading')}</p>
       </div>
     )
   }
@@ -88,12 +90,12 @@ export function CompanyInteractions({ companyId, adminOnly }: { companyId: strin
   return (
     <div className="mt-6">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">Recent Interactions{adminOnly && <Lock className="h-3 w-3 text-amber-500" />}</h2>
+        <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">{t('title')}{adminOnly && <Lock className="h-3 w-3 text-amber-500" />}</h2>
         <Link
           href={`/interactions?company_id=${companyId}`}
           className="text-xs text-muted-foreground hover:text-foreground"
         >
-          View all
+          {t('viewAll')}
         </Link>
       </div>
 
@@ -120,7 +122,7 @@ export function CompanyInteractions({ companyId, adminOnly }: { companyId: strin
                 )}
                 <span>{formatRelativeTime(interaction.interaction_date)}</span>
                 {interaction.tags?.includes('intro') && (
-                  <span className="text-amber-600 dark:text-amber-400 font-medium">Intro</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">{t('intro')}</span>
                 )}
               </div>
 
@@ -139,7 +141,7 @@ export function CompanyInteractions({ companyId, adminOnly }: { companyId: strin
                     className="flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                    {introContacts.length} contact{introContacts.length !== 1 ? 's' : ''} introduced
+                    {t('contactsIntroduced', { count: introContacts.length })}
                   </button>
 
                   {isExpanded && (
@@ -165,14 +167,14 @@ export function CompanyInteractions({ companyId, adminOnly }: { companyId: strin
                 >
                   {emailExpandedId === interaction.id ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   <Mail className="h-3 w-3" />
-                  View email
+                  {t('viewEmail')}
                 </button>
               )}
 
               {emailExpandedId === interaction.id && interaction.email_id && (
                 <div className="mt-1.5 border rounded-md bg-muted/30 p-3">
                   {emailLoading === interaction.id ? (
-                    <p className="text-xs text-muted-foreground animate-pulse">Loading email...</p>
+                    <p className="text-xs text-muted-foreground animate-pulse">{t('loadingEmail')}</p>
                   ) : (
                     <pre className="text-xs whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
                       {fetchedBodies[interaction.email_id] || ''}

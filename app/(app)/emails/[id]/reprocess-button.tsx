@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { RefreshCw } from 'lucide-react'
 import { useConfirm } from '@/components/confirm-dialog'
 
 export function ReprocessButton({ emailId }: { emailId: string }) {
+  const t = useTranslations('Emails.detail')
   const router = useRouter()
   const confirm = useConfirm()
   const [loading, setLoading] = useState(false)
@@ -15,9 +17,9 @@ export function ReprocessButton({ emailId }: { emailId: string }) {
 
   async function handleClick() {
     const ok = await confirm({
-      title: 'Reprocess email',
-      description: 'This will delete existing reviews and metric values for this email and run the pipeline. Continue?',
-      confirmLabel: 'Reprocess',
+      title: t('reprocess.title'),
+      description: t('reprocess.description'),
+      confirmLabel: t('reprocess.confirm'),
       variant: 'destructive',
     })
     if (!ok) return
@@ -31,8 +33,8 @@ export function ReprocessButton({ emailId }: { emailId: string }) {
       setDone(true)
       // Refresh page after a short delay to show updated status
       setTimeout(() => router.refresh(), 1500)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error reprocessing email')
+    } catch {
+      toast.error(t('errors.reprocess'))
     } finally {
       setLoading(false)
     }
@@ -47,7 +49,7 @@ export function ReprocessButton({ emailId }: { emailId: string }) {
       className="gap-1.5 shrink-0"
     >
       <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-      {done ? 'Processing…' : 'Process'}
+      {done ? t('reprocess.processing') : t('reprocess.action')}
     </Button>
   )
 }

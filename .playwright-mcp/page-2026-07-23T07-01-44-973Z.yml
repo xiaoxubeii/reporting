@@ -1,0 +1,121 @@
+- generic [active] [ref=f14e1]:
+  - generic [ref=f14e3]:
+    - banner [ref=f14e4]:
+      - generic [ref=f14e5]:
+        - button "Open menu" [ref=f14e6] [cursor=pointer]
+        - generic [ref=f14e13]: test@example.com
+      - button [ref=f14e16] [cursor=pointer]
+    - main [ref=f14e18]:
+      - generic [ref=f14e20]:
+        - generic [ref=f14e21]:
+          - generic [ref=f14e22]:
+            - heading "Today" [level=1] [ref=f14e23]
+            - paragraph [ref=f14e24]: Curated healthcare and investment intelligence.
+          - button "Refresh curated articles" [ref=f14e25] [cursor=pointer]
+        - navigation "Today view" [ref=f14e26]:
+          - link "Me" [ref=f14e27] [cursor=pointer]:
+            - /url: /feeds
+          - link "Explore" [ref=f14e28] [cursor=pointer]:
+            - /url: /feeds?view=explore
+        - generic [ref=f14e29]:
+          - generic "Explore categories" [ref=f14e30]:
+            - button "All" [pressed] [ref=f14e31] [cursor=pointer]
+            - button "Healthcare AI 1" [ref=f14e95] [cursor=pointer]
+          - generic [ref=f14e32]:
+            - generic [ref=f14e33]: Search curated articles
+            - textbox "Search curated articles" [ref=f14e34]
+        - paragraph [ref=f14e35]: Cross-origin feed changes are not allowed.
+        - generic [ref=f14e96]:
+          - generic [ref=f14e97]:
+            - heading "Latest in Healthcare AI" [level=2] [ref=f14e98]
+            - generic [ref=f14e99]:
+              - article [ref=f14e100]:
+                - generic [ref=f14e102]:
+                  - button "What Can Quantum Computing Do To Healthcare?" [ref=f14e103] [cursor=pointer]
+                  - paragraph [ref=f14e104]: The Medical Futurist · 8d ago
+                  - paragraph [ref=f14e105]: "A leap from bits to qubits: this two-letter change could mean entirely new horizons for healthcare. Quantum computing might bring supersonic drug design, in silico clinical trials with virtual humans simulated ‘live’, full-speed whole genome sequencing and analytics, the movem…"
+                  - alert [ref=f14e173]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e106] [cursor=pointer]
+              - article [ref=f14e107]:
+                - generic [ref=f14e109]:
+                  - button "3 Things Transhumanism Can Give To Healthcare" [ref=f14e110] [cursor=pointer]
+                  - paragraph [ref=f14e111]: The Medical Futurist · 8d ago
+                  - paragraph [ref=f14e112]: Imagine a future where aging is not a fate but a solvable puzzle, reshaping the very fabric of medical science. This is what transhumanism aims for. Although this goal is surely too ambitious, we might learn a thing or two from this futuristic movement. What is transhumanism?…
+                  - alert [ref=f14e174]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e113] [cursor=pointer]
+              - article [ref=f14e114]:
+                - generic [ref=f14e116]:
+                  - button "Digital Health, Menopause, And The $150 Billion Ignorance" [ref=f14e117] [cursor=pointer]
+                  - paragraph [ref=f14e118]: The Medical Futurist · 8d ago
+                  - paragraph [ref=f14e119]: The idea of this story came from personal experience. During the past year, I have spent countless hours and a bucketload of money trying to figure out what the heck is wrong with my health. I was feeling worse and worse, having various symptoms, totally inexplicable with my i…
+                  - alert [ref=f14e175]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e120] [cursor=pointer]
+              - article [ref=f14e121]:
+                - generic [ref=f14e123]:
+                  - button "Drug Discovery In The Age of AI" [ref=f14e124] [cursor=pointer]
+                  - paragraph [ref=f14e125]: The Medical Futurist · 21d ago
+                  - paragraph [ref=f14e126]: Previously, we contemplated the practical opportunities of the assistance of artificial intelligence (AI) technologies in clinical trials for drug development. Such assistance extends before and after trials commence, and in this article, we will focus on the pre-clinical tria…
+                  - alert [ref=f14e176]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e127] [cursor=pointer]
+              - article [ref=f14e128]:
+                - generic [ref=f14e130]:
+                  - button "What Happens To Your Medical Data After You Die?" [ref=f14e131] [cursor=pointer]
+                  - paragraph [ref=f14e132]: The Medical Futurist · 21d ago
+                  - paragraph [ref=f14e133]: “Almost no one has thought about what is going to happen to all of the medical records that sit around after people die,” said Jon Cornwall, senior lecturer in the Centre for Early Learning in Medicine at the University of Otago in New Zealand. Indeed, even if death is one of…
+                  - alert [ref=f14e177]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e134] [cursor=pointer]
+              - article [ref=f14e135]:
+                - generic [ref=f14e137]:
+                  - button "How To Analyse Your Sleep Quality?" [ref=f14e138] [cursor=pointer]
+                  - paragraph [ref=f14e139]: The Medical Futurist · 21d ago
+                  - paragraph [ref=f14e140]: Fitbit, Misfit, Live by Earlysense, Jawbone. The market for sleep trackers is skyrocketing and finally, more and more people track the quality of their bedtime. However, getting conclusions from sleep measurements is tricky. Let me help you by sharing my experience! I experime…
+                  - alert [ref=f14e178]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e141] [cursor=pointer]
+              - article [ref=f14e142]:
+                - generic [ref=f14e144]:
+                  - button "What Do Digital Biomarkers Mean?" [ref=f14e145] [cursor=pointer]
+                  - paragraph [ref=f14e146]: The Medical Futurist · 21d ago
+                  - paragraph [ref=f14e147]: The spread of wearable digital technologies in healthcare generating big data entailed the appearance of a new type of medical information. They produce actionable insights into the biological state of individuals, just like “general” biomarkers, but are collected through digi…
+                  - alert [ref=f14e179]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e148] [cursor=pointer]
+              - article [ref=f14e149]:
+                - generic [ref=f14e151]:
+                  - button "Are Physicians Losing Skills Due To AI? What Is Cognitive Offloading?" [ref=f14e152] [cursor=pointer]
+                  - paragraph [ref=f14e153]: The Medical Futurist · 30d ago
+                  - paragraph [ref=f14e154]: In the current age of artificial intelligence (AI), physicians are able to rely on the technology for a myriad of purposes. From triaging patients to assistance with radiological scans, they can turn to AI tools to assist them in their healthcare-related tasks. However, by off…
+                  - alert [ref=f14e180]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e155] [cursor=pointer]
+              - article [ref=f14e156]:
+                - generic [ref=f14e158]:
+                  - button "When A Longevity Screening Come To Your Home" [ref=f14e159] [cursor=pointer]
+                  - paragraph [ref=f14e160]: The Medical Futurist · 34d ago
+                  - paragraph [ref=f14e161]: Longevity, especially the practical side of it, has become one of the biggest business opportunities in healthcare worldwide. Longevity clinics, practices, services and technologies have flooded the market, promising people a chance to live longer and healthier lives. And whil…
+                  - alert [ref=f14e181]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e162] [cursor=pointer]
+              - article [ref=f14e163]:
+                - generic [ref=f14e165]:
+                  - button "Four Scenarios of AI Scribe Adoption in Healthcare" [ref=f14e166] [cursor=pointer]
+                  - paragraph [ref=f14e167]: The Medical Futurist · 41d ago
+                  - paragraph [ref=f14e168]: AI scribes, the apps that can listen in to the conversations between patients and healthcare professionals and transform them into the exact electronic medical record format the given hospital or practice is using, have taken the healthcare industry by storm. For the past 1-2…
+                  - alert [ref=f14e182]: Cross-origin feed changes are not allowed.
+                - button "Follow" [ref=f14e169] [cursor=pointer]
+          - paragraph [ref=f14e171]: Showing 10 of 10
+      - list [ref=f14e75]:
+        - listitem [ref=f14e76]:
+          - text: Made by
+          - link "Hemrock" [ref=f14e77] [cursor=pointer]:
+            - /url: https://hemrock.com
+        - listitem [ref=f14e80]:
+          - link "View on GitHub" [ref=f14e81] [cursor=pointer]:
+            - /url: https://github.com/tdavidson/reporting
+        - listitem [ref=f14e85]:
+          - link "License" [ref=f14e86] [cursor=pointer]:
+            - /url: /license
+        - listitem [ref=f14e91]:
+          - link "Terms" [ref=f14e92] [cursor=pointer]:
+            - /url: /terms
+        - listitem [ref=f14e93]:
+          - link "Privacy" [ref=f14e94] [cursor=pointer]:
+            - /url: /privacy
+  - region "Notifications alt+T"
+  - alert [ref=f14e172]

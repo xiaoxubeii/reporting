@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, X, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useLedgerFetch } from '@/components/accounting-vehicle'
+import { formatDate, formatMoney } from './format'
 
 interface Acct { id: string; code: string; name: string; lp_entity_id: string | null }
 interface PostingRow { id: string; account_id: string; amount: number; lp_entity_id: string | null }
@@ -38,9 +40,11 @@ export function EntryModal({
   onClose: () => void
   onSaved: () => void
 }) {
+  const locale = useLocale()
+  const t = useTranslations('Funds.entryModal')
   const lf = useLedgerFetch()
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
 
   const isNew = !entryId
   const [id, setId] = useState<string | null>(entryId ?? null)
@@ -99,7 +103,7 @@ export function EntryModal({
     const res = txnId
       ? await lf('/api/accounting/bank', json({ action, id: txnId }))
       : await lf('/api/accounting/journal', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, id: targetId }) })
-    return res.ok ? null : await errOf(res, `${action} failed`)
+    return res.ok ? null : await errOf(res, t(action === 'post' ? 'postFailed' : 'unpostFailed'))
   }
 
   async function save(thenPost: boolean) {
@@ -111,17 +115,17 @@ export function EntryModal({
     let targetId = id
     if (!targetId) {
       const res = await lf('/api/accounting/journal', json({ entryDate: date, memo, sourceType: 'manual', status: 'draft', postings }))
-      if (!res.ok) { setError(await errOf(res, 'Could not create the entry')); setSaving(false); return }
+      if (!res.ok) { setError(await errOf(res, t('createFailed'))); setSaving(false); return }
       targetId = (await res.json()).id
       setId(targetId)
     } else {
       const res = await lf('/api/accounting/journal', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: targetId, entryDate: date, memo, postings }) })
-      if (!res.ok) { setError(await errOf(res, 'Save failed')); setSaving(false); return }
+      if (!res.ok) { setError(await errOf(res, t('saveFailed'))); setSaving(false); return }
     }
 
     if (thenPost && targetId) {
       const err = await setPosted('post', targetId)
-      if (err) { setError(`Saved as a draft, but posting failed: ${err}`); setSaving(false); return }
+      if (err) { setError(t('savedButPostFailed', { error: err })); setSaving(false); return }
     }
     setSaving(false); onSaved(); onClose()
   }
@@ -140,25 +144,25 @@ export function EntryModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border bg-card shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-sm font-medium">{isNew ? 'New journal entry' : editable ? 'Edit journal entry' : 'Journal entry'}</h2>
+          <h2 className="text-sm font-medium">{isNew ? t('newTitle') : editable ? t('editTitle') : t('viewTitle')}</h2>
           <div className="flex items-center gap-2">
-            {!editable && <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Posted</span>}
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            {!editable && <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t('posted')}</span>}
+            <button onClick={onClose} aria-label={t('close')} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
           </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+          <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}</div>
         ) : (
           <>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
             <div className="flex flex-wrap gap-3">
-              <label className="text-xs text-muted-foreground">Date
+              <label className="text-xs text-muted-foreground">{t('date')}
                 {editable
                   ? <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-0.5 block rounded border border-input bg-transparent px-2 py-1 text-sm" />
-                  : <span className="mt-0.5 block px-2 py-1 font-mono text-sm text-foreground">{date || '—'}</span>}
+                  : <span className="mt-0.5 block px-2 py-1 font-mono text-sm text-foreground">{date ? formatDate(date, locale) : '—'}</span>}
               </label>
-              <label className="min-w-[200px] flex-1 text-xs text-muted-foreground">Memo
+              <label className="min-w-[200px] flex-1 text-xs text-muted-foreground">{t('memo')}
                 {editable
                   ? <input value={memo} onChange={e => setMemo(e.target.value)} className="mt-0.5 block w-full rounded border border-input bg-transparent px-2 py-1 text-sm" />
                   : <span className="mt-0.5 block px-2 py-1 text-sm text-foreground">{memo || '—'}</span>}
@@ -168,9 +172,9 @@ export function EntryModal({
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted-foreground">
-                  <th className="pb-1 font-medium">Account</th>
-                  <th className="w-28 pb-1 text-right font-medium">Debit</th>
-                  <th className="w-28 pb-1 text-right font-medium">Credit</th>
+                  <th className="pb-1 font-medium">{t('account')}</th>
+                  <th className="w-28 pb-1 text-right font-medium">{t('debit')}</th>
+                  <th className="w-28 pb-1 text-right font-medium">{t('credit')}</th>
                   <th className="w-8" />
                 </tr>
               </thead>
@@ -196,12 +200,12 @@ export function EntryModal({
                             }}
                             className="w-full rounded border border-input bg-transparent px-1.5 py-1 text-xs"
                           >
-                            <option value="">Select account…</option>
-                            <optgroup label="Accounts">
+                            <option value="">{t('selectAccount')}</option>
+                            <optgroup label={t('accounts')}>
                               {general.map(a => <option key={a.id} value={a.id}>{a.name} ({a.code})</option>)}
                             </optgroup>
                             {partnerAccounts.length > 0 && (
-                              <optgroup label="Partner capital">
+                              <optgroup label={t('partnerCapital')}>
                                 {partnerAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                               </optgroup>
                             )}
@@ -227,7 +231,7 @@ export function EntryModal({
               </tbody>
               <tfoot>
                 <tr className="border-t text-xs">
-                  <td className="pt-1">{editable && <button onClick={() => setLines(prev => [...prev, newLine()])} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"><Plus className="h-3.5 w-3.5" /> Add line</button>}</td>
+                  <td className="pt-1">{editable && <button onClick={() => setLines(prev => [...prev, newLine()])} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"><Plus className="h-3.5 w-3.5" /> {t('addLine')}</button>}</td>
                   <td className="pt-1 text-right font-mono">{fmt(totalDebit)}</td>
                   <td className="pt-1 text-right font-mono">{fmt(totalCredit)}</td>
                   <td />
@@ -236,7 +240,7 @@ export function EntryModal({
             </table>
 
             <div className="flex items-center justify-between">
-              <span className={`text-xs ${diff === 0 ? 'text-muted-foreground' : 'text-amber-600'}`}>{diff === 0 ? 'Balanced' : `Out of balance by ${fmt(Math.abs(diff))}`}</span>
+              <span className={`text-xs ${diff === 0 ? 'text-muted-foreground' : 'text-amber-600'}`}>{diff === 0 ? t('balanced') : t('outOfBalance', { amount: fmt(Math.abs(diff)) })}</span>
               {error && <span className="text-xs text-destructive">{error}</span>}
             </div>
             </div>
@@ -246,14 +250,14 @@ export function EntryModal({
             <div className="border-t p-4">
               {editable ? (
                 <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={onClose}>Cancel</Button>
-                  <Button size="sm" variant="outline" onClick={() => save(false)} disabled={saving || !balanced}>{saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Save draft</Button>
-                  <Button size="sm" onClick={() => save(true)} disabled={saving || !balanced}>Save &amp; post</Button>
+                  <Button size="sm" variant="outline" onClick={onClose}>{t('cancel')}</Button>
+                  <Button size="sm" variant="outline" onClick={() => save(false)} disabled={saving || !balanced}>{saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}{t('saveDraft')}</Button>
+                  <Button size="sm" onClick={() => save(true)} disabled={saving || !balanced}>{t('saveAndPost')}</Button>
                 </div>
               ) : (
                 <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={onClose}>Close</Button>
-                  <Button size="sm" variant="outline" onClick={unpostAndEdit} disabled={saving} title="Revert to draft so you can edit it">{saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Unpost &amp; edit</Button>
+                  <Button size="sm" variant="outline" onClick={onClose}>{t('close')}</Button>
+                  <Button size="sm" variant="outline" onClick={unpostAndEdit} disabled={saving} title={t('unpostHelp')}>{saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}{t('unpostEdit')}</Button>
                 </div>
               )}
             </div>

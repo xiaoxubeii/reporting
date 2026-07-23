@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Menu, Github, LogIn, Play, Home, Building2, Mail, Upload, BarChart3, Briefcase, Send, StickyNote, Handshake, FileText, Crown, ShieldCheck, Settings, LifeBuoy, Scale, MessageCircle, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Package, Tag, Star, Lightbulb, Microscope, Lock, Calculator } from 'lucide-react'
+import { Menu, Github, LogIn, Play, Home, Building2, Mail, Upload, BarChart3, Briefcase, Send, StickyNote, Handshake, FileText, Crown, ShieldCheck, Settings, Scale, MessageCircle, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Package, Tag, Star, Lightbulb, Microscope, Lock, Calculator } from 'lucide-react'
 
 function XIcon({ className }: { className?: string }) {
   return (
@@ -26,41 +26,42 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { SidebarProvider, useSidebar } from '@/components/sidebar-context'
 import { useTheme } from 'next-themes'
-import { AppFooter } from '@/components/app-footer'
 import { APP_VERSION } from '@/lib/version'
+import { useTranslations } from 'next-intl'
+import { LanguageSwitcher } from '@/components/language-switcher'
+import type englishMessages from '@/messages/en.json'
 
 const THEME_CYCLE = ['system', 'light', 'dark'] as const
 const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon }
-const THEME_LABELS = { system: 'System', light: 'Light', dark: 'Dark' }
+type PublicChromeKey = keyof typeof englishMessages.PublicChrome
 
-const TOP_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/', label: 'Home', icon: Home },
+const TOP_ITEMS: { href: string; labelKey: PublicChromeKey; icon: LucideIcon }[] = [
+  { href: '/', labelKey: 'home', icon: Home },
 ]
 
-const PRODUCT_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/dashboard-explainer', label: 'Portfolio', icon: Building2 },
-  { href: '/inbound-explainer', label: 'Inbound', icon: Mail },
-  { href: '/import-explainer', label: 'Import', icon: Upload },
-  { href: '/investments-explainer', label: 'Investments', icon: BarChart3 },
-  { href: '/funds-explainer', label: 'Funds', icon: Briefcase },
-  { href: '/asks-explainer', label: 'Asks', icon: Send },
-  { href: '/notes-explainer', label: 'Notes', icon: StickyNote },
-  { href: '/interactions-explainer', label: 'Interactions', icon: Handshake },
-  { href: '/deals-explainer', label: 'Deals', icon: Lightbulb },
-  { href: '/diligence-explainer', label: 'Diligence', icon: Microscope },
-  { href: '/letters-explainer', label: 'Letters', icon: FileText },
-  { href: '/lps-explainer', label: 'LPs', icon: Crown },
-  { href: '/funds-explainer', label: 'Accounting', icon: Calculator },
-  { href: '/lp-portal-explainer', label: 'LP Portal', icon: Lock },
-  { href: '/compliance-explainer', label: 'Compliance', icon: ShieldCheck },
-  { href: '/settings-explainer', label: 'Settings', icon: Settings },
-  { href: '/support-explainer', label: 'Support', icon: LifeBuoy },
+const PRODUCT_ITEMS: { href: string; labelKey: PublicChromeKey; icon: LucideIcon }[] = [
+  { href: '/dashboard-explainer', labelKey: 'portfolio', icon: Building2 },
+  { href: '/inbound-explainer', labelKey: 'inbound', icon: Mail },
+  { href: '/import-explainer', labelKey: 'import', icon: Upload },
+  { href: '/investments-explainer', labelKey: 'investments', icon: BarChart3 },
+  { href: '/funds-explainer', labelKey: 'funds', icon: Briefcase },
+  { href: '/asks-explainer', labelKey: 'asks', icon: Send },
+  { href: '/notes-explainer', labelKey: 'notes', icon: StickyNote },
+  { href: '/interactions-explainer', labelKey: 'interactions', icon: Handshake },
+  { href: '/deals-explainer', labelKey: 'deals', icon: Lightbulb },
+  { href: '/diligence-explainer', labelKey: 'diligence', icon: Microscope },
+  { href: '/letters-explainer', labelKey: 'letters', icon: FileText },
+  { href: '/lps-explainer', labelKey: 'lps', icon: Crown },
+  { href: '/funds-explainer', labelKey: 'accounting', icon: Calculator },
+  { href: '/lp-portal-explainer', labelKey: 'lpPortal', icon: Lock },
+  { href: '/compliance-explainer', labelKey: 'compliance', icon: ShieldCheck },
+  { href: '/settings-explainer', labelKey: 'settings', icon: Settings },
 ]
 
-const BOTTOM_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/pricing', label: 'Pricing', icon: Tag },
-  { href: '/contact', label: 'Contact', icon: MessageCircle },
-  { href: '/license', label: 'License', icon: Scale },
+const BOTTOM_ITEMS: { href: string; labelKey: PublicChromeKey; icon: LucideIcon }[] = [
+  { href: '/pricing', labelKey: 'pricing', icon: Tag },
+  { href: '/contact', labelKey: 'contact', icon: MessageCircle },
+  { href: '/license', labelKey: 'license', icon: Scale },
 ]
 
 function NavLink({ href, label, icon: Icon, collapsed, isActive, onNavigate, className = '', activeStyle = 'default' }: {
@@ -93,6 +94,9 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [productOpen, setProductOpen] = useState(false)
+  const t = useTranslations('PublicChrome')
+  const tTheme = useTranslations('Theme')
+  const tNavigation = useTranslations('Navigation')
   useEffect(() => setMounted(true), [])
 
   // Auto-open product section if current page is a product page
@@ -104,7 +108,7 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   const currentTheme = (THEME_CYCLE.includes(theme as typeof THEME_CYCLE[number]) ? theme : 'system') as typeof THEME_CYCLE[number]
   const ThemeIcon = mounted ? THEME_ICONS[currentTheme] : Monitor
-  const themeLabel = mounted ? THEME_LABELS[currentTheme] : 'System'
+  const themeLabel = mounted ? tTheme(currentTheme) : tTheme('system')
 
   function cycleTheme() {
     const idx = THEME_CYCLE.indexOf(currentTheme)
@@ -120,20 +124,20 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={onNavigate}
-          title={collapsed ? 'Try the Demo' : undefined}
+          title={collapsed ? t('tryDemo') : undefined}
           className={`md:hidden flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-accent ${
             collapsed ? 'md:justify-center md:px-0' : ''
           }`}
         >
           <Play className="h-5 w-5 shrink-0" />
-          <span>Try the Demo</span>
+          <span>{t('tryDemo')}</span>
         </a>
 
-        {TOP_ITEMS.map(({ href, label, icon }) => (
+        {TOP_ITEMS.map(({ href, labelKey, icon }) => (
           <NavLink
             key={href}
             href={href}
-            label={label}
+            label={t(labelKey)}
             icon={icon}
             collapsed={collapsed}
             isActive={pathname === href}
@@ -146,21 +150,21 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <div>
           <button
             onClick={() => setProductOpen(!productOpen)}
-            title={collapsed ? 'Product' : undefined}
+            title={collapsed ? t('product') : undefined}
             className={`flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors hover:text-foreground hover:bg-accent ${
               collapsed ? 'md:justify-center md:px-0' : ''
             } ${productOpen ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
           >
             <Package className="h-5 w-5 shrink-0" />
-            <span className={`flex-1 text-left ${collapsed ? 'md:hidden' : ''}`}>Product</span>
+            <span className={`flex-1 text-left ${collapsed ? 'md:hidden' : ''}`}>{t('product')}</span>
           </button>
           {productOpen && (
             <div className={`space-y-0.5 ${collapsed ? '' : 'ml-5 border-l border-border pl-2'}`}>
-              {PRODUCT_ITEMS.map(({ href, label, icon }) => (
+              {PRODUCT_ITEMS.map(({ href, labelKey, icon }) => (
                 <NavLink
                   key={href}
                   href={href}
-                  label={label}
+                  label={t(labelKey)}
                   icon={icon}
                   collapsed={collapsed}
                   isActive={pathname === href || pathname.startsWith(href + '/')}
@@ -171,11 +175,11 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </div>
 
-        {BOTTOM_ITEMS.map(({ href, label, icon }) => (
+        {BOTTOM_ITEMS.map(({ href, labelKey, icon }) => (
           <NavLink
             key={href}
             href={href}
-            label={label}
+            label={t(labelKey)}
             icon={icon}
             collapsed={collapsed}
             isActive={pathname === href || (href !== '/' && pathname.startsWith(href + '/'))}
@@ -222,9 +226,19 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
           </span>
         </button>
 
+        <div className={collapsed ? 'md:hidden' : undefined}>
+          <LanguageSwitcher className="w-full" />
+        </div>
+        {collapsed && (
+          <div className="hidden md:block">
+            <LanguageSwitcher compact />
+          </div>
+        )}
+
         <button
           onClick={toggle}
-          title={collapsed ? 'Show Sidebar' : 'Hide Sidebar'}
+          title={collapsed ? tNavigation('showSidebar') : tNavigation('hideSidebar')}
+          aria-label={collapsed ? tNavigation('showSidebar') : tNavigation('hideSidebar')}
           className={`hidden md:flex w-full items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent ${
             collapsed ? 'md:justify-center md:px-0' : ''
           }`}
@@ -235,7 +249,7 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
             <PanelLeftClose className="h-5 w-5 shrink-0" />
           )}
           <span className={`flex-1 text-left ${collapsed ? 'md:hidden' : ''}`}>
-            {collapsed ? 'Show Sidebar' : 'Hide Sidebar'}
+            {collapsed ? tNavigation('showSidebar') : tNavigation('hideSidebar')}
           </span>
         </button>
       </nav>
@@ -245,8 +259,10 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
 function PublicShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const { collapsed } = useSidebar()
   const [starCount, setStarCount] = useState<number | null>(null)
+  const t = useTranslations('PublicChrome')
 
   useEffect(() => {
     fetch('/api/github-stars')
@@ -260,13 +276,15 @@ function PublicShell({ children }: { children: React.ReactNode }) {
       <header className="relative flex items-center justify-between px-4 py-3 shrink-0">
         <div className="flex items-center gap-3">
           <Button
+            ref={menuButtonRef}
             variant="ghost"
             size="sm"
             className="md:hidden p-1.5"
             onClick={() => setDrawerOpen(true)}
+            aria-label={t('openMenu')}
           >
             <Menu className="h-5 w-5" />
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">{t('openMenu')}</span>
           </Button>
           <a href="https://www.hemrock.com" target="_blank" rel="noopener noreferrer" aria-label="Hemrock">
             <HemrockIcon className="h-7 w-7 text-foreground" />
@@ -282,10 +300,11 @@ function PublicShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher compact />
           <Button variant="outline" size="sm" asChild className="text-muted-foreground gap-2 hidden sm:inline-flex">
             <a href="https://portfolio.hemrock.com/demo" target="_blank" rel="noopener noreferrer">
               <Play className="h-4 w-4" />
-              Try the Demo
+              {t('tryDemo')}
             </a>
           </Button>
           <Button variant="outline" size="sm" asChild className="text-muted-foreground gap-2">
@@ -297,19 +316,29 @@ function PublicShell({ children }: { children: React.ReactNode }) {
                   {starCount}
                 </span>
               )}
-              <span className="hidden sm:inline">View on GitHub</span>
+              <span className="hidden sm:inline">{t('viewOnGitHub')}</span>
             </a>
           </Button>
           <Button variant="outline" size="sm" asChild className="text-muted-foreground gap-2">
             <Link href="/auth">
               <LogIn className="h-4 w-4" />
-              <span className="hidden sm:inline">Sign in</span>
+              <span className="hidden sm:inline">{t('signIn')}</span>
             </Link>
           </Button>
         </div>
 
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetContent side="left" className="p-0 pt-12 w-64">
+          <SheetContent
+            side="left"
+            closeLabel={t('closeMenu')}
+            dialogTitle={t('menuTitle')}
+            dialogDescription={t('menuDescription')}
+            onCloseAutoFocus={event => {
+              event.preventDefault()
+              menuButtonRef.current?.focus()
+            }}
+            className="p-0 pt-12 w-64"
+          >
             <PublicSidebar onNavigate={() => setDrawerOpen(false)} />
           </SheetContent>
         </Sheet>
@@ -327,9 +356,6 @@ function PublicShell({ children }: { children: React.ReactNode }) {
         <main className={`flex-1 min-w-0 flex flex-col ${collapsed ? 'md:pl-4' : ''}`}>
           <div className="flex-1">
             {children}
-          </div>
-          <div className="max-w-3xl">
-            <AppFooter />
           </div>
         </main>
       </div>

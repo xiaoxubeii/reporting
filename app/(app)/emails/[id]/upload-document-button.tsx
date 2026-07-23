@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Upload, Loader2, FileText, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function UploadDocumentButton({ emailId }: Props) {
+  const t = useTranslations('Emails.detail')
   const [uploading, setUploading] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -42,8 +44,8 @@ export function UploadDocumentButton({ emailId }: Props) {
         throw new Error(d.error ?? 'Upload failed')
       }
       setUploadedFiles(prev => [...prev, file.name])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error uploading file')
+    } catch {
+      setError(t('errors.upload'))
     } finally {
       setUploading(false)
     }
@@ -57,7 +59,7 @@ export function UploadDocumentButton({ emailId }: Props) {
             <p key={i} className="text-xs text-emerald-600 flex items-center gap-1.5">
               <Check className="h-3 w-3" />
               <FileText className="h-3 w-3" />
-              {name} uploaded
+              {t('upload.uploaded', { name })}
             </p>
           ))}
         </div>
@@ -93,7 +95,7 @@ export function UploadDocumentButton({ emailId }: Props) {
           ) : (
             <Upload className="h-3.5 w-3.5" />
           )}
-          {uploading ? 'Uploading...' : 'Upload Document'}
+          {uploading ? t('upload.uploading') : t('upload.action')}
         </Button>
       </label>
     </div>

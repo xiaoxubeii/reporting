@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { getDemoCredentials } from './actions'
 
 export default function DemoPage() {
-  const [error, setError] = useState<string | null>(null)
+  const t = useTranslations('Demo')
+  const [failed, setFailed] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -22,7 +25,7 @@ export default function DemoPage() {
       // Fetch demo credentials via server action (no secrets in client bundle)
       const result = await getDemoCredentials()
       if (!result.ok) {
-        setError(result.error)
+        setFailed(true)
         return
       }
 
@@ -32,7 +35,7 @@ export default function DemoPage() {
       })
       if (error) {
         console.error('[demo] signInWithPassword failed:', error.message, error.status)
-        setError(`Unable to load demo. (${error.message})`)
+        setFailed(true)
         return
       }
 
@@ -41,12 +44,12 @@ export default function DemoPage() {
     startDemo()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) {
+  if (failed) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <a href="/auth" className="text-sm text-blue-600 underline">Go to sign in</a>
+          <p className="text-sm text-muted-foreground">{t('error')}</p>
+          <Link href="/auth" className="text-sm text-blue-600 underline">{t('signIn')}</Link>
         </div>
       </div>
     )
@@ -54,7 +57,7 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <p className="text-sm text-muted-foreground">Loading demo…</p>
+      <p className="text-sm text-muted-foreground">{t('loading')}</p>
     </div>
   )
 }

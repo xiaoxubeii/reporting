@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { domainForFeature } from '@/lib/access/domains'
+import { domainForFeature, domainGrantableToMembers } from '@/lib/access/domains'
+import { effectiveAccess } from '@/lib/access/effective'
 import { ROUTE_DOMAINS } from '@/lib/access/route-domains'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
 import { isFeedMutationAllowed } from '@/lib/feeds/route-context'
@@ -8,6 +9,32 @@ describe('Feeds access contract', () => {
   it('is independently switchable inside the existing dealflow domain', () => {
     expect(domainForFeature('feeds' as any)).toBe('dealflow')
     expect((DEFAULT_FEATURE_VISIBILITY as Record<string, string>).feeds).toBe('admin')
+  })
+
+  it('lets admins grant Dealflow when Feeds is open even if Deals remains admin-only', () => {
+    const features = {
+      ...DEFAULT_FEATURE_VISIBILITY,
+      deals: 'admin' as const,
+      feeds: 'everyone' as const,
+    }
+
+    expect(domainGrantableToMembers('dealflow', features)).toBe(true)
+    expect(effectiveAccess({
+      fundId: 'fund-1',
+      userId: 'member-1',
+      role: 'member',
+      features,
+      grants: { dealflow: 'read' },
+      defaults: {},
+    }, 'dealflow', 'feeds')).toBe('read')
+    expect(effectiveAccess({
+      fundId: 'fund-1',
+      userId: 'member-1',
+      role: 'member',
+      features,
+      grants: { dealflow: 'read' },
+      defaults: {},
+    }, 'dealflow', 'deals')).toBe('none')
   })
 
   it('maps every Feeds API to feature=feeds instead of inheriting deals', () => {

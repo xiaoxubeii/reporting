@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - combobox "语言：简体中文" [ref=e58] [cursor=pointer]:
+      - generic [ref=e46]: 简体中文
+    - generic [ref=e14]:
+      - link [ref=e59] [cursor=pointer]:
+        - /url: /
+        - heading "投资组合报告" [level=1] [ref=e60]
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]: 登录您的账户
+          - generic [ref=e26]: 使用密码或一次性验证码登录。
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - text: 邮箱
+            - textbox "邮箱" [ref=e61]:
+              - /placeholder: you@example.com
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: 密码
+              - link "忘记密码？" [ref=e62] [cursor=pointer]:
+                - /url: /auth/forgot-password
+            - textbox "密码" [ref=e63]
+          - button "登录" [ref=e64] [cursor=pointer]
+          - generic [ref=e36]: 或
+          - link [ref=e65] [cursor=pointer]:
+            - /url: /auth/magic-link
+            - button "使用一次性验证码登录" [ref=e66]
+          - paragraph [ref=e40]:
+            - text: 还没有账户？
+            - link "创建账户" [ref=e67] [cursor=pointer]:
+              - /url: /auth/signup
+      - paragraph [ref=e42]:
+        - link "← 返回首页" [ref=e68] [cursor=pointer]:
+          - /url: /
+      - paragraph [ref=e44]:
+        - link "许可证" [ref=e69] [cursor=pointer]:
+          - /url: /license
+  - region "Notifications alt+T"
+  - alert [ref=e47]: 登录 | 由 Hemrock 提供支持

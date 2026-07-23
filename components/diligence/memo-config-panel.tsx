@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useConfirm } from '@/components/confirm-dialog'
 import { SchemaViewer } from '@/components/diligence/schema-viewer'
 import { DefaultsEditor } from '@/app/(app)/settings/memo-agent/defaults/editor'
+import { useTranslations } from 'next-intl'
 
 export type MemoComplexity = 'brief' | 'standard' | 'detailed' | 'comprehensive'
 
@@ -36,28 +37,12 @@ export interface MemoTemplateConfig {
 
 // Section list mirrors the memo editor — keep these in sync if the schema
 // section IDs ever change. Order matches the editor for partner mental model.
-const SECTIONS: Array<{ id: string; title: string; defaultParagraphs: number }> = [
-  { id: 'executive_summary', title: 'Executive Summary', defaultParagraphs: 2 },
-  { id: 'recommendation', title: 'Recommendation', defaultParagraphs: 1 },
-  { id: 'company_overview', title: 'Company Overview', defaultParagraphs: 2 },
-  { id: 'market', title: 'Market', defaultParagraphs: 3 },
-  { id: 'team', title: 'Team', defaultParagraphs: 2 },
-  { id: 'product_technology', title: 'Product & Technology', defaultParagraphs: 3 },
-  { id: 'traction', title: 'Traction & Evidence', defaultParagraphs: 3 },
-  { id: 'business_model', title: 'Business Model & Financials', defaultParagraphs: 3 },
-  { id: 'competition_moat', title: 'Competition & Moat', defaultParagraphs: 2 },
-  { id: 'deal_terms', title: 'Deal & Terms', defaultParagraphs: 2 },
-  { id: 'risks_and_open_questions', title: 'Risks & Open Questions', defaultParagraphs: 2 },
+const SECTIONS = [
+  'executive_summary', 'recommendation', 'company_overview', 'market', 'team', 'product_technology',
+  'traction', 'business_model', 'competition_moat', 'deal_terms', 'risks_and_open_questions',
 ]
 
-const STYLE_OPTIONS: Array<{ value: '' | NonNullable<MemoTemplateConfig['style_override']>; label: string }> = [
-  { value: '',          label: 'Deal default (use stage_at_consideration)' },
-  { value: 'pre_seed',  label: 'Pre-seed' },
-  { value: 'seed',      label: 'Seed' },
-  { value: 'series_a',  label: 'Series A' },
-  { value: 'series_b',  label: 'Series B' },
-  { value: 'growth',    label: 'Growth' },
-]
+const STYLE_VALUES: Array<'' | NonNullable<MemoTemplateConfig['style_override']>> = ['', 'pre_seed', 'seed', 'series_a', 'series_b', 'growth']
 
 // Curated analyst-voice presets. Stored verbatim as analyst_persona and fed to
 // the agent prompt. "Custom…" reveals a free-text field for anything bespoke.
@@ -72,12 +57,7 @@ const PERSONA_PRESETS = [
 
 // Single proxy for completeness, depth, and length — replaces per-section
 // paragraph counts. Order runs shortest → most thorough.
-const COMPLEXITY_OPTIONS: Array<{ value: MemoComplexity; label: string; hint: string }> = [
-  { value: 'brief',         label: 'Brief',         hint: 'Concise, key points only' },
-  { value: 'standard',      label: 'Standard',      hint: 'Standard depth (default)' },
-  { value: 'detailed',      label: 'Detailed',      hint: 'Thorough, more evidence' },
-  { value: 'comprehensive', label: 'Comprehensive', hint: 'Exhaustive, maximum depth' },
-]
+const COMPLEXITY_VALUES: MemoComplexity[] = ['brief', 'standard', 'detailed', 'comprehensive']
 
 interface MemoPreset {
   id: string
@@ -85,10 +65,20 @@ interface MemoPreset {
   description: string | null
   partner_memo_guidance: string
   memo_template_config: MemoTemplateConfig
-  default_for_stage: string | null
+  default_for_stage: NonNullable<MemoTemplateConfig['style_override']> | null
 }
 
 export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defaultOpen?: boolean }) {
+  const t = useTranslations('Diligence.memoConfig')
+  const sectionTitles: Record<string, string> = {
+    executive_summary: t('sections.executive_summary'), recommendation: t('sections.recommendation'), company_overview: t('sections.company_overview'),
+    market: t('sections.market'), team: t('sections.team'), product_technology: t('sections.product_technology'), traction: t('sections.traction'),
+    business_model: t('sections.business_model'), competition_moat: t('sections.competition_moat'), deal_terms: t('sections.deal_terms'), risks_and_open_questions: t('sections.risks_and_open_questions'),
+  }
+  const styleLabels: Record<'' | NonNullable<MemoTemplateConfig['style_override']>, string> = {
+    '': t('styles.default'), pre_seed: t('styles.pre_seed'), seed: t('styles.seed'), series_a: t('styles.series_a'), series_b: t('styles.series_b'), growth: t('styles.growth'),
+  }
+  const personaLabels = [t('persona.presets.0'), t('persona.presets.1'), t('persona.presets.2'), t('persona.presets.3'), t('persona.presets.4'), t('persona.presets.5')]
   const confirm = useConfirm()
   const [open, setOpen] = useState(!!defaultOpen)
   const [loaded, setLoaded] = useState(false)
@@ -130,15 +120,17 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
         setFirstPageAnchorId(promptsBody.first_page_anchor_id ?? '')
         setLoaded(true)
       })
-      .catch(() => { setError('Failed to load memo settings.'); setLoaded(true) })
+      .catch(() => { setError(t('errors.load')); setLoaded(true) })
     return () => { cancelled = true }
-  }, [dealId])
+    // applyConfigToForm intentionally snapshots the active locale when this deal loads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId, t])
 
   function applyConfigToForm(guidance: string, cfg: MemoTemplateConfig) {
     // Legacy "points to emphasize" are now folded into the single guidance field.
     const emph = (Array.isArray(cfg.emphasis) ? cfg.emphasis : []).filter(Boolean)
-    setPartnerGuidance(emph.length ? [guidance.trim(), ...emph.map(e => `Emphasize: ${e}`)].filter(Boolean).join('\n') : guidance)
-    setStyleOverride((cfg.style_override ?? '') as any)
+    setPartnerGuidance(emph.length ? [guidance.trim(), ...emph.map(e => t('emphasizePrefix', { value: e }))].filter(Boolean).join('\n') : guidance)
+    setStyleOverride((cfg.style_override ?? '') as '' | NonNullable<MemoTemplateConfig['style_override']>)
     const p = cfg.analyst_persona ?? ''
     setPersona(p)
     setPersonaCustom(!!p && !PERSONA_PRESETS.includes(p))
@@ -156,10 +148,10 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
       })))
     } else {
       // Back-compat: seed the default section list, honoring legacy include flags.
-      setSections(SECTIONS.map(s => ({
-        id: s.id,
-        title: s.title,
-        included: cfg.section_overrides?.[s.id]?.included !== false,
+      setSections(SECTIONS.map(id => ({
+        id,
+        title: sectionTitles[id] ?? id,
+        included: cfg.section_overrides?.[id]?.included !== false,
         complexity: defaultComplexity,
       })))
     }
@@ -204,7 +196,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
         }),
       })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error ?? 'Save failed')
+      if (!res.ok) throw new Error(body.error ?? t('errors.save'))
       // Refresh presets list — easier than splice-merging the swap-cleanup the
       // server may have done if default_for_stage took an existing slot.
       const refreshed = await fetch('/api/diligence/memo-presets').then(r => r.ok ? r.json() : { presets: [] })
@@ -213,7 +205,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
       setPresetName('')
       setPresetDefaultFor('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
+      setError(e instanceof Error ? e.message : t('errors.save'))
     } finally {
       setSaving(false)
     }
@@ -222,9 +214,9 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
   async function deletePreset(presetId: string) {
     const p = presets.find(p => p.id === presetId)
     const ok = await confirm({
-      title: 'Delete preset?',
-      description: p ? `Removes "${p.name}" from this fund. Deals already using it keep their config.` : 'Removes this preset.',
-      confirmLabel: 'Delete',
+      title: t('deletePreset.title'),
+      description: p ? t('deletePreset.description', { name: p.name }) : t('deletePreset.fallback'),
+      confirmLabel: t('deletePreset.confirm'),
       variant: 'destructive',
     })
     if (!ok) return
@@ -254,12 +246,12 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
       ])
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Save failed')
+        throw new Error(body.error ?? t('errors.save'))
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
+      setError(e instanceof Error ? e.message : t('errors.save'))
     } finally {
       setSaving(false)
     }
@@ -274,7 +266,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
   }
   function addSection() {
     const id = `custom_${Math.random().toString(36).slice(2, 9)}`
-    setSections(prev => [...prev, { id, title: 'New section', included: true, complexity: 'standard', custom: true, cover: '' }])
+    setSections(prev => [...prev, { id, title: t('newSection'), included: true, complexity: 'standard', custom: true, cover: '' }])
   }
   function dropSectionOnto(targetId: string) {
     setSections(prev => {
@@ -293,11 +285,11 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
 
   const includedCount = sections.filter(s => s.included).length
   const summary = !loaded
-    ? 'Loading…'
+    ? t('loading')
     : [
-        styleOverride && STYLE_OPTIONS.find(s => s.value === styleOverride)?.label,
-        persona ? `persona: ${persona.length > 30 ? persona.slice(0, 30) + '…' : persona}` : null,
-        `${includedCount}/${sections.length} sections`,
+        styleOverride && styleLabels[styleOverride],
+        persona ? t('summary.persona', { persona: persona.length > 30 ? persona.slice(0, 30) + '…' : persona }) : null,
+        t('summary.sections', { included: includedCount, total: sections.length }),
       ].filter(Boolean).join(' · ')
 
   return (
@@ -309,7 +301,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
       >
         <span className="flex items-center gap-2">
           <ChevronDown className={`h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
-          <span className="font-medium text-sm">How the agent works</span>
+          <span className="font-medium text-sm">{t('title')}</span>
         </span>
         <span className="text-xs text-muted-foreground truncate ml-4">{summary}</span>
       </button>
@@ -323,24 +315,24 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
               the source of truth that gets PATCHed to the deal on Save. */}
           <div className="rounded-md border bg-muted/20 px-3 py-2 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <label className="text-xs font-medium">Preset:</label>
+              <label className="text-xs font-medium">{t('preset.label')}</label>
               <select
                 onChange={e => { if (e.target.value) loadPreset(e.target.value) }}
                 defaultValue=""
                 className="h-7 rounded border border-input bg-background px-2 text-xs min-w-[200px]"
               >
-                <option value="">Load a saved preset…</option>
+                <option value="">{t('preset.load')}</option>
                 {presets.map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.name}{p.default_for_stage ? ` (default for ${p.default_for_stage.replace('_', ' ')})` : ''}
+                    {p.name}{p.default_for_stage ? ` (${t('preset.defaultFor', { stage: styleLabels[p.default_for_stage] })})` : ''}
                   </option>
                 ))}
               </select>
               <Button size="sm" variant="outline" onClick={() => setSavePresetOpen(o => !o)}>
-                Save as preset…
+                {t('preset.saveAs')}
               </Button>
               {presets.length > 0 && (
-                <span className="text-[11px] text-muted-foreground ml-auto">{presets.length} preset{presets.length === 1 ? '' : 's'} on file</span>
+                <span className="text-[11px] text-muted-foreground ml-auto">{t('preset.count', { count: presets.length })}</span>
               )}
             </div>
             {savePresetOpen && (
@@ -349,41 +341,37 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
                   <Input
                     value={presetName}
                     onChange={e => setPresetName(e.target.value)}
-                    placeholder="Preset name (e.g. 'Our seed memo style')"
+                    placeholder={t('preset.namePlaceholder')}
                     className="h-8 text-sm flex-1 min-w-[200px]"
                   />
                   <select
                     value={presetDefaultFor}
-                    onChange={e => setPresetDefaultFor(e.target.value as any)}
+                    onChange={e => setPresetDefaultFor(e.target.value as '' | NonNullable<MemoTemplateConfig['style_override']>)}
                     className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-                    title="Auto-apply to new deals at this stage"
+                    title={t('preset.autoApplyHelp')}
                   >
-                    <option value="">Not a default</option>
-                    <option value="pre_seed">Default for pre-seed</option>
-                    <option value="seed">Default for seed</option>
-                    <option value="series_a">Default for Series A</option>
-                    <option value="series_b">Default for Series B</option>
-                    <option value="growth">Default for growth</option>
+                    <option value="">{t('preset.notDefault')}</option>
+                    {STYLE_VALUES.filter((value): value is NonNullable<MemoTemplateConfig['style_override']> => Boolean(value)).map(value => <option key={value} value={value}>{t('preset.defaultFor', { stage: styleLabels[value] })}</option>)}
                   </select>
                   <Button size="sm" onClick={savePreset} disabled={saving || !presetName.trim()}>
-                    {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />} Save preset
+                    {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />} {t('preset.save')}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setSavePresetOpen(false); setPresetName(''); setPresetDefaultFor('') }}>Cancel</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setSavePresetOpen(false); setPresetName(''); setPresetDefaultFor('') }}>{t('cancel')}</Button>
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Saves the current form state (style, persona, emphasis, sections, guidance) as a reusable preset. Marking it the default for a stage auto-applies it to new deals at that stage.
+                  {t('preset.help')}
                 </p>
               </div>
             )}
             {presets.length > 0 && (
               <details className="text-xs">
-                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Manage presets</summary>
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('preset.manage')}</summary>
                 <div className="mt-2 space-y-1 pl-2">
                   {presets.map(p => (
                     <div key={p.id} className="flex items-center gap-2">
                       <span className="font-medium truncate flex-1">{p.name}</span>
-                      {p.default_for_stage && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">default · {p.default_for_stage.replace('_', ' ')}</span>}
-                      <button onClick={() => deletePreset(p.id)} className="text-muted-foreground hover:text-destructive" aria-label="Delete preset" title="Delete preset">
+                      {p.default_for_stage && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('preset.defaultBadge', { stage: styleLabels[p.default_for_stage] })}</span>}
+                      <button onClick={() => deletePreset(p.id)} className="text-muted-foreground hover:text-destructive" aria-label={t('preset.delete')} title={t('preset.delete')}>
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
@@ -395,18 +383,18 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
 
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium mb-1">Style</label>
+              <label className="block text-xs font-medium mb-1">{t('style.label')}</label>
               <select
                 value={styleOverride}
-                onChange={e => setStyleOverride(e.target.value as any)}
+                onChange={e => setStyleOverride(e.target.value as '' | NonNullable<MemoTemplateConfig['style_override']>)}
                 className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
               >
-                {STYLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {STYLE_VALUES.map(value => <option key={value || 'default'} value={value}>{styleLabels[value]}</option>)}
               </select>
-              <p className="text-[10px] text-muted-foreground mt-1">Calibrates expectations and tone. Overrides the deal&apos;s stage when set.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t('style.help')}</p>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Analyst persona</label>
+              <label className="block text-xs font-medium mb-1">{t('persona.label')}</label>
               <select
                 value={personaCustom ? '__custom__' : (persona && PERSONA_PRESETS.includes(persona) ? persona : (persona ? '__custom__' : ''))}
                 onChange={e => {
@@ -417,57 +405,57 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
                 }}
                 className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
               >
-                <option value="">No persona (default voice)</option>
-                {PERSONA_PRESETS.map(p => <option key={p} value={p}>{p}</option>)}
-                <option value="__custom__">Custom…</option>
+                <option value="">{t('persona.none')}</option>
+                {PERSONA_PRESETS.map((p, index) => <option key={p} value={p}>{personaLabels[index]}</option>)}
+                <option value="__custom__">{t('persona.custom')}</option>
               </select>
               {personaCustom && (
                 <Input
                   value={persona}
                   onChange={e => setPersona(e.target.value)}
-                  placeholder="e.g. skeptical numbers-first analyst"
+                  placeholder={t('persona.placeholder')}
                   className="h-8 text-sm mt-1.5"
                   autoFocus
                 />
               )}
-              <p className="text-[10px] text-muted-foreground mt-1">The voice the agent writes in. Pick a preset, or choose Custom to describe your own.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t('persona.help')}</p>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1">Memo first-page template</label>
+            <label className="block text-xs font-medium mb-1">{t('firstPage.label')}</label>
             {anchors.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground">No example memos uploaded yet. Add them in Settings → Memo agent → Style anchors.</p>
+              <p className="text-[10px] text-muted-foreground">{t('firstPage.empty')}</p>
             ) : (
               <select
                 value={firstPageAnchorId}
                 onChange={e => setFirstPageAnchorId(e.target.value)}
                 className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
               >
-                <option value="">— no first-page exemplar —</option>
+                <option value="">{t('firstPage.none')}</option>
                 {anchors.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
               </select>
             )}
-            <p className="text-[10px] text-muted-foreground mt-1">An example memo whose first page (title block, framing, opening) the agent models new memos on. Fund-wide.</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t('firstPage.help')}</p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1">Guidance for this memo</label>
+            <label className="block text-xs font-medium mb-1">{t('guidance.label')}</label>
             <textarea
               value={partnerGuidance}
               onChange={e => setPartnerGuidance(e.target.value)}
               rows={4}
-              placeholder="Deal-specific direction and points to emphasize, e.g. &quot;lead with the wedge; tilt toward technical defensibility; flag the CAC trajectory.&quot;"
+              placeholder={t('guidance.placeholder')}
               className="w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
-            <p className="text-[10px] text-muted-foreground mt-1">Adds to the fund&apos;s draft-stage guidance from Settings. Covers both what to emphasize and any deal-specific direction.</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t('guidance.help')}</p>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium">Sections</label>
+              <label className="block text-xs font-medium">{t('sectionEditor.label')}</label>
               <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={addSection}>
-                <Plus className="h-3 w-3 mr-1" /> Add section
+                <Plus className="h-3 w-3 mr-1" /> {t('sectionEditor.add')}
               </Button>
             </div>
             <div className="rounded-md border divide-y">
@@ -484,8 +472,8 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
                       onDragStart={() => setDragId(s.id)}
                       onDragEnd={() => { setDragId(null); setOverId(null) }}
                       className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground shrink-0"
-                      title="Drag to reorder"
-                      aria-label="Drag to reorder"
+                      title={t('sectionEditor.drag')}
+                      aria-label={t('sectionEditor.drag')}
                     >
                       <GripVertical className="h-3.5 w-3.5" />
                     </span>
@@ -494,7 +482,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
                       checked={s.included}
                       onChange={e => patchSection(s.id, { included: e.target.checked })}
                       className="h-3.5 w-3.5 shrink-0"
-                      title={s.included ? 'Included' : 'Omitted'}
+                      title={s.included ? t('sectionEditor.included') : t('sectionEditor.omitted')}
                     />
                     <Input
                       value={s.title}
@@ -505,15 +493,15 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
                       value={s.complexity ?? 'standard'}
                       onChange={e => patchSection(s.id, { complexity: e.target.value as MemoComplexity })}
                       disabled={!s.included}
-                      title="Depth & length for this section"
-                      aria-label={`Depth for ${s.title}`}
+                      title={t('sectionEditor.depthHelp')}
+                      aria-label={t('sectionEditor.depthFor', { title: s.title })}
                       className={`h-7 rounded-md border border-input bg-background px-1.5 text-xs shrink-0 ${s.included ? '' : 'opacity-50'}`}
                     >
-                      {COMPLEXITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      {COMPLEXITY_VALUES.map(value => <option key={value} value={value}>{t(`complexity.${value}`)}</option>)}
                     </select>
-                    {s.custom && <span className="text-[9px] uppercase tracking-wide text-muted-foreground shrink-0">custom</span>}
+                    {s.custom && <span className="text-[9px] uppercase tracking-wide text-muted-foreground shrink-0">{t('sectionEditor.custom')}</span>}
                     {s.custom && (
-                      <button onClick={() => removeSection(s.id)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label="Remove section" title="Remove section">
+                      <button onClick={() => removeSection(s.id)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label={t('sectionEditor.remove')} title={t('sectionEditor.remove')}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     )}
@@ -522,27 +510,27 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
                     <Input
                       value={s.cover ?? ''}
                       onChange={e => patchSection(s.id, { cover: e.target.value })}
-                      placeholder="What should the agent cover in this section?"
+                      placeholder={t('sectionEditor.coverPlaceholder')}
                       className="h-7 text-xs mt-1.5 ml-7"
                     />
                   )}
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">Drag to reorder. Unchecked sections are omitted. Each section&apos;s depth dropdown sets its length and level of detail independently. Add custom sections the agent drafts from your &ldquo;what to cover&rdquo; note. Save as a preset to reuse this as a default.</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t('sectionEditor.help')}</p>
           </div>
 
           <SchemaViewer
             schemaName="memo_output"
-            title="Base memo schema"
+            title={t('schema.title')}
             guidanceStage="draft"
-            description="The section structure, guidance, and sourcing rules the draft is built from. The settings above layer on top of this."
+            description={t('schema.description')}
           />
 
           <div className="flex justify-end">
             <Button size="sm" onClick={save} disabled={saving}>
               {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : saved ? <Save className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-              {saved ? 'Saved' : 'Save settings'}
+              {saved ? t('saved') : t('saveSettings')}
             </Button>
           </div>
 

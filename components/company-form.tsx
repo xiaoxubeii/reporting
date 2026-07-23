@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { X } from 'lucide-react'
 import type { Company } from '@/lib/types/database'
+import { useTranslations } from 'next-intl'
 
 interface Props {
   company?: Company
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props) {
+  const t = useTranslations('SharedForms.company')
   const isEdit = !!company
 
   const [name, setName] = useState(company?.name ?? initialName ?? '')
@@ -125,7 +127,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
 
   async function submit() {
     if (!name.trim()) {
-      setError('Name is required.')
+      setError(t('errors.nameRequired'))
       return
     }
     setError(null)
@@ -160,12 +162,12 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
       try {
         data = JSON.parse(text)
       } catch {
-        throw new Error(`Server error (${res.status}): failed to parse response`)
+        throw new Error(t('errors.invalidResponse', { status: res.status }))
       }
-      if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
+      if (!res.ok) throw new Error(data.error ?? t('errors.generic'))
       onSuccess(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : t('errors.generic'))
     } finally {
       setSaving(false)
     }
@@ -180,17 +182,17 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="company-name">Name</Label>
+        <Label htmlFor="company-name">{t('name')}</Label>
         <Input
           id="company-name"
-          placeholder="Acme Corp"
+          placeholder={t('namePlaceholder')}
           value={name}
           onChange={e => setName(e.target.value)}
         />
       </div>
 
       <div className="space-y-2">
-        <Label>Aliases</Label>
+        <Label>{t('aliases')}</Label>
         {aliases.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {aliases.map(alias => (
@@ -200,6 +202,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
                   type="button"
                   onClick={() => removeAlias(alias)}
                   className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                  aria-label={t('removeAlias', { value: alias })}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -208,19 +211,19 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
           </div>
         )}
         <Input
-          placeholder="Add alias and press Enter"
+          placeholder={t('aliasPlaceholder')}
           value={aliasInput}
           onChange={e => setAliasInput(e.target.value)}
           onKeyDown={handleAliasKeyDown}
           onBlur={addAlias}
         />
         <p className="text-xs text-muted-foreground">
-          Alternative names Claude might see in emails (e.g. abbreviations, trading names).
+          {t('aliasHelp')}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label>Tags</Label>
+        <Label>{t('tags')}</Label>
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {tags.map(tag => (
@@ -230,6 +233,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
                   type="button"
                   onClick={() => removeTag(tag)}
                   className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                  aria-label={t('removeTag', { value: tag })}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -238,29 +242,29 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
           </div>
         )}
         <Input
-          placeholder="Add tag and press Enter (e.g. Fund I)"
+          placeholder={t('tagPlaceholder')}
           value={tagInput}
           onChange={e => setTagInput(e.target.value)}
           onKeyDown={handleTagKeyDown}
           onBlur={addTag}
         />
         <p className="text-xs text-muted-foreground">
-          Tags for organizing companies (e.g. fund name, cohort).
+          {t('tagHelp')}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="stage">Stage</Label>
+        <Label htmlFor="stage">{t('stage')}</Label>
         <Input
           id="stage"
-          placeholder="Series A"
+          placeholder={t('stagePlaceholder')}
           value={stage}
           onChange={e => setStage(e.target.value)}
         />
       </div>
 
       <div className="space-y-2">
-        <Label>Industry</Label>
+        <Label>{t('industry')}</Label>
         {industries.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {industries.map(val => (
@@ -270,6 +274,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
                   type="button"
                   onClick={() => removeIndustry(val)}
                   className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                  aria-label={t('removeIndustry', { value: val })}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -278,7 +283,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
           </div>
         )}
         <Input
-          placeholder="Add industry and press Enter (e.g. SaaS)"
+          placeholder={t('industryPlaceholder')}
           value={industryInput}
           onChange={e => setIndustryInput(e.target.value)}
           onKeyDown={handleIndustryKeyDown}
@@ -287,7 +292,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
       </div>
 
       <div className="space-y-2">
-        <Label>Portfolio Group</Label>
+        <Label>{t('portfolioGroup')}</Label>
         {portfolioGroups.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {portfolioGroups.map(val => (
@@ -297,6 +302,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
                   type="button"
                   onClick={() => removePortfolioGroup(val)}
                   className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                  aria-label={t('removePortfolioGroup', { value: val })}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -305,7 +311,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
           </div>
         )}
         <Input
-          placeholder="Add group and press Enter (e.g. Fund I)"
+          placeholder={t('portfolioGroupPlaceholder')}
           value={portfolioGroupInput}
           onChange={e => setPortfolioGroupInput(e.target.value)}
           onKeyDown={handlePortfolioGroupKeyDown}
@@ -314,17 +320,17 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="founders">Founders</Label>
+        <Label htmlFor="founders">{t('founders')}</Label>
         <Input
           id="founders"
-          placeholder="Jane Doe, John Smith"
+          placeholder={t('foundersPlaceholder')}
           value={founders}
           onChange={e => setFounders(e.target.value)}
         />
       </div>
 
       <div className="space-y-2">
-        <Label>Contact Emails</Label>
+        <Label>{t('contactEmails')}</Label>
         {contactEmails.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {contactEmails.map(val => (
@@ -334,6 +340,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
                   type="button"
                   onClick={() => removeContactEmail(val)}
                   className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                  aria-label={t('removeContactEmail', { value: val })}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -343,7 +350,7 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
         )}
         <Input
           type="email"
-          placeholder="Add email and press Enter"
+          placeholder={t('contactEmailPlaceholder')}
           value={contactEmailInput}
           onChange={e => setContactEmailInput(e.target.value)}
           onKeyDown={handleContactEmailKeyDown}
@@ -352,10 +359,10 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="overview">Overview</Label>
+        <Label htmlFor="overview">{t('overview')}</Label>
         <Textarea
           id="overview"
-          placeholder="Brief description of the company..."
+          placeholder={t('overviewPlaceholder')}
           value={overview}
           onChange={e => setOverview(e.target.value)}
           rows={2}
@@ -363,10 +370,10 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="why-invested">Why We Invested</Label>
+        <Label htmlFor="why-invested">{t('whyInvested')}</Label>
         <Textarea
           id="why-invested"
-          placeholder="Investment thesis..."
+          placeholder={t('whyInvestedPlaceholder')}
           value={whyInvested}
           onChange={e => setWhyInvested(e.target.value)}
           rows={2}
@@ -374,10 +381,10 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="current-update">Current Business Update</Label>
+        <Label htmlFor="current-update">{t('currentUpdate')}</Label>
         <Textarea
           id="current-update"
-          placeholder="Latest update on the business..."
+          placeholder={t('currentUpdatePlaceholder')}
           value={currentUpdate}
           onChange={e => setCurrentUpdate(e.target.value)}
           rows={2}
@@ -386,25 +393,25 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
 
       {isEdit && (
         <div className="space-y-2">
-          <Label>Status</Label>
+          <Label>{t('status')}</Label>
           <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="exited">Exited</SelectItem>
-              <SelectItem value="written-off">Written off</SelectItem>
+              <SelectItem value="active">{t('statuses.active')}</SelectItem>
+              <SelectItem value="exited">{t('statuses.exited')}</SelectItem>
+              <SelectItem value="written-off">{t('statuses.writtenOff')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
+        <Label htmlFor="notes">{t('notes')}</Label>
         <Textarea
           id="notes"
-          placeholder="Any notes about this company…"
+          placeholder={t('notesPlaceholder')}
           value={notes}
           onChange={e => setNotes(e.target.value)}
           rows={3}
@@ -413,10 +420,10 @@ export function CompanyForm({ company, initialName, onSuccess, onCancel }: Props
 
       <div className="flex gap-2 justify-end pt-2">
         <Button variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {t('cancel')}
         </Button>
         <Button onClick={submit} disabled={saving}>
-          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add company'}
+          {saving ? t('saving') : isEdit ? t('saveChanges') : t('addCompany')}
         </Button>
       </div>
     </div>

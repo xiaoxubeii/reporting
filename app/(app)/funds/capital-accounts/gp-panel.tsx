@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useLedgerFetch } from '@/components/accounting-vehicle'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
+import { formatDate, formatMoney, formatPercent } from '../format'
 
 // The GP / associate entity panel: who owns the vehicle, who holds carry points, and how
 // much carry each partner has accrued, been paid, and is still owed.
@@ -38,12 +40,13 @@ interface Gp {
   totals: { carryAccrued: number; carryPaid: number; carryUnpaid: number; ending: number }
 }
 
-const pct = (v: number) => `${(v * 100).toFixed(2)}%`
-
 export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
+  const t = useTranslations('Funds.gpPanel')
+  const locale = useLocale()
   const lf = useLedgerFetch()
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
+  const pct = (v: number) => formatPercent(v, locale, 2)
 
   const [gp, setGp] = useState<Gp | null>(null)
   const [loading, setLoading] = useState(true)
@@ -74,7 +77,7 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
     })
     const d = await res.json()
     setSaving(null)
-    if (!res.ok) { setError(d.error ?? 'Could not save'); return }
+    if (!res.ok) { setError(d.error ?? t('saveError')); return }
     setGp(d.gp)
   }
 
@@ -86,7 +89,7 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
     })
     const d = await res.json()
     setSaving(null)
-    if (!res.ok) { setError(d.error ?? 'Could not record the payment'); return }
+    if (!res.ok) { setError(d.error ?? t('paymentError')); return }
     setGp(d.gp)
     setPayPartner(''); setPayDate(''); setPayAmount('')
   }
@@ -95,7 +98,7 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
     setSaving('del' + id); setError(null)
     const res = await lf(`/api/accounting/gp-economics?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     setSaving(null)
-    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? 'Could not delete'); return }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? t('deleteError')); return }
     load()
   }
 
@@ -109,11 +112,10 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
       <div className="space-y-1">
         <h2 className="text-sm font-medium">
           {gp.link.vehicle}
-          <span className="ml-2 text-xs font-normal text-muted-foreground">GP of {gp.link.servesVehicle}</span>
+          <span className="ml-2 text-xs font-normal text-muted-foreground">{t('gpOf', { vehicle: gp.link.servesVehicle })}</span>
         </h2>
         <p className="text-xs text-muted-foreground max-w-3xl">
-          Ownership splits the capital this entity holds in {gp.link.servesVehicle} and everything that follows
-          capital, by default carry ownership is equal to capital ownership but can be set independently.
+          {t('description', { vehicle: gp.link.servesVehicle })}
         </p>
       </div>
 
@@ -121,12 +123,9 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
           this entity holds in the served fund), and can be overridden per partner. */}
       <p className="text-xs text-muted-foreground">
         {gp.basis === 'none' ? (
-          <>This vehicle has <strong>no commitments</strong>, so there is no capital ownership to default carry from —
-          set each partner&rsquo;s carry share below.</>
+          <>{t.rich('noCommitments', { strong: chunks => <strong>{chunks}</strong> })}</>
         ) : (
-          <>Carry defaults to each partner&rsquo;s <strong>capital ownership</strong>
-          {derived ? <> (derived from commitments on {gp.link.vehicle})</> : null}. Override a partner&rsquo;s carry share below;
-          leave it blank to follow ownership.</>
+          <>{t.rich('defaults', { strong: chunks => <strong>{chunks}</strong>, derived: derived ? t('derived', { vehicle: gp.link.vehicle }) : '' })}</>
         )}
       </p>
 
@@ -136,11 +135,11 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground">
             <tr>
-              <th className="text-left px-3 py-1.5 font-medium">Partner</th>
-              <th className="text-right px-3 py-1.5 font-medium">Carry ownership</th>
-              <th className="text-right px-3 py-1.5 font-medium">Carry accrued</th>
-              <th className="text-right px-3 py-1.5 font-medium">Carry paid</th>
-              <th className="text-right px-3 py-1.5 font-medium">Carry unpaid</th>
+              <th className="text-left px-3 py-1.5 font-medium">{t('partner')}</th>
+              <th className="text-right px-3 py-1.5 font-medium">{t('carryOwnership')}</th>
+              <th className="text-right px-3 py-1.5 font-medium">{t('carryAccrued')}</th>
+              <th className="text-right px-3 py-1.5 font-medium">{t('carryPaid')}</th>
+              <th className="text-right px-3 py-1.5 font-medium">{t('carryUnpaid')}</th>
             </tr>
           </thead>
           <tbody>
@@ -167,7 +166,7 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
             ))}
 
             <tr className="border-t font-medium">
-              <td className="px-3 py-1.5">Total</td>
+              <td className="px-3 py-1.5">{t('total')}</td>
               <td />
               <td className="px-3 py-1.5 text-right font-mono">{fmt(gp.totals.carryAccrued)}</td>
               <td className="px-3 py-1.5 text-right font-mono">{fmt(gp.totals.carryPaid)}</td>
@@ -179,8 +178,7 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
 
       {gp.partners.some(p => p.carryUnpaid < -0.005) && (
         <p className="text-xs text-amber-600">
-          A negative <strong>carry unpaid</strong> means more carry has been paid than is currently accrued (NAV fell
-          after a payment) — an over-distribution to claw back, not an amount owed.
+          {t.rich('negativeHelp', { strong: chunks => <strong>{chunks}</strong> })}
         </p>
       )}
 
@@ -188,32 +186,30 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
           books, read-only. LP tracking: an explicit register of (partner, date, amount). */}
       {gp.source === 'ledger' ? (
         <p className="text-xs text-muted-foreground">
-          Carry paid is rolled up per partner from {gp.link.vehicle}&rsquo;s ledger — the carried-interest
-          distributions only, which the ledger keeps separate from return-of-capital distributions. Book a carry
-          payment as a carried-interest distribution in the ledger to change it; it can&rsquo;t be typed here.
+          {t('ledgerHelp', { vehicle: gp.link.vehicle })}
         </p>
       ) : (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium">Carry payments</h3>
-          <p className="text-xs text-muted-foreground">Carry paid to each partner — the total per partner feeds the table above.</p>
+          <h3 className="text-sm font-medium">{t('payments.title')}</h3>
+          <p className="text-xs text-muted-foreground">{t('payments.description')}</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-xs text-muted-foreground">
                 <tr>
-                  <th className="text-left px-3 py-1.5 font-medium">Partner</th>
-                  <th className="text-left px-3 py-1.5 font-medium">Date</th>
-                  <th className="text-right px-3 py-1.5 font-medium">Amount</th>
+                  <th className="text-left px-3 py-1.5 font-medium">{t('partner')}</th>
+                  <th className="text-left px-3 py-1.5 font-medium">{t('payments.date')}</th>
+                  <th className="text-right px-3 py-1.5 font-medium">{t('payments.amount')}</th>
                   {isAdmin && <th className="px-3 py-1.5" />}
                 </tr>
               </thead>
               <tbody>
                 {gp.payments.length === 0 && (
-                  <tr><td colSpan={isAdmin ? 4 : 3} className="px-3 py-3 text-center text-muted-foreground text-xs">No carry payments recorded yet.</td></tr>
+                  <tr><td colSpan={isAdmin ? 4 : 3} className="px-3 py-3 text-center text-muted-foreground text-xs">{t('payments.empty')}</td></tr>
                 )}
                 {gp.payments.map(pay => (
                   <tr key={pay.id} className="border-t">
                     <td className="px-3 py-1.5">{nameById.get(pay.lpEntityId) ?? pay.lpEntityId}</td>
-                    <td className="px-3 py-1.5 text-muted-foreground">{pay.date}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{formatDate(pay.date, locale)}</td>
                     <td className="px-3 py-1.5 text-right font-mono">{fmt(pay.amount)}</td>
                     {isAdmin && (
                       <td className="px-3 py-1.5 text-right">
@@ -230,20 +226,20 @@ export function GpPanel({ isAdmin }: { isAdmin: boolean }) {
 
           {isAdmin && (
             <div className="flex flex-wrap items-end gap-2 pt-1">
-              <label className="text-xs text-muted-foreground">Partner
+              <label className="text-xs text-muted-foreground">{t('partner')}
                 <select value={payPartner} onChange={e => setPayPartner(e.target.value)} className="mt-1 h-9 px-2 rounded-md border border-input bg-background text-sm block min-w-[160px]">
-                  <option value="">Choose…</option>
+                  <option value="">{t('choose')}</option>
                   {gp.partners.map(p => <option key={p.lpEntityId} value={p.lpEntityId}>{p.name}</option>)}
                 </select>
               </label>
-              <label className="text-xs text-muted-foreground">Date
+              <label className="text-xs text-muted-foreground">{t('payments.date')}
                 <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="mt-1 h-9 w-40" />
               </label>
-              <label className="text-xs text-muted-foreground">Amount
+              <label className="text-xs text-muted-foreground">{t('payments.amount')}
                 <Input value={payAmount} onChange={e => setPayAmount(e.target.value)} inputMode="decimal" placeholder="0.00" className="mt-1 h-9 w-36 font-mono" />
               </label>
               <Button size="sm" onClick={addPayment} disabled={!payPartner || !payDate || !payAmount || saving !== null}>
-                {saving === 'addPay' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} Add
+                {saving === 'addPay' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} {t('payments.add')}
               </Button>
             </div>
           )}

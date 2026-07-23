@@ -1,0 +1,140 @@
+- generic [active] [ref=f22e1]:
+  - generic [ref=f22e3]:
+    - banner [ref=f22e4]:
+      - generic [ref=f22e5]: Feeds browser 0150c8c2-05cd-4112-acbc-42beda6d4fbd
+      - generic [ref=f22e12]:
+        - generic [ref=f22e13]: feeds-browser-0150c8c2-05cd-4112-acbc-42beda6d4fbd@example.invalid
+        - button "Sign out" [ref=f22e15] [cursor=pointer]
+    - generic [ref=f22e17]:
+      - complementary [ref=f22e18]:
+        - navigation [ref=f22e20]:
+          - link "Pending Actions" [ref=f22e22] [cursor=pointer]:
+            - /url: /pending-actions
+          - link "Inbound" [ref=f22e28] [cursor=pointer]:
+            - /url: /emails
+          - link "Deals" [ref=f22e34] [cursor=pointer]:
+            - /url: /deals
+          - generic [ref=f22e41]:
+            - link "Feeds" [ref=f22e42] [cursor=pointer]:
+              - /url: /feeds
+            - generic [ref=f22e51]:
+              - link "Today" [ref=f22e52] [cursor=pointer]:
+                - /url: /feeds
+              - link "Follow sources" [ref=f22e57] [cursor=pointer]:
+                - /url: /feeds/sources
+          - link "Portfolio" [ref=f22e63] [cursor=pointer]:
+            - /url: /dashboard
+          - link "LPs" [ref=f22e70] [cursor=pointer]:
+            - /url: /lps
+          - link "Usage" [ref=f22e78] [cursor=pointer]:
+            - /url: /usage
+          - link "Settings" [ref=f22e89] [cursor=pointer]:
+            - /url: /settings
+          - link "Support" [ref=f22e95] [cursor=pointer]:
+            - /url: /support
+          - button "System" [ref=f22e104] [cursor=pointer]
+          - button "Hide Sidebar" [ref=f22e108] [cursor=pointer]
+      - main [ref=f22e113]:
+        - generic [ref=f22e115]:
+          - generic [ref=f22e116]:
+            - generic [ref=f22e117]:
+              - heading "Today" [level=1] [ref=f22e118]
+              - paragraph [ref=f22e119]: Curated healthcare and investment intelligence.
+            - button "Refresh curated articles" [ref=f22e120] [cursor=pointer]
+          - navigation "Today view" [ref=f22e121]:
+            - link "Me" [ref=f22e122] [cursor=pointer]:
+              - /url: /feeds
+            - link "Explore" [ref=f22e123] [cursor=pointer]:
+              - /url: /feeds?view=explore
+          - generic [ref=f22e124]:
+            - generic "Explore categories" [ref=f22e125]:
+              - button "All" [pressed] [ref=f22e126] [cursor=pointer]
+              - button "Healthcare AI 1" [ref=f22e127] [cursor=pointer]
+            - generic [ref=f22e128]:
+              - generic [ref=f22e129]: Search curated articles
+              - textbox "Search curated articles" [ref=f22e130]
+          - paragraph [ref=f22e131]: Curated articles refreshed
+          - generic [ref=f22e133]:
+            - generic [ref=f22e134]:
+              - heading "Latest in Healthcare AI" [level=2] [ref=f22e135]
+              - generic [ref=f22e136]:
+                - article [ref=f22e137]:
+                  - generic [ref=f22e139]:
+                    - button "What Can Quantum Computing Do To Healthcare?" [ref=f22e140] [cursor=pointer]
+                    - paragraph [ref=f22e141]: The Medical Futurist · 8d ago
+                    - paragraph [ref=f22e142]: "A leap from bits to qubits: this two-letter change could mean entirely new horizons for healthcare. Quantum computing might bring supersonic drug design, in silico clinical trials with virtual humans simulated ‘live’, full-speed whole genome sequencing and analytics, the movem…"
+                  - button "Following…" [disabled]
+                - article [ref=f22e144]:
+                  - generic [ref=f22e146]:
+                    - button "3 Things Transhumanism Can Give To Healthcare" [ref=f22e147] [cursor=pointer]
+                    - paragraph [ref=f22e148]: The Medical Futurist · 8d ago
+                    - paragraph [ref=f22e149]: Imagine a future where aging is not a fate but a solvable puzzle, reshaping the very fabric of medical science. This is what transhumanism aims for. Although this goal is surely too ambitious, we might learn a thing or two from this futuristic movement. What is transhumanism?…
+                  - button "Following…" [disabled]
+                - article [ref=f22e151]:
+                  - generic [ref=f22e153]:
+                    - button "Digital Health, Menopause, And The $150 Billion Ignorance" [ref=f22e154] [cursor=pointer]
+                    - paragraph [ref=f22e155]: The Medical Futurist · 8d ago
+                    - paragraph [ref=f22e156]: The idea of this story came from personal experience. During the past year, I have spent countless hours and a bucketload of money trying to figure out what the heck is wrong with my health. I was feeling worse and worse, having various symptoms, totally inexplicable with my i…
+                  - button "Following…" [disabled]
+                - article [ref=f22e158]:
+                  - generic [ref=f22e160]:
+                    - button "Drug Discovery In The Age of AI" [ref=f22e161] [cursor=pointer]
+                    - paragraph [ref=f22e162]: The Medical Futurist · 21d ago
+                    - paragraph [ref=f22e163]: Previously, we contemplated the practical opportunities of the assistance of artificial intelligence (AI) technologies in clinical trials for drug development. Such assistance extends before and after trials commence, and in this article, we will focus on the pre-clinical tria…
+                  - button "Following…" [disabled]
+                - article [ref=f22e165]:
+                  - generic [ref=f22e167]:
+                    - button "What Happens To Your Medical Data After You Die?" [ref=f22e168] [cursor=pointer]
+                    - paragraph [ref=f22e169]: The Medical Futurist · 21d ago
+                    - paragraph [ref=f22e170]: “Almost no one has thought about what is going to happen to all of the medical records that sit around after people die,” said Jon Cornwall, senior lecturer in the Centre for Early Learning in Medicine at the University of Otago in New Zealand. Indeed, even if death is one of…
+                  - button "Following…" [disabled]
+                - article [ref=f22e172]:
+                  - generic [ref=f22e174]:
+                    - button "How To Analyse Your Sleep Quality?" [ref=f22e175] [cursor=pointer]
+                    - paragraph [ref=f22e176]: The Medical Futurist · 21d ago
+                    - paragraph [ref=f22e177]: Fitbit, Misfit, Live by Earlysense, Jawbone. The market for sleep trackers is skyrocketing and finally, more and more people track the quality of their bedtime. However, getting conclusions from sleep measurements is tricky. Let me help you by sharing my experience! I experime…
+                  - button "Following…" [disabled]
+                - article [ref=f22e179]:
+                  - generic [ref=f22e181]:
+                    - button "What Do Digital Biomarkers Mean?" [ref=f22e182] [cursor=pointer]
+                    - paragraph [ref=f22e183]: The Medical Futurist · 21d ago
+                    - paragraph [ref=f22e184]: The spread of wearable digital technologies in healthcare generating big data entailed the appearance of a new type of medical information. They produce actionable insights into the biological state of individuals, just like “general” biomarkers, but are collected through digi…
+                  - button "Following…" [disabled]
+                - article [ref=f22e186]:
+                  - generic [ref=f22e188]:
+                    - button "Are Physicians Losing Skills Due To AI? What Is Cognitive Offloading?" [ref=f22e189] [cursor=pointer]
+                    - paragraph [ref=f22e190]: The Medical Futurist · 30d ago
+                    - paragraph [ref=f22e191]: In the current age of artificial intelligence (AI), physicians are able to rely on the technology for a myriad of purposes. From triaging patients to assistance with radiological scans, they can turn to AI tools to assist them in their healthcare-related tasks. However, by off…
+                  - button "Following…" [disabled]
+                - article [ref=f22e193]:
+                  - generic [ref=f22e195]:
+                    - button "When A Longevity Screening Come To Your Home" [ref=f22e196] [cursor=pointer]
+                    - paragraph [ref=f22e197]: The Medical Futurist · 34d ago
+                    - paragraph [ref=f22e198]: Longevity, especially the practical side of it, has become one of the biggest business opportunities in healthcare worldwide. Longevity clinics, practices, services and technologies have flooded the market, promising people a chance to live longer and healthier lives. And whil…
+                  - button "Following…" [disabled]
+                - article [ref=f22e200]:
+                  - generic [ref=f22e202]:
+                    - button "Four Scenarios of AI Scribe Adoption in Healthcare" [ref=f22e203] [cursor=pointer]
+                    - paragraph [ref=f22e204]: The Medical Futurist · 41d ago
+                    - paragraph [ref=f22e205]: AI scribes, the apps that can listen in to the conversations between patients and healthcare professionals and transform them into the exact electronic medical record format the given hospital or practice is using, have taken the healthcare industry by storm. For the past 1-2…
+                  - button "Following…" [disabled]
+            - paragraph [ref=f22e208]: Showing 10 of 10
+        - list [ref=f22e210]:
+          - listitem [ref=f22e211]:
+            - text: Made by
+            - link "Hemrock" [ref=f22e212] [cursor=pointer]:
+              - /url: https://hemrock.com
+          - listitem [ref=f22e215]:
+            - link "View on GitHub" [ref=f22e216] [cursor=pointer]:
+              - /url: https://github.com/tdavidson/reporting
+          - listitem [ref=f22e220]:
+            - link "License" [ref=f22e221] [cursor=pointer]:
+              - /url: /license
+          - listitem [ref=f22e226]:
+            - link "Terms" [ref=f22e227] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=f22e228]:
+            - link "Privacy" [ref=f22e229] [cursor=pointer]:
+              - /url: /privacy
+  - region "Notifications alt+T"
+  - alert [ref=f22e230]

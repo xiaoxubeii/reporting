@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { Building2, ChevronDown, ChevronRight, Mail, Users } from 'lucide-react'
 
 const KNOWN_TAGS = ['intro', 'hiring', 'strategy', 'fundraising', 'product', 'partnership', 'legal', 'operations'] as const
@@ -39,7 +40,7 @@ interface Interaction {
   company_name: string | null
 }
 
-function formatRelativeTime(dateStr: string) {
+function relativeTime(dateStr: string) {
   const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -47,14 +48,16 @@ function formatRelativeTime(dateStr: string) {
   const diffHr = Math.floor(diffMs / 3600000)
   const diffDay = Math.floor(diffMs / 86400000)
 
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  if (diffHr < 24) return `${diffHr}h ago`
-  if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (diffMin < 1) return { unit: 'now' as const, count: 0, date }
+  if (diffMin < 60) return { unit: 'minute' as const, count: diffMin, date }
+  if (diffHr < 24) return { unit: 'hour' as const, count: diffHr, date }
+  if (diffDay < 7) return { unit: 'day' as const, count: diffDay, date }
+  return { unit: 'date' as const, count: 0, date }
 }
 
 export function RelationshipsList({ interactions }: { interactions: Interaction[] }) {
+  const t = useTranslations('Interactions')
+  const locale = useLocale()
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [emailExpandedId, setEmailExpandedId] = useState<string | null>(null)
@@ -76,7 +79,7 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
       const body = payload.TextBody || payload.HtmlBody || ''
       setFetchedBodies(prev => ({ ...prev, [emailId]: body }))
     } catch {
-      setFetchedBodies(prev => ({ ...prev, [emailId]: 'Failed to load email body.' }))
+      setFetchedBodies(prev => ({ ...prev, [emailId]: t('errors.emailBody') }))
     } finally {
       setEmailLoading(null)
     }
@@ -114,7 +117,7 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
                 : 'text-muted-foreground hover:text-foreground hover:bg-accent'
             }`}
           >
-            {tag}
+            {t(`tags.${tag}`)}
           </button>
         ))}
         {selectedTags.size > 0 && (
@@ -122,7 +125,7 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
             onClick={() => setSelectedTags(new Set())}
             className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            Clear
+            {t('filters.clear')}
           </button>
         )}
       </div>
@@ -130,15 +133,15 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Mail className="h-8 w-8 mx-auto mb-3 opacity-50" />
-          <p className="text-sm font-medium mb-1">No interactions yet</p>
+          <p className="text-sm font-medium mb-1">{t('empty.title')}</p>
           <p className="text-xs max-w-md mx-auto">
-            BCC your fund&apos;s inbound email address on conversations with portfolio companies.
-            The system will automatically log them here with AI-generated summaries.
+            {t('empty.description')}
           </p>
         </div>
       ) : (
         <div className="space-y-1">
           {filtered.map(interaction => {
+            const relative = relativeTime(interaction.interaction_date)
             const introContacts = interaction.intro_contacts ?? []
             const isExpanded = expandedId === interaction.id
             const hasIntros = introContacts.length > 0
@@ -153,7 +156,9 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">
-                        {formatRelativeTime(interaction.interaction_date)}
+                        {relative.unit === 'date'
+                          ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(relative.date)
+                          : t(`relative.${relative.unit}`, { count: relative.count })}
                       </span>
                       {interaction.company_name && (
                         <Link
@@ -167,7 +172,7 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
                       {tags.includes('intro') && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-medium">
                           <Users className="h-2.5 w-2.5" />
-                          {introContacts.length} intro{introContacts.length !== 1 ? 's' : ''}
+                          {t('introCount', { count: introContacts.length })}
                         </span>
                       )}
                       {tags.filter(t => t !== 'intro').map(tag => (
@@ -175,7 +180,9 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
                           key={tag}
                           className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${TAG_COLORS[tag] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
                         >
-                          {tag}
+                          {KNOWN_TAGS.includes(tag as (typeof KNOWN_TAGS)[number])
+                            ? t(`tags.${tag as (typeof KNOWN_TAGS)[number]}`)
+                            : tag}
                         </span>
                       ))}
                     </div>
@@ -195,7 +202,7 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
                         className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground hover:text-foreground"
                       >
                         {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        Intro details
+                        {t('introDetails')}
                       </button>
                     )}
 
@@ -223,14 +230,14 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
                       >
                         {emailExpandedId === interaction.id ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                         <Mail className="h-3 w-3" />
-                        View email
+                        {t('viewEmail')}
                       </button>
                     )}
 
                     {emailExpandedId === interaction.id && interaction.email_id && (
                       <div className="mt-2 border rounded-md bg-muted/30 p-3">
                         {emailLoading === interaction.id ? (
-                          <p className="text-xs text-muted-foreground animate-pulse">Loading email...</p>
+                          <p className="text-xs text-muted-foreground animate-pulse">{t('loadingEmail')}</p>
                         ) : (
                           <pre className="text-xs whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
                             {fetchedBodies[interaction.email_id] || ''}

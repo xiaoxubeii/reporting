@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Loader2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { useLedgerFetch, useFundSeg } from '@/components/accounting-vehicle'
 
 /** Vehicle-scoped onboarding: seed chart, choose full-history or cutover, reconcile. */
 export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean } = {}) {
+  const t = useTranslations('Funds.setup')
   const [accountCount, setAccountCount] = useState<number | null>(null)
   const [onboarded, setOnboarded] = useState(false)
   const [seeding, setSeeding] = useState(false)
@@ -65,9 +67,9 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
     setSeedMsg(
       res.ok
         ? (data.seeded > 0
-            ? `Added ${data.seeded} account${data.seeded === 1 ? '' : 's'}: ${(data.accounts ?? []).map((a: any) => a.code).join(', ')}`
-            : 'Chart already up to date — nothing to add.')
-        : (data.error ?? 'Sync failed')
+            ? t('seed.added', { count: data.seeded, accounts: (data.accounts ?? []).map((a: any) => a.code).join(', ') })
+            : t('seed.current'))
+        : (data.error ?? t('seed.failed'))
     )
     await refresh()
     setSeeding(false)
@@ -81,17 +83,17 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
         body: JSON.stringify({ dryRun: true }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setAttrError(data.error ?? 'Preview failed'); setAttrPreview(null); return }
+      if (!res.ok) { setAttrError(data.error ?? t('attribution.previewFailed')); setAttrPreview(null); return }
       setAttrPreview(data)
     } catch (e: any) {
-      setAttrError(e?.message ?? 'Preview failed')
+      setAttrError(e?.message ?? t('attribution.previewFailed'))
     } finally {
       setAttrLoading(false)
     }
   }
 
   async function applyAttribution() {
-    if (!window.confirm('Create the per-LP accounts and move pooled LP capital onto them? This writes to the ledger.')) return
+    if (!window.confirm(t('attribution.confirm'))) return
     setAttrApplying(true); setAttrError(null)
     try {
       const res = await lf('/api/accounting/attribute-lp-capital', {
@@ -99,15 +101,12 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
         body: JSON.stringify({}),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setAttrError(data.error ?? 'Apply failed'); return }
-      setAttrMsg(
-        `Created ${data.accountsCreated} accounts, attributed ${data.moved} postings.` +
-        (data.untagged ? ` ${data.untagged} still need manual handling.` : '')
-      )
+      if (!res.ok) { setAttrError(data.error ?? t('attribution.applyFailed')); return }
+      setAttrMsg(t('attribution.applied', { accounts: data.accountsCreated, postings: data.moved, manual: data.untagged ?? 0 }))
       setAttrPreview(null)
       await refresh()
     } catch (e: any) {
-      setAttrError(e?.message ?? 'Apply failed')
+      setAttrError(e?.message ?? t('attribution.applyFailed'))
     } finally {
       setAttrApplying(false)
     }
@@ -118,7 +117,7 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
     setBootstrapping(true); setBootstrapMsg(null)
     const res = await lf('/api/accounting/bootstrap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entryDate: cutoverDate }) })
     const data = await res.json()
-    setBootstrapMsg(res.ok ? `Booked opening balances for ${data.lpCount} LP(s).` : (data.error ?? 'Failed'))
+    setBootstrapMsg(res.ok ? t('cutover.booked', { count: data.lpCount }) : (data.error ?? t('failed')))
     setBootstrapping(false)
   }
 
@@ -131,43 +130,43 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
 
   return (
     <div className="border rounded-lg p-4 mb-6 bg-muted/20 space-y-3">
-      <p className="text-sm font-medium">Onboarding this vehicle</p>
+      <p className="text-sm font-medium">{t('title')}</p>
 
       {/* Step 1 — chart */}
       <div className="flex items-center gap-2 text-sm">
         {accountCount > 0
-          ? <><Check className="h-4 w-4 text-green-600" /> <span className="text-muted-foreground">Chart of accounts seeded ({accountCount} accounts).</span>
-              <button onClick={seed} disabled={seeding} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">{seeding ? 'Syncing…' : 'Sync accounts'}</button></>
-          : <><span className="text-muted-foreground">1. Seed the chart of accounts.</span><Button size="sm" variant="outline" onClick={seed} disabled={seeding}>{seeding && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Seed chart</Button></>}
+          ? <><Check className="h-4 w-4 text-green-600" /> <span className="text-muted-foreground">{t('seed.done', { count: accountCount })}</span>
+              <button onClick={seed} disabled={seeding} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">{t(seeding ? 'seed.syncing' : 'seed.sync')}</button></>
+          : <><span className="text-muted-foreground">{t('seed.step')}</span><Button size="sm" variant="outline" onClick={seed} disabled={seeding}>{seeding && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}{t('seed.button')}</Button></>}
       </div>
       {seedMsg && <p className="text-xs text-muted-foreground pl-6">{seedMsg}</p>}
 
       {/* Attribute pooled LP capital (3100) onto per-LP accounts — optional, preview then apply. */}
       <div className="text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Attribute LP capital to per-LP accounts</span>
+          <span className="text-muted-foreground">{t('attribution.title')}</span>
           <Button size="sm" variant="outline" onClick={previewAttribution} disabled={attrLoading || attrApplying}>
-            {attrLoading && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Preview
+            {attrLoading && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}{t('attribution.preview')}
           </Button>
         </div>
         {attrError && <p className="text-xs text-destructive mt-1">{attrError}</p>}
         {attrPreview && (
           <div className="mt-1.5 space-y-1">
             {attrPreview.empty ? (
-              <p className="text-xs text-muted-foreground">Nothing to attribute — capital is already on per-LP accounts.</p>
+              <p className="text-xs text-muted-foreground">{t('attribution.empty')}</p>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">
-                  {attrPreview.accountsToCreate} account{attrPreview.accountsToCreate === 1 ? '' : 's'} to create, {attrPreview.movable} posting{attrPreview.movable === 1 ? '' : 's'} to attribute
+                  {t('attribution.summary', { accounts: attrPreview.accountsToCreate ?? 0, postings: attrPreview.movable ?? 0 })}
                 </p>
                 {!!attrPreview.untagged && attrPreview.untagged > 0 && (
-                  <p className="text-xs text-muted-foreground">{attrPreview.untagged} pooled posting{attrPreview.untagged === 1 ? '' : 's'} have no LP and need manual handling</p>
+                  <p className="text-xs text-muted-foreground">{t('attribution.untagged', { count: attrPreview.untagged })}</p>
                 )}
                 {!!attrPreview.closedSkipped && attrPreview.closedSkipped > 0 && (
-                  <p className="text-xs text-muted-foreground">{attrPreview.closedSkipped} skipped (closed period)</p>
+                  <p className="text-xs text-muted-foreground">{t('attribution.skipped', { count: attrPreview.closedSkipped })}</p>
                 )}
                 <Button size="sm" onClick={applyAttribution} disabled={attrApplying}>
-                  {attrApplying && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Apply
+                  {attrApplying && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}{t('attribution.apply')}
                 </Button>
               </>
             )}
@@ -178,12 +177,12 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
 
       {/* Step 2 — choose path */}
       <div className="text-sm">
-        <p className="text-muted-foreground mb-1.5">2. How are you starting this vehicle?</p>
+        <p className="text-muted-foreground mb-1.5">{t('path.title')}</p>
         <div className="flex flex-wrap gap-1.5">
           {(['full_history', 'cutover'] as const).map(p => (
             <button key={p} onClick={() => choosePath(p)}
               className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${path === p ? 'border-foreground/30 bg-accent font-medium' : 'border-border text-muted-foreground hover:text-foreground'}`}>
-              {p === 'full_history' ? 'Full history (reconstruct)' : 'Cutover opening balance'}
+              {t(p === 'full_history' ? 'path.fullHistory' : 'path.cutover')}
             </button>
           ))}
         </div>
@@ -195,29 +194,28 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
       {path === 'full_history' && (
         <>
           <ol className="text-sm text-muted-foreground space-y-1 list-decimal ml-4">
-            <li><Link href={fundHref('bank')} className="underline underline-offset-2 hover:text-foreground">Import the bank history</Link> (CSV/XLS) — dated cash back to inception.</li>
-            <li>Categorize, and match inflows to capital calls / the investment purchase.</li>
-            <li><Link href={fundHref('schedule-of-investments')} className="underline underline-offset-2 hover:text-foreground">Replay the investment history</Link> — each purchase and mark posts on the date it happened, so gains land in the period they were earned.</li>
-            <li><Link href={fundHref('status')} className="underline underline-offset-2 hover:text-foreground">Set the allocation terms</Link>, then <Link href={fundHref('periods')} className="underline underline-offset-2 hover:text-foreground">close each period</Link> to allocate P&amp;L to partners.</li>
-            <li>Reconcile capital accounts against the LP snapshot (Reconciliation → Load from LP snapshot).</li>
+            <li>{t.rich('fullHistory.bank', { link: chunks => <Link href={fundHref('bank')} className="underline underline-offset-2 hover:text-foreground">{chunks}</Link> })}</li>
+            <li>{t('fullHistory.categorize')}</li>
+            <li>{t.rich('fullHistory.investments', { link: chunks => <Link href={fundHref('schedule-of-investments')} className="underline underline-offset-2 hover:text-foreground">{chunks}</Link> })}</li>
+            <li>{t.rich('fullHistory.close', { terms: chunks => <Link href={fundHref('status')} className="underline underline-offset-2 hover:text-foreground">{chunks}</Link>, close: chunks => <Link href={fundHref('periods')} className="underline underline-offset-2 hover:text-foreground">{chunks}</Link> })}</li>
+            <li>{t('fullHistory.reconcile')}</li>
           </ol>
           <p className="text-xs text-muted-foreground">
-            No opening balances to enter — the ledger starts at inception, so they come from the history itself.
+            {t('fullHistory.noOpening')}
           </p>
         </>
       )}
 
       {path === 'cutover' && (
         <div className="text-sm space-y-2">
-          <p className="text-muted-foreground">Generate opening balances from the LP data already in the platform (paid-in − distributions per LP), as of:</p>
+          <p className="text-muted-foreground">{t('cutover.description')}</p>
           <div className="flex items-center gap-2">
             <input type="date" value={cutoverDate} onChange={e => setCutoverDate(e.target.value)} className="border rounded px-2 py-1.5 text-sm" />
-            <Button size="sm" onClick={bootstrap} disabled={bootstrapping || !cutoverDate || accountCount === 0}>{bootstrapping && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Bootstrap opening balances</Button>
+            <Button size="sm" onClick={bootstrap} disabled={bootstrapping || !cutoverDate || accountCount === 0}>{bootstrapping && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}{t('cutover.bootstrap')}</Button>
           </div>
           {bootstrapMsg && <p className="text-xs text-muted-foreground">{bootstrapMsg}</p>}
           <p className="text-xs text-muted-foreground">
-            Prefer to type each LP&rsquo;s balance from their statement instead?{' '}
-            <Link href={fundHref('opening-balances')} className="underline underline-offset-2 hover:text-foreground">Enter opening balances manually</Link>.
+            {t.rich('cutover.manual', { link: chunks => <Link href={fundHref('opening-balances')} className="underline underline-offset-2 hover:text-foreground">{chunks}</Link> })}
           </p>
         </div>
       )}
@@ -232,23 +230,20 @@ export function AccountingSetup({ alwaysShow = false }: { alwaysShow?: boolean }
             <>
               <Check className="h-4 w-4 text-green-600 shrink-0" />
               <span className="text-muted-foreground">
-                Investments are on the ledger ({inv.positions} {inv.positions === 1 ? 'position' : 'positions'}).
+                {t('investments.done', { count: inv.positions })}
               </span>
               <Link href={fundHref('schedule-of-investments')} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
-                Schedule of investments
+                {t('investments.schedule')}
               </Link>
             </>
           ) : (
             <>
               <span className="text-muted-foreground">
-                3. Book the {inv.positions} {inv.positions === 1 ? 'investment' : 'investments'} the tracker holds for this vehicle onto the ledger
-                {path === 'full_history'
-                  ? ' — replay the dated history so each mark lands in its own period.'
-                  : ' — one snapshot at the cutover date.'}
+                {t(path === 'full_history' ? 'investments.fullHistory' : 'investments.cutover', { count: inv.positions })}
               </span>
               <Button size="sm" variant="outline" asChild>
                 <Link href={fundHref('schedule-of-investments')}>
-                  {path === 'full_history' ? 'Replay investment history' : 'Book investments'}
+                  {t(path === 'full_history' ? 'investments.replay' : 'investments.book')}
                 </Link>
               </Button>
             </>

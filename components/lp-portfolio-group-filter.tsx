@@ -1,6 +1,7 @@
 'use client'
 
 import { Filter, CheckSquare, Square } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function PortfolioGroupFilter({ allGroups, excludedGroups, onToggle, onToggleAll }: Props) {
+  const t = useTranslations('LPs.filters')
   const allIncluded = excludedGroups.size === 0
   const hasExclusions = excludedGroups.size > 0
 
@@ -20,7 +22,7 @@ export function PortfolioGroupFilter({ allGroups, excludedGroups, onToggle, onTo
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="no-print text-muted-foreground">
           <Filter className="h-4 w-4 mr-1" />
-          Filters
+          {t('title')}
           {hasExclusions && (
             <span className="ml-1 text-xs text-muted-foreground">
               ({allGroups.length - excludedGroups.size}/{allGroups.length})
@@ -38,7 +40,7 @@ export function PortfolioGroupFilter({ allGroups, excludedGroups, onToggle, onTo
             : <Square className="h-4 w-4 text-muted-foreground shrink-0" />
           }
           <span className="text-sm font-medium">
-            {allIncluded ? 'Deselect All' : 'Select All'}
+            {allIncluded ? t('deselectAll') : t('selectAll')}
           </span>
         </div>
         {allGroups.map(group => {

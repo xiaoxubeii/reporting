@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { Sparkles, RefreshCw, Upload, Loader2, History, ChevronDown, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
+import { formatPeriodLabel } from '@/lib/i18n/format-period-label'
 
 interface HistoryEntry {
   id: string
@@ -32,6 +34,9 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
 const TEXT_ONLY_THRESHOLD = 10 * 1024 * 1024 // 10 MB, files above this get text-only extraction
 
 export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, defaultAIProvider }: Props) {
+  const t = useTranslations('CompanyDetail.summary')
+  const format = useFormatter()
+  const locale = useLocale()
   const [data, setData] = useState<SummaryData | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -76,10 +81,10 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
         // Reload to get updated history
         await load()
       } else {
-        setError(result.error ?? 'Unable to generate summary.')
+        setError(result.error ?? t('errors.generate'))
       }
     } catch {
-      setError('Unable to generate summary at this time.')
+      setError(t('errors.generateNow'))
     } finally {
       setGenerating(false)
     }
@@ -90,7 +95,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
     if (!file) return
 
     if (file.size > MAX_FILE_SIZE) {
-      setError('File exceeds 50 MB limit')
+      setError(t('errors.fileTooLarge'))
       return
     }
 
@@ -110,7 +115,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
         .upload(storagePath, file)
 
       if (uploadError) {
-        setError(`Upload failed: ${uploadError.message}`)
+        setError(t('errors.uploadWithReason', { reason: uploadError.message }))
         return
       }
 
@@ -129,12 +134,12 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
 
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error ?? 'Failed to register document')
+        setError(data.error ?? t('errors.registerDocument'))
       } else if (isOversized) {
-        setWarning('File exceeds 10 MB, only extracted text was stored.')
+        setWarning(t('warnings.textOnly'))
       }
     } catch {
-      setError('Upload failed')
+      setError(t('errors.upload'))
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -167,7 +172,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
       <div className="rounded-lg border bg-card p-5 mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">Analyst</span>
+          <span className="text-xs font-medium text-muted-foreground">{t('analyst')}</span>
         </div>
         <div className="animate-pulse space-y-2">
           <div className="h-3 bg-muted rounded w-full" />
@@ -192,7 +197,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Analyst</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('analyst')}</span>
           </div>
           <div className="flex items-center gap-1">
             {showProviderToggle && (
@@ -218,11 +223,11 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
               ) : (
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
               )}
-              {uploading ? 'Uploading…' : 'Upload'}
+              {uploading ? t('uploading') : t('upload')}
             </Button>
             <Button size="sm" variant="outline" onClick={generate} disabled={generating} className="text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              {generating ? 'Analyzing…' : 'Analyze'}
+              {generating ? t('analyzing') : t('analyze')}
             </Button>
           </div>
         </div>
@@ -258,17 +263,17 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">Analyst</span>
+          <span className="text-xs font-medium text-muted-foreground">{t('analyst')}</span>
           {displayDate && (
             <span className="text-[10px] text-muted-foreground">
-              · {new Date(displayDate).toLocaleDateString(undefined, {
+              · {format.dateTime(new Date(displayDate), {
                 month: 'short', day: 'numeric', year: 'numeric',
               })}
             </span>
           )}
           {displayPeriod && (
             <span className="text-[10px] text-muted-foreground">
-              · {displayPeriod}
+              · {formatPeriodLabel({ period_label: displayPeriod }, locale)}
             </span>
           )}
           {isViewingOlder && (
@@ -276,7 +281,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
               onClick={viewLatest}
               className="text-[10px] text-primary hover:underline ml-1"
             >
-              Back to latest
+              {t('backToLatest')}
             </button>
           )}
         </div>
@@ -297,7 +302,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            title="Upload document"
+            title={t('uploadDocument')}
             className="text-muted-foreground"
           >
             {uploading ? (
@@ -305,14 +310,14 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
             ) : (
               <Upload className="h-3.5 w-3.5 mr-1.5" />
             )}
-            {uploading ? 'Uploading…' : 'Upload'}
+            {uploading ? t('uploading') : t('upload')}
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={generate}
             disabled={generating}
-            title="Regenerate summary"
+            title={t('regenerate')}
             className="h-7 px-2 text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${generating ? 'animate-spin' : ''}`} />
@@ -322,7 +327,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
               size="sm"
               variant="ghost"
               onClick={() => setHistoryOpen(!historyOpen)}
-              title="View previous summaries"
+              title={t('viewPrevious')}
               className="h-7 px-2 text-muted-foreground hover:text-foreground"
             >
               <History className="h-3.5 w-3.5" />
@@ -331,7 +336,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
             {historyOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border bg-popover shadow-lg">
                 <div className="flex items-center justify-between px-3 py-2 border-b">
-                  <span className="text-xs font-medium">Summary history</span>
+                  <span className="text-xs font-medium">{t('history.title')}</span>
                   <button onClick={() => setHistoryOpen(false)} className="text-muted-foreground hover:text-foreground">
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -339,7 +344,7 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
                 <div className="max-h-64 overflow-y-auto">
                   {history.length <= 1 ? (
                     <p className="px-3 py-4 text-[11px] text-muted-foreground text-center">
-                      Each time you analyze this company, a new summary is saved here. Previous summaries are never overwritten.
+                      {t('history.description')}
                     </p>
                   ) : (
                     history.map((entry, i) => (
@@ -354,15 +359,17 @@ export function CompanySummary({ companyId, fundId, hasClaudeKey, hasOpenAIKey, 
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-foreground">
-                            {new Date(entry.created_at).toLocaleDateString(undefined, {
+                            {format.dateTime(new Date(entry.created_at), {
                               month: 'short', day: 'numeric', year: 'numeric',
                             })}
                           </span>
                           {entry.period_label && (
-                            <span className="text-[10px] text-muted-foreground">{entry.period_label}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatPeriodLabel({ period_label: entry.period_label }, locale)}
+                            </span>
                           )}
                           {i === 0 && (
-                            <span className="text-[10px] text-primary font-medium">Latest</span>
+                            <span className="text-[10px] text-primary font-medium">{t('history.latest')}</span>
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">

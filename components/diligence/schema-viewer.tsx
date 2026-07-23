@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, Loader2 } from 'lucide-react'
 import { StageGuidance } from './stage-guidance'
+import { useTranslations } from 'next-intl'
 
 // ---------------------------------------------------------------------------
 // Read-only viewer for the active memo-agent schemas/prompts (rubric, memo
@@ -11,6 +12,7 @@ import { StageGuidance } from './stage-guidance'
 // is the member-open GET /api/firm/schemas (resolved fund override or default).
 // ---------------------------------------------------------------------------
 export function SchemaViewer({ schemaName, title, subtitle, description, defaultOpen, guidanceStage }: { schemaName: string; title: string; subtitle?: string; description?: string; defaultOpen?: boolean; guidanceStage?: string }) {
+  const t = useTranslations('Diligence.schemaViewer')
   const [open, setOpen] = useState(!!defaultOpen)
   const [content, setContent] = useState<string | null>(null)
   const [version, setVersion] = useState<string | null>(null)
@@ -23,12 +25,12 @@ export function SchemaViewer({ schemaName, title, subtitle, description, default
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('failed'))))
       .then(b => {
         const s = b.schemas?.[schemaName]
-        setContent(typeof s?.yaml_content === 'string' ? s.yaml_content : 'No content found for this schema.')
+        setContent(typeof s?.yaml_content === 'string' ? s.yaml_content : t('noContent'))
         setVersion(s?.schema_version ?? null)
       })
-      .catch(() => setContent('Failed to load the schema.'))
+      .catch(() => setContent(t('loadFailed')))
       .finally(() => setLoading(false))
-  }, [open, schemaName, content, loading])
+  }, [open, schemaName, content, loading, t])
 
   return (
     <div className="rounded-md border bg-card">
@@ -39,20 +41,20 @@ export function SchemaViewer({ schemaName, title, subtitle, description, default
           {subtitle && <span className="text-xs font-normal text-muted-foreground truncate">· {subtitle}</span>}
           {version && <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">{version}</span>}
         </span>
-        <span className="text-xs text-muted-foreground shrink-0">Read-only</span>
+        <span className="text-xs text-muted-foreground shrink-0">{t('readOnly')}</span>
       </button>
       {open && (
         <div className="px-4 pb-4 pt-3 border-t space-y-4">
           {guidanceStage && <StageGuidance stage={guidanceStage} />}
           <div>
-            {guidanceStage && <div className="text-[11px] font-medium text-muted-foreground mb-1">Reference schema (read-only)</div>}
+            {guidanceStage && <div className="text-[11px] font-medium text-muted-foreground mb-1">{t('referenceSchema')}</div>}
             {description && <p className="text-xs text-muted-foreground mb-2">{description}</p>}
             {loading ? (
-              <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> Loading…</div>
+              <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</div>
             ) : (
               <pre className="text-[11px] leading-relaxed bg-muted/40 rounded-md p-3 overflow-auto whitespace-pre-wrap max-h-[440px]">{content}</pre>
             )}
-            <p className="text-[10px] text-muted-foreground mt-2">The schema is the active configuration from Settings → Memo agent. Editing the schema itself is admin-only.</p>
+            <p className="text-[10px] text-muted-foreground mt-2">{t('help')}</p>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Script from 'next/script'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { AppShell } from '@/components/app-shell'
 import { DemoSessionGuard } from '@/components/demo-session-guard'
@@ -23,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
+  const t = await getTranslations('Header')
 
   // Get fund ID (uncached — quick single query, needed to key everything else)
   const { data: fund } = await supabase.from('funds').select('id').limit(1).single() as { data: { id: string } | null }
@@ -90,8 +92,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <>
           <DemoSessionGuard />
           <div className="bg-blue-500 text-white text-center text-xs py-1.5 px-4 shrink-0 flex items-center justify-center gap-3">
-            <span>Viewing demo &mdash; read only</span>
-            <a href="/api/auth/logout" className="underline underline-offset-2 hover:text-white/80">Exit demo</a>
+            <span>{t('demoViewing')}</span>
+            <a href="/api/auth/logout" className="underline underline-offset-2 hover:text-white/80">{t('exitDemo')}</a>
           </div>
         </>
       )}

@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, FileDown, FileText, ExternalLink, Lock, AlertTriangle, AlertCircle, ChevronRight, Save, GripVertical, X } from 'lucide-react'
+import { ArrowLeft, Loader2, FileDown, FileText, ExternalLink, Lock, AlertTriangle, Save, GripVertical, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/confirm-dialog'
 import { formatSource, type SourceLabel } from '@/lib/memo-agent/render/source-labels'
+import { useTranslations } from 'next-intl'
 
 interface Paragraph {
   id: string
@@ -31,9 +32,9 @@ interface DimensionScore {
 }
 
 interface MemoOutput {
-  header?: Record<string, any>
+  header?: Record<string, unknown>
   paragraphs: Paragraph[]
-  partner_attention?: any[]
+  partner_attention?: unknown[]
   scores?: DimensionScore[]
 }
 
@@ -59,18 +60,18 @@ interface AttentionItem {
   created_at: string
 }
 
-const SECTION_ORDER: Array<{ id: string; title: string }> = [
-  { id: 'executive_summary', title: 'Executive Summary' },
-  { id: 'recommendation', title: 'Recommendation' },
-  { id: 'company_overview', title: 'Company Overview' },
-  { id: 'market', title: 'Market' },
-  { id: 'team', title: 'Team' },
-  { id: 'product_technology', title: 'Product & Technology' },
-  { id: 'traction', title: 'Traction & Evidence' },
-  { id: 'business_model', title: 'Business Model & Financials' },
-  { id: 'competition_moat', title: 'Competition & Moat' },
-  { id: 'deal_terms', title: 'Deal & Terms' },
-  { id: 'risks_and_open_questions', title: 'Risks & Open Questions' },
+const SECTION_ORDER: Array<{ id: string }> = [
+  { id: 'executive_summary' },
+  { id: 'recommendation' },
+  { id: 'company_overview' },
+  { id: 'market' },
+  { id: 'team' },
+  { id: 'product_technology' },
+  { id: 'traction' },
+  { id: 'business_model' },
+  { id: 'competition_moat' },
+  { id: 'deal_terms' },
+  { id: 'risks_and_open_questions' },
 ]
 
 // Title for a section_id not covered by the deal's section config (e.g. an
@@ -95,6 +96,7 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
    *  deal-detail Memo tab without extra chrome. */
   embedded?: boolean
 }) {
+  const t = useTranslations('Diligence.memoEditor')
   const router = useRouter()
   const confirm = useConfirm()
   const [draft, setDraft] = useState(initial)
@@ -120,6 +122,23 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
 
   const memo = draft.memo_draft_output ?? { paragraphs: [], scores: [] }
   const isReadOnly = !draft.is_draft
+  const localizedSectionTitles = useMemo<Record<string, string>>(() => ({
+    executive_summary: t('sections.executive_summary'), recommendation: t('sections.recommendation'),
+    company_overview: t('sections.company_overview'), market: t('sections.market'), team: t('sections.team'),
+    product_technology: t('sections.product_technology'), traction: t('sections.traction'),
+    business_model: t('sections.business_model'), competition_moat: t('sections.competition_moat'),
+    deal_terms: t('sections.deal_terms'), risks_and_open_questions: t('sections.risks_and_open_questions'),
+  }), [t])
+  const urgencyLabels: Record<AttentionItem['urgency'], string> = {
+    must_address: t('urgencies.must_address'),
+    should_address: t('urgencies.should_address'),
+    fyi: t('urgencies.fyi'),
+  }
+  const attentionStatusLabels: Record<AttentionItem['status'], string> = {
+    open: t('statuses.open'),
+    ignore: t('statuses.ignore'),
+    done: t('statuses.done'),
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -151,20 +170,20 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
   const renderSections = useMemo(() => {
     const base = usingConfig
       ? sectionCfg!.filter(s => s.included !== false).map(s => ({ id: s.id, title: s.title }))
-      : SECTION_ORDER
+      : SECTION_ORDER.map(section => ({ ...section, title: localizedSectionTitles[section.id] }))
     const known = new Set(base.map(s => s.id))
     const extras = Array.from(new Set((memo.paragraphs ?? []).map(p => p.section_id)))
       .filter(id => !known.has(id))
       .map(id => ({ id, title: humanizeSectionId(id) }))
     return [...base, ...extras]
-  }, [usingConfig, sectionCfg, memo.paragraphs])
+  }, [usingConfig, sectionCfg, memo.paragraphs, localizedSectionTitles])
 
   const selectedPara = useMemo(() => (memo.paragraphs ?? []).find(p => p.id === selected) ?? null, [memo.paragraphs, selected])
 
   // Initialize editing draft when selecting a paragraph.
   useEffect(() => {
     if (selectedPara) setProseDraft(selectedPara.prose)
-  }, [selectedPara?.id])
+  }, [selectedPara])
 
   async function saveParagraph() {
     if (!selectedPara) return
@@ -178,7 +197,8 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Save failed')
+        setError(typeof body.error === 'string' ? body.error : t('errors.save'))
+        return
       }
       setDraft(prev => ({
         ...prev,
@@ -188,8 +208,8 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
             p.id === selectedPara.id ? { ...p, prose: proseDraft, origin: 'partner_edited' as const } : p),
         } : prev.memo_draft_output,
       }))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+    } catch {
+      setError(t('errors.save'))
     } finally {
       setSavingPara(false)
     }
@@ -207,14 +227,17 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
         body: JSON.stringify(body),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Update failed')
+      if (!res.ok) {
+        setError(typeof data.error === 'string' ? data.error : t('errors.update'))
+        return null
+      }
       if (data.memo_draft_output) {
         setDraft(prev => ({ ...prev, memo_draft_output: data.memo_draft_output }))
         return data.memo_draft_output as MemoOutput
       }
       return null
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Update failed')
+    } catch {
+      setError(t('errors.update'))
       return null
     }
   }
@@ -270,7 +293,7 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
     const inSection = (memo.paragraphs ?? []).filter(p => p.section_id === sectionId)
     const nextOrder = inSection.reduce((max, p) => Math.max(max, p.order ?? 0), -1) + 1
     const updated = await patchDraft({
-      paragraph_inserts: [{ section_id: sectionId, order: nextOrder, prose: 'New paragraph. Write your content here.' }],
+      paragraph_inserts: [{ section_id: sectionId, order: nextOrder, prose: t('newParagraph') }],
     })
     if (updated) {
       // Select the newest partner-drafted paragraph in this section for editing.
@@ -292,13 +315,16 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
         body: JSON.stringify({ format, draft_id: draft.id }),
       })
       const body = await res.json()
-      if (!res.ok) throw new Error(body.error ?? 'Render failed')
+      if (!res.ok) {
+        setError(typeof body.error === 'string' ? body.error : t('errors.render'))
+        return
+      }
       setExportResult({
         format,
         url: body.download_url ?? body.web_view_link ?? null,
       })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Render failed')
+    } catch {
+      setError(t('errors.render'))
     } finally {
       setExporting(null)
     }
@@ -306,9 +332,9 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
 
   async function finalize() {
     const ok = await confirm({
-      title: 'Mark as final?',
-      description: 'Finalizing locks the draft. Edits after this require running a new draft. The recommendation section must be filled in.',
-      confirmLabel: 'Finalize',
+      title: t('finalize.title'),
+      description: t('finalize.description'),
+      confirmLabel: t('finalize.confirm'),
     })
     if (!ok) return
     setFinalizing(true)
@@ -317,11 +343,12 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
       const res = await fetch(`/api/diligence/${dealId}/drafts/${draft.id}/finalize`, { method: 'POST' })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Finalize failed')
+        setError(typeof body.error === 'string' ? body.error : t('errors.finalize'))
+        return
       }
       router.refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Finalize failed')
+    } catch {
+      setError(t('errors.finalize'))
     } finally {
       setFinalizing(false)
     }
@@ -345,14 +372,14 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
         <div className="min-w-0">
           {!embedded && (
             <Link href={`/diligence/${dealId}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to deal
+              <ArrowLeft className="h-3.5 w-3.5" /> {t('backToDeal')}
             </Link>
           )}
           <h1 className={`${embedded ? 'text-base' : 'text-xl'} font-semibold tracking-tight truncate flex items-center gap-2`}>
-            {embedded ? 'Memo draft' : `${dealName} memo`}
+            {embedded ? t('title') : t('dealMemo', { dealName })}
             {!draft.is_draft && (
               <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                <Lock className="h-3 w-3 inline mr-0.5" /> Final
+                <Lock className="h-3 w-3 inline mr-0.5" /> {t('final')}
               </span>
             )}
           </h1>
@@ -361,21 +388,21 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
         <div className="flex items-center gap-2 shrink-0">
           {dismissedAttention.length > 0 && (
             <Button variant="outline" size="sm" onClick={() => setShowAttention(s => !s)}>
-              {showAttention ? 'Hide dismissed' : `Dismissed (${dismissedAttention.length})`}
+              {showAttention ? t('attention.hideDismissed') : t('attention.dismissedCount', { count: dismissedAttention.length })}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => exportTo('docx')} disabled={exporting !== null}>
             {exporting === 'docx' ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <FileDown className="h-3.5 w-3.5 mr-1" />}
-            Word Doc
+            {t('exports.word')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => exportTo('gdoc')} disabled={exporting !== null}>
             {exporting === 'gdoc' ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <FileText className="h-3.5 w-3.5 mr-1" />}
-            Google Doc
+            {t('exports.google')}
           </Button>
           {isAdmin && draft.is_draft && (
             <Button variant="outline" size="sm" onClick={finalize} disabled={finalizing}>
               {finalizing && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
-              Mark as final
+              {t('finalize.button')}
             </Button>
           )}
         </div>
@@ -384,9 +411,9 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
       {error && <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive mb-4">{error}</div>}
       {exportResult?.url && (
         <div className="rounded-md border border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-900/10 p-3 text-sm mb-4 flex items-center justify-between gap-2">
-          <span>Export ready ({exportResult.format})</span>
+          <span>{t('exports.ready', { format: exportResult.format })}</span>
           <a href={exportResult.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline">
-            Open <ExternalLink className="h-3 w-3" />
+            {t('exports.open')} <ExternalLink className="h-3 w-3" />
           </a>
         </div>
       )}
@@ -404,13 +431,13 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium capitalize">
                     {item.kind.replace(/_/g, ' ')}
-                    <span className="text-[10px] font-normal text-muted-foreground"> · {item.urgency.replace(/_/g, ' ')}</span>
+                    <span className="text-[10px] font-normal text-muted-foreground"> · {urgencyLabels[item.urgency]}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">{item.body}</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => updateAttentionStatus(item.id, 'done')} className="text-[11px] text-muted-foreground hover:text-foreground">Mark done</button>
-                  <button onClick={() => updateAttentionStatus(item.id, 'ignore')} className="text-muted-foreground hover:text-foreground" title="Dismiss" aria-label="Dismiss"><X className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => updateAttentionStatus(item.id, 'done')} className="text-[11px] text-muted-foreground hover:text-foreground">{t('attention.markDone')}</button>
+                  <button onClick={() => updateAttentionStatus(item.id, 'ignore')} className="text-muted-foreground hover:text-foreground" title={t('attention.dismiss')} aria-label={t('attention.dismiss')}><X className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
             ))}
@@ -418,14 +445,14 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
         )}
         {showAttention && dismissedAttention.length > 0 && (
           <div className="space-y-2 mb-6">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Dismissed warnings</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('attention.dismissedWarnings')}</div>
             {dismissedAttention.map(item => (
               <div key={item.id} className="rounded-md border p-3 text-sm flex items-start gap-2 opacity-60">
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium capitalize">{item.kind.replace(/_/g, ' ')}</div>
                   <div className="text-xs text-muted-foreground mt-0.5 line-through">{item.body}</div>
                 </div>
-                <button onClick={() => updateAttentionStatus(item.id, 'open')} className="text-[11px] text-muted-foreground hover:text-foreground shrink-0">Reopen ({item.status})</button>
+                <button onClick={() => updateAttentionStatus(item.id, 'open')} className="text-[11px] text-muted-foreground hover:text-foreground shrink-0">{t('attention.reopen', { status: attentionStatusLabels[item.status] })}</button>
               </div>
             ))}
           </div>
@@ -441,7 +468,7 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
               <section key={section.id} className="mb-6" id={`sec-${section.id}`}>
                 <h2 className="text-base font-semibold tracking-tight mb-2">{section.title}</h2>
                 {paragraphs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">[No content yet for this section.]</p>
+                  <p className="text-sm text-muted-foreground italic">{t('sectionEmpty')}</p>
                 ) : (
                   paragraphs.map((p, i) => (
                     <div
@@ -474,8 +501,8 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
                             onDragStart={(e) => { e.stopPropagation(); setDragId(p.id); e.dataTransfer.effectAllowed = 'move' }}
                             onDragEnd={() => { setDragId(null); setOverId(null) }}
                             className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground"
-                            title="Drag to reorder"
-                            aria-label="Drag to reorder"
+                            title={t('dragToReorder')}
+                            aria-label={t('dragToReorder')}
                           >
                             <GripVertical className="h-3.5 w-3.5" />
                           </span>
@@ -489,7 +516,7 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
                     onClick={() => insertParagraph(section.id)}
                     className="text-xs text-muted-foreground hover:text-foreground mt-1"
                   >
-                    + Add paragraph
+                    {t('addParagraph')}
                   </button>
                 )}
               </section>
@@ -525,6 +552,11 @@ function ParagraphView({
   onToggleHidden: () => void
   dragHandle?: React.ReactNode
 }) {
+  const t = useTranslations('Diligence.memoEditor')
+  const originLabels: Record<Paragraph['origin'], string> = {
+    agent_drafted: t('origins.agentDrafted'), partner_drafted: t('origins.partnerDrafted'),
+    partner_only_placeholder: t('origins.partnerOnlyPlaceholder'), partner_edited: t('origins.partnerEdited'),
+  }
   const isPlaceholder = paragraph.origin === 'partner_only_placeholder'
   const stop = (e: React.MouseEvent, fn: () => void) => { e.stopPropagation(); fn() }
   const realSources = paragraph.sources.filter(s => s.source_type !== 'partner_only')
@@ -535,7 +567,7 @@ function ParagraphView({
       <div className="rounded-md p-3 mb-2 text-sm bg-muted/30 ring-1 ring-primary/30">
         {isPlaceholder ? (
           <div className="rounded-md border border-amber-500/40 bg-amber-50/50 dark:bg-amber-900/10 p-2 text-xs">
-            Partner-only section. Use “+ Add paragraph” to write the partner-drafted content for this section.
+            {t('partnerOnlyHelp')}
           </div>
         ) : (
           <textarea
@@ -554,15 +586,15 @@ function ParagraphView({
           {!isPlaceholder && (
             <Button variant="outline" size="sm" onClick={onSave} disabled={saving || proseDraft === paragraph.prose}>
               {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-              Save
+              {t('save')}
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={onCancel}>Done</Button>
+          <Button variant="ghost" size="sm" onClick={onCancel}>{t('done')}</Button>
           <span className="ml-auto flex flex-wrap items-center gap-1.5">
-            <Badge tone="muted">{paragraph.origin.replace(/_/g, ' ')}</Badge>
-            {paragraph.contains_projection && <Badge tone="amber">projection</Badge>}
-            {paragraph.contains_unverified_claim && <Badge tone="amber">⚠ unverified</Badge>}
-            {paragraph.contains_contradiction && <Badge tone="red">contradiction</Badge>}
+            <Badge tone="muted">{originLabels[paragraph.origin]}</Badge>
+            {paragraph.contains_projection && <Badge tone="amber">{t('badges.projection')}</Badge>}
+            {paragraph.contains_unverified_claim && <Badge tone="amber">⚠ {t('badges.unverified')}</Badge>}
+            {paragraph.contains_contradiction && <Badge tone="red">{t('badges.contradiction')}</Badge>}
           </span>
         </div>
         {realSources.length > 0 && <SourceList sources={realSources} labels={sourceLabels} />}
@@ -592,32 +624,32 @@ function ParagraphView({
       <div className="flex flex-wrap items-center gap-1.5 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {dragHandle}
         {!readOnly && !isPlaceholder && (
-          <button onClick={e => stop(e, onSelect)} className="text-[11px] text-muted-foreground hover:text-foreground">Edit</button>
+          <button onClick={e => stop(e, onSelect)} className="text-[11px] text-muted-foreground hover:text-foreground">{t('edit')}</button>
         )}
-        <Badge tone="muted">{paragraph.origin.replace(/_/g, ' ')}</Badge>
-        {paragraph.hidden && <Badge tone="amber">hidden · excluded from export</Badge>}
-        {paragraph.contains_projection && <Badge tone="amber">projection</Badge>}
-        {paragraph.contains_unverified_claim && <Badge tone="amber">⚠ unverified</Badge>}
-        {paragraph.contains_contradiction && <Badge tone="red">contradiction</Badge>}
+        <Badge tone="muted">{originLabels[paragraph.origin]}</Badge>
+        {paragraph.hidden && <Badge tone="amber">{t('badges.hidden')}</Badge>}
+        {paragraph.contains_projection && <Badge tone="amber">{t('badges.projection')}</Badge>}
+        {paragraph.contains_unverified_claim && <Badge tone="amber">⚠ {t('badges.unverified')}</Badge>}
+        {paragraph.contains_contradiction && <Badge tone="red">{t('badges.contradiction')}</Badge>}
         {!readOnly && (
           <span className="ml-auto flex items-center gap-2">
             <button
               onClick={e => stop(e, onMoveUp)}
               disabled={!canMoveUp}
               className="text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-30"
-              title="Move up"
+              title={t('moveUp')}
             >↑</button>
             <button
               onClick={e => stop(e, onMoveDown)}
               disabled={!canMoveDown}
               className="text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-30"
-              title="Move down"
+              title={t('moveDown')}
             >↓</button>
             <button
               onClick={e => stop(e, onToggleHidden)}
               className="text-[11px] text-muted-foreground hover:text-foreground"
-              title={paragraph.hidden ? 'Show in export' : 'Hide from export'}
-            >{paragraph.hidden ? 'Show' : 'Hide'}</button>
+              title={paragraph.hidden ? t('showInExport') : t('hideFromExport')}
+            >{paragraph.hidden ? t('show') : t('hide')}</button>
           </span>
         )}
       </div>
@@ -634,9 +666,10 @@ function ParagraphView({
  * tracing back to the ingestion output.
  */
 function SourceList({ sources, labels }: { sources: Array<{ source_type: string; source_id: string }>; labels: Map<string, SourceLabel> }) {
+  const t = useTranslations('Diligence.memoEditor')
   return (
     <div className="text-[11px] text-muted-foreground mt-2 flex flex-wrap gap-x-3 gap-y-1">
-      <span className="font-medium">Sources:</span>
+      <span className="font-medium">{t('sources')}:</span>
       {sources.slice(0, 8).map((s, i) => {
         const hit = labels.get(`${s.source_type}:${s.source_id}`)
         return (
@@ -653,7 +686,7 @@ function SourceList({ sources, labels }: { sources: Array<{ source_type: string;
           </span>
         )
       })}
-      {sources.length > 8 && <span className="text-muted-foreground/60">+{sources.length - 8} more</span>}
+      {sources.length > 8 && <span className="text-muted-foreground/60">{t('moreSources', { count: sources.length - 8 })}</span>}
     </div>
   )
 }

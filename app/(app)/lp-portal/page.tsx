@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { LpPortalDashboard } from './lp-portal-dashboard'
 
-export const metadata: Metadata = { title: 'LP Documents' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('LPs.admin.portal')
+  return { title: t('metadataTitle') }
+}
 
 export default async function LpPortalPage() {
   const supabase = createClient()
@@ -16,11 +20,11 @@ export default async function LpPortalPage() {
   if (!page) redirect('/dashboard')
 
   const admin = createAdminClient()
-  const { data: fs } = await (admin as any)
+  const { data: fs } = await admin
     .from('fund_settings')
     .select('lp_portal_enabled')
     .eq('fund_id', page.fundId)
-    .maybeSingle()
+    .maybeSingle() as unknown as { data: { lp_portal_enabled: boolean } | null }
 
   // Master switch off → page unavailable to everyone.
   if (!fs?.lp_portal_enabled) redirect('/dashboard')

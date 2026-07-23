@@ -1,0 +1,37 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e29]:
+    - link [ref=e31] [cursor=pointer]:
+      - /url: /
+      - heading "Portfolio Reporting" [level=1] [ref=e37]
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: Sign in with your account
+        - generic [ref=e41]: Sign in with password or a one-time code.
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - text: Email
+          - textbox "Email" [ref=e44]:
+            - /placeholder: you@example.com
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]: Password
+            - link "Forgot password?" [ref=e48] [cursor=pointer]:
+              - /url: /auth/forgot-password
+          - textbox "Password" [ref=e49]
+        - button "Sign in" [ref=e50] [cursor=pointer]
+        - generic [ref=e51]: or
+        - link [ref=e53] [cursor=pointer]:
+          - /url: /auth/magic-link
+          - button "Sign in with a one-time code" [ref=e54]
+        - paragraph [ref=e55]:
+          - text: Don't have an account?
+          - link "Create an account" [ref=e56] [cursor=pointer]:
+            - /url: /auth/signup
+    - paragraph [ref=e57]:
+      - link "← Back to home" [ref=e58] [cursor=pointer]:
+        - /url: /
+    - paragraph [ref=e59]:
+      - link "License" [ref=e60] [cursor=pointer]:
+        - /url: /license
+  - region "Notifications alt+T"
+  - alert [ref=e27]

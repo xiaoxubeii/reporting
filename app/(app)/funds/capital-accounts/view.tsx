@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useLpPortalEnabled, useIsAdmin } from '@/components/feature-visibility-context'
 import Link from 'next/link'
 import { Loader2, Check, AlertTriangle, Landmark, ChevronRight, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useLedgerFetch, useFundSeg } from '@/components/accounting-vehicle'
 import { type PeriodPreset } from '@/lib/accounting/statement-period'
 import { PeriodPicker } from '@/components/accounting/period-picker'
@@ -15,6 +16,7 @@ import { type CapitalSource } from './capital-source-card'
 import { GpPanel } from './gp-panel'
 import { useCanRead } from '@/components/access-context'
 import { SortTh, nextSort, compareVals, type SortState } from '@/components/sortable-th'
+import { formatDate, formatMoney } from '../format'
 
 interface Account {
   beginning: number
@@ -66,38 +68,18 @@ interface Period { preset: PeriodPreset; start: string | null; end: string | nul
  *  included the receivable, so those two columns double-counted. Total cash the LP still
  *  owes is the sum of them. `Called, unpaid` only appears when a vehicle has a receivable,
  *  because an events-tracked vehicle never does. */
-const COMMITMENT_COLUMNS: { key: 'commitment' | 'called' | 'funded' | 'outstanding' | 'receivable'; label: string }[] = [
-  { key: 'commitment', label: 'Committed' },
-  { key: 'called', label: 'Called' },
-  { key: 'funded', label: 'Funded' },
-  { key: 'outstanding', label: 'Remaining to be called' },
-  { key: 'receivable', label: 'Called, unpaid' },
-]
+const COMMITMENT_COLUMNS = ['commitment', 'called', 'funded', 'outstanding', 'receivable'] as const
 
-const COLUMNS: { key: keyof Account; label: string }[] = [
-  { key: 'beginning', label: 'Beginning' },
-  { key: 'contributions', label: 'Contributions' },
-  { key: 'distributions', label: 'Distributions' },
-  { key: 'managementFees', label: 'Mgmt fees' },
-  { key: 'expenses', label: 'Partnership exp.' },
-  { key: 'operatingIncome', label: 'Operating income' },
-  { key: 'realizedGains', label: 'Net realized G/(L)' },
-  { key: 'unrealizedGains', label: 'Net unrealized G/(L)' },
-  // A currency swing is not investment performance — its own column, so a partner can
-  // see how the portfolio did apart from what the exchange rate did to it.
-  { key: 'fxTranslation', label: 'FX translation' },
-  { key: 'transfers', label: 'Transfers' },
-  { key: 'carriedInterest', label: 'Carry accrued' },
-  { key: 'unclassified', label: 'Unclassified' },
-  { key: 'ending', label: 'Ending' },
-]
+const COLUMNS: (keyof Account)[] = ['beginning', 'contributions', 'distributions', 'managementFees', 'expenses', 'operatingIncome', 'realizedGains', 'unrealizedGains', 'fxTranslation', 'transfers', 'carriedInterest', 'unclassified', 'ending']
 
 export function CapitalAccountsView() {
+  const t = useTranslations('Funds.capitalAccounts')
+  const locale = useLocale()
   const lpPortalEnabled = useLpPortalEnabled()
   const isAdmin = useIsAdmin()
   const canReadGpEconomics = useCanRead('gp_economics')
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
   const lf = useLedgerFetch()
   const fundSeg = useFundSeg()
 
@@ -177,21 +159,21 @@ export function CapitalAccountsView() {
     })
     const data = await res.json()
     setPublishing(false)
-    if (!res.ok) { setErr(data.error ?? 'Could not publish statements'); return }
+    if (!res.ok) { setErr(data.error ?? t('share.error')); return }
     setPublishResult({ count: data.count ?? 0, errors: data.errors ?? [] })
   }
 
   const enteredTotal = rows.reduce((s, r) => s + (Number(amounts[r.lpEntityId]) || 0), 0)
 
   async function splitProRata() {
-    const t = Number(callTotal)
-    if (!Number.isFinite(t) || t <= 0) { setMsg({ ok: false, text: 'Enter a positive total to split' }); return }
+    const total = Number(callTotal)
+    if (!Number.isFinite(total) || total <= 0) { setMsg({ ok: false, text: t('call.positiveTotal') }); return }
     const res = await lf('/api/accounting/capital-calls', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'preview', total: t }),
+      body: JSON.stringify({ action: 'preview', total }),
     })
     const data = await res.json()
-    if (!res.ok) { setMsg({ ok: false, text: data.error ?? 'Could not split' }); return }
+    if (!res.ok) { setMsg({ ok: false, text: data.error ?? t('call.splitError') }); return }
     const next: Record<string, string> = {}
     for (const l of (data.lines ?? [])) next[l.lpEntityId] = String(l.amount)
     setAmounts(next); setMsg(null)
@@ -202,8 +184,8 @@ export function CapitalAccountsView() {
     const lines = rows
       .map(r => ({ lpEntityId: r.lpEntityId, amount: Number(amounts[r.lpEntityId]) || 0 }))
       .filter(l => l.amount > 0)
-    if (lines.length === 0) { setMsg({ ok: false, text: 'Enter at least one LP amount' }); return }
-    if (!callDate) { setMsg({ ok: false, text: 'Pick a call date' }); return }
+    if (lines.length === 0) { setMsg({ ok: false, text: t('call.amountRequired') }); return }
+    if (!callDate) { setMsg({ ok: false, text: t('call.dateRequired') }); return }
     setIssuing(true)
     const res = await lf('/api/accounting/capital-calls', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -211,8 +193,8 @@ export function CapitalAccountsView() {
     })
     const data = await res.json()
     setIssuing(false)
-    if (!res.ok) { setMsg({ ok: false, text: data.error ?? 'Could not issue call' }); return }
-    setMsg({ ok: true, text: 'Call issued.' })
+    if (!res.ok) { setMsg({ ok: false, text: data.error ?? t('call.issueError') }); return }
+    setMsg({ ok: true, text: t('call.issued') })
     setAmounts({}); setCallTotal(''); setDescription('')
     load()
   }
@@ -224,14 +206,14 @@ export function CapitalAccountsView() {
   // show an "Unclassified" column, but it has to appear the moment something lands
   // there, or a manual posting would be invisible while still inside Ending.
   const columns = useMemo(
-    () => COLUMNS.filter(c =>
-      c.key === 'beginning' || c.key === 'ending' ||
-      rows.some(r => Math.abs(acctOf(r)[c.key]) > 0.004)
+    () => COLUMNS.filter(key =>
+      key === 'beginning' || key === 'ending' ||
+      rows.some(r => Math.abs(acctOf(r)[key]) > 0.004)
     ),
     [rows, period], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const commitmentCols = useMemo(
-    () => COMMITMENT_COLUMNS.filter(c => c.key !== 'receivable' || rows.some(r => Math.abs(r.receivable) > 0.004)),
+    () => COMMITMENT_COLUMNS.filter(key => key !== 'receivable' || rows.some(r => Math.abs(r.receivable) > 0.004)),
     [rows],
   )
 
@@ -240,7 +222,7 @@ export function CapitalAccountsView() {
   const [sort, setSort] = useState<SortState>({ key: 'name', dir: 'asc' })
   const onSort = (key: string) => setSort(s => nextSort(s, key, key === 'name' ? 'asc' : 'desc'))
   const sortedRows = useMemo(() => {
-    const accountKeys = new Set<string>(COLUMNS.map(c => c.key))
+    const accountKeys = new Set<string>(COLUMNS)
     const val = (r: Row): number | string => {
       if (sort.key === 'name') return r.name
       if (accountKeys.has(sort.key)) return acctOf(r)[sort.key as keyof Account]
@@ -249,12 +231,12 @@ export function CapitalAccountsView() {
     return [...rows].sort((a, b) => compareVals(val(a), val(b), sort.dir))
   }, [rows, sort, period]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totals = columns.reduce((acc, c) => {
-    acc[c.key] = rows.reduce((s, r) => s + acctOf(r)[c.key], 0)
+  const totals = columns.reduce((acc, key) => {
+    acc[key] = rows.reduce((s, r) => s + acctOf(r)[key], 0)
     return acc
   }, {} as Record<string, number>)
-  const commitTotals = commitmentCols.reduce((acc, c) => {
-    acc[c.key] = rows.reduce((s, r) => s + r[c.key], 0)
+  const commitTotals = commitmentCols.reduce((acc, key) => {
+    acc[key] = rows.reduce((s, r) => s + r[key], 0)
     return acc
   }, {} as Record<string, number>)
 
@@ -267,7 +249,7 @@ export function CapitalAccountsView() {
       <div className="flex flex-wrap items-center gap-2">
         {!isEvents && (
           <Button size="sm" variant="outline" className="text-muted-foreground" onClick={() => setShowCall(v => !v)} disabled={rows.length === 0}>
-            <Landmark className="h-4 w-4 mr-1" />Issue a capital call
+            <Landmark className="h-4 w-4 mr-1" />{t('call.open')}
           </Button>
         )}
         {/* Same "Share with LPs" action as the LPs report page: pick which LPs, publish to the
@@ -276,7 +258,7 @@ export function CapitalAccountsView() {
         {lpPortalEnabled && (
           <Button size="sm" variant="outline" className="text-muted-foreground" onClick={openShare} disabled={rows.length === 0}>
             <Share2 className="h-4 w-4 mr-1" />
-            Share with LPs
+            {t('share.open')}
           </Button>
         )}
         {err && !showShare && <span className="text-xs text-amber-600">{err}</span>}
@@ -289,7 +271,7 @@ export function CapitalAccountsView() {
             start={start} end={end} onStart={setStart} onEnd={setEnd}
             asOf={asOf} onAsOf={setAsOf}
             allowAsOf
-            title={period && period.preset !== 'itd' && period.start ? `Beginning capital is the balance carried in before ${period.start}` : 'All activity since inception'}
+            title={period && period.preset !== 'itd' && period.start ? t('periodBeginning', { date: formatDate(period.start, locale) }) : t('allActivity')}
           />
         </div>
       </div>
@@ -299,21 +281,20 @@ export function CapitalAccountsView() {
       <Dialog open={showShare} onOpenChange={o => { if (!o) setShowShare(false) }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Share statements with LPs</DialogTitle>
+            <DialogTitle>{t('share.title')}</DialogTitle>
             <DialogDescription>
-              Publish each selected LP&rsquo;s capital-account statement for {period?.label ?? 'this period'} to their
-              portal. No email is sent — LPs see it when they sign in.
+              {t('share.description', { period: period?.label ?? t('share.thisPeriod') })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 min-w-0">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{shareSel.size} of {rows.length} selected</span>
+              <span className="text-xs text-muted-foreground">{t('share.selected', { selected: shareSel.size, total: rows.length })}</span>
               <button
                 onClick={() => setShareSel(shareSel.size === rows.length ? new Set() : new Set(rows.map(r => r.lpEntityId)))}
                 className="text-[11px] text-primary hover:underline"
               >
-                {shareSel.size === rows.length ? 'Deselect all' : 'Select all'}
+                {t(shareSel.size === rows.length ? 'share.deselectAll' : 'share.selectAll')}
               </button>
             </div>
             <div className="rounded-md border divide-y max-h-[45vh] overflow-y-auto min-w-0">
@@ -322,7 +303,12 @@ export function CapitalAccountsView() {
                   <input
                     type="checkbox"
                     checked={shareSel.has(r.lpEntityId)}
-                    onChange={() => setShareSel(prev => { const n = new Set(prev); n.has(r.lpEntityId) ? n.delete(r.lpEntityId) : n.add(r.lpEntityId); return n })}
+                    onChange={() => setShareSel(prev => {
+                      const next = new Set(prev)
+                      if (next.has(r.lpEntityId)) next.delete(r.lpEntityId)
+                      else next.add(r.lpEntityId)
+                      return next
+                    })}
                     className="h-3.5 w-3.5 shrink-0"
                   />
                   <span className="flex-1 min-w-0 truncate">{r.name}</span>
@@ -335,7 +321,7 @@ export function CapitalAccountsView() {
               <div className="rounded-md border p-2.5 text-sm space-y-1">
                 <p className="flex items-center gap-1.5 text-green-700 dark:text-green-400">
                   <Check className="h-4 w-4" />
-                  Published {publishResult.count} statement{publishResult.count === 1 ? '' : 's'} for {period?.label} to the LP portal.
+                  {t('share.published', { count: publishResult.count, period: period?.label ?? t('share.thisPeriod') })}
                 </p>
                 {publishResult.errors.map((e, i) => <p key={i} className="text-xs text-amber-600">{e}</p>)}
               </div>
@@ -343,10 +329,10 @@ export function CapitalAccountsView() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setShowShare(false)}>Close</Button>
+            <Button variant="outline" size="sm" onClick={() => setShowShare(false)}>{t('close')}</Button>
             <Button size="sm" onClick={publishStatements} disabled={publishing || shareSel.size === 0}>
               {publishing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-              Publish {shareSel.size > 0 ? `${shareSel.size} ` : ''}statement{shareSel.size === 1 ? '' : 's'}
+              {t('share.publish', { count: shareSel.size })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -357,30 +343,30 @@ export function CapitalAccountsView() {
           it showing on a vehicle that has no receivable to call against. */}
       {showCall && !isEvents && rows.length > 0 && (
         <div className="border rounded-lg p-4 space-y-3">
-          <p className="text-sm font-medium">Issue a capital call</p>
+          <p className="text-sm font-medium">{t('call.title')}</p>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="text-xs text-muted-foreground">Date
+            <label className="text-xs text-muted-foreground">{t('call.date')}
               <input type="date" value={callDate} onChange={e => setCallDate(e.target.value)} className="block mt-1 border border-input rounded px-2 py-1.5 text-sm bg-transparent" />
             </label>
-            <label className="text-xs text-muted-foreground flex-1 min-w-[180px]">Description
-              <input value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Call #3 — new investment" className="block mt-1 w-full border border-input rounded px-2 py-1.5 text-sm bg-transparent" />
+            <label className="text-xs text-muted-foreground flex-1 min-w-[180px]">{t('call.description')}
+              <input value={description} onChange={e => setDescription(e.target.value)} placeholder={t('call.descriptionPlaceholder')} className="block mt-1 w-full border border-input rounded px-2 py-1.5 text-sm bg-transparent" />
             </label>
             <div className="text-xs text-muted-foreground">
-              <span className="block mb-1">Type</span>
+              <span className="block mb-1">{t('call.type')}</span>
               <div className="inline-flex rounded border border-input overflow-hidden">
-                <button type="button" onClick={() => setMode('fund_wide')} className={`px-2.5 py-1.5 text-xs ${mode === 'fund_wide' ? 'bg-accent text-foreground' : 'text-muted-foreground'}`}>Fund-wide</button>
-                <button type="button" onClick={() => setMode('per_lp')} className={`px-2.5 py-1.5 text-xs border-l border-input ${mode === 'per_lp' ? 'bg-accent text-foreground' : 'text-muted-foreground'}`}>Per-LP</button>
+                <button type="button" onClick={() => setMode('fund_wide')} className={`px-2.5 py-1.5 text-xs ${mode === 'fund_wide' ? 'bg-accent text-foreground' : 'text-muted-foreground'}`}>{t('call.fundWide')}</button>
+                <button type="button" onClick={() => setMode('per_lp')} className={`px-2.5 py-1.5 text-xs border-l border-input ${mode === 'per_lp' ? 'bg-accent text-foreground' : 'text-muted-foreground'}`}>{t('call.perLp')}</button>
               </div>
             </div>
           </div>
 
           {mode === 'fund_wide' && (
             <div className="flex items-end gap-2">
-              <label className="text-xs text-muted-foreground">Total to call
+              <label className="text-xs text-muted-foreground">{t('call.totalToCall')}
                 <input value={callTotal} onChange={e => setCallTotal(e.target.value)} inputMode="decimal" placeholder="0.00" className="block mt-1 border border-input rounded px-2 py-1.5 text-sm font-mono bg-transparent w-40" />
               </label>
-              <Button size="sm" variant="outline" onClick={splitProRata}>Split pro-rata</Button>
-              <span className="text-xs text-muted-foreground pb-2">Fills each LP by commitment — edit any row below.</span>
+              <Button size="sm" variant="outline" onClick={splitProRata}>{t('call.split')}</Button>
+              <span className="text-xs text-muted-foreground pb-2">{t('call.splitHelp')}</span>
             </div>
           )}
 
@@ -388,10 +374,10 @@ export function CapitalAccountsView() {
             <table className="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left px-3 py-2 font-medium">Partner</th>
-                  <th className="text-right px-3 py-2 font-medium">Commitment</th>
-                  <th className="text-right px-3 py-2 font-medium">Unfunded</th>
-                  <th className="text-right px-3 py-2 font-medium">Call amount</th>
+                  <th className="text-left px-3 py-2 font-medium">{t('partner')}</th>
+                  <th className="text-right px-3 py-2 font-medium">{t('call.commitment')}</th>
+                  <th className="text-right px-3 py-2 font-medium">{t('call.unfunded')}</th>
+                  <th className="text-right px-3 py-2 font-medium">{t('call.amount')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -414,7 +400,7 @@ export function CapitalAccountsView() {
               </tbody>
               <tfoot>
                 <tr className="border-t bg-muted/30 font-semibold">
-                  <td className="px-3 py-2" colSpan={3}>Call total</td>
+                  <td className="px-3 py-2" colSpan={3}>{t('call.total')}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmt(enteredTotal)}</td>
                 </tr>
               </tfoot>
@@ -423,9 +409,9 @@ export function CapitalAccountsView() {
 
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={issue} disabled={issuing || enteredTotal <= 0}>
-              {issuing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Issue call
+              {issuing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}{t('call.issue')}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setShowCall(false)} disabled={issuing}>Cancel</Button>
+            <Button size="sm" variant="outline" onClick={() => setShowCall(false)} disabled={issuing}>{t('cancel')}</Button>
             {msg && (
               <span className={`text-sm flex items-center gap-1 ${msg.ok ? 'text-green-600' : 'text-amber-600'}`}>
                 {msg.ok ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}{msg.text}
@@ -436,20 +422,20 @@ export function CapitalAccountsView() {
       )}
 
       {loading && rows.length === 0 ? (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
+        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
       ) : rows.length === 0 ? (
         <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
-          No capital accounts yet. Add a partner above, or import opening balances from the Accounting home page.
+          {t('empty')}
         </div>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b bg-muted/50">
-                <SortTh label="Partner" sortKey="name" sort={sort} onSort={onSort} align="left" />
+                <SortTh label={t('partner')} sortKey="name" sort={sort} onSort={onSort} align="left" />
                 {/* Commitment side — was the Capital calls page. */}
-                {commitmentCols.map(c => <SortTh key={c.key} label={c.label} sortKey={c.key} sort={sort} onSort={onSort} align="right" className="border-l" />)}
-                {columns.map((c, i) => <SortTh key={c.key} label={c.label} sortKey={c.key} sort={sort} onSort={onSort} align="right" className={i === 0 ? 'border-l' : ''} />)}
+                {commitmentCols.map(key => <SortTh key={key} label={t(`columns.${key}`)} sortKey={key} sort={sort} onSort={onSort} align="right" className="border-l" />)}
+                {columns.map((key, i) => <SortTh key={key} label={t(`columns.${key}`)} sortKey={key} sort={sort} onSort={onSort} align="right" className={i === 0 ? 'border-l' : ''} />)}
               </tr>
             </thead>
             <tbody>
@@ -463,16 +449,16 @@ export function CapitalAccountsView() {
                         {r.partnerClass === 'gp' && <span className="text-[10px] uppercase tracking-wider px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">GP</span>}
                       </div>
                     </td>
-                    {commitmentCols.map(c => (
-                      <td key={c.key} className={`px-3 py-2 text-right font-mono border-l ${Math.abs(r[c.key]) > 0.004 ? '' : 'text-muted-foreground'}`}>
-                        {fmt(r[c.key])}
+                    {commitmentCols.map(key => (
+                      <td key={key} className={`px-3 py-2 text-right font-mono border-l ${Math.abs(r[key]) > 0.004 ? '' : 'text-muted-foreground'}`}>
+                        {fmt(r[key])}
                       </td>
                     ))}
-                    {columns.map((c, i) => (
-                      <td key={c.key} className={`px-3 py-2 text-right font-mono ${i === 0 ? 'border-l' : ''} ${c.key === 'ending' ? 'font-semibold' : ''} ${c.key === 'unclassified' && Math.abs(a[c.key]) > 0.004 ? 'text-amber-600' : ''}`}>
+                    {columns.map((key, i) => (
+                      <td key={key} className={`px-3 py-2 text-right font-mono ${i === 0 ? 'border-l' : ''} ${key === 'ending' ? 'font-semibold' : ''} ${key === 'unclassified' && Math.abs(a[key]) > 0.004 ? 'text-amber-600' : ''}`}>
                         {/* Roll-forward deltas are signed so the columns tie to Ending: contributions
                             add, distributions (withdrawals) and fees subtract. */}
-                        {fmt(a[c.key])}
+                        {fmt(a[key])}
                       </td>
                     ))}
                   </tr>
@@ -481,9 +467,9 @@ export function CapitalAccountsView() {
             </tbody>
             <tfoot>
               <tr className="border-t bg-muted/30 font-semibold">
-                <td className="px-3 py-2">Total</td>
-                {commitmentCols.map(c => <td key={c.key} className="px-3 py-2 text-right font-mono border-l">{fmt(commitTotals[c.key])}</td>)}
-                {columns.map((c, i) => <td key={c.key} className={`px-3 py-2 text-right font-mono ${i === 0 ? 'border-l' : ''}`}>{fmt(totals[c.key])}</td>)}
+                <td className="px-3 py-2">{t('total')}</td>
+                {commitmentCols.map(key => <td key={key} className="px-3 py-2 text-right font-mono border-l">{fmt(commitTotals[key])}</td>)}
+                {columns.map((key, i) => <td key={key} className={`px-3 py-2 text-right font-mono ${i === 0 ? 'border-l' : ''}`}>{fmt(totals[key])}</td>)}
               </tr>
             </tfoot>
           </table>
@@ -492,13 +478,13 @@ export function CapitalAccountsView() {
 
       {calls.length > 0 && (
         <div>
-          <p className="text-sm font-medium mb-2 mt-4">Issued calls</p>
+          <p className="text-sm font-medium mb-2 mt-4">{t('call.issuedTitle')}</p>
           <div className="space-y-2">
             {calls.map(c => (
               <div key={c.id} className="border rounded-lg p-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{c.callDate} · {fmt(c.total)}</span>
-                  <span className="text-xs text-muted-foreground">{c.scope === 'fund_wide' ? 'Fund-wide' : 'Per-LP'}</span>
+                  <span className="font-medium">{formatDate(c.callDate, locale)} · {fmt(c.total)}</span>
+                  <span className="text-xs text-muted-foreground">{t(c.scope === 'fund_wide' ? 'call.fundWide' : 'call.perLp')}</span>
                 </div>
                 {c.description && <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>}
                 <div className="mt-2 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
@@ -519,9 +505,7 @@ export function CapitalAccountsView() {
       {isEvents && (
         <div className="pt-6">
           <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-            This vehicle is capital-tracked. Add or edit its LP positions on the{' '}
-            <Link href="/lps/capital" className="text-foreground underline underline-offset-4">LP capital accounts</Link>{' '}
-            page.
+            {t.rich('eventsHelp', { link: chunks => <Link href="/lps/capital" className="text-foreground underline underline-offset-4">{chunks}</Link> })}
           </div>
         </div>
       )}
@@ -551,9 +535,9 @@ export function CapitalAccountsView() {
       <details className="group border rounded-lg mt-6">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-medium">
           <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
-          Tie out to an administrator&rsquo;s statement
+          {t('reconciliation.title')}
           <span className="ml-1 text-xs font-normal text-muted-foreground">
-            a takeover check — prove these accounts reproduce theirs, per partner, per line
+            {t('reconciliation.subtitle')}
           </span>
         </summary>
         <div className="border-t p-3">

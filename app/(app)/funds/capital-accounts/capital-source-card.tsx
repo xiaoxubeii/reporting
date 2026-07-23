@@ -7,6 +7,7 @@
 // setting that decides what every other control on this page even means.
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { BookOpen, ListTree } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +25,7 @@ export function CapitalSourceCard({
   source?: CapitalSource
   onChange?: (next: CapitalSource) => void
 } = {}) {
+  const t = useTranslations('Funds.capitalSource')
   const lf = useLedgerFetch()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +56,7 @@ export function CapitalSourceCard({
     if (!res.ok) {
       // The API refuses ledger promotion when the vehicle has no chart of accounts —
       // its LP capital would otherwise read as zero everywhere at once.
-      setError((await res.json().catch(() => ({}))).error ?? 'Could not change the capital source')
+      setError((await res.json().catch(() => ({}))).error ?? t('changeError'))
       return
     }
     if (sourceProp === undefined) setFetched(next)
@@ -68,19 +70,19 @@ export function CapitalSourceCard({
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-sm font-medium">
               {isLedger ? <BookOpen className="h-4 w-4" /> : <ListTree className="h-4 w-4" />}
-              This vehicle uses{' '}
+              {t('uses')}{' '}
               <Badge variant={isLedger ? 'default' : 'secondary'}>
-                {isLedger ? 'Fund Accounting' : 'LP only tracking'}
+                {isLedger ? t('ledger') : t('events')}
               </Badge>
             </div>
             <p className="max-w-2xl text-sm text-muted-foreground">
               {isLedger
-                ? 'Double-entry books to produce full financial statements.'
-                : 'Limited partner capital tracking only — no ledger, close, or statements.'}
+                ? t('ledgerHelp')
+                : t('eventsHelp')}
             </p>
           </div>
           <Button variant="outline" size="sm" disabled={busy} onClick={() => switchTo(isLedger ? 'events' : 'ledger')}>
-            Switch to {isLedger ? 'LP only tracking' : 'Fund Accounting'}
+            {t('switchTo', { source: isLedger ? t('events') : t('ledger') })}
           </Button>
         </div>
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}

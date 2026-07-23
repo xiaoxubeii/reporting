@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { MessageSquare, Send, Pencil, X, Check, Building2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { NoteContent } from '@/components/note-content'
@@ -29,6 +30,7 @@ interface Note {
 interface CompanyOption {
   id: string
   name: string
+  portfolioGroup?: string[] | null
 }
 
 interface NotesContextValue {
@@ -41,21 +43,6 @@ interface NotesContextValue {
   unreadCount: number
   setUnreadCount: (n: number) => void
   inputRef: React.MutableRefObject<MentionTextareaRef | null>
-}
-
-function formatRelativeTime(dateStr: string) {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHr = Math.floor(diffMs / 3600000)
-  const diffDay = Math.floor(diffMs / 86400000)
-
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  if (diffHr < 24) return `${diffHr}h ago`
-  if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 const DashboardNotesContext = createContext<NotesContextValue | null>(null)
@@ -77,12 +64,7 @@ export function DashboardNotesLayout({
 
   // Extract distinct portfolio groups from companies
   const groups = Array.from(new Set(
-    companies.flatMap((c: any) => {
-      const pg = c.portfolio_group ?? c.portfolioGroup
-      if (Array.isArray(pg)) return pg.filter(Boolean)
-      if (pg) return [pg]
-      return []
-    })
+    companies.flatMap(c => c.portfolioGroup?.filter(Boolean) ?? [])
   )).sort()
 
   useEffect(() => {
@@ -99,6 +81,7 @@ export function DashboardNotesLayout({
 }
 
 export function DashboardChatButton() {
+  const t = useTranslations('Dashboard')
   const ctx = useContext(DashboardNotesContext)
   const fv = useFeatureVisibility()
   if (!ctx) return null
@@ -110,6 +93,7 @@ export function DashboardChatButton() {
       size="sm"
       className={`gap-1.5 h-8 py-2 text-muted-foreground hover:text-foreground ${open ? 'bg-accent' : ''}`}
       onClick={toggle}
+      aria-expanded={open}
     >
       <span className="relative">
         <MessageSquare className="h-3.5 w-3.5" />
@@ -117,7 +101,7 @@ export function DashboardChatButton() {
           <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
         )}
       </span>
-      Notes
+      {t('notes.button')}
       {notesAdminOnly && <Lock className="h-3 w-3 text-amber-500" />}
       {!open && unreadCount > 0 && (
         <span className="text-[10px] font-medium bg-blue-500 text-white rounded-full px-1 min-w-[16px] text-center">
@@ -139,6 +123,8 @@ export function DashboardNotesPanel() {
 }
 
 function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
+  const t = useTranslations('Dashboard')
+  const locale = useLocale()
   const { userId, isAdmin, companies, groups, inputRef, toggle, setUnreadCount } = ctx
   const { fundName } = useAnalystContext()
   const [notes, setNotes] = useState<Note[]>([])
@@ -149,6 +135,21 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
   const [editContent, setEditContent] = useState('')
   const [members, setMembers] = useState<MentionMember[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  function formatRelativeTime(dateStr: string) {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    const diffHr = Math.floor(diffMs / 3600000)
+    const diffDay = Math.floor(diffMs / 86400000)
+
+    if (diffMin < 1) return t('notes.relative.justNow')
+    if (diffMin < 60) return t('notes.relative.minutesAgo', { count: diffMin })
+    if (diffHr < 24) return t('notes.relative.hoursAgo', { count: diffHr })
+    if (diffDay < 7) return t('notes.relative.daysAgo', { count: diffDay })
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+  }
 
   useEffect(() => {
     fetch('/api/notes/members').then(r => r.json()).then(data => {
@@ -247,18 +248,18 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
     <div className="flex flex-col h-full">
     <div className="max-h-[80vh] lg:max-h-[calc(100vh-6rem)] rounded-lg border bg-card flex flex-col flex-1">
       <div className="px-4 py-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-muted-foreground">Team Notes</h2>
-        <button onClick={toggle} className="hidden lg:block">
+        <h2 className="text-sm font-medium text-muted-foreground">{t('notes.title')}</h2>
+        <button onClick={toggle} className="hidden lg:block" aria-label={t('notes.close')}>
           <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
         </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-3 space-y-3">
         {loading && (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">{t('notes.loading')}</p>
         )}
         {!loading && notes.length === 0 && (
-          <p className="text-sm text-muted-foreground">No notes yet.</p>
+          <p className="text-sm text-muted-foreground">{t('notes.empty')}</p>
         )}
         {notes.map(note => (
           <div key={note.id} className="group">
@@ -273,16 +274,16 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
                 {formatRelativeTime(note.createdAt)}
               </span>
               {note.edited && (
-                <span className="text-[10px] text-muted-foreground italic">edited</span>
+                <span className="text-[10px] text-muted-foreground italic">{t('notes.edited')}</span>
               )}
               <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-auto flex items-center gap-1">
                 {note.userId === userId && (
-                  <button onClick={() => startEditing(note)}>
+                  <button onClick={() => startEditing(note)} aria-label={t('notes.edit')}>
                     <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 )}
                 {(note.userId === userId || isAdmin) && (
-                  <button onClick={() => handleDelete(note.id)}>
+                  <button onClick={() => handleDelete(note.id)} aria-label={t('notes.delete')}>
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 )}
@@ -313,14 +314,15 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
                     }
                   }}
                   rows={2}
+                  aria-label={t('notes.editField')}
                   className="flex-1 resize-none rounded-md border bg-transparent px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   autoFocus
                 />
                 <div className="flex flex-col gap-1 self-end">
-                  <button onClick={() => handleEdit(note.id)}>
+                  <button onClick={() => handleEdit(note.id)} aria-label={t('notes.saveEdit')}>
                     <Check className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
                   </button>
-                  <button onClick={() => { setEditingId(null); setEditContent('') }}>
+                  <button onClick={() => { setEditingId(null); setEditContent('') }} aria-label={t('notes.cancelEdit')}>
                     <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
                   </button>
                 </div>
@@ -347,7 +349,7 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
                 handlePost()
               }
             }}
-            placeholder="Write a note... (@ to tag people, companies, or groups)"
+            placeholder={t('notes.placeholder')}
             rows={2}
             className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
@@ -356,6 +358,7 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
             onClick={handlePost}
             disabled={!content.trim() || posting}
             className="h-auto self-end px-2 py-2"
+            aria-label={t('notes.send')}
           >
             <Send className="h-3.5 w-3.5" />
           </Button>
@@ -363,7 +366,7 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
       </div>
     </div>
     <p className="text-[10px] text-muted-foreground/60 text-center mt-3 px-4">
-      All chat history is saved by {fundName}.
+      {t('notes.storageNotice', { fundName })}
     </p>
     </div>
   )

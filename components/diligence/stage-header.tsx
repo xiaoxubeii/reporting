@@ -5,6 +5,7 @@ import { Loader2, Check, AlertTriangle, Lock, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChecklistBar, DataRoomBar, StageBar } from './progress-bars'
 import type { StageInfo, StageKey, ChecklistStatus, DocBucket } from '@/lib/diligence/progress'
+import { useFormatter, useTranslations } from 'next-intl'
 
 export interface DiligenceProgress {
   stages: StageInfo[]
@@ -75,6 +76,7 @@ export function StageHeader({
   onRan?: () => void
   children?: React.ReactNode
 }) {
+  const t = useTranslations('Diligence.stageHeader')
   const { progress, job, refresh } = useDiligenceProgress(dealId)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +86,29 @@ export function StageHeader({
 
   const running = stage.state === 'running'
   const blocked = stage.state === 'blocked'
+  const stageLabels: Record<StageKey, string> = {
+    data_room: t('labels.dataRoom'), checklist: t('labels.checklist'), research: t('labels.research'),
+    scoring: t('labels.scoring'), memo: t('labels.memo'),
+  }
+  const actionLabels: Record<StageKey, string> = {
+    data_room: t(stage.actionLabel.startsWith('Re-') ? 'actions.reanalyzeDataRoom' : 'actions.analyzeDataRoom'),
+    checklist: t(stage.actionLabel.startsWith('Re-') ? 'actions.reassessChecklist' : 'actions.assessChecklist'),
+    research: t(stage.actionLabel.startsWith('Re-') ? 'actions.rerunResearch' : 'actions.runResearch'),
+    scoring: t(stage.actionLabel.startsWith('Re-') ? 'actions.rerunScoring' : 'actions.runScoring'),
+    memo: t(stage.actionLabel.startsWith('Re-') ? 'actions.redraftMemo' : 'actions.draftMemo'),
+  }
+  const count = Number(stage.hint.match(/^\d+/)?.[0] ?? 0)
+  const localizedHint = stage.hint === 'Upload documents first' ? t('hints.uploadDocuments')
+    : stage.hint === 'Read every document and extract the evidence base' ? t('hints.extractEvidence')
+    : stage.hint === 'Analyze the data room first' ? t('hints.analyzeFirst')
+    : stage.hint.includes('still missing') ? t('hints.itemsMissing', { count })
+    : stage.hint === 'Judge each checklist item against the evidence' ? t('hints.judgeChecklist')
+    : stage.hint === 'Search outside the data room — market, competitors, team' ? t('hints.searchOutside')
+    : stage.hint === 'Score the deal against the fund’s criteria' ? t('hints.scoreDeal')
+    : stage.hint.includes('must-address item') ? t('hints.mustAddressOpen', { count })
+    : stage.hint.includes('open item') ? t('hints.openItems', { count })
+    : stage.hint === 'Every item addressed — finalize the memo' ? t('hints.finalizeMemo')
+    : t('hints.assembleMemo')
 
   async function run() {
     if (!stage?.action) return
@@ -92,7 +117,7 @@ export function StageHeader({
       const res = await fetch(`/api/diligence/${dealId}/agent/${stage.action}`, { method: 'POST' })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
-        setError(d.error ?? 'Could not start')
+        setError(d.error ?? t('couldNotStart'))
       } else {
         await refresh()
         onRan?.()
@@ -115,9 +140,9 @@ export function StageHeader({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium flex items-center gap-1.5">
             {Icon && <Icon className={`h-3.5 w-3.5 ${stage.state === 'done' ? 'text-emerald-600' : stage.state === 'failed' ? 'text-red-600' : 'text-muted-foreground'}`} />}
-            {stage.label}
+            {stageLabels[stageKey]}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">{stage.hint}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{localizedHint}</p>
         </div>
 
         {stage.action && (
@@ -129,12 +154,12 @@ export function StageHeader({
             variant="outline"
             onClick={run}
             disabled={submitting || running || blocked}
-            title={blocked ? stage.hint : undefined}
+            title={blocked ? localizedHint : undefined}
           >
             {(submitting || running)
               ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
               : <Play className="h-3.5 w-3.5 mr-1" />}
-            {running ? 'Running…' : stage.actionLabel}
+            {running ? t('running') : actionLabels[stageKey]}
           </Button>
         )}
       </div>
@@ -157,6 +182,8 @@ export function StageHeader({
 }
 
 function JobLine({ job, stage }: { job: Job; stage: StageInfo }) {
+  const t = useTranslations('Diligence.stageHeader')
+  const format = useFormatter()
   const [, tick] = useState(0)
   const live = job.status === 'pending' || job.status === 'running'
   useEffect(() => {
@@ -169,14 +196,14 @@ function JobLine({ job, stage }: { job: Job; stage: StageInfo }) {
     const from = job.started_at ?? job.enqueued_at
     const secs = from ? Math.round((Date.now() - new Date(from).getTime()) / 1000) : 0
     const mins = Math.floor(secs / 60)
-    const elapsed = mins > 0 ? `${mins}m ${secs % 60}s` : `${secs}s`
+    const elapsed = mins > 0 ? t('elapsed.minutesSeconds', { minutes: mins, seconds: secs % 60 }) : t('elapsed.seconds', { seconds: secs })
     return (
       <div className="rounded-md border bg-muted/30 p-2 text-xs flex items-center gap-2">
         <Loader2 className="h-3 w-3 animate-spin shrink-0" />
         <span className="flex-1">
-          {job.status === 'pending' ? 'Queued — the worker picks up within about a minute.' : (job.progress_message ?? 'Running…')}
+          {job.status === 'pending' ? t('queuedDescription') : (job.progress_message ?? t('running'))}
         </span>
-        <span className="tabular-nums text-muted-foreground">{elapsed} {job.started_at ? 'running' : 'queued'}</span>
+        <span className="tabular-nums text-muted-foreground">{elapsed} {job.started_at ? t('runningState') : t('queuedState')}</span>
       </div>
     )
   }
@@ -184,7 +211,7 @@ function JobLine({ job, stage }: { job: Job; stage: StageInfo }) {
   if (stage.state === 'failed' && job.error) {
     return (
       <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs">
-        <p className="font-medium text-destructive">Last run failed.</p>
+        <p className="font-medium text-destructive">{t('lastRunFailed')}</p>
         <p className="text-destructive/80 mt-0.5">{job.error}</p>
       </div>
     )
@@ -194,7 +221,7 @@ function JobLine({ job, stage }: { job: Job; stage: StageInfo }) {
     return (
       <p className="text-xs text-muted-foreground">
         <Check className="h-3 w-3 inline mr-1" />
-        Last run finished {new Date(job.finished_at).toLocaleString()}.
+        {t('lastRunFinished', { date: format.dateTime(new Date(job.finished_at), { dateStyle: 'medium', timeStyle: 'short' }) })}
       </p>
     )
   }

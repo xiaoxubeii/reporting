@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Building2, Lock, Send, Pencil, X, Check, Reply, Pin, PinOff } from 'lucide-react'
 import Link from 'next/link'
 import { NoteContent } from '@/components/note-content'
@@ -36,7 +37,7 @@ interface CompanyOption {
 
 type FilterMode = 'all' | 'general' | 'mentions'
 
-function formatRelativeTime(dateStr: string) {
+function relativeTime(dateStr: string) {
   const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -44,14 +45,18 @@ function formatRelativeTime(dateStr: string) {
   const diffHr = Math.floor(diffMs / 3600000)
   const diffDay = Math.floor(diffMs / 86400000)
 
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  if (diffHr < 24) return `${diffHr}h ago`
-  if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (diffMin < 1) return { unit: 'now' as const, count: 0, date }
+  if (diffMin < 60) return { unit: 'minute' as const, count: diffMin, date }
+  if (diffHr < 24) return { unit: 'hour' as const, count: diffHr, date }
+  if (diffDay < 7) return { unit: 'day' as const, count: diffDay, date }
+  return { unit: 'date' as const, count: 0, date }
 }
 
+const KNOWN_CONTEXTS = ['lps', 'investments', 'interactions', 'compliance', 'deals', 'asks'] as const
+
 export default function NotesPage() {
+  const t = useTranslations('Notes')
+  const locale = useLocale()
   const fv = useFeatureVisibility()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
@@ -82,7 +87,7 @@ export default function NotesPage() {
 
     fetch('/api/companies').then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
-        setCompanies(data.map((c: any) => ({ id: c.id, name: c.name })))
+        setCompanies(data.map((company: { id: string; name: string }) => ({ id: company.id, name: company.name })))
         const allGroups = new Set<string>()
         for (const c of data) {
           const pg = c.portfolio_group ?? c.portfolioGroup
@@ -148,7 +153,7 @@ export default function NotesPage() {
     if (!replyContent.trim() || posting) return
     setPosting(true)
     try {
-      const body: any = { content: replyContent.trim() }
+      const body: { content: string; companyId?: string } = { content: replyContent.trim() }
       if (parentNote.companyId) body.companyId = parentNote.companyId
       const res = await fetch('/api/dashboard/notes', {
         method: 'POST',
@@ -226,10 +231,10 @@ export default function NotesPage() {
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.notes === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}Notes</h1>
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.notes === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
           <AnalystToggleButton />
         </div>
-        <p className="text-sm text-muted-foreground">Activity and conversations across your portfolio</p>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
         <div className="flex items-center pt-2">
           <div className="flex items-center rounded-md border text-xs">
           {(['all', 'mentions', 'general'] as FilterMode[]).map(f => (
@@ -244,7 +249,7 @@ export default function NotesPage() {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {f === 'mentions' ? '@Mentions' : f.charAt(0).toUpperCase() + f.slice(1)}
+              {t(`filters.${f}`)}
             </button>
           ))}
           </div>
@@ -253,14 +258,20 @@ export default function NotesPage() {
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
       <div className="flex-1 min-w-0 w-full">
-      {loading && <p className="text-sm text-muted-foreground">Loading...</p>}
+      {loading && <p className="text-sm text-muted-foreground">{t('loading')}</p>}
 
       {!loading && notes.length === 0 && (
-        <p className="text-sm text-muted-foreground">No notes found.</p>
+        <p className="text-sm text-muted-foreground">{t('empty')}</p>
       )}
 
       <div className="space-y-1">
         {notes.map(note => (
+          (() => {
+            const relative = relativeTime(note.createdAt)
+            const relativeLabel = relative.unit === 'date'
+              ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(relative.date)
+              : t(`relative.${relative.unit}`, { count: relative.count })
+            return (
           <div
             key={note.id}
             className={`group rounded-lg border p-4 transition-colors ${
@@ -281,10 +292,10 @@ export default function NotesPage() {
                 {note.userName || note.userEmail.split('@')[0]}
               </span>
               <span className="text-xs text-muted-foreground">
-                {formatRelativeTime(note.createdAt)}
+                {relativeLabel}
               </span>
               {note.edited && (
-                <span className="text-[10px] text-muted-foreground italic">edited</span>
+                <span className="text-[10px] text-muted-foreground italic">{t('edited')}</span>
               )}
               {/* Page context label */}
               {note.companyName ? (
@@ -296,13 +307,17 @@ export default function NotesPage() {
                   {note.companyName}
                 </Link>
               ) : note.pageContext ? (
-                <span className="text-[11px] text-muted-foreground capitalize">{note.pageContext}</span>
+                <span className="text-[11px] text-muted-foreground capitalize">
+                  {KNOWN_CONTEXTS.includes(note.pageContext as (typeof KNOWN_CONTEXTS)[number])
+                    ? t(`contexts.${note.pageContext as (typeof KNOWN_CONTEXTS)[number]}`)
+                    : note.pageContext}
+                </span>
               ) : (
-                <span className="text-[11px] text-muted-foreground">General</span>
+                <span className="text-[11px] text-muted-foreground">{t('general')}</span>
               )}
               {/* Pin / Edit / Delete actions */}
               <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-auto flex items-center gap-1">
-                <button onClick={() => handlePin(note.id, !note.pinnedAt)} title={note.pinnedAt ? 'Unpin' : 'Pin'}>
+                <button onClick={() => handlePin(note.id, !note.pinnedAt)} title={note.pinnedAt ? t('actions.unpin') : t('actions.pin')} aria-label={note.pinnedAt ? t('actions.unpin') : t('actions.pin')}>
                   {note.pinnedAt ? (
                     <PinOff className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   ) : (
@@ -310,12 +325,12 @@ export default function NotesPage() {
                   )}
                 </button>
                 {currentUserId && note.userId === currentUserId && (
-                  <button onClick={() => startEditing(note)}>
+                  <button onClick={() => startEditing(note)} aria-label={t('actions.edit')}>
                     <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 )}
                 {currentUserId && (note.userId === currentUserId || isAdmin) && (
-                  <button onClick={() => handleDelete(note.id)}>
+                  <button onClick={() => handleDelete(note.id)} aria-label={t('actions.delete')}>
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 )}
@@ -343,10 +358,10 @@ export default function NotesPage() {
                   autoFocus
                 />
                 <div className="flex flex-col gap-1 self-end">
-                  <button onClick={e => { handleEdit(note.id) }}>
+                  <button onClick={() => { handleEdit(note.id) }} aria-label={t('actions.save')}>
                     <Check className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
                   </button>
-                  <button onClick={e => { setEditingId(null); setEditContent('') }}>
+                  <button onClick={() => { setEditingId(null); setEditContent('') }} aria-label={t('actions.cancel')}>
                     <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
                   </button>
                 </div>
@@ -362,7 +377,7 @@ export default function NotesPage() {
                 className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Reply className="h-3 w-3" />
-                Reply
+                {t('actions.reply')}
               </button>
             )}
 
@@ -386,7 +401,7 @@ export default function NotesPage() {
                       setReplyContent('')
                     }
                   }}
-                  placeholder="Write a reply... (@ to tag)"
+                  placeholder={t('replyPlaceholder')}
                   rows={2}
                   className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
@@ -401,6 +416,8 @@ export default function NotesPage() {
               </div>
             )}
           </div>
+            )
+          })()
         ))}
       </div>
     </div>

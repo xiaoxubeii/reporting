@@ -1,9 +1,13 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { UsageDashboard } from './usage-dashboard'
 
-export const metadata: Metadata = { title: 'Usage' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Usage.metadata')
+  return { title: t('title') }
+}
 
 export default async function UsagePage() {
   const supabase = createClient()

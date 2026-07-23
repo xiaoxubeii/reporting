@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Loader2, FileText, Download, Mail, ChevronRight } from 'lucide-react'
+import { useFormatter, useTranslations } from 'next-intl'
 import { LpAnalyst } from '@/components/portal/lp-analyst'
 import { DocumentViewer, isPreviewable, type ViewerDoc } from '@/components/portal/document-viewer'
 
@@ -14,34 +15,9 @@ interface Doc {
   last_viewed_at: string | null
 }
 
-const SCOPE_ORDER: { key: string; label: string }[] = [
-  { key: 'fund', label: 'Fund documents' },
-  { key: 'investor', label: 'Your documents' },
-]
+const SCOPE_ORDER = ['fund', 'investor'] as const
 
-function fmtSize(b: number | null): string {
-  if (!b) return ''
-  if (b < 1024) return `${b} B`
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`
-  return `${(b / 1024 / 1024).toFixed(1)} MB`
-}
 const effective = (d: Doc) => d.doc_date || d.uploaded_at || ''
-function fmtDate(s: string): string {
-  if (!s) return ''
-  const date = new Date(s.length <= 10 ? `${s}T00:00:00` : s)
-  return isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-function fileType(d: Doc): string {
-  const m = (d.mime_type || '').toLowerCase()
-  if (m.includes('pdf')) return 'PDF'
-  if (m.includes('wordprocessing') || m.includes('msword')) return 'Word'
-  if (m.includes('spreadsheet') || m.includes('excel') || m.includes('csv')) return 'Spreadsheet'
-  if (m.includes('presentation') || m.includes('powerpoint')) return 'Slides'
-  if (m.startsWith('image/')) return 'Image'
-  if (m.startsWith('text/')) return 'Text'
-  const ext = d.file_name?.split('.').pop()?.toUpperCase()
-  return ext && ext.length <= 5 ? ext : 'File'
-}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -53,14 +29,43 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function PortalLibraryPage() {
+  const t = useTranslations('Portal')
+  const format = useFormatter()
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [letters, setLetters] = useState<Letter[]>([])
   const [docs, setDocs] = useState<Doc[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
   const [downloading, setDownloading] = useState<string | null>(null)
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [viewerDoc, setViewerDoc] = useState<ViewerDoc | null>(null)
+
+  function fmtSize(bytes: number | null): string {
+    if (!bytes) return ''
+    if (bytes < 1024) return t('snapshots.sizeBytes', { value: format.number(bytes) })
+    if (bytes < 1024 * 1024) return t('snapshots.sizeKilobytes', { value: format.number(bytes / 1024, { maximumFractionDigits: 0 }) })
+    return t('snapshots.sizeMegabytes', { value: format.number(bytes / 1024 / 1024, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })
+  }
+
+  function fmtDate(value: string): string {
+    if (!value) return ''
+    const date = new Date(value.length <= 10 ? `${value}T00:00:00` : value)
+    return isNaN(date.getTime())
+      ? ''
+      : format.dateTime(date, { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  function fileType(doc: Doc): string {
+    const mime = (doc.mime_type || '').toLowerCase()
+    if (mime.includes('pdf')) return t('snapshots.fileTypePdf')
+    if (mime.includes('wordprocessing') || mime.includes('msword')) return t('snapshots.fileTypeWord')
+    if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv')) return t('snapshots.fileTypeSpreadsheet')
+    if (mime.includes('presentation') || mime.includes('powerpoint')) return t('snapshots.fileTypeSlides')
+    if (mime.startsWith('image/')) return t('snapshots.fileTypeImage')
+    if (mime.startsWith('text/')) return t('snapshots.fileTypeText')
+    const extension = doc.file_name?.split('.').pop()?.toUpperCase()
+    return extension && extension.length <= 5 ? extension : t('snapshots.fileTypeFile')
+  }
 
   useEffect(() => {
     Promise.all([
@@ -73,7 +78,7 @@ export default function PortalLibraryPage() {
         setLetters(l.letters ?? [])
         setDocs(d.documents ?? [])
       })
-      .catch(() => setError('Could not load your documents.'))
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -144,22 +149,22 @@ export default function PortalLibraryPage() {
     return (
       <div className="flex items-center hover:bg-muted/40 transition-colors">
         <Link href={href} className="flex flex-1 min-w-0 items-center gap-3 px-4 py-3">
-          {unread && <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" title="Not viewed yet" />}
+          {unread && <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" title={t('snapshots.notViewedYet')} />}
           {icon}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm truncate">{title}</span>
-              {unread && <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">New</span>}
+              {unread && <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">{t('snapshots.newBadge')}</span>}
             </div>
             {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
-            {viewedAt && <div className="text-xs text-muted-foreground/80">Viewed {fmtDate(viewedAt)}</div>}
+            {viewedAt && <div className="text-xs text-muted-foreground/80">{t('snapshots.viewedOn', { date: fmtDate(viewedAt) })}</div>}
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </Link>
         <button
           onClick={() => downloadPdf(dlKey, dlUrl, dlName)}
           disabled={downloading === dlKey}
-          title="Download PDF"
+          title={t('snapshots.downloadPdf')}
           className="flex shrink-0 items-center gap-1.5 border-l px-3 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
         >
           {downloading === dlKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -184,18 +189,18 @@ export default function PortalLibraryPage() {
     const unread = isDocUnread(d)
     const meta: string[] = [fileType(d)]
     if (d.size_bytes) meta.push(fmtSize(d.size_bytes))
-    if (d.uploaded_at) meta.push(`Uploaded ${fmtDate(d.uploaded_at)}`)
-    if (d.doc_date && fmtDate(d.doc_date) !== fmtDate(d.uploaded_at)) meta.push(`Dated ${fmtDate(d.doc_date)}`)
-    if (d.last_viewed_at) meta.push(`Viewed ${fmtDate(d.last_viewed_at)}`)
+    if (d.uploaded_at) meta.push(t('snapshots.uploadedOn', { date: fmtDate(d.uploaded_at) }))
+    if (d.doc_date && fmtDate(d.doc_date) !== fmtDate(d.uploaded_at)) meta.push(t('snapshots.datedOn', { date: fmtDate(d.doc_date) }))
+    if (d.last_viewed_at) meta.push(t('snapshots.viewedOn', { date: fmtDate(d.last_viewed_at) }))
 
     const inner = (
       <>
-        {unread && <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 mt-1.5" title="Not opened yet" />}
+        {unread && <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 mt-1.5" title={t('snapshots.notOpenedYet')} />}
         <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">{d.title}</span>
-            {unread && <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">New</span>}
+            {unread && <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">{t('snapshots.newBadge')}</span>}
             {d.category?.trim() && (
               <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{d.category.trim()}</span>
             )}
@@ -206,9 +211,9 @@ export default function PortalLibraryPage() {
       </>
     )
     return d.sample ? (
-      <div key={d.id} className="w-full flex items-start gap-3 px-4 py-3" title="Sample document">
+      <div key={d.id} className="w-full flex items-start gap-3 px-4 py-3" title={t('snapshots.sampleDocument')}>
         {inner}
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0 mt-0.5">Sample</span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0 mt-0.5">{t('snapshots.sampleBadge')}</span>
       </div>
     ) : (
       <div key={d.id} className="flex items-stretch hover:bg-muted/40 transition-colors">
@@ -218,11 +223,11 @@ export default function PortalLibraryPage() {
         <button
           onClick={() => downloadDoc(d.id)}
           disabled={downloading === d.id}
-          title="Download"
+          title={t('snapshots.download')}
           className="flex shrink-0 items-center gap-1.5 border-l px-3 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
         >
           {downloading === d.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          <span className="hidden sm:inline">Download</span>
+          <span className="hidden sm:inline">{t('snapshots.download')}</span>
         </button>
       </div>
     )
@@ -234,18 +239,18 @@ export default function PortalLibraryPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Your documents</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Reports, letters, and documents your fund has shared with you.</p>
+          <h1 className="text-xl font-semibold tracking-tight">{t('snapshots.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t('snapshots.description')}</p>
         </div>
         <LpAnalyst />
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-8"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-8"><Loader2 className="h-4 w-4 animate-spin" /> {t('common.loading')}</div>
       ) : error ? (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{t('snapshots.loadFailed')}</div>
       ) : isEmpty ? (
-        <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">Nothing has been shared with you yet.</div>
+        <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">{t('snapshots.empty')}</div>
       ) : (
         <>
           <div className="flex items-center gap-2">
@@ -256,12 +261,14 @@ export default function PortalLibraryPage() {
               }`}
             >
               <span className={`h-2 w-2 rounded-full ${unreadCount > 0 ? 'bg-amber-500' : 'bg-muted-foreground/40'}`} />
-              Unread only{unreadCount > 0 ? ` (${unreadCount})` : ''}
+              {unreadCount > 0
+                ? t('snapshots.unreadOnlyWithCount', { count: format.number(unreadCount) })
+                : t('snapshots.unreadOnly')}
             </button>
           </div>
 
           {visSnapshots.length > 0 && (
-            <Section title="Statements">
+            <Section title={t('snapshots.statementsTitle')}>
               <div className="rounded-md border bg-card divide-y">
                 {visSnapshots.map(s => (
                   <ViewableRow
@@ -269,7 +276,9 @@ export default function PortalLibraryPage() {
                     href={s.viewHref ?? `/portal/snapshots/${s.id}`}
                     icon={<FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
                     title={s.name}
-                    subtitle={s.viewHref ? 'Current position' : (s.as_of_date ? `As of ${s.as_of_date}` : null)}
+                    subtitle={s.viewHref
+                      ? t('snapshots.currentPosition')
+                      : (s.as_of_date ? t('snapshots.asOf', { date: fmtDate(s.as_of_date) }) : null)}
                     dlKey={`snap-${s.id}`}
                     dlUrl={s.pdfUrl ?? `/api/portal/snapshots/${s.id}/pdf`}
                     dlName={`${s.name}.pdf`}
@@ -282,7 +291,7 @@ export default function PortalLibraryPage() {
           )}
 
           {visLetters.length > 0 && (
-            <Section title="Letters">
+            <Section title={t('snapshots.lettersTitle')}>
               <div className="rounded-md border bg-card divide-y">
                 {visLetters.map(l => (
                   <ViewableRow
@@ -302,14 +311,16 @@ export default function PortalLibraryPage() {
           )}
 
           {groupedDocs.size > 0 && (
-            <Section title="Documents">
+            <Section title={t('snapshots.documentsTitle')}>
               <div className="space-y-4">
                 {SCOPE_ORDER.map(scope => {
-                  const list = groupedDocs.get(scope.key)
+                  const list = groupedDocs.get(scope)
                   if (!list || list.length === 0) return null
                   return (
-                    <div key={scope.key} className="space-y-1.5">
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{scope.label}</h3>
+                    <div key={scope} className="space-y-1.5">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        {scope === 'fund' ? t('snapshots.fundDocuments') : t('snapshots.yourDocuments')}
+                      </h3>
                       <div className="rounded-md border bg-card divide-y">{list.map(docRow)}</div>
                     </div>
                   )
@@ -319,7 +330,7 @@ export default function PortalLibraryPage() {
           )}
 
           {unreadOnly && visSnapshots.length === 0 && visLetters.length === 0 && groupedDocs.size === 0 && (
-            <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">You&apos;re all caught up — nothing unread.</div>
+            <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">{t('snapshots.allCaughtUp')}</div>
           )}
         </>
       )}

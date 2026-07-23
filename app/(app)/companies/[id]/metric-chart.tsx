@@ -17,6 +17,7 @@ import type { Metric } from '@/lib/types/database'
 import type { MetricValueRow } from './company-charts'
 import { DataPointPopover } from './data-point-popover'
 import { useCurrency, getCurrencySymbol } from '@/components/currency-context'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface Props {
   metric: Metric
@@ -40,6 +41,9 @@ const CONFIDENCE_COLORS: Record<string, string> = {
 }
 
 export function MetricChart({ metric, values, onRefresh, compact }: Props) {
+  const t = useTranslations('CompanyDetail.metrics.chart')
+  const tDataPoint = useTranslations('CompanyDetail.dataPoint')
+  const format = useFormatter()
   const fundCurrency = useCurrency()
   const [chartType, setChartType] = useState<'line' | 'bar'>('line')
   const [activePoint, setActivePoint] = useState<{
@@ -49,7 +53,13 @@ export function MetricChart({ metric, values, onRefresh, compact }: Props) {
   } | null>(null)
 
   const data: ChartPoint[] = values.map((v) => ({
-    label: v.period_label,
+    label: v.period_month
+      ? format.dateTime(new Date(Date.UTC(v.period_year, v.period_month - 1, 1)), {
+          month: 'short',
+          year: 'numeric',
+          timeZone: 'UTC',
+        })
+      : tDataPoint('fiscalYear', { year: v.period_year }),
     value: v.value_number,
     raw: v,
   }))
@@ -66,15 +76,15 @@ export function MetricChart({ metric, values, onRefresh, compact }: Props) {
         metric.value_type === 'percentage'
           ? `${val}%`
           : metric.value_type === 'currency'
-            ? val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-            : val.toLocaleString()
+            ? format.number(val, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+            : format.number(val)
 
       if (!effectiveUnit) return formatted
       return effectiveUnitPosition === 'prefix'
         ? `${effectiveUnit}${formatted}`
         : `${formatted} ${effectiveUnit}`
     },
-    [metric, effectiveUnit, effectiveUnitPosition]
+    [metric, effectiveUnit, effectiveUnitPosition, format]
   )
 
   const formatYAxis = useCallback(
@@ -124,7 +134,7 @@ export function MetricChart({ metric, values, onRefresh, compact }: Props) {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Line
+            {t('line')}
           </button>
           <button
             onClick={() => setChartType('bar')}
@@ -134,7 +144,7 @@ export function MetricChart({ metric, values, onRefresh, compact }: Props) {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Bar
+            {t('bar')}
           </button>
         </div>
       </div>

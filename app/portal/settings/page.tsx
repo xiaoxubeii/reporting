@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MfaSettings } from '@/components/account/mfa-settings'
 import { useTheme } from 'next-themes'
+import { useTranslations } from 'next-intl'
 import { Loader2, Check, UserCheck, Trash2, Monitor, Sun, Moon } from 'lucide-react'
 
 function SettingsCard({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -21,10 +22,38 @@ function SettingsCard({ title, description, children }: { title: string; descrip
 
 // Supabase embeds can arrive as an object or a single-element array depending on
 // the relation; normalize to a plain object.
-const one = (v: any) => (Array.isArray(v) ? v[0] : v) ?? null
+const one = <T,>(value: T | T[] | null | undefined): T | null =>
+  (Array.isArray(value) ? value[0] : value) ?? null
+
+interface PortalAccountSummary {
+  email: string | null
+  status: string | null
+}
+
+interface PortalInvestorSummary {
+  name: string | null
+}
+
+interface AuthorizedUserRow {
+  id: string
+  lp_accounts: PortalAccountSummary | PortalAccountSummary[] | null
+  lp_investors: PortalInvestorSummary | PortalInvestorSummary[] | null
+}
+
+type PasswordError =
+  | { code: 'tooShort' | 'mismatch' }
+  | { detail: string }
 
 export default function PortalSettingsPage() {
+  const t = useTranslations('Portal')
   const supabase = createClient()
+
+  function passwordErrorMessage(error: PasswordError): string {
+    if ('detail' in error) return error.detail
+    return error.code === 'tooShort'
+      ? t('settings.passwordError.tooShort')
+      : t('settings.passwordError.mismatch')
+  }
 
   // ── Appearance ──
   const { theme, setTheme } = useTheme()
@@ -36,22 +65,22 @@ export default function PortalSettingsPage() {
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
   const [pwBusy, setPwBusy] = useState(false)
-  const [pwMsg, setPwMsg] = useState<string | null>(null)
-  const [pwErr, setPwErr] = useState<string | null>(null)
+  const [pwUpdated, setPwUpdated] = useState(false)
+  const [pwErr, setPwErr] = useState<PasswordError | null>(null)
 
   async function changePassword() {
-    setPwErr(null); setPwMsg(null)
-    if (pw.length < 8) { setPwErr('Use at least 8 characters.'); return }
-    if (pw !== pw2) { setPwErr('Passwords don’t match.'); return }
+    setPwErr(null); setPwUpdated(false)
+    if (pw.length < 8) { setPwErr({ code: 'tooShort' }); return }
+    if (pw !== pw2) { setPwErr({ code: 'mismatch' }); return }
     setPwBusy(true)
     const { error } = await supabase.auth.updateUser({ password: pw })
     setPwBusy(false)
-    if (error) { setPwErr(error.message); return }
-    setPw(''); setPw2(''); setPwMsg('Password updated.')
+    if (error) { setPwErr({ detail: error.message }); return }
+    setPw(''); setPw2(''); setPwUpdated(true)
   }
 
   // ── Authorized users ──
-  const [rows, setRows] = useState<any[]>([])
+  const [rows, setRows] = useState<AuthorizedUserRow[]>([])
   const [loadingAu, setLoadingAu] = useState(true)
   const [revoking, setRevoking] = useState<string | null>(null)
 
@@ -72,13 +101,13 @@ export default function PortalSettingsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage how the portal looks, your sign-in security, and who can access your account.</p>
+        <h1 className="text-xl font-semibold tracking-tight">{t('settings.title')}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{t('settings.description')}</p>
       </div>
 
-      <SettingsCard title="Appearance" description="Choose how the portal looks on this device.">
+      <SettingsCard title={t('settings.appearanceTitle')} description={t('settings.appearanceDescription')}>
         <div className="inline-flex rounded-md border p-0.5 gap-0.5">
-          {([['system', Monitor, 'System'], ['light', Sun, 'Light'], ['dark', Moon, 'Dark']] as const).map(([val, Icon, label]) => (
+          {([['system', Monitor, t('settings.themeSystem')], ['light', Sun, t('settings.themeLight')], ['dark', Moon, t('settings.themeDark')]] as const).map(([val, Icon, label]) => (
             <button
               key={val}
               onClick={() => setTheme(val)}
@@ -91,33 +120,33 @@ export default function PortalSettingsPage() {
         </div>
       </SettingsCard>
 
-      <SettingsCard title="Change password">
+      <SettingsCard title={t('settings.changePasswordTitle')}>
         <div className="space-y-3 max-w-sm">
           <div className="space-y-1.5">
-            <Label htmlFor="pw">New password</Label>
-            <Input id="pw" type="password" value={pw} onChange={e => setPw(e.target.value)} autoComplete="new-password" placeholder="At least 8 characters" />
+            <Label htmlFor="pw">{t('settings.newPasswordLabel')}</Label>
+            <Input id="pw" type="password" value={pw} onChange={e => setPw(e.target.value)} autoComplete="new-password" placeholder={t('settings.passwordPlaceholder')} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pw2">Confirm password</Label>
+            <Label htmlFor="pw2">{t('settings.confirmPasswordLabel')}</Label>
             <Input id="pw2" type="password" value={pw2} onChange={e => setPw2(e.target.value)} autoComplete="new-password" onKeyDown={e => e.key === 'Enter' && changePassword()} />
           </div>
-          {pwErr && <p className="text-xs text-destructive">{pwErr}</p>}
-          {pwMsg && <p className="text-xs text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> {pwMsg}</p>}
+          {pwErr && <p className="text-xs text-destructive">{passwordErrorMessage(pwErr)}</p>}
+          {pwUpdated && <p className="text-xs text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> {t('settings.passwordUpdated')}</p>}
           <Button size="sm" onClick={changePassword} disabled={pwBusy || !pw || !pw2}>
-            {pwBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null} Update password
+            {pwBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null} {t('settings.updatePassword')}
           </Button>
         </div>
       </SettingsCard>
 
-      <SettingsCard title="Two-factor authentication">
+      <SettingsCard title={t('settings.twoFactorTitle')}>
         <MfaSettings />
       </SettingsCard>
 
-      <SettingsCard title="Authorized users" description="People your fund has granted access to your account. Revoke access at any time.">
+      <SettingsCard title={t('settings.authorizedUsersTitle')} description={t('settings.authorizedUsersDescription')}>
         {loadingAu ? (
-          <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</div>
+          <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('common.loading')}</div>
         ) : rows.length === 0 ? (
-          <div className="text-xs text-muted-foreground">No one else has access to your account.</div>
+          <div className="text-xs text-muted-foreground">{t('settings.noAuthorizedUsers')}</div>
         ) : (
           <div className="rounded-md border divide-y">
             {rows.map(r => {
@@ -129,12 +158,16 @@ export default function PortalSettingsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{account?.email ?? '—'}</div>
                     <div className="text-xs text-muted-foreground">
-                      Access to {investor?.name ?? 'your account'}
-                      {account?.status && account.status !== 'active' && <span className="uppercase tracking-wide ml-2">{account.status}</span>}
+                      {investor?.name
+                        ? t('settings.accessToNamedAccount', { name: investor.name })
+                        : t('settings.accessToYourAccount')}
+                      {account?.status === 'invited' && <span className="uppercase tracking-wide ml-2">{t('settings.statusInvited')}</span>}
+                      {account?.status === 'disabled' && <span className="uppercase tracking-wide ml-2">{t('settings.statusDisabled')}</span>}
+                      {account?.status && !['active', 'invited', 'disabled'].includes(account.status) && <span className="uppercase tracking-wide ml-2">{account.status}</span>}
                     </div>
                   </div>
                   <button onClick={() => revoke(r.id)} disabled={revoking === r.id} className="text-xs text-muted-foreground hover:text-destructive inline-flex items-center gap-1 shrink-0">
-                    {revoking === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Revoke
+                    {revoking === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} {t('settings.revoke')}
                   </button>
                 </div>
               )

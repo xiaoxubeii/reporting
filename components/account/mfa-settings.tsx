@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AlertCircle, Check, Loader2, Shield } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 /**
  * TOTP two-factor enrollment/management. Self-contained (Supabase MFA APIs),
@@ -13,6 +14,7 @@ import { AlertCircle, Check, Loader2, Shield } from 'lucide-react'
  * account settings.
  */
 export function MfaSettings() {
+  const t = useTranslations('AccountSecurity')
   const supabase = createClient()
   const [state, setState] = useState<'loading' | 'disabled' | 'enrolling' | 'enabled'>('loading')
   const [qrCode, setQrCode] = useState<string | null>(null)
@@ -87,7 +89,7 @@ export function MfaSettings() {
   }
 
   if (state === 'loading') {
-    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</div>
+    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loading')}</div>
   }
 
   return (
@@ -101,10 +103,10 @@ export function MfaSettings() {
       {state === 'disabled' && (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Add an extra layer of security to your account by requiring a code from an authenticator app when you sign in.
+            {t('disabledDescription')}
           </p>
           <Button size="sm" onClick={startEnroll}>
-            <Shield className="h-3.5 w-3.5 mr-1.5" /> Enable two-factor authentication
+            <Shield className="h-3.5 w-3.5 mr-1.5" /> {t('enable')}
           </Button>
         </div>
       )}
@@ -112,22 +114,22 @@ export function MfaSettings() {
       {state === 'enrolling' && (
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Scan the QR code with your authenticator app (e.g. Google Authenticator, 1Password, Authy), then enter the 6-digit code to verify.
+            {t('enrollmentDescription')}
           </p>
           {qrCode && (
             <div className="flex justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrCode} alt="TOTP QR code" className="h-48 w-48 rounded border" />
+              <img src={qrCode} alt={t('qrCodeAlt')} className="h-48 w-48 rounded border" />
             </div>
           )}
           {secret && (
             <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Or enter this code manually:</p>
+              <p className="text-xs text-muted-foreground mb-1">{t('manualCode')}</p>
               <code className="text-xs bg-muted px-2 py-1 rounded select-all">{secret}</code>
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="mfa-enroll-code">Verification code</Label>
+            <Label htmlFor="mfa-enroll-code">{t('verificationCode')}</Label>
             <Input
               ref={inputRef}
               id="mfa-enroll-code"
@@ -144,9 +146,9 @@ export function MfaSettings() {
           </div>
           <div className="flex gap-2 justify-center">
             <Button size="sm" onClick={verifyEnroll} disabled={verifying || code.length !== 6}>
-              {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null} Verify &amp; enable
+              {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null} {t('verifyAndEnable')}
             </Button>
-            <Button size="sm" variant="outline" onClick={cancelEnroll} disabled={verifying}>Cancel</Button>
+            <Button size="sm" variant="outline" onClick={cancelEnroll} disabled={verifying}>{t('cancel')}</Button>
           </div>
         </div>
       )}
@@ -155,16 +157,16 @@ export function MfaSettings() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
             <Check className="h-4 w-4 text-green-600 shrink-0" />
-            <span>Two-factor authentication is enabled.</span>
+            <span>{t('enabled')}</span>
           </div>
           {!confirmDisable ? (
-            <Button size="sm" variant="outline" onClick={() => setConfirmDisable(true)}>Disable</Button>
+            <Button size="sm" variant="outline" onClick={() => setConfirmDisable(true)}>{t('disable')}</Button>
           ) : (
             <div className="flex items-center gap-2">
               <Button size="sm" variant="destructive" onClick={disableMfa} disabled={disabling}>
-                {disabling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null} Confirm disable
+                {disabling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null} {t('confirmDisable')}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setConfirmDisable(false)} disabled={disabling}>Cancel</Button>
+              <Button size="sm" variant="outline" onClick={() => setConfirmDisable(false)} disabled={disabling}>{t('cancel')}</Button>
             </div>
           )}
         </div>

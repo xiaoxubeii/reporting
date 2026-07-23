@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, ArrowLeft, Download } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { AccessHistory } from '@/components/portal/access-history'
 
 interface Letter {
@@ -14,17 +15,18 @@ interface Letter {
 }
 
 export default function PortalLetterDetailPage() {
+  const t = useTranslations('Portal')
   const { letterId } = useParams<{ letterId: string }>()
   const [letter, setLetter] = useState<Letter | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
   const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     fetch(`/api/portal/letters/${letterId}`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('not found'))))
       .then(body => setLetter(body.letter))
-      .catch(() => setError('This letter is not available.'))
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [letterId])
 
@@ -49,20 +51,20 @@ export default function PortalLetterDetailPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center gap-2 text-sm text-muted-foreground py-8"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+    return <div className="flex items-center gap-2 text-sm text-muted-foreground py-8"><Loader2 className="h-4 w-4 animate-spin" /> {t('common.loading')}</div>
   }
   if (error || !letter) {
     return (
       <div className="space-y-4">
-        <Link href="/portal/snapshots" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> Back</Link>
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error ?? 'Not found.'}</div>
+        <Link href="/portal/snapshots" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> {t('common.back')}</Link>
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error ? t('letterDetail.unavailable') : t('common.notFound')}</div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <Link href="/portal/snapshots" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> Back to documents</Link>
+      <Link href="/portal/snapshots" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> {t('common.backToDocuments')}</Link>
 
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">{letter.period_label}</h1>
@@ -72,7 +74,7 @@ export default function PortalLetterDetailPage() {
           className="inline-flex shrink-0 items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-60"
         >
           {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          Download PDF
+          {t('common.downloadPdf')}
         </button>
       </div>
 
@@ -85,7 +87,7 @@ export default function PortalLetterDetailPage() {
           <div className="text-sm overflow-x-auto [&_table]:w-full [&_th]:text-left [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1 [&_td]:border-t" dangerouslySetInnerHTML={{ __html: letter.portfolio_table_html }} />
         )}
         {!letter.full_draft && !letter.portfolio_table_html && (
-          <p className="text-sm text-muted-foreground italic">This letter has no content.</p>
+          <p className="text-sm text-muted-foreground italic">{t('letterDetail.empty')}</p>
         )}
       </div>
 

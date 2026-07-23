@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Upload, Loader2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 
 type Confidence = 'unavailable' | 'preliminary' | 'reliable' | 'robust'
 
-interface AnchorListItem {
+export interface AnchorListItem {
   id: string
   file_name: string
   file_format: string
@@ -28,18 +29,18 @@ interface AnchorListItem {
   uploaded_at: string
 }
 
-const VOICE_BADGE: Record<AnchorListItem['voice_representativeness'], { label: string; cls: string }> = {
-  exemplary:           { label: 'Exemplary',     cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' },
-  representative:      { label: 'Representative',cls: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' },
-  atypical:            { label: 'Atypical',      cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' },
-  do_not_match_voice:  { label: 'Do not match',  cls: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+const VOICE_BADGE: Record<AnchorListItem['voice_representativeness'], string> = {
+  exemplary: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
+  representative: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+  atypical: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+  do_not_match_voice: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
 }
 
-const CONFIDENCE_NOTES: Record<Confidence, { label: string; help: string; cls: string }> = {
-  unavailable:  { label: 'Voice match unavailable', help: 'Upload at least one memo to start teaching the agent your voice.', cls: 'bg-gray-100 text-gray-700' },
-  preliminary:  { label: 'Preliminary voice match', help: 'With 1-2 memos the voice signal is weak. Plan to add a few more.', cls: 'bg-amber-100 text-amber-800' },
-  reliable:     { label: 'Reliable voice match',    help: 'With 3-7 memos the dominant voice is captured well.', cls: 'bg-blue-100 text-blue-800' },
-  robust:       { label: 'Robust voice match',      help: 'With 8+ memos voice patterns are robust across authors and vintages.', cls: 'bg-emerald-100 text-emerald-800' },
+const CONFIDENCE_CLASSES: Record<Confidence, string> = {
+  unavailable: 'bg-gray-100 text-gray-700',
+  preliminary: 'bg-amber-100 text-amber-800',
+  reliable: 'bg-blue-100 text-blue-800',
+  robust: 'bg-emerald-100 text-emerald-800',
 }
 
 function nextConfidence(count: number): Confidence {
@@ -56,17 +57,18 @@ export function StyleAnchorsLibrary({ initialAnchors, initialConfidence, embedde
 }) {
   const router = useRouter()
   const confirm = useConfirm()
+  const locale = useLocale()
+  const t = useTranslations('Settings.styleAnchors')
   const [anchors, setAnchors] = useState(initialAnchors)
   const [uploadOpen, setUploadOpen] = useState(false)
 
-  const confidence = nextConfidence(anchors.length)
-  const note = CONFIDENCE_NOTES[confidence]
+  const confidence = anchors.length === initialAnchors.length ? initialConfidence : nextConfidence(anchors.length)
 
   async function remove(id: string) {
     const ok = await confirm({
-      title: 'Delete reference memo?',
-      description: 'The file is removed from storage and will no longer inform the agent\'s voice synthesis.',
-      confirmLabel: 'Delete',
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+      confirmLabel: t('delete'),
       variant: 'destructive',
     })
     if (!ok) return
@@ -84,31 +86,30 @@ export function StyleAnchorsLibrary({ initialAnchors, initialConfidence, embedde
     <div className={embedded ? '' : 'p-4 md:py-8 md:pl-8 md:pr-4 max-w-5xl'}>
       {!embedded && (
         <Link href="/settings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to settings
+          <ArrowLeft className="h-3.5 w-3.5" /> {t('back')}
         </Link>
       )}
 
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          {!embedded && <h1 className="text-2xl font-semibold tracking-tight">Example memos</h1>}
+          {!embedded && <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>}
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Upload past investment memos to teach the agent your firm&rsquo;s voice and structure.
-            Reference memos teach style, they never supply facts to a new memo.
+            {t('description')}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
-          <Upload className="h-3.5 w-3.5 mr-1" /> Upload memo
+          <Upload className="h-3.5 w-3.5 mr-1" /> {t('uploadMemo')}
         </Button>
       </div>
 
-      <div className={`mb-6 rounded-md border p-3 text-sm dark:bg-opacity-20 ${note.cls}`}>
-        <div className="font-medium">{note.label}</div>
-        <div className="opacity-80 mt-0.5 text-[13px]">{note.help}</div>
+      <div className={`mb-6 rounded-md border p-3 text-sm dark:bg-opacity-20 ${CONFIDENCE_CLASSES[confidence]}`}>
+        <div className="font-medium">{t(`confidence.${confidence}.label`)}</div>
+        <div className="opacity-80 mt-0.5 text-[13px]">{t(`confidence.${confidence}.help`)}</div>
       </div>
 
       {anchors.length === 0 ? (
         <div className="rounded-md border bg-card p-12 text-center text-sm text-muted-foreground">
-          No reference memos yet. Click Upload memo to add your first.
+          {t('empty')}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -118,21 +119,21 @@ export function StyleAnchorsLibrary({ initialAnchors, initialConfidence, embedde
                 <Link href={`/settings/memo-agent/style-anchors/${a.id}`} className="font-medium truncate hover:underline">
                   {a.title || a.file_name}
                 </Link>
-                <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-medium ${VOICE_BADGE[a.voice_representativeness].cls}`}>
-                  {VOICE_BADGE[a.voice_representativeness].label}
+                <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-medium ${VOICE_BADGE[a.voice_representativeness]}`}>
+                  {t(`voice.${a.voice_representativeness}`)}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground space-y-0.5 flex-1">
                 <div>
-                  {a.vintage_year ? `${a.vintage_year}${a.vintage_quarter ? ` ${a.vintage_quarter}` : ''}` : 'No vintage'}
+                  {a.vintage_year ? `${new Intl.NumberFormat(locale, { useGrouping: false }).format(a.vintage_year)}${a.vintage_quarter ? ` ${a.vintage_quarter}` : ''}` : t('noVintage')}
                   {a.sector && ` · ${a.sector}`}
                 </div>
-                <div>{a.file_format.toUpperCase()} · {a.file_size_bytes ? `${(a.file_size_bytes / 1024 / 1024).toFixed(1)} MB` : '—'}</div>
+                <div>{a.file_format.toUpperCase()} · {a.file_size_bytes ? t('sizeMb', { value: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(a.file_size_bytes / 1024 / 1024) }) : '—'}</div>
                 <div>
                   {a.extracted_at ? (
-                    <span>Text extracted ({(a.extracted_text_length ?? 0).toLocaleString()} chars)</span>
+                    <span>{t('textExtracted', { count: a.extracted_text_length ?? 0 })}</span>
                   ) : (
-                    <span className="text-amber-600">Text extraction failed, open to retry</span>
+                    <span className="text-amber-600">{t('extractionFailed')}</span>
                   )}
                 </div>
                 {a.partner_notes && (
@@ -144,9 +145,9 @@ export function StyleAnchorsLibrary({ initialAnchors, initialConfidence, embedde
                   href={`/settings/memo-agent/style-anchors/${a.id}`}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
-                  Edit metadata
+                  {t('editMetadata')}
                 </Link>
-                <button onClick={() => remove(a.id)} className="ml-auto text-muted-foreground hover:text-destructive">
+                <button onClick={() => remove(a.id)} aria-label={t('deleteMemo', { name: a.title || a.file_name })} className="ml-auto text-muted-foreground hover:text-destructive">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -169,6 +170,8 @@ function UploadDialog({ open, onOpenChange, onUploaded }: {
   onOpenChange: (v: boolean) => void
   onUploaded: (row: AnchorListItem) => void
 }) {
+  const locale = useLocale()
+  const t = useTranslations('Settings.styleAnchors')
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [vintageYear, setVintageYear] = useState('')
@@ -194,7 +197,7 @@ function UploadDialog({ open, onOpenChange, onUploaded }: {
       })
       if (!urlRes.ok) {
         const body = await urlRes.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Failed to prepare upload')
+        throw new Error(body.error ?? t('prepareUploadFailed'))
       }
       const { storage_path, token } = await urlRes.json() as { storage_path: string; token: string }
 
@@ -204,7 +207,7 @@ function UploadDialog({ open, onOpenChange, onUploaded }: {
       const { error: upErr } = await supabase.storage
         .from('style-anchor-memos')
         .uploadToSignedUrl(storage_path, token, file, { contentType: file.type || 'application/octet-stream' })
-      if (upErr) throw new Error(`Upload failed: ${upErr.message}`)
+      if (upErr) throw new Error(t('uploadFailedWithDetail', { detail: upErr.message }))
 
       // Step 3: finalize — record the metadata row and trigger text extraction.
       // Only the storage path + JSON metadata travel through Vercel here.
@@ -223,14 +226,14 @@ function UploadDialog({ open, onOpenChange, onUploaded }: {
       })
       if (!finalRes.ok) {
         const body = await finalRes.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Upload failed')
+        throw new Error(body.error ?? t('uploadFailed'))
       }
       const row: AnchorListItem = await finalRes.json()
       onUploaded(row)
       // Reset form
       setFile(null); setTitle(''); setVintageYear(''); setSector(''); setVoice('representative'); setPartnerNotes('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(err instanceof Error ? err.message : t('uploadFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -240,15 +243,15 @@ function UploadDialog({ open, onOpenChange, onUploaded }: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload reference memo</DialogTitle>
-          <DialogDescription>PDF, DOCX, or MD. ≤20 MB. Add basic metadata now; you can fine-tune voice settings on the detail page after upload.</DialogDescription>
+          <DialogTitle>{t('uploadDialog.title')}</DialogTitle>
+          <DialogDescription>{t('uploadDialog.description')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">File *</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">{t('uploadDialog.file')}</label>
             <label className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-card text-sm hover:bg-muted/50 cursor-pointer ${submitting ? 'opacity-50 pointer-events-none' : ''}`}>
               <Upload className="h-3.5 w-3.5" />
-              {file ? 'Choose a different file' : 'Choose file'}
+              {file ? t('uploadDialog.chooseDifferent') : t('uploadDialog.chooseFile')}
               <input
                 type="file"
                 accept=".pdf,.docx,.md,.txt,application/pdf"
@@ -257,48 +260,48 @@ function UploadDialog({ open, onOpenChange, onUploaded }: {
                 onChange={e => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
-            {file && <p className="text-[11px] text-muted-foreground mt-1">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
+            {file && <p className="text-[11px] text-muted-foreground mt-1">{file.name} · {t('sizeMb', { value: new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(file.size / 1024 / 1024) })}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Title</label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Defaults to filename" />
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('uploadDialog.memoTitle')}</label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder={t('uploadDialog.titlePlaceholder')} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Vintage year</label>
-              <Input value={vintageYear} onChange={e => setVintageYear(e.target.value)} placeholder="e.g. 2024" />
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('uploadDialog.vintageYear')}</label>
+              <Input value={vintageYear} onChange={e => setVintageYear(e.target.value)} placeholder={t('uploadDialog.yearPlaceholder')} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Sector</label>
-              <Input value={sector} onChange={e => setSector(e.target.value)} placeholder="e.g. dev tools" />
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('uploadDialog.sector')}</label>
+              <Input value={sector} onChange={e => setSector(e.target.value)} placeholder={t('uploadDialog.sectorPlaceholder')} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Voice fit</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('uploadDialog.voiceFit')}</label>
               <select value={voice} onChange={e => setVoice(e.target.value)} className="h-9 w-full px-2 rounded-md border border-input bg-background text-sm">
-                <option value="exemplary">Exemplary</option>
-                <option value="representative">Representative</option>
-                <option value="atypical">Atypical</option>
-                <option value="do_not_match_voice">Do not match (read for structure only)</option>
+                <option value="exemplary">{t('voice.exemplary')}</option>
+                <option value="representative">{t('voice.representative')}</option>
+                <option value="atypical">{t('voice.atypical')}</option>
+                <option value="do_not_match_voice">{t('uploadDialog.doNotMatch')}</option>
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Partner notes</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">{t('uploadDialog.partnerNotes')}</label>
             <textarea
               value={partnerNotes}
               onChange={e => setPartnerNotes(e.target.value)}
               rows={2}
               className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              placeholder="e.g. Gold standard for team sections; structure is right but voice is too formal"
+              placeholder={t('uploadDialog.notesPlaceholder')}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{t('cancel')}</Button>
           <Button onClick={submit} disabled={submitting || !file}>
             {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-            Upload
+            {t('upload')}
           </Button>
         </DialogFooter>
       </DialogContent>

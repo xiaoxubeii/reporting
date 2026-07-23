@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, ShieldCheck, PencilLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export function ConsentForm({ clientName, fundName, willWrite, downgraded, params }: Props) {
+  const t = useTranslations('OAuth')
   const [busy, setBusy] = useState<'approve' | 'deny' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,14 +47,14 @@ export function ConsentForm({ clientName, fundName, willWrite, downgraded, param
       })
       const body = await res.json()
       if (!res.ok || !body.redirect) {
-        setError(body.error ?? 'Could not complete authorization.')
+        setError(body.error ?? t('errors.authorizationFailed'))
         setBusy(null)
         return
       }
       // Hand control back to the app that sent us here.
       window.location.href = body.redirect
     } catch {
-      setError('Could not reach the server.')
+      setError(t('errors.serverUnavailable'))
       setBusy(null)
     }
   }
@@ -62,16 +64,18 @@ export function ConsentForm({ clientName, fundName, willWrite, downgraded, param
       wide
       footer={
         <p className="text-center text-xs text-muted-foreground">
-          It can only ever see {fundName}, never another fund. You can revoke this at any time in
-          Settings, and access ends automatically if you leave the fund.
+          {t('consent.footer', { fundName })}
         </p>
       }
     >
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Connect {clientName}?</CardTitle>
+          <CardTitle className="text-lg">{t('consent.title', { clientName })}</CardTitle>
           <CardDescription>
-            It is asking to act on <span className="font-medium text-foreground">{fundName}</span> as you.
+            {t.rich('consent.description', {
+              fundName,
+              strong: chunks => <span className="font-medium text-foreground">{chunks}</span>,
+            })}
           </CardDescription>
         </CardHeader>
 
@@ -83,11 +87,9 @@ export function ConsentForm({ clientName, fundName, willWrite, downgraded, param
             <div className="flex gap-2.5">
               <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
               <div className="space-y-1">
-                <p className="text-xs font-medium">Read your fund</p>
+                <p className="text-xs font-medium">{t('consent.read.title')}</p>
                 <p className="text-xs text-muted-foreground">
-                  Deal flow and diligence, the portfolio, companies and investments, LP positions and
-                  fund performance, and the ledger — chart of accounts, journal entries, capital
-                  accounts and financial statements.
+                  {t('consent.read.description')}
                 </p>
               </div>
             </div>
@@ -96,10 +98,9 @@ export function ConsentForm({ clientName, fundName, willWrite, downgraded, param
               <div className="flex gap-2.5 border-t pt-3">
                 <PencilLine className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-500" />
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Make changes</p>
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400">{t('consent.write.title')}</p>
                   <p className="text-xs text-muted-foreground">
-                    Record investments, post journal entries, run allocations, import bank transactions,
-                    and close accounting periods.
+                    {t('consent.write.description')}
                   </p>
                 </div>
               </div>
@@ -107,7 +108,9 @@ export function ConsentForm({ clientName, fundName, willWrite, downgraded, param
               <div className="flex gap-2.5 border-t pt-3">
                 <PencilLine className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground/40" />
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Read-only.</span> It cannot change anything.
+                  {t.rich('consent.readOnly', {
+                    strong: chunks => <span className="font-medium text-foreground">{chunks}</span>,
+                  })}
                 </p>
               </div>
             )}
@@ -116,7 +119,7 @@ export function ConsentForm({ clientName, fundName, willWrite, downgraded, param
           {downgraded && (
             <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
               <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
-                It asked for write access, but only fund admins can grant that — so it will get read-only.
+                {t('consent.downgraded')}
               </AlertDescription>
             </Alert>
           )}
@@ -129,10 +132,10 @@ export function ConsentForm({ clientName, fundName, willWrite, downgraded, param
 
           <div className="flex gap-2 pt-1">
             <Button onClick={() => decide(true)} disabled={busy !== null} className="flex-1">
-              {busy === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Allow'}
+              {busy === 'approve' ? <Loader2 className="h-4 w-4 animate-spin" /> : t('consent.allow')}
             </Button>
             <Button variant="outline" onClick={() => decide(false)} disabled={busy !== null} className="flex-1">
-              {busy === 'deny' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Deny'}
+              {busy === 'deny' ? <Loader2 className="h-4 w-4 animate-spin" /> : t('consent.deny')}
             </Button>
           </div>
         </CardContent>

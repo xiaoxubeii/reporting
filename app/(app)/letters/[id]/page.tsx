@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Lock, Sparkles, Copy, Check, Save, FileText, Download, ExternalLink, ChevronDown, ChevronRight, MessageSquare, Pencil, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,30 +11,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFeatureVisibility, useIsAdmin } from '@/components/feature-visibility-context'
 import { LpShareControl } from '@/components/lp-share-control'
 import { sanitizeBasicHtml } from '@/lib/sanitize'
-
-const DEFAULT_PROMPT_PLACEHOLDER = `## LP Letter Style Guide (Default)
-
-### Structure
-1. Header: Fund name, period, date
-2. Opening: "Dear Limited Partners" + brief intro paragraph
-3. Portfolio Company Updates: one section per active company
-4. Exited/Written-off: brief notes
-5. Closing: placeholder for GP outlook
-
-### Company Update Format
-- Length: 2-4 paragraphs per company
-- Leads with key metrics and trends
-- References specific numbers from the data
-- Notes significant developments or milestones
-- Flags challenges honestly
-- Does NOT include forward-looking predictions unless data-supported
-
-### Tone
-- Professional but not overly formal
-- First person plural ("We", "Our portfolio")
-- Data-forward, numbers first, narrative supports
-- Balanced, acknowledges both positives and challenges
-- Concise, no filler language`
 
 interface CompanyNarrative {
   company_id: string
@@ -107,9 +84,10 @@ interface PortfolioPreviewData {
 }
 
 export default function LetterEditorPage() {
+  const t = useTranslations('Letters.editor')
+  const locale = useLocale()
   const fv = useFeatureVisibility()
   const isAdmin = useIsAdmin()
-  const router = useRouter()
   const params = useParams()
   const letterId = params.id as string
 
@@ -141,10 +119,10 @@ export default function LetterEditorPage() {
       const data = await res.json()
       setLetter(data)
       setFullDraft(data.full_draft ?? '')
-      setGlobalPromptText(data.generation_prompt ?? DEFAULT_PROMPT_PLACEHOLDER)
+      setGlobalPromptText(data.generation_prompt ?? t('defaultPrompt'))
     }
     setLoading(false)
-  }, [letterId])
+  }, [letterId, t])
 
   // Load live portfolio table from preview endpoint
   const loadPortfolioTable = useCallback(async (l: Letter) => {
@@ -160,7 +138,13 @@ export default function LetterEditorPage() {
       if (res.ok) {
         const preview = await res.json()
         setPreviewData(preview)
-        const html = buildTableHtml(preview)
+        const statusLabels: Record<string, string> = {
+          active: t('statuses.active'), exited: t('statuses.exited'), written_off: t('statuses.writtenOff'), 'written off': t('statuses.writtenOff'),
+        }
+        const html = buildTableHtml(preview, {
+          company: t('portfolio.columns.company'), status: t('portfolio.columns.status'), stage: t('portfolio.columns.stage'),
+          invested: t('portfolio.columns.invested'), fmv: t('portfolio.columns.fmv'), grossMoic: t('portfolio.columns.grossMoic'), total: t('portfolio.total'),
+        }, locale, status => statusLabels[status.toLowerCase()] ?? status)
         setLiveTableHtml(html)
       }
     } catch {
@@ -168,7 +152,7 @@ export default function LetterEditorPage() {
     } finally {
       setLoadingTable(false)
     }
-  }, [])
+  }, [locale, t])
 
   useEffect(() => {
     loadLetter()
@@ -180,11 +164,12 @@ export default function LetterEditorPage() {
   }, [letter?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll for updates when letter is generating server-side
+  const letterStatus = letter?.status
   useEffect(() => {
-    if (!letter || letter.status !== 'generating') return
+    if (letterStatus !== 'generating') return
     const interval = setInterval(() => { loadLetter() }, 5000)
     return () => clearInterval(interval)
-  }, [letter?.status, loadLetter])
+  }, [letterStatus, loadLetter])
 
   useEffect(() => {
     fetch('/api/settings')
@@ -270,8 +255,8 @@ export default function LetterEditorPage() {
 
       if (!res.ok) {
         docWin?.close()
-        const err = await res.json().catch(() => ({ error: 'Export failed' }))
-        alert(err.error ?? 'Export failed')
+        const err = await res.json().catch(() => ({ error: t('errors.export') }))
+        alert(err.error ?? t('errors.export'))
         return
       }
 
@@ -291,7 +276,7 @@ export default function LetterEditorPage() {
       }
     } catch {
       docWin?.close()
-      alert('Export failed')
+      alert(t('errors.export'))
     } finally {
       setExporting(null)
     }
@@ -356,8 +341,8 @@ export default function LetterEditorPage() {
   if (!letter) {
     return (
       <div className="p-8">
-        <p className="text-sm text-destructive">Letter not found.</p>
-        <Link href="/letters" className="text-sm underline mt-2">Back to letters</Link>
+        <p className="text-sm text-destructive">{t('notFound')}</p>
+        <Link href="/letters" className="text-sm underline mt-2">{t('back')}</Link>
       </div>
     )
   }
@@ -380,15 +365,15 @@ export default function LetterEditorPage() {
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'sections' | 'portfolio' | 'full')}>
           <TabsList>
-            <TabsTrigger value="sections">Edit Company Summaries</TabsTrigger>
-            <TabsTrigger value="portfolio">Review Portfolio Data</TabsTrigger>
-            <TabsTrigger value="full">Review All</TabsTrigger>
+            <TabsTrigger value="sections">{t('tabs.sections')}</TabsTrigger>
+            <TabsTrigger value="portfolio">{t('tabs.portfolio')}</TabsTrigger>
+            <TabsTrigger value="full">{t('tabs.full')}</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-2 ml-auto">
-          <Button size="sm" variant="outline" className="text-muted-foreground" onClick={copyToClipboard} title="Copy the full letter draft to your clipboard">
+          <Button size="sm" variant="outline" className="text-muted-foreground" onClick={copyToClipboard} title={t('copyTitle')}>
             {copied ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? t('copied') : t('copy')}
           </Button>
           {hasContent && (
             <Button
@@ -397,10 +382,10 @@ export default function LetterEditorPage() {
               className="text-muted-foreground"
               onClick={() => exportLetter('docx')}
               disabled={!!exporting}
-              title="Download the letter as a Word document (.docx)"
+              title={t('downloadTitle')}
             >
               {exporting === 'docx' ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}
-              Download .docx
+              {t('download')}
             </Button>
           )}
           {hasContent && googleDriveConnected && (
@@ -410,7 +395,7 @@ export default function LetterEditorPage() {
               className="text-muted-foreground"
               onClick={() => exportLetter('google-docs')}
               disabled={!!exporting}
-              title="Export the letter to Google Docs in your connected Drive"
+              title={t('googleDocsTitle')}
             >
               {exporting === 'google-docs' ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <ExternalLink className="h-3.5 w-3.5 mr-1.5" />}
               Google Docs
@@ -431,15 +416,15 @@ export default function LetterEditorPage() {
           className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-sm hover:bg-muted/50"
         >
           {globalPromptOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          <span className="font-medium">Analyst prompt</span>
+          <span className="font-medium">{t('prompt.title')}</span>
           {letter.generation_prompt && (
-            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">customized</span>
+            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{t('prompt.customized')}</span>
           )}
         </button>
         {globalPromptOpen && (
           <div className="px-4 pb-3 space-y-2">
             <p className="text-[11px] text-muted-foreground">
-              Custom instructions applied to all company narratives during generation.
+              {t('prompt.description')}
             </p>
             <Textarea
               value={globalPromptText}
@@ -452,10 +437,10 @@ export default function LetterEditorPage() {
                 size="sm"
                 variant="outline"
                 onClick={saveGlobalPrompt}
-                disabled={savingGlobalPrompt || globalPromptText === (letter.generation_prompt ?? DEFAULT_PROMPT_PLACEHOLDER)}
+                disabled={savingGlobalPrompt || globalPromptText === (letter.generation_prompt ?? t('defaultPrompt'))}
               >
                 {savingGlobalPrompt ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-                Save prompt
+                {t('prompt.save')}
               </Button>
               <span className="flex-1" />
               <Button
@@ -464,10 +449,10 @@ export default function LetterEditorPage() {
                 className="text-muted-foreground"
                 onClick={regenerateAll}
                 disabled={regeneratingAll}
-                title="Generate AI narratives for all portfolio companies"
+                title={t('prompt.analyzeAllTitle')}
               >
                 {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-                Analyze All Companies
+                {t('prompt.analyzeAll')}
               </Button>
             </div>
           </div>
@@ -478,9 +463,9 @@ export default function LetterEditorPage() {
         <div className="rounded-lg border bg-muted/30 p-8 text-center space-y-3">
           <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Generation is in progress. This may take a few minutes...
+            {t('generation.progress')}
           </p>
-          <p className="text-xs text-muted-foreground/60">This page will update automatically when ready.</p>
+          <p className="text-xs text-muted-foreground/60">{t('generation.autoUpdate')}</p>
         </div>
       )}
 
@@ -489,19 +474,19 @@ export default function LetterEditorPage() {
           <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
           {letter.generation_error ? (
             <>
-              <p className="text-sm text-destructive">Generation failed</p>
+              <p className="text-sm text-destructive">{t('generation.failed')}</p>
               <p className="text-xs text-muted-foreground">{letter.generation_error}</p>
             </>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">No content has been generated for this letter yet.</p>
-              <p className="text-xs text-muted-foreground/60">Open the Analyst Prompt above to generate AI-written narratives for each portfolio company.</p>
+              <p className="text-sm text-muted-foreground">{t('generation.empty')}</p>
+              <p className="text-xs text-muted-foreground/60">{t('generation.emptyHint')}</p>
             </>
           )}
           {letter.generation_error && (
             <Button size="sm" variant="outline" onClick={regenerateAll}>
               <Sparkles className="h-4 w-4 mr-1.5" />
-              Retry generation
+              {t('generation.retry')}
             </Button>
           )}
         </div>
@@ -511,7 +496,7 @@ export default function LetterEditorPage() {
         <div className="rounded-lg border bg-muted/30 p-8 text-center space-y-3">
           <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Analyzing all companies. This may take a few minutes...
+            {t('generation.analyzingAll')}
           </p>
         </div>
       )}
@@ -533,7 +518,7 @@ export default function LetterEditorPage() {
                       onClick={() => { setEditingNarrative(n.company_id); setEditText(n.narrative); setPromptPanelCompany(null) }}
                     >
                       <Pencil className="h-3 w-3 mr-1.5" />
-                      Edit
+                      {t('actions.edit')}
                     </Button>
                   )}
                   <Button
@@ -543,7 +528,7 @@ export default function LetterEditorPage() {
                     onClick={() => { openPromptPanel(n.company_id); setEditingNarrative(null) }}
                   >
                     <MessageSquare className="h-3 w-3 mr-1.5" />
-                    Prompt
+                    {t('actions.prompt')}
                     {letter.company_prompts?.[n.company_id] && promptPanelCompany !== n.company_id && (
                       <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary inline-block" />
                     )}
@@ -570,10 +555,10 @@ export default function LetterEditorPage() {
                           disabled={saving}
                         >
                           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-                          Save
+                          {t('actions.save')}
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => setEditingNarrative(null)}>
-                          Cancel
+                          {t('actions.cancel')}
                         </Button>
                       </div>
                     </div>
@@ -582,7 +567,7 @@ export default function LetterEditorPage() {
                       {regenerating === n.company_id ? (
                         <div className="flex items-center gap-2 py-4 text-muted-foreground">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-xs">Analyzing company...</span>
+                          <span className="text-xs">{t('generation.analyzingCompany')}</span>
                         </div>
                       ) : (
                         n.narrative
@@ -595,18 +580,18 @@ export default function LetterEditorPage() {
                 {promptPanelCompany === n.company_id && (
                   <div className="w-[280px] shrink-0 border-l ml-4 pl-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium">Company prompt</p>
+                      <p className="text-xs font-medium">{t('companyPrompt.title')}</p>
                       <button onClick={() => setPromptPanelCompany(null)} className="text-muted-foreground hover:text-foreground">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Custom instructions for this company. Saving will regenerate the narrative.
+                      {t('companyPrompt.description')}
                     </p>
                     <Textarea
                       value={companyPromptText}
                       onChange={e => setCompanyPromptText(e.target.value)}
-                      placeholder="e.g., Emphasize product milestones and customer growth..."
+                      placeholder={t('companyPrompt.placeholder')}
                       rows={5}
                       className="text-xs"
                     />
@@ -623,7 +608,7 @@ export default function LetterEditorPage() {
                         ) : (
                           <Sparkles className="h-3 w-3 mr-1.5" />
                         )}
-                        Save & analyze
+                        {t('companyPrompt.saveAnalyze')}
                       </Button>
                     </div>
                     {letter.company_prompts?.[n.company_id] && (
@@ -645,7 +630,7 @@ export default function LetterEditorPage() {
                           }
                         }}
                       >
-                        Clear prompt
+                        {t('companyPrompt.clear')}
                       </button>
                     )}
                   </div>
@@ -653,7 +638,7 @@ export default function LetterEditorPage() {
               </div>
 
               <p className="text-[10px] text-muted-foreground/50 mt-2">
-                Last updated: {new Date(n.updated_at).toLocaleString()}
+                {t('lastUpdated', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(n.updated_at)) })}
               </p>
             </div>
           ))}
@@ -666,26 +651,26 @@ export default function LetterEditorPage() {
           {loadingTable ? (
             <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Loading portfolio data...</span>
+              <span className="text-sm">{t('portfolio.loading')}</span>
             </div>
           ) : previewData ? (
             <>
               {/* Fund metrics table */}
               <div className="rounded-lg border p-4">
-                <h2 className="font-medium text-sm mb-3">Fund Summary</h2>
+                <h2 className="font-medium text-sm mb-3">{t('portfolio.fundSummary')}</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b bg-muted/50">
-                        <th className="text-left px-2 py-1.5 font-semibold">Fund</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">Committed</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">Called</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">Distributions</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">FMV</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">DPI</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">RVPI</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">TVPI</th>
-                        <th className="text-right px-2 py-1.5 font-semibold">IRR</th>
+                        <th className="text-left px-2 py-1.5 font-semibold">{t('portfolio.columns.fund')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.committed')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.called')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.distributions')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.fmv')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.dpi')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.rvpi')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.tvpi')}</th>
+                        <th className="text-right px-2 py-1.5 font-semibold">{t('portfolio.columns.irr')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -696,14 +681,14 @@ export default function LetterEditorPage() {
                         </td>
                         {previewData.fundMetrics ? (
                           <>
-                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.committedCapital)}</td>
-                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.paidInCapital)}</td>
-                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.distributions)}</td>
-                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.fmv)}</td>
-                            <td className="text-right px-2 py-1.5 font-mono">{previewData.fundMetrics.dpi != null ? `${previewData.fundMetrics.dpi.toFixed(2)}x` : '\u2014'}</td>
-                            <td className="text-right px-2 py-1.5 font-mono">{previewData.fundMetrics.rvpi != null ? `${previewData.fundMetrics.rvpi.toFixed(2)}x` : '\u2014'}</td>
-                            <td className="text-right px-2 py-1.5 font-mono">{previewData.fundMetrics.tvpi != null ? `${previewData.fundMetrics.tvpi.toFixed(2)}x` : '\u2014'}</td>
-                            <td className="text-right px-2 py-1.5 font-mono">{previewData.fundMetrics.irr != null ? `${(previewData.fundMetrics.irr * 100).toFixed(1)}%` : '\u2014'}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.committedCapital, previewData.fundCurrency, locale)}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.paidInCapital, previewData.fundCurrency, locale)}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.distributions, previewData.fundCurrency, locale)}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{fmtCurrency(previewData.fundMetrics.fmv, previewData.fundCurrency, locale)}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{formatMoic(previewData.fundMetrics.dpi, locale)}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{formatMoic(previewData.fundMetrics.rvpi, locale)}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{formatMoic(previewData.fundMetrics.tvpi, locale)}</td>
+                            <td className="text-right px-2 py-1.5 font-mono">{formatPercent(previewData.fundMetrics.irr, locale)}</td>
                           </>
                         ) : (
                           <>
@@ -726,7 +711,7 @@ export default function LetterEditorPage() {
               {/* Portfolio company table */}
               {tableHtml && (
                 <div className="rounded-lg border p-4">
-                  <h2 className="font-medium text-sm mb-3">Portfolio Companies</h2>
+                  <h2 className="font-medium text-sm mb-3">{t('portfolio.companies')}</h2>
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none [&_table]:w-full [&_table]:text-xs [&_th]:px-2 [&_th]:py-1.5 [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_td]:border [&_thead]:bg-muted/50"
                     dangerouslySetInnerHTML={{ __html: tableHtml }}
@@ -736,7 +721,7 @@ export default function LetterEditorPage() {
             </>
           ) : (
             <div className="rounded-lg border border-dashed p-12 text-center">
-              <p className="text-sm text-muted-foreground">No portfolio data available for this period.</p>
+              <p className="text-sm text-muted-foreground">{t('portfolio.empty')}</p>
             </div>
           )}
         </div>
@@ -759,7 +744,7 @@ export default function LetterEditorPage() {
               disabled={saving || fullDraft === letter.full_draft}
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-              Save draft
+              {t('draft.save')}
             </Button>
             <Button
               size="sm"
@@ -767,7 +752,7 @@ export default function LetterEditorPage() {
               onClick={() => setFullDraft(letter.full_draft ?? '')}
               disabled={fullDraft === letter.full_draft}
             >
-              Revert
+              {t('draft.revert')}
             </Button>
           </div>
         </div>
@@ -784,35 +769,44 @@ function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function fmtCurrency(value: number): string {
-  if (Math.abs(value) >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
-  if (Math.abs(value) >= 1_000) return `$${(value / 1_000).toFixed(0)}K`
-  return `$${value.toLocaleString()}`
+function fmtCurrency(value: number, currency: string, locale: string): string {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
+}
+
+function formatMoic(value: number | null, locale: string): string {
+  return value == null ? '\u2014' : `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}x`
+}
+
+function formatPercent(value: number | null, locale: string): string {
+  return value == null ? '\u2014' : new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value)
 }
 
 function buildTableHtml(preview: {
+  fundCurrency: string
   companies: { investment: { companyName: string; status: string; stage: string | null; totalInvested: number; fmv: number; moic: number | null } }[]
   totals: { totalInvested: number; totalFmv: number; portfolioMoic: number | null }
-}): string {
+}, labels: {
+  company: string; status: string; stage: string; invested: string; fmv: string; grossMoic: string; total: string
+}, locale: string, statusLabel: (status: string) => string): string {
   const rows = preview.companies.map(c => {
     const inv = c.investment
     return `<tr>
       <td>${escHtml(inv.companyName)}</td>
-      <td style="text-transform:capitalize">${escHtml(inv.status)}</td>
+      <td>${escHtml(statusLabel(inv.status))}</td>
       <td>${escHtml(inv.stage ?? '\u2014')}</td>
-      <td style="text-align:right">${fmtCurrency(inv.totalInvested)}</td>
-      <td style="text-align:right">${fmtCurrency(inv.fmv)}</td>
-      <td style="text-align:right">${inv.moic ? `${inv.moic.toFixed(2)}x` : '\u2014'}</td>
+      <td style="text-align:right">${fmtCurrency(inv.totalInvested, preview.fundCurrency, locale)}</td>
+      <td style="text-align:right">${fmtCurrency(inv.fmv, preview.fundCurrency, locale)}</td>
+      <td style="text-align:right">${formatMoic(inv.moic, locale)}</td>
     </tr>`
   })
 
   return `<table>
   <thead>
     <tr>
-      <th>Company</th><th>Status</th><th>Stage</th>
-      <th style="text-align:right">Invested</th>
-      <th style="text-align:right">FMV</th>
-      <th style="text-align:right">Gross MOIC</th>
+      <th>${escHtml(labels.company)}</th><th>${escHtml(labels.status)}</th><th>${escHtml(labels.stage)}</th>
+      <th style="text-align:right">${escHtml(labels.invested)}</th>
+      <th style="text-align:right">${escHtml(labels.fmv)}</th>
+      <th style="text-align:right">${escHtml(labels.grossMoic)}</th>
     </tr>
   </thead>
   <tbody>
@@ -820,10 +814,10 @@ function buildTableHtml(preview: {
   </tbody>
   <tfoot>
     <tr>
-      <td colspan="3"><strong>Total</strong></td>
-      <td style="text-align:right"><strong>${fmtCurrency(preview.totals.totalInvested)}</strong></td>
-      <td style="text-align:right"><strong>${fmtCurrency(preview.totals.totalFmv)}</strong></td>
-      <td style="text-align:right"><strong>${preview.totals.portfolioMoic ? `${preview.totals.portfolioMoic.toFixed(2)}x` : '\u2014'}</strong></td>
+      <td colspan="3"><strong>${escHtml(labels.total)}</strong></td>
+      <td style="text-align:right"><strong>${fmtCurrency(preview.totals.totalInvested, preview.fundCurrency, locale)}</strong></td>
+      <td style="text-align:right"><strong>${fmtCurrency(preview.totals.totalFmv, preview.fundCurrency, locale)}</strong></td>
+      <td style="text-align:right"><strong>${formatMoic(preview.totals.portfolioMoic, locale)}</strong></td>
     </tr>
   </tfoot>
 </table>`

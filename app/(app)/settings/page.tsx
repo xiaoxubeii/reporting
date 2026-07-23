@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -24,7 +26,7 @@ import { DefaultMetricsSettings } from '@/components/settings/default-metrics-se
 import { StyleAnchorsInline } from './memo-agent/style-anchors/style-anchors-inline'
 import { SchemasInline } from './memo-agent/schemas/schemas-inline'
 import { AppearanceEditor } from './appearance/editor'
-import { AlertCircle, Check, ChevronDown, ChevronRight, Loader2, Plus, Trash2, Copy, FolderOpen, Unlink, Shield, ImagePlus, X, Lock, ArrowDownCircle, Eye } from 'lucide-react'
+import { AlertCircle, Check, ChevronDown, ChevronRight, Loader2, Plus, Trash2, Copy, FolderOpen, Unlink, Shield, ImagePlus, X, Lock } from 'lucide-react'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
 import type { FeatureKey, FeatureVisibility, FeatureVisibilityMap } from '@/lib/types/features'
 import { FEATURE_META } from '@/lib/types/feature-meta'
@@ -36,6 +38,11 @@ import { AffinityConnect } from '@/components/settings/affinity-connect'
 import { HeartbeatConnect } from '@/components/settings/heartbeat-connect'
 import { DealResearchSettings } from '@/components/settings/deal-research-settings'
 import { AdminSectionContext, GroupHeader, Section } from '@/components/settings/section'
+import {
+  CUSTOM_AI_PROVIDER_LABEL,
+  parseCustomAIProviderRequestParameters,
+  type CustomAIProviderRequestParameters,
+} from '@/lib/ai/custom-provider'
 
 interface Sender {
   id: string
@@ -45,7 +52,6 @@ interface Sender {
 }
 
 interface Settings {
-  fundId: string
   fundName: string
   fundLogo: string | null
   fundAddress: string | null
@@ -63,6 +69,8 @@ interface Settings {
   hasOpenRouterKey: boolean
   openrouterModel: string
   openrouterBaseUrl: string
+  openrouterRequestParameters: CustomAIProviderRequestParameters
+  customAIProviderConfigured: boolean
   retainResolvedReviews: boolean
   resolvedReviewsTtlDays: number | null
   senders: Sender[]
@@ -111,6 +119,7 @@ interface Settings {
 
 export default function SettingsPage() {
   const router = useRouter()
+  const t = useTranslations('Settings')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -127,10 +136,10 @@ export default function SettingsPage() {
       <div className="p-4 md:p-8">
         <div className="mb-6 space-y-1">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
             <AnalystToggleButton />
           </div>
-          <p className="text-sm text-muted-foreground">Configure your fund, integrations, and team preferences</p>
+          <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div className="flex-1 min-w-0 max-w-3xl w-full">
@@ -149,14 +158,14 @@ export default function SettingsPage() {
       <div className="p-4 md:p-8">
         <div className="mb-6 space-y-1">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
             <AnalystToggleButton />
           </div>
-          <p className="text-sm text-muted-foreground">Configure your fund, integrations, and team preferences</p>
+          <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div className="flex-1 min-w-0 max-w-3xl w-full">
-          <p className="text-muted-foreground">Could not load settings.</p>
+          <p className="text-muted-foreground">{t('errors.load')}</p>
         </div>
         <AnalystPanel />
         </div>
@@ -167,7 +176,7 @@ export default function SettingsPage() {
   return (
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <AnalystToggleButton />
       </div>
 
@@ -180,34 +189,34 @@ export default function SettingsPage() {
         <AdminSectionContext.Provider value={true}>
           <VersionSection appVersion={settings.appVersion} updateAvailable={settings.updateAvailable} />
           <FundNameSection name={settings.fundName} logo={settings.fundLogo} address={settings.fundAddress} onSaved={load} />
-          <Section title="Appearance">
+          <Section title={t('sections.appearance')}>
             <AppearanceEditor />
           </Section>
           <CurrencySection currency={settings.currency} onSaved={load} />
           <FeatureVisibilitySection featureVisibility={settings.featureVisibility} lpPortalEnabled={settings.lpPortalEnabled} onSaved={load} />
-          <Section title="Investment vehicles">
+          <Section title={t('sections.investmentVehicles')}>
             <VehiclesSettings />
           </Section>
-          <Section title="Default metrics">
+          <Section title={t('sections.defaultMetrics')}>
             <DefaultMetricsSettings />
           </Section>
         </AdminSectionContext.Provider>
       )}
       {/* Per-USER, not per-fund: the Affinity key is the caller's own personal access
           token and every user needs their own. This section used for all external data integrations. */}
-      <GroupHeader label="External Data" />
+      <GroupHeader label={t('groups.externalData')} />
       <AffinityConnect />
       {/* Heartbeat, unlike Affinity, is a per-FUND credential that reads the whole
           community — so the card is admin-only and renders nothing for everyone else. */}
       <HeartbeatConnect />
 
-      <GroupHeader label="Notes" />
+      <GroupHeader label={t('groups.notes')} />
       <NotificationPreferencesSection />
       {/* No longer gated on the accounting feature: the agent surface now covers the
           portfolio, companies, performance and LPs as well as the ledger, so a fund with
           accounting switched off still has most of it. */}
-      <GroupHeader label="AI agents" />
-      <Section title="Agent access (MCP + REST API keys)">
+      <GroupHeader label={t('groups.aiAgents')} />
+      <Section title={t('sections.agentAccess')}>
         <LedgerAgentAccess isAdmin={settings.isAdmin} />
       </Section>
       {!settings.isAdmin && (
@@ -215,7 +224,7 @@ export default function SettingsPage() {
       )}
       {settings.isAdmin && (
         <AdminSectionContext.Provider value={true}>
-          <GroupHeader label="Inbound Email" />
+          <GroupHeader label={t('groups.inboundEmail')} />
           <InboundEmailSection
             provider={settings.inboundEmailProvider}
             postmarkAddress={settings.postmarkInboundAddress}
@@ -226,7 +235,7 @@ export default function SettingsPage() {
           />
           <SendersSection senders={settings.senders} onChanged={load} />
 
-          <GroupHeader label="Outbound Email" />
+          <GroupHeader label={t('groups.outboundEmail')} />
           <OutboundEmailSection
             provider={settings.outboundEmailProvider}
             asksProvider={settings.asksEmailProvider}
@@ -244,7 +253,7 @@ export default function SettingsPage() {
             onSaved={load}
           />
 
-          <GroupHeader label="AI" />
+          <GroupHeader label={t('groups.ai')} />
           <AIProvidersSection
             hasClaudeKey={settings.hasClaudeKey}
             claudeModel={settings.claudeModel}
@@ -257,12 +266,14 @@ export default function SettingsPage() {
             hasOpenRouterKey={settings.hasOpenRouterKey}
             openrouterModel={settings.openrouterModel}
             openrouterBaseUrl={settings.openrouterBaseUrl}
+            openrouterRequestParameters={settings.openrouterRequestParameters}
+            customAIProviderConfigured={settings.customAIProviderConfigured}
             defaultAIProvider={settings.defaultAIProvider}
             onSaved={load}
           />
           <AiSummaryPromptSection currentPrompt={settings.aiSummaryPrompt} onSaved={load} />
 
-          <GroupHeader label="Deals" />
+          <GroupHeader label={t('groups.deals')} />
           <DealScreeningSection
             thesis={settings.dealThesis}
             prompt={settings.dealScreeningPrompt}
@@ -277,32 +288,30 @@ export default function SettingsPage() {
             model={settings.routingModel}
             onSaved={load}
           />
-          <Section title="AI">
+          <Section title={t('sections.dealAi')}>
             <p className="text-xs text-muted-foreground mb-3">
-              AI provider and model for the key deal features: the inbound email classifier, deal screening, and inbound portfolio extraction.
+              {t('dealAiDescription')}
             </p>
             <DefaultsEditor embedded section="features" />
           </Section>
 
-          <GroupHeader label="Diligence" />
+          <GroupHeader label={t('groups.diligence')} />
           <MemoAgentSection />
 
-          <GroupHeader label="Storage" />
+          <GroupHeader label={t('groups.storage')} />
           <StorageSection
-            fundId={settings.fundId}
             fileStorageProvider={settings.fileStorageProvider}
             googleDriveConnected={settings.googleDriveConnected}
             googleDriveFolderId={settings.googleDriveFolderId}
             googleDriveFolderName={settings.googleDriveFolderName}
             hasGoogleCredentials={settings.hasGoogleCredentials}
-            googleClientId={settings.googleClientId}
             dropboxConnected={settings.dropboxConnected}
             hasDropboxCredentials={settings.hasDropboxCredentials}
             dropboxAppKey={settings.dropboxAppKey}
             dropboxFolderPath={settings.dropboxFolderPath}
             onChanged={load}
           />
-          <GroupHeader label="Analytics" />
+          <GroupHeader label={t('groups.analytics')} />
           <AnalyticsSection
             fathomSiteId={settings.analyticsFathomSiteId}
             gaMeasurementId={settings.analyticsGaMeasurementId}
@@ -312,7 +321,7 @@ export default function SettingsPage() {
             disableUserTracking={settings.disableUserTracking}
             onSaved={load}
           />
-          <GroupHeader label="Access Control" />
+          <GroupHeader label={t('groups.accessControl')} />
           <AuthEmailTemplatesSection />
           <WhitelistSection />
           <TeamSection isAdmin={settings.isAdmin} featureVisibility={settings.featureVisibility} />
@@ -330,29 +339,30 @@ export default function SettingsPage() {
 // ──────────────────────────── Version ────────────────────────────
 
 function VersionSection({ appVersion, updateAvailable }: { appVersion: string; updateAvailable: boolean }) {
+  const t = useTranslations('Settings.page.version')
   return (
     <div className="rounded-lg border border-amber-500/30 bg-card p-5">
       <h2 className="text-sm font-medium mb-1 flex items-center gap-1.5">
         <Lock className="h-3 w-3 text-amber-500" />
-        Version
+        {t('title')}
       </h2>
       {updateAvailable ? (
         <p className="text-xs text-muted-foreground">
-          You are running <span className="font-mono font-medium text-foreground">v{appVersion}</span>. A newer version is available.{' '}
+          {t.rich('updateAvailable', { version: appVersion, versionTag: chunks => <span className="font-mono font-medium text-foreground">v{chunks}</span> })}{' '}
           <Link href="/updates" className="text-amber-600 dark:text-amber-400 underline underline-offset-4 hover:text-amber-500">
-            View update details
+            {t('viewUpdate')}
           </Link>
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          You are running <span className="font-mono font-medium text-foreground">v{appVersion}</span> and are up to date.{' '}
+          {t.rich('upToDate', { version: appVersion, versionTag: chunks => <span className="font-mono font-medium text-foreground">v{chunks}</span> })}{' '}
           <a
             href="https://github.com/tdavidson/reporting/releases"
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-4 hover:text-foreground"
           >
-            View releases on GitHub
+            {t('viewReleases')}
           </a>
         </p>
       )}
@@ -363,6 +373,7 @@ function VersionSection({ appVersion, updateAvailable }: { appVersion: string; u
 // ──────────────────────────── Profile ────────────────────────────
 
 function ProfileSection({ displayName, onSaved }: { displayName: string; onSaved: () => void }) {
+  const t = useTranslations('Settings.page.profile')
   const [value, setValue] = useState(displayName)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -383,21 +394,21 @@ function ProfileSection({ displayName, onSaved }: { displayName: string; onSaved
   }
 
   return (
-    <Section title="Your profile">
+    <Section title={t('title')}>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
         <div className="flex-1">
-          <Label>Display name</Label>
+          <Label>{t('displayName')}</Label>
           <p className="text-xs text-muted-foreground mt-1 mb-1.5">
-            Shown on notes and activity. If empty, your email will be used.
+            {t('help')}
           </p>
           <Input
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="Your name"
+            placeholder={t('placeholder')}
           />
         </div>
         <Button onClick={handleSave} disabled={saving || value === displayName} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
     </Section>
@@ -407,6 +418,7 @@ function ProfileSection({ displayName, onSaved }: { displayName: string; onSaved
 // ──────────────────────────── MFA ────────────────────────────
 
 function MfaSection() {
+  const t = useTranslations('Settings.page.mfa')
   const supabase = createClient()
   const [state, setState] = useState<'loading' | 'disabled' | 'enrolling' | 'enabled'>('loading')
   const [qrCode, setQrCode] = useState<string | null>(null)
@@ -509,16 +521,16 @@ function MfaSection() {
 
   if (state === 'loading') {
     return (
-      <Section title="Two-factor authentication">
+      <Section title={t('title')}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loading')}
         </div>
       </Section>
     )
   }
 
   return (
-    <Section title="Two-factor authentication">
+    <Section title={t('title')}>
       {error && (
         <p className="text-xs text-destructive flex items-center gap-1 mb-3">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {error}
@@ -528,11 +540,11 @@ function MfaSection() {
       {state === 'disabled' && (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Add an extra layer of security to your account by requiring a code from an authenticator app when you sign in.
+            {t('description')}
           </p>
           <Button size="sm" onClick={startEnroll}>
             <Shield className="h-3.5 w-3.5 mr-1.5" />
-            Enable two-factor authentication
+            {t('enable')}
           </Button>
         </div>
       )}
@@ -540,21 +552,21 @@ function MfaSection() {
       {state === 'enrolling' && (
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Scan the QR code with your authenticator app (e.g. Google Authenticator, 1Password, Authy), then enter the 6-digit code to verify.
+            {t('scanHelp')}
           </p>
           {qrCode && (
             <div className="flex justify-center">
-              <img src={qrCode} alt="TOTP QR code" className="h-48 w-48 rounded border" />
+              <img src={qrCode} alt={t('qrAlt')} className="h-48 w-48 rounded border" />
             </div>
           )}
           {secret && (
             <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Or enter this code manually:</p>
+              <p className="text-xs text-muted-foreground mb-1">{t('manualCode')}</p>
               <code className="text-xs bg-muted px-2 py-1 rounded select-all">{secret}</code>
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="mfa-enroll-code">Verification code</Label>
+            <Label htmlFor="mfa-enroll-code">{t('verificationCode')}</Label>
             <Input
               ref={inputRef}
               id="mfa-enroll-code"
@@ -572,10 +584,10 @@ function MfaSection() {
           <div className="flex gap-2 justify-center">
             <Button size="sm" onClick={verifyEnroll} disabled={verifying || code.length !== 6}>
               {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-              Verify &amp; enable
+              {t('verifyEnable')}
             </Button>
             <Button size="sm" variant="outline" onClick={cancelEnroll} disabled={verifying}>
-              Cancel
+              {t('cancel')}
             </Button>
           </div>
         </div>
@@ -585,20 +597,20 @@ function MfaSection() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
             <Check className="h-4 w-4 text-green-600 shrink-0" />
-            <span>Two-factor authentication is enabled.</span>
+            <span>{t('enabled')}</span>
           </div>
           {!confirmDisable ? (
             <Button size="sm" variant="outline" onClick={() => setConfirmDisable(true)}>
-              Disable
+              {t('disable')}
             </Button>
           ) : (
             <div className="flex items-center gap-2">
               <Button size="sm" variant="destructive" onClick={disableMfa} disabled={disabling}>
                 {disabling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                Confirm disable
+                {t('confirmDisable')}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setConfirmDisable(false)} disabled={disabling}>
-                Cancel
+                {t('cancel')}
               </Button>
             </div>
           )}
@@ -610,29 +622,11 @@ function MfaSection() {
 
 // ──────────────────────────── Currency ────────────────────────────
 
-const SUPPORTED_CURRENCIES = [
-  { code: 'USD', label: 'USD – US Dollar' },
-  { code: 'EUR', label: 'EUR – Euro' },
-  { code: 'GBP', label: 'GBP – British Pound' },
-  { code: 'CHF', label: 'CHF – Swiss Franc' },
-  { code: 'CAD', label: 'CAD – Canadian Dollar' },
-  { code: 'AUD', label: 'AUD – Australian Dollar' },
-  { code: 'JPY', label: 'JPY – Japanese Yen' },
-  { code: 'CNY', label: 'CNY – Chinese Yuan' },
-  { code: 'INR', label: 'INR – Indian Rupee' },
-  { code: 'SGD', label: 'SGD – Singapore Dollar' },
-  { code: 'HKD', label: 'HKD – Hong Kong Dollar' },
-  { code: 'SEK', label: 'SEK – Swedish Krona' },
-  { code: 'NOK', label: 'NOK – Norwegian Krone' },
-  { code: 'DKK', label: 'DKK – Danish Krone' },
-  { code: 'NZD', label: 'NZD – New Zealand Dollar' },
-  { code: 'BRL', label: 'BRL – Brazilian Real' },
-  { code: 'ZAR', label: 'ZAR – South African Rand' },
-  { code: 'ILS', label: 'ILS – Israeli Shekel' },
-  { code: 'KRW', label: 'KRW – South Korean Won' },
-]
+const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'CNY', 'INR', 'SGD', 'HKD', 'SEK', 'NOK', 'DKK', 'NZD', 'BRL', 'ZAR', 'ILS', 'KRW'] as const
 
 function CurrencySection({ currency, onSaved }: { currency: string; onSaved: () => void }) {
+  const locale = useLocale()
+  const t = useTranslations('Settings.page.currency')
   const [value, setValue] = useState(currency)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -653,25 +647,25 @@ function CurrencySection({ currency, onSaved }: { currency: string; onSaved: () 
   }
 
   return (
-    <Section title="Fund currency">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        The default currency used for investment values and currency-type metrics across the app.
+        {t('description')}
       </p>
       <div className="flex items-end gap-3">
         <div className="flex-1 max-w-xs">
-          <Label>Currency</Label>
+          <Label>{t('label')}</Label>
           <select
             value={value}
             onChange={e => setValue(e.target.value)}
             className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
-            {SUPPORTED_CURRENCIES.map(c => (
-              <option key={c.code} value={c.code}>{c.label}</option>
+            {SUPPORTED_CURRENCIES.map(code => (
+              <option key={code} value={code}>{code} – {new Intl.DisplayNames(locale, { type: 'currency' }).of(code)}</option>
             ))}
           </select>
         </div>
         <Button onClick={handleSave} disabled={saving || value === currency} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
     </Section>
@@ -688,10 +682,10 @@ function CurrencySection({ currency, onSaved }: { currency: string; onSaved: () 
 // "Hidden" used to read "Removed from sidebar, still accessible via URL". That was accurate and it
 // was the bug: hiding a page while its API still served the data is not access control. Hidden now
 // denies every surface.
-const VISIBILITY_OPTIONS: { value: FeatureVisibility; label: string; description: string }[] = [
-  { value: 'everyone', label: 'Members', description: 'On — each member gets what you grant them below' },
-  { value: 'admin', label: 'Admins only', description: 'On — no member can be granted it' },
-  { value: 'off', label: 'Off', description: 'Nobody, admins included. Data is kept.' },
+const VISIBILITY_OPTIONS: { value: Exclude<FeatureVisibility, 'hidden'> }[] = [
+  { value: 'everyone' },
+  { value: 'admin' },
+  { value: 'off' },
 ]
 
 /** Stored `hidden` is the same as `off` now — show it as Off rather than a fourth button. */
@@ -706,6 +700,7 @@ function FeatureVisibilitySection({
   lpPortalEnabled: boolean
   onSaved: () => void
 }) {
+  const t = useTranslations('Settings.page.visibility')
   const [values, setValues] = useState<Record<string, string>>(featureVisibility)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -730,11 +725,9 @@ function FeatureVisibilitySection({
   const features = Object.keys(DEFAULT_FEATURE_VISIBILITY) as FeatureKey[]
 
   return (
-    <Section title="Feature visibility">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-4">
-        Whether each area is on for the fund, and the most anyone may have. This is only half the
-        answer for a member — set what each person gets under Team → Access below. Off denies
-        everyone, admins included.
+        {t('description')}
       </p>
 
       {/* The one switch here that isn't about your team. It decides whether your INVESTORS have a
@@ -755,7 +748,7 @@ function FeatureVisibilitySection({
               subtitle={
                 <>
                   {meta.description}{' '}
-                  <Link href={meta.href} className="underline underline-offset-2 hover:text-foreground">Learn more</Link>
+                  <Link href={meta.href} className="underline underline-offset-2 hover:text-foreground">{t('learnMore')}</Link>
                 </>
               }
             >
@@ -766,14 +759,14 @@ function FeatureVisibilitySection({
                   <button
                     key={opt.value}
                     onClick={() => handleChange(key, opt.value)}
-                    title={opt.description}
+                    title={t(`options.${opt.value}.description`)}
                     className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
                       current === opt.value
                         ? 'border-foreground/30 bg-accent font-medium'
                         : 'hover:bg-accent/30'
                     }`}
                   >
-                    {opt.label}
+                    {t(`options.${opt.value}.label`)}
                   </button>
                 ))}
               </div>
@@ -781,8 +774,8 @@ function FeatureVisibilitySection({
           )
         })}
       </SettingsCardGrid>
-      {saving && <p className="text-xs text-muted-foreground mt-3">Saving...</p>}
-      {saved && <p className="text-xs text-green-600 mt-3">Saved</p>}
+      {saving && <p className="text-xs text-muted-foreground mt-3">{t('saving')}</p>}
+      {saved && <p className="text-xs text-green-600 mt-3">{t('saved')}</p>}
     </Section>
   )
 }
@@ -790,6 +783,7 @@ function FeatureVisibilitySection({
 // ──────────────────────────── Notification Preferences ────────────────────────────
 
 function NotificationPreferencesSection() {
+  const t = useTranslations('Settings.page.notifications')
   const [level, setLevel] = useState<string>('mentions')
   const [subscribedIds, setSubscribedIds] = useState<string[]>([])
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
@@ -839,48 +833,44 @@ function NotificationPreferencesSection() {
     save(level, next)
   }
 
-  const options = [
-    { value: 'all', label: 'All notes', description: 'Get notified for every new note' },
-    { value: 'mentions', label: '@Mentions & followed companies', description: 'When someone @mentions you, plus notes on companies you follow' },
-    { value: 'none', label: 'None', description: 'No email notifications for notes' },
-  ]
+  const options = ['all', 'mentions', 'none'] as const
 
   return (
-    <Section title="Note notifications">
+    <Section title={t('title')}>
       {loading ? (
         <div className="h-16 bg-muted rounded animate-pulse" />
       ) : (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground mb-3">
-            Choose when you receive email notifications about new notes.
+            {t('description')}
           </p>
           {options.map(opt => (
             <label
-              key={opt.value}
+              key={opt}
               className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
-                level === opt.value ? 'border-foreground/30 bg-accent/50' : 'hover:bg-accent/30'
+                level === opt ? 'border-foreground/30 bg-accent/50' : 'hover:bg-accent/30'
               }`}
             >
               <input
                 type="radio"
                 name="note-notification-level"
-                value={opt.value}
-                checked={level === opt.value}
-                onChange={() => handleLevelChange(opt.value)}
+                value={opt}
+                checked={level === opt}
+                onChange={() => handleLevelChange(opt)}
                 className="mt-0.5"
               />
               <div>
-                <span className="text-sm font-medium">{opt.label}</span>
-                <p className="text-xs text-muted-foreground">{opt.description}</p>
+                <span className="text-sm font-medium">{t(`options.${opt}.label`)}</span>
+                <p className="text-xs text-muted-foreground">{t(`options.${opt}.description`)}</p>
               </div>
             </label>
           ))}
 
           {level === 'mentions' && companies.length > 0 && (
             <div className="mt-3 pt-3 border-t">
-              <p className="text-xs font-medium mb-2">Follow companies</p>
+              <p className="text-xs font-medium mb-2">{t('followCompanies')}</p>
               <p className="text-xs text-muted-foreground mb-2">
-                Get notified for all notes on these companies, even without an @mention.
+                {t('followHelp')}
               </p>
               <div className="max-h-48 overflow-y-auto space-y-1">
                 {companies.map(c => (
@@ -898,8 +888,8 @@ function NotificationPreferencesSection() {
             </div>
           )}
 
-          {saving && <p className="text-xs text-muted-foreground mt-2">Saving...</p>}
-          {saved && <p className="text-xs text-green-600 mt-2">Saved</p>}
+          {saving && <p className="text-xs text-muted-foreground mt-2">{t('saving')}</p>}
+          {saved && <p className="text-xs text-green-600 mt-2">{t('saved')}</p>}
         </div>
       )}
     </Section>
@@ -909,6 +899,7 @@ function NotificationPreferencesSection() {
 // ──────────────────────────── Fund Name ────────────────────────────
 
 function FundNameSection({ name, logo, address, onSaved }: { name: string; logo: string | null; address: string | null; onSaved: () => void }) {
+  const t = useTranslations('Settings.page.fund')
   const [value, setValue] = useState(name)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -940,7 +931,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
     setLogoError(null)
 
     if (file.size > 200 * 1024) {
-      setLogoError('File must be under 200KB')
+      setLogoError(t('fileTooLarge'))
       e.target.value = ''
       return
     }
@@ -960,7 +951,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
         onSaved()
       } else {
         setLogoPreview(logo)
-        setLogoError('Failed to upload logo')
+        setLogoError(t('uploadFailed'))
       }
     }
     reader.readAsDataURL(file)
@@ -983,28 +974,28 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
   }
 
   return (
-    <Section title="Fund name & logo">
+    <Section title={t('title')}>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
         <div className="flex-1">
-          <Label>Name</Label>
+          <Label>{t('name')}</Label>
           <Input value={value} onChange={(e) => setValue(e.target.value)} />
         </div>
         <Button onClick={handleSave} disabled={saving || value === name} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
 
       <div className="mt-4 pt-4 border-t">
-        <Label>Logo</Label>
+        <Label>{t('logo')}</Label>
         <p className="text-xs text-muted-foreground mb-2">
-          Upload a logo to display in the header. Max 200KB.
+          {t('logoHelp')}
         </p>
         <div className="flex items-center gap-3">
           {logoPreview ? (
             <div className="relative">
               <img
                 src={logoPreview}
-                alt="Fund logo"
+                alt={t('logoAlt')}
                 className="h-12 w-12 rounded border object-contain bg-background"
               />
               <button
@@ -1018,7 +1009,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
           ) : (
             <label className="flex items-center gap-2 cursor-pointer border rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors">
               <ImagePlus className="h-4 w-4" />
-              Choose file
+              {t('chooseFile')}
               <input
                 type="file"
                 accept="image/*"
@@ -1029,7 +1020,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
           )}
           {logoPreview && (
             <label className="flex items-center gap-2 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Replace
+              {t('replace')}
               <input
                 type="file"
                 accept="image/*"
@@ -1048,16 +1039,16 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
       </div>
 
       <div className="mt-4 pt-4 border-t">
-        <Label>Address / Contact Info</Label>
+        <Label>{t('address')}</Label>
         <p className="text-xs text-muted-foreground mb-2">
-          Displayed on investor report PDFs below the fund name.
+          {t('addressHelp')}
         </p>
         <textarea
           value={addressValue}
           onChange={e => setAddressValue(e.target.value)}
           rows={3}
           className="w-full border rounded p-2 text-sm bg-background mb-2"
-          placeholder="123 Main St&#10;New York, NY 10001&#10;info@fund.com"
+          placeholder={t('addressPlaceholder')}
         />
         <Button
           size="sm"
@@ -1077,7 +1068,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
             }
           }}
         >
-          {addressSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : addressSaved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {addressSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : addressSaved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
     </Section>
@@ -1089,7 +1080,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
 // ──────────────────────────── AI Providers ────────────────────────────
 
 function AIProvidersSection({
-  hasClaudeKey, claudeModel, hasOpenAIKey, openaiModel, hasGeminiKey, geminiModel, ollamaBaseUrl, ollamaModel, hasOpenRouterKey, openrouterModel, openrouterBaseUrl, defaultAIProvider, onSaved,
+  hasClaudeKey, claudeModel, hasOpenAIKey, openaiModel, hasGeminiKey, geminiModel, ollamaBaseUrl, ollamaModel, hasOpenRouterKey, openrouterModel, openrouterBaseUrl, openrouterRequestParameters, customAIProviderConfigured, defaultAIProvider, onSaved,
 }: {
   hasClaudeKey: boolean
   claudeModel: string
@@ -1102,27 +1093,41 @@ function AIProvidersSection({
   hasOpenRouterKey: boolean
   openrouterModel: string
   openrouterBaseUrl: string
+  openrouterRequestParameters: CustomAIProviderRequestParameters
+  customAIProviderConfigured: boolean
   defaultAIProvider: string
   onSaved: () => void
 }) {
+  const t = useTranslations('Settings.page.aiProviders')
   const [defaultProvider, setDefaultProvider] = useState(defaultAIProvider)
   const [savingDefault, setSavingDefault] = useState(false)
+  const [defaultProviderError, setDefaultProviderError] = useState<string | null>(null)
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set([defaultAIProvider]))
 
   useEffect(() => { setDefaultProvider(defaultAIProvider) }, [defaultAIProvider])
 
   const saveDefaultProvider = async (value: string) => {
+    const previousProvider = defaultProvider
     setDefaultProvider(value)
     setSavingDefault(true)
+    setDefaultProviderError(null)
     // Open the newly selected provider section
     setOpenSections(prev => new Set(prev).add(value))
-    const res = await fetch('/api/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ defaultAIProvider: value }),
-    })
-    setSavingDefault(false)
-    if (res.ok) onSaved()
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ defaultAIProvider: value }),
+      })
+      const data = await res.json().catch(() => null) as { error?: string } | null
+      if (!res.ok) throw new Error(data?.error || t('saveDefaultFailedStatus', { status: res.status }))
+      onSaved()
+    } catch (error) {
+      setDefaultProvider(previousProvider)
+      setDefaultProviderError(error instanceof Error ? error.message : t('saveDefaultFailed'))
+    } finally {
+      setSavingDefault(false)
+    }
   }
 
   const toggleSection = (key: string) => {
@@ -1135,42 +1140,47 @@ function AIProvidersSection({
   }
 
   return (
-    <Section title="AI Providers">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Choose which AI provider to use by default for report parsing, summaries, and imports.
-        Configure at least one provider below.
+        {t('description')}
       </p>
       <div className="flex items-center gap-2 mb-4">
-        <Label className="text-xs text-muted-foreground shrink-0">Default provider</Label>
-        <select
-          className="flex h-9 w-full max-w-xs rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        <Label htmlFor="default-ai-provider" className="text-xs text-muted-foreground shrink-0">{t('defaultProvider')}</Label>
+        <Select
           value={defaultProvider}
-          onChange={(e) => saveDefaultProvider(e.target.value)}
+          onValueChange={saveDefaultProvider}
           disabled={savingDefault}
         >
-          <option value="anthropic" disabled={!hasClaudeKey}>
-            Anthropic (Claude){!hasClaudeKey ? ', no key configured' : ''}
-          </option>
-          <option value="openai" disabled={!hasOpenAIKey}>
-            OpenAI{!hasOpenAIKey ? ', no key configured' : ''}
-          </option>
-          <option value="gemini" disabled={!hasGeminiKey}>
-            Google Gemini{!hasGeminiKey ? ', no key configured' : ''}
-          </option>
-          <option value="ollama" disabled={!ollamaBaseUrl}>
-            Ollama (Local){!ollamaBaseUrl ? ', not configured' : ''}
-          </option>
-          <option value="openrouter" disabled={!hasOpenRouterKey}>
-            OpenRouter{!hasOpenRouterKey ? ', no key configured' : ''}
-          </option>
-        </select>
+          <SelectTrigger id="default-ai-provider" className="w-full max-w-xs">
+            <SelectValue placeholder={t('chooseProvider')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="anthropic" disabled={!hasClaudeKey}>
+              Anthropic (Claude){!hasClaudeKey ? t('noKeySuffix') : ''}
+            </SelectItem>
+            <SelectItem value="openai" disabled={!hasOpenAIKey}>
+              OpenAI{!hasOpenAIKey ? t('noKeySuffix') : ''}
+            </SelectItem>
+            <SelectItem value="gemini" disabled={!hasGeminiKey}>
+              Google Gemini{!hasGeminiKey ? t('noKeySuffix') : ''}
+            </SelectItem>
+            <SelectItem value="ollama" disabled={!ollamaBaseUrl}>
+              Ollama ({t('local')}){!ollamaBaseUrl ? t('notConfiguredSuffix') : ''}
+            </SelectItem>
+            <SelectItem value="openrouter" disabled={!customAIProviderConfigured}>
+              {CUSTOM_AI_PROVIDER_LABEL}{!customAIProviderConfigured ? t('notConfiguredSuffix') : ''}
+            </SelectItem>
+          </SelectContent>
+        </Select>
         {savingDefault && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />}
       </div>
+      {defaultProviderError && (
+        <p className="mb-4 text-xs text-destructive" role="alert">{defaultProviderError}</p>
+      )}
 
       <div className="space-y-0 border rounded-lg overflow-hidden">
         <AIProviderDisclosure
           label="Anthropic (Claude)"
-          providerKey="anthropic"
           isDefault={defaultProvider === 'anthropic'}
           isOpen={openSections.has('anthropic')}
           onToggle={() => toggleSection('anthropic')}
@@ -1180,7 +1190,6 @@ function AIProvidersSection({
         </AIProviderDisclosure>
         <AIProviderDisclosure
           label="OpenAI"
-          providerKey="openai"
           isDefault={defaultProvider === 'openai'}
           isOpen={openSections.has('openai')}
           onToggle={() => toggleSection('openai')}
@@ -1190,7 +1199,6 @@ function AIProvidersSection({
         </AIProviderDisclosure>
         <AIProviderDisclosure
           label="Google Gemini"
-          providerKey="gemini"
           isDefault={defaultProvider === 'gemini'}
           isOpen={openSections.has('gemini')}
           onToggle={() => toggleSection('gemini')}
@@ -1199,8 +1207,7 @@ function AIProvidersSection({
           <GeminiKeyContent hasKey={hasGeminiKey} currentModel={geminiModel} onSaved={onSaved} />
         </AIProviderDisclosure>
         <AIProviderDisclosure
-          label="Ollama (Local)"
-          providerKey="ollama"
+          label={`Ollama (${t('local')})`}
           isDefault={defaultProvider === 'ollama'}
           isOpen={openSections.has('ollama')}
           onToggle={() => toggleSection('ollama')}
@@ -1209,78 +1216,198 @@ function AIProvidersSection({
           <OllamaContent baseUrl={ollamaBaseUrl} currentModel={ollamaModel} onSaved={onSaved} />
         </AIProviderDisclosure>
         <AIProviderDisclosure
-          label="OpenRouter"
-          providerKey="openrouter"
+          label={CUSTOM_AI_PROVIDER_LABEL}
           isDefault={defaultProvider === 'openrouter'}
           isOpen={openSections.has('openrouter')}
           onToggle={() => toggleSection('openrouter')}
-          hasKey={hasOpenRouterKey}
+          hasKey={customAIProviderConfigured}
         >
-          <OpenRouterContent hasKey={hasOpenRouterKey} currentModel={openrouterModel} currentBaseUrl={openrouterBaseUrl} onSaved={onSaved} />
+          <CustomOpenAIProviderContent
+            hasKey={hasOpenRouterKey}
+            currentModel={openrouterModel}
+            currentBaseUrl={openrouterBaseUrl}
+            currentRequestParameters={openrouterRequestParameters}
+            onSaved={onSaved}
+          />
         </AIProviderDisclosure>
       </div>
     </Section>
   )
 }
 
-function OpenRouterContent({ hasKey, currentModel, currentBaseUrl, onSaved }: { hasKey: boolean; currentModel: string; currentBaseUrl: string; onSaved: () => void }) {
+function CustomOpenAIProviderContent({
+  hasKey,
+  currentModel,
+  currentBaseUrl,
+  currentRequestParameters,
+  onSaved,
+}: {
+  hasKey: boolean
+  currentModel: string
+  currentBaseUrl: string
+  currentRequestParameters: CustomAIProviderRequestParameters
+  onSaved: () => void
+}) {
+  const t = useTranslations('Settings.page.aiProviders')
   const [key, setKey] = useState('')
-  const [baseUrl, setBaseUrl] = useState(currentBaseUrl || 'https://openrouter.ai/api/v1')
+  const [baseUrl, setBaseUrl] = useState(currentBaseUrl || '')
   const [model, setModel] = useState(currentModel || '')
+  const [requestParameters, setRequestParameters] = useState(
+    JSON.stringify(currentRequestParameters ?? {}, null, 2),
+  )
+  const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'valid' | 'invalid' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
 
-  async function save() {
-    setSaving(true); setError(null)
+  async function testKey() {
+    const parsedRequestParameters = parseRequestParameters()
+    if (!parsedRequestParameters) return
+    setTesting(true)
+    setStatus('idle')
+    setError(null)
     try {
-      const body: Record<string, string> = { openrouterBaseUrl: baseUrl, openrouterModel: model }
-      if (key.trim()) body.openrouterApiKey = key.trim()
-      const res = await fetch('/api/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? 'Save failed') }
-      setKey(''); setSaved(true); setTimeout(() => setSaved(false), 2000); onSaved()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
+      const res = await fetch('/api/test-custom-provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: key,
+          baseUrl,
+          model,
+          requestParameters: parsedRequestParameters,
+        }),
+      })
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      setStatus(res.ok ? 'valid' : 'invalid')
+      if (!res.ok) setError(body.error ?? t('connectionFailed'))
+    } catch (error) {
+      setStatus('invalid')
+      setError(error instanceof Error ? error.message : t('connectionFailed'))
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  async function updateProvider() {
+    const parsedRequestParameters = parseRequestParameters()
+    if (!parsedRequestParameters) return
+    setSaving(true)
+    setStatus('idle')
+    setError(null)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          openrouterApiKey: key.trim(),
+          openrouterBaseUrl: baseUrl,
+          openrouterModel: model,
+          openrouterRequestParameters: parsedRequestParameters,
+        }),
+      })
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      if (!res.ok) throw new Error(body.error ?? t('updateFailed'))
+      setKey('')
+      setStatus('saved')
+      onSaved()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t('updateFailed'))
     } finally {
       setSaving(false)
     }
   }
 
+  function parseRequestParameters(): CustomAIProviderRequestParameters | null {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(requestParameters || '{}')
+    } catch {
+      setStatus('invalid')
+      setError(t('invalidJson'))
+      return null
+    }
+
+    const result = parseCustomAIProviderRequestParameters(parsed)
+    if (!result.ok) {
+      setStatus('invalid')
+      setError(result.error)
+      return null
+    }
+    return result.value
+  }
+
+  const hasCoreConfiguration = !!baseUrl.trim() && !!model.trim()
+  const canTest = !!key.trim() && hasCoreConfiguration
+  const canUpdate = (!!key.trim() || hasKey) && hasCoreConfiguration
+
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Connect OpenRouter (or any OpenAI-compatible endpoint) to use inexpensive open models — DeepSeek, GLM, Qwen, Llama. Create a key at openrouter.ai.
+        {t('customDescription')}
       </p>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+        <div className="flex-1">
+          <Label className="text-xs">{t('apiKey')} {hasKey && <span className="text-muted-foreground">{t('savedReplace')}</span>}</Label>
+          <Input
+            type="password"
+            value={key}
+            onChange={(event) => { setKey(event.target.value); setStatus('idle'); setError(null) }}
+            placeholder={hasKey ? '••••••••' : t('providerApiKey')}
+            className="h-9"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={testKey} disabled={!canTest || testing} variant="outline" size="sm">
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('test')}
+          </Button>
+          <Button onClick={updateProvider} disabled={!canUpdate || saving} size="sm">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('update')}
+          </Button>
+        </div>
+      </div>
+      {status === 'valid' && <p className="text-xs text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> {t('connectionValid')}</p>}
+      {status === 'invalid' && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {t('connectionFailed')}</p>}
+      {status === 'saved' && <p className="text-xs text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> {t('providerUpdated')}</p>}
       <div>
-        <Label className="text-xs">API key {hasKey && <span className="text-muted-foreground">(saved — leave blank to keep)</span>}</Label>
-        <Input type="password" value={key} onChange={e => setKey(e.target.value)} placeholder={hasKey ? '••••••••' : 'sk-or-...'} className="h-9" />
+        <Label className="text-xs">{t('baseUrl')}</Label>
+        <Input value={baseUrl} onChange={(event) => { setBaseUrl(event.target.value); setStatus('idle'); setError(null) }} placeholder="https://gateway.example.com/v1" className="h-9 font-mono text-xs" />
       </div>
       <div>
-        <Label className="text-xs">Base URL</Label>
-        <Input value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="https://openrouter.ai/api/v1" className="h-9 font-mono text-xs" />
+        <Label className="text-xs">{t('model')}</Label>
+        <Input value={model} onChange={(event) => { setModel(event.target.value); setStatus('idle'); setError(null) }} placeholder={t('modelPlaceholder')} className="h-9 font-mono text-xs" />
       </div>
       <div>
-        <Label className="text-xs">Model</Label>
-        <Input value={model} onChange={e => setModel(e.target.value)} placeholder="e.g. deepseek/deepseek-chat or z-ai/glm-4.6" className="h-9 font-mono text-xs" />
+        <Label className="text-xs">{t('customParameters')}</Label>
+        <Textarea
+          value={requestParameters}
+          onChange={(event) => {
+            setRequestParameters(event.target.value)
+            setStatus('idle')
+            setError(null)
+          }}
+          placeholder="{}"
+          rows={4}
+          spellCheck={false}
+          className="font-mono text-xs"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t('customParametersHelp')}
+        </p>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Button size="sm" onClick={save} disabled={saving}>
-        {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5 mr-1" /> : null}
-        Save
-      </Button>
     </div>
   )
 }
 
-function AIProviderDisclosure({ label, providerKey, isDefault, isOpen, onToggle, hasKey, children }: {
+function AIProviderDisclosure({ label, isDefault, isOpen, onToggle, hasKey, children }: {
   label: string
-  providerKey: string
   isDefault: boolean
   isOpen: boolean
   onToggle: () => void
   hasKey: boolean
   children: React.ReactNode
 }) {
+  const t = useTranslations('Settings.page.aiProviders')
   return (
     <div className="border-b last:border-b-0">
       <button
@@ -1290,12 +1417,12 @@ function AIProviderDisclosure({ label, providerKey, isDefault, isOpen, onToggle,
         {isOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
         <span className="flex-1">{label}</span>
         {isDefault && (
-          <span className="text-[9px] font-medium text-emerald-600 bg-emerald-500/10 rounded px-1.5 py-0.5 leading-none uppercase tracking-wider">default</span>
+          <span className="text-[9px] font-medium text-emerald-600 bg-emerald-500/10 rounded px-1.5 py-0.5 leading-none uppercase tracking-wider">{t('default')}</span>
         )}
         {hasKey ? (
           <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
         ) : (
-          <span className="text-[10px] text-muted-foreground">Not configured</span>
+          <span className="text-[10px] text-muted-foreground">{t('notConfigured')}</span>
         )}
       </button>
       {isOpen && (
@@ -1308,6 +1435,7 @@ function AIProviderDisclosure({ label, providerKey, isDefault, isOpen, onToggle,
 }
 
 function ClaudeKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; currentModel: string; onSaved: () => void }) {
+  const t = useTranslations('Settings.page.aiProviders')
   const [newKey, setNewKey] = useState('')
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1331,11 +1459,11 @@ function ClaudeKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
       setModels(data.models ?? [])
       setModelsFetched(true)
     } catch {
-      setModelsError('Failed to fetch models')
+      setModelsError(t('fetchModelsFailed'))
     } finally {
       setModelsLoading(false)
     }
-  }, [modelsFetched])
+  }, [modelsFetched, t])
 
   useEffect(() => {
     if (hasKey) fetchModels()
@@ -1387,12 +1515,12 @@ function ClaudeKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
     <>
       <p className="text-xs text-muted-foreground mb-3">
         {hasKey
-          ? 'A Claude API key is configured. Enter a new key below to replace it.'
-          : 'No Claude API key configured. Add one to enable report parsing.'}
+          ? t('claudeConfigured')
+          : t('claudeMissing')}
       </p>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
         <div className="flex-1">
-          <Label>API key</Label>
+          <Label>{t('apiKey')}</Label>
           <Input
             type="password"
             value={newKey}
@@ -1402,23 +1530,23 @@ function ClaudeKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
         </div>
         <div className="flex gap-2">
           <Button onClick={testKey} disabled={!newKey.trim() || testing} variant="outline" size="sm">
-            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Test'}
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('test')}
           </Button>
           <Button onClick={saveKey} disabled={!newKey.trim() || saving} size="sm">
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Update'}
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('update')}
           </Button>
         </div>
       </div>
-      {status === 'valid' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> Key is valid</p>}
-      {status === 'invalid' && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Key is invalid</p>}
-      {status === 'saved' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> Key updated</p>}
+      {status === 'valid' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> {t('keyValid')}</p>}
+      {status === 'invalid' && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {t('keyInvalid')}</p>}
+      {status === 'saved' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> {t('keyUpdated')}</p>}
 
       {hasKey && (
         <div className="mt-4 pt-4 border-t">
-          <Label>Model</Label>
-          <p className="text-xs text-muted-foreground mb-2">Choose which Claude model to use.</p>
+          <Label>{t('model')}</Label>
+          <p className="text-xs text-muted-foreground mb-2">{t('chooseModel', { provider: 'Claude' })}</p>
           {modelsLoading ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading models…</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loadingModels')}</div>
           ) : modelsError ? (
             <p className="text-xs text-destructive">{modelsError}</p>
           ) : (
@@ -1437,6 +1565,7 @@ function ClaudeKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
 }
 
 function OpenAIKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; currentModel: string; onSaved: () => void }) {
+  const t = useTranslations('Settings.page.aiProviders')
   const [newKey, setNewKey] = useState('')
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1460,11 +1589,11 @@ function OpenAIKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
       setModels(data.models ?? [])
       setModelsFetched(true)
     } catch {
-      setModelsError('Failed to fetch models')
+      setModelsError(t('fetchModelsFailed'))
     } finally {
       setModelsLoading(false)
     }
-  }, [modelsFetched])
+  }, [modelsFetched, t])
 
   useEffect(() => { if (hasKey) fetchModels() }, [hasKey, fetchModels])
   useEffect(() => { setSelectedModel(currentModel) }, [currentModel])
@@ -1513,33 +1642,33 @@ function OpenAIKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
     <>
       <p className="text-xs text-muted-foreground mb-3">
         {hasKey
-          ? 'An OpenAI API key is configured. Enter a new key below to replace it.'
-          : 'No OpenAI API key configured. Add one to enable OpenAI as an AI provider.'}
+          ? t('openaiConfigured')
+          : t('openaiMissing')}
       </p>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
         <div className="flex-1">
-          <Label>API key</Label>
+          <Label>{t('apiKey')}</Label>
           <Input type="password" value={newKey} onChange={(e) => { setNewKey(e.target.value); setStatus('idle') }} placeholder="sk-..." />
         </div>
         <div className="flex gap-2">
           <Button onClick={testKey} disabled={!newKey.trim() || testing} variant="outline" size="sm">
-            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Test'}
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('test')}
           </Button>
           <Button onClick={saveKey} disabled={!newKey.trim() || saving} size="sm">
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Update'}
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('update')}
           </Button>
         </div>
       </div>
-      {status === 'valid' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> Key is valid</p>}
-      {status === 'invalid' && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Key is invalid</p>}
-      {status === 'saved' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> Key updated</p>}
+      {status === 'valid' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> {t('keyValid')}</p>}
+      {status === 'invalid' && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {t('keyInvalid')}</p>}
+      {status === 'saved' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> {t('keyUpdated')}</p>}
 
       {hasKey && (
         <div className="mt-4 pt-4 border-t">
-          <Label>Model</Label>
-          <p className="text-xs text-muted-foreground mb-2">Choose which OpenAI model to use.</p>
+          <Label>{t('model')}</Label>
+          <p className="text-xs text-muted-foreground mb-2">{t('chooseModel', { provider: 'OpenAI' })}</p>
           {modelsLoading ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading models…</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loadingModels')}</div>
           ) : modelsError ? (
             <p className="text-xs text-destructive">{modelsError}</p>
           ) : (
@@ -1558,6 +1687,7 @@ function OpenAIKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
 }
 
 function GeminiKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; currentModel: string; onSaved: () => void }) {
+  const t = useTranslations('Settings.page.aiProviders')
   const [newKey, setNewKey] = useState('')
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1582,11 +1712,11 @@ function GeminiKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
       setModels(data.models ?? [])
       setModelsFetched(true)
     } catch {
-      setModelsError('Failed to fetch models')
+      setModelsError(t('fetchModelsFailed'))
     } finally {
       setModelsLoading(false)
     }
-  }, [modelsFetched])
+  }, [modelsFetched, t])
 
   useEffect(() => { if (hasKey) fetchModels() }, [hasKey, fetchModels])
   useEffect(() => { setSelectedModel(currentModel) }, [currentModel])
@@ -1604,7 +1734,7 @@ function GeminiKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
       setStatus('valid')
     } else {
       const data = await res.json().catch(() => ({}))
-      setErrorMsg(data.error || 'Key is invalid')
+      setErrorMsg(data.error || t('keyInvalid'))
       setStatus('invalid')
     }
     setTesting(false)
@@ -1642,33 +1772,33 @@ function GeminiKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
     <>
       <p className="text-xs text-muted-foreground mb-3">
         {hasKey
-          ? 'A Gemini API key is configured. Enter a new key below to replace it.'
-          : 'No Gemini API key configured. Add one to enable Google Gemini as an AI provider.'}
+          ? t('geminiConfigured')
+          : t('geminiMissing')}
       </p>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
         <div className="flex-1">
-          <Label>API key</Label>
+          <Label>{t('apiKey')}</Label>
           <Input type="password" value={newKey} onChange={(e) => { setNewKey(e.target.value); setStatus('idle') }} placeholder="AIza..." />
         </div>
         <div className="flex gap-2">
           <Button onClick={testKey} disabled={!newKey.trim() || testing} variant="outline" size="sm">
-            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Test'}
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('test')}
           </Button>
           <Button onClick={saveKey} disabled={!newKey.trim() || saving} size="sm">
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Update'}
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('update')}
           </Button>
         </div>
       </div>
-      {status === 'valid' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> Key is valid</p>}
+      {status === 'valid' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> {t('keyValid')}</p>}
       {status === 'invalid' && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errorMsg}</p>}
-      {status === 'saved' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> Key updated</p>}
+      {status === 'saved' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> {t('keyUpdated')}</p>}
 
       {hasKey && (
         <div className="mt-4 pt-4 border-t">
-          <Label>Model</Label>
-          <p className="text-xs text-muted-foreground mb-2">Choose which Gemini model to use.</p>
+          <Label>{t('model')}</Label>
+          <p className="text-xs text-muted-foreground mb-2">{t('chooseModel', { provider: 'Gemini' })}</p>
           {modelsLoading ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading models…</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loadingModels')}</div>
           ) : modelsError ? (
             <p className="text-xs text-destructive">{modelsError}</p>
           ) : (
@@ -1687,6 +1817,7 @@ function GeminiKeyContent({ hasKey, currentModel, onSaved }: { hasKey: boolean; 
 }
 
 function OllamaContent({ baseUrl, currentModel, onSaved }: { baseUrl: string; currentModel: string; onSaved: () => void }) {
+  const t = useTranslations('Settings.page.aiProviders')
   const [url, setUrl] = useState(baseUrl || 'http://localhost:11434/v1')
   const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1718,11 +1849,11 @@ function OllamaContent({ baseUrl, currentModel, onSaved }: { baseUrl: string; cu
       } else {
         const data = await res.json()
         setTestStatus('error')
-        setTestError(data.error || 'Connection failed')
+        setTestError(data.error || t('connectionFailed'))
       }
     } catch {
       setTestStatus('error')
-      setTestError('Connection failed')
+      setTestError(t('connectionFailed'))
     }
     setTesting(false)
   }
@@ -1747,7 +1878,7 @@ function OllamaContent({ baseUrl, currentModel, onSaved }: { baseUrl: string; cu
       if (data.error) setModelsError(data.error)
       setModels(data.models ?? [])
     } catch {
-      setModelsError('Failed to fetch models')
+      setModelsError(t('fetchModelsFailed'))
     } finally {
       setModelsLoading(false)
     }
@@ -1768,30 +1899,30 @@ function OllamaContent({ baseUrl, currentModel, onSaved }: { baseUrl: string; cu
   return (
     <>
       <p className="text-xs text-muted-foreground mb-3">
-        Connect to a local Ollama instance. No API key needed, models run on your machine.
+        {t('ollamaDescription')}
       </p>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
         <div className="flex-1">
-          <Label>Base URL</Label>
+          <Label>{t('baseUrl')}</Label>
           <Input value={url} onChange={(e) => { setUrl(e.target.value); setTestStatus('idle') }} placeholder="http://localhost:11434/v1" />
         </div>
         <div className="flex gap-2">
           <Button onClick={testConnection} disabled={!url.trim() || testing} variant="outline" size="sm">
-            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Test'}
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('test')}
           </Button>
           <Button onClick={saveUrl} disabled={!url.trim() || saving} size="sm">
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('save')}
           </Button>
         </div>
       </div>
-      {testStatus === 'ok' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> Connected</p>}
+      {testStatus === 'ok' && <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1"><Check className="h-3 w-3" /> {t('connected')}</p>}
       {testStatus === 'error' && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {testError}</p>}
 
       <div className="mt-4 pt-4 border-t">
-        <Label>Model</Label>
-        <p className="text-xs text-muted-foreground mb-2">Choose which Ollama model to use. Test the connection first to load available models.</p>
+        <Label>{t('model')}</Label>
+        <p className="text-xs text-muted-foreground mb-2">{t('ollamaModelHelp')}</p>
         {modelsLoading ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading models…</div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loadingModels')}</div>
         ) : modelsError ? (
           <p className="text-xs text-destructive">{modelsError}</p>
         ) : (
@@ -1810,21 +1941,17 @@ function OllamaContent({ baseUrl, currentModel, onSaved }: { baseUrl: string; cu
 
 // ──────────────────────────── AI Summary Prompt ────────────────────────────
 
-const DEFAULT_AI_SUMMARY_PROMPT = `Write a concise analyst summary covering:
-
-1. **Current Status**, How is the company performing right now? Reference specific numbers.
-2. **Trends**, What direction are the key metrics heading? Growth rates, acceleration or deceleration.
-3. **Progress & Positives**, What's going well? Milestones, improvements, or strong execution.
-4. **Challenges & Risks**, What concerns you? Declining metrics, missing data, red flags.
-5. **Key Follow-ups**, What should the investment team ask about or monitor next?
-
-Keep it to 2-4 short paragraphs. Be direct and analytical, not promotional. Use specific numbers. Do not use markdown formatting, write in plain prose paragraphs.`
-
 function AiSummaryPromptSection({ currentPrompt, onSaved }: { currentPrompt: string | null; onSaved: () => void }) {
-  const [value, setValue] = useState(currentPrompt ?? DEFAULT_AI_SUMMARY_PROMPT)
+  const t = useTranslations('Settings.page.aiSummary')
+  const defaultPrompt = t('defaultPrompt')
+  const [value, setValue] = useState(currentPrompt ?? defaultPrompt)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const isCustomized = currentPrompt !== null
+
+  useEffect(() => {
+    if (currentPrompt === null) setValue(defaultPrompt)
+  }, [currentPrompt, defaultPrompt])
 
   const handleSave = async () => {
     setSaving(true)
@@ -1850,7 +1977,7 @@ function AiSummaryPromptSection({ currentPrompt, onSaved }: { currentPrompt: str
     })
     setSaving(false)
     if (res.ok) {
-      setValue(DEFAULT_AI_SUMMARY_PROMPT)
+      setValue(defaultPrompt)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
       onSaved()
@@ -1858,9 +1985,9 @@ function AiSummaryPromptSection({ currentPrompt, onSaved }: { currentPrompt: str
   }
 
   return (
-    <Section title="AI summary prompt">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Customize the analysis instructions for AI company summaries. Company data and metrics are provided automatically.
+        {t('description')}
       </p>
       <textarea
         className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-mono leading-relaxed"
@@ -1870,11 +1997,11 @@ function AiSummaryPromptSection({ currentPrompt, onSaved }: { currentPrompt: str
       />
       <div className="flex items-center gap-2 mt-3">
         <Button onClick={handleSave} disabled={saving} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
         {isCustomized && (
           <Button onClick={handleReset} disabled={saving} variant="outline" size="sm">
-            Reset to default
+            {t('reset')}
           </Button>
         )}
       </div>
@@ -1883,13 +2010,15 @@ function AiSummaryPromptSection({ currentPrompt, onSaved }: { currentPrompt: str
 }
 
 function AiSummaryPromptReadOnly({ prompt }: { prompt: string | null }) {
+  const t = useTranslations('Settings.page.aiSummary')
+  const defaultPrompt = t('defaultPrompt')
   return (
-    <Section title="AI summary prompt">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        The analysis instructions used for AI company summaries. Contact an admin to change this.
+        {t('readOnlyDescription')}
       </p>
       <pre className="whitespace-pre-wrap text-sm bg-muted rounded-md px-3 py-2 font-mono leading-relaxed">
-        {prompt || DEFAULT_AI_SUMMARY_PROMPT}
+        {prompt || defaultPrompt}
       </pre>
     </Section>
   )
@@ -1912,6 +2041,7 @@ function InboundEmailSection({
   hasMailgunSigningKey: boolean
   onSaved: () => void
 }) {
+  const t = useTranslations('Settings.page.inbound')
   const [selectedProvider, setSelectedProvider] = useState(provider || '')
   const [addr, setAddr] = useState(postmarkAddress)
   const [mgDomain, setMgDomain] = useState(mailgunInboundDomain)
@@ -1966,19 +2096,19 @@ function InboundEmailSection({
   const canSave = providerChanged || hasNewData
 
   return (
-    <Section title="Inbound email">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Choose how portfolio companies send reports to your fund.
+        {t('description')}
       </p>
       <div className="space-y-3">
         <div>
-          <Label>Provider</Label>
+          <Label>{t('provider')}</Label>
           <select
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={selectedProvider}
             onChange={(e) => setSelectedProvider(e.target.value)}
           >
-            <option value="">None (disabled)</option>
+            <option value="">{t('none')}</option>
             <option value="postmark">Postmark</option>
             <option value="mailgun">Mailgun</option>
           </select>
@@ -1987,19 +2117,19 @@ function InboundEmailSection({
         {selectedProvider === 'postmark' && (
           <>
             <div>
-              <Label>Postmark inbound address</Label>
+              <Label>{t('postmarkAddress')}</Label>
               <Input
                 value={addr}
                 onChange={(e) => setAddr(e.target.value)}
                 placeholder="abc123@inbound.postmarkapp.com"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Set this in the Postmark dashboard under Inbound. Portfolio companies forward their reports to this address, and Postmark delivers them to your webhook.
+                {t('postmarkHelp')}
               </p>
             </div>
             {postmarkToken && (
               <div>
-                <Label>Webhook URL</Label>
+                <Label>{t('webhookUrl')}</Label>
                 <div className="flex items-center gap-2">
                   <div className="flex flex-1 items-center rounded-md border border-input shadow-sm overflow-hidden">
                     <input
@@ -2015,7 +2145,7 @@ function InboundEmailSection({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Paste this into Postmark&#39;s inbound webhook settings. Edit the base URL for local development (e.g. ngrok).
+                  {t('postmarkWebhookHelp')}
                 </p>
               </div>
             )}
@@ -2025,35 +2155,35 @@ function InboundEmailSection({
         {selectedProvider === 'mailgun' && (
           <>
             <div>
-              <Label>Mailgun inbound domain</Label>
+              <Label>{t('mailgunDomain')}</Label>
               <Input
                 value={mgDomain}
                 onChange={(e) => setMgDomain(e.target.value)}
                 placeholder="mg.yourdomain.com"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                The domain configured for inbound routing in Mailgun.
+                {t('mailgunDomainHelp')}
               </p>
             </div>
             <div>
-              <Label>Webhook signing key</Label>
+              <Label>{t('signingKey')}</Label>
               {hasMailgunSigningKey && (
                 <p className="text-xs text-muted-foreground mt-1 mb-1.5">
-                  A signing key is saved. Enter a new one to replace it.
+                  {t('signingKeySaved')}
                 </p>
               )}
               <Input
                 type="password"
                 value={mgSigningKey}
                 onChange={(e) => setMgSigningKey(e.target.value)}
-                placeholder={hasMailgunSigningKey ? '••••••••' : 'Mailgun webhook signing key'}
+                placeholder={hasMailgunSigningKey ? '••••••••' : t('signingKeyPlaceholder')}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Found in Mailgun dashboard under Sending &gt; Webhooks.
+                {t('signingKeyHelp')}
               </p>
             </div>
             <div>
-              <Label>Webhook URL</Label>
+              <Label>{t('webhookUrl')}</Label>
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center rounded-md border border-input shadow-sm overflow-hidden">
                   <input
@@ -2069,14 +2199,14 @@ function InboundEmailSection({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                In Mailgun, go to Receiving &gt; Create Route and forward matching emails to this URL. Edit the base URL for local development (e.g. ngrok).
+                {t('mailgunWebhookHelp')}
               </p>
             </div>
           </>
         )}
 
         <Button onClick={handleSave} disabled={saving || !canSave} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
     </Section>
@@ -2086,42 +2216,43 @@ function InboundEmailSection({
 // ──────────────────────────── Google Connection (shared) ────────────────────────────
 
 function GoogleSetupGuide({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  const t = useTranslations('Settings.page.google')
   if (!show) {
     return (
       <button onClick={onToggle} className="text-xs text-muted-foreground hover:text-foreground underline">
-        Setup guide
+        {t('setupGuide')}
       </button>
     )
   }
   return (
     <div className="space-y-1.5">
       <button onClick={onToggle} className="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1">
-        <ChevronDown className="h-3 w-3" /> Setup guide
+        <ChevronDown className="h-3 w-3" /> {t('setupGuide')}
       </button>
       <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-        <li>Go to{' '}
+        <li>{t('goTo')}{' '}
           <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a>
         </li>
-        <li><a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener noreferrer" className="underline">Create a project</a> (or select an existing one)</li>
-        <li>Configure the{' '}
-          <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" className="underline">OAuth consent screen</a>
+        <li><a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener noreferrer" className="underline">{t('createProject')}</a> {t('orSelect')}</li>
+        <li>{t('configure')}{' '}
+          <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" className="underline">{t('oauthConsent')}</a>
           <ul className="list-disc list-inside ml-3 mt-0.5 space-y-0.5">
-            <li>Set User type to <strong>Internal</strong> (avoids 7-day token expiry)</li>
-            <li>App name & support email, fill in anything</li>
-            <li>Scopes: add <code className="text-[11px] bg-muted px-1 rounded">drive.file</code> and <code className="text-[11px] bg-muted px-1 rounded">gmail.send</code></li>
+            <li>{t.rich('userType', { strong: chunks => <strong>{chunks}</strong> })}</li>
+            <li>{t('appDetails')}</li>
+            <li>{t('scopes')} <code className="text-[11px] bg-muted px-1 rounded">drive.file</code> / <code className="text-[11px] bg-muted px-1 rounded">gmail.send</code></li>
           </ul>
         </li>
-        <li>Enable APIs:{' '}
+        <li>{t('enableApis')}{' '}
           <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer" className="underline">Google Drive API</a>,{' '}
           <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" rel="noopener noreferrer" className="underline">Gmail API</a>
         </li>
-        <li><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">Create OAuth credentials</a>
+        <li><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">{t('createCredentials')}</a>
           <ul className="list-disc list-inside ml-3 mt-0.5 space-y-0.5">
-            <li>Type: <strong>Web application</strong></li>
-            <li>Authorized redirect URI: <code className="text-[11px] bg-muted px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/google/callback</code></li>
+            <li>{t.rich('appType', { strong: chunks => <strong>{chunks}</strong> })}</li>
+            <li>{t('redirectUri')} <code className="text-[11px] bg-muted px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/google/callback</code></li>
           </ul>
         </li>
-        <li>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> into the fields above</li>
+        <li>{t.rich('copyCredentials', { strong: chunks => <strong>{chunks}</strong> })}</li>
       </ol>
     </div>
   )
@@ -2138,6 +2269,7 @@ function GoogleCredentialsForm({
   onCancel?: () => void
   saving: boolean
 }) {
+  const t = useTranslations('Settings.page.google')
   const [newClientId, setNewClientId] = useState(clientId)
   const [newClientSecret, setNewClientSecret] = useState('')
   const [showSetupGuide, setShowSetupGuide] = useState(!clientId)
@@ -2146,9 +2278,9 @@ function GoogleCredentialsForm({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium">Google OAuth credentials</p>
+      <p className="text-xs font-medium">{t('credentials')}</p>
       <div>
-        <Label>Client ID</Label>
+        <Label>{t('clientId')}</Label>
         <Input
           value={newClientId}
           onChange={(e) => setNewClientId(e.target.value)}
@@ -2156,7 +2288,7 @@ function GoogleCredentialsForm({
         />
       </div>
       <div>
-        <Label>Client secret</Label>
+        <Label>{t('clientSecret')}</Label>
         <Input
           type="password"
           value={newClientSecret}
@@ -2167,11 +2299,11 @@ function GoogleCredentialsForm({
       <GoogleSetupGuide show={showSetupGuide} onToggle={() => setShowSetupGuide(!showSetupGuide)} />
       <div className="flex gap-2">
         <Button size="sm" onClick={() => onSave(newClientId, newClientSecret)} disabled={saving || !newClientId.trim() || !newClientSecret.trim()}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save credentials'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('saveCredentials')}
         </Button>
         {onCancel && (
           <Button size="sm" variant="outline" onClick={onCancel}>
-            Cancel
+            {t('cancel')}
           </Button>
         )}
       </div>
@@ -2190,6 +2322,7 @@ function GoogleConnectionUI({
   clientId: string
   onChanged: () => void
 }) {
+  const t = useTranslations('Settings.page.google')
   const [editingCreds, setEditingCreds] = useState(!hasCredentials)
   const [savingCreds, setSavingCreds] = useState(false)
   const [credsSaved, setCredsSaved] = useState(false)
@@ -2217,7 +2350,7 @@ function GoogleConnectionUI({
   }
 
   const removeCredentials = async () => {
-    if (!confirm('Remove Google OAuth credentials? This will also disconnect your Google account.')) return
+    if (!confirm(t('removeConfirm'))) return
     setRemovingCreds(true)
     // Clear credentials and disconnect
     await Promise.all([
@@ -2238,7 +2371,7 @@ function GoogleConnectionUI({
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-sm">
           <Check className="h-4 w-4 text-green-600 shrink-0" />
-          <span>Google account connected.</span>
+          <span>{t('connected')}</span>
         </div>
         {editingCreds ? (
           <GoogleCredentialsForm
@@ -2250,17 +2383,17 @@ function GoogleConnectionUI({
         ) : (
           <div className="flex items-center gap-2">
             <p className="text-xs text-muted-foreground flex-1">
-              Google credentials configured.
-              {credsSaved && <span className="text-emerald-600 ml-1">Saved!</span>}
+              {t('configured')}
+              {credsSaved && <span className="text-emerald-600 ml-1">{t('saved')}</span>}
             </p>
             <Button size="sm" variant="outline" onClick={() => setEditingCreds(true)} className="text-xs h-7">
-              Update credentials
+              {t('updateCredentials')}
             </Button>
             <Button size="sm" variant="outline" onClick={() => { window.location.href = '/api/auth/google' }} className="text-xs h-7">
-              Reconnect
+              {t('reconnect')}
             </Button>
             <Button size="sm" variant="outline" onClick={removeCredentials} disabled={removingCreds} className="text-xs h-7 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30">
-              {removingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Remove'}
+              {removingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('remove')}
             </Button>
           </div>
         )}
@@ -2280,20 +2413,20 @@ function GoogleConnectionUI({
       ) : (
         <div className="flex items-center gap-2">
           <p className="text-xs text-muted-foreground flex-1">
-            Google credentials configured.
-            {credsSaved && <span className="text-emerald-600 ml-1">Saved!</span>}
+            {t('configured')}
+            {credsSaved && <span className="text-emerald-600 ml-1">{t('saved')}</span>}
           </p>
           <Button size="sm" variant="outline" onClick={() => setEditingCreds(true)} className="text-xs h-7">
-            Update credentials
+            {t('updateCredentials')}
           </Button>
           <Button size="sm" variant="outline" onClick={removeCredentials} disabled={removingCreds} className="text-xs h-7 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30">
-            {removingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Remove'}
+            {removingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('remove')}
           </Button>
         </div>
       )}
       {hasCredentials && (
         <Button size="sm" onClick={() => { window.location.href = '/api/auth/google' }}>
-          Connect Google account
+          {t('connect')}
         </Button>
       )}
     </div>
@@ -2303,25 +2436,24 @@ function GoogleConnectionUI({
 // ──────────────────────────── Google Drive ────────────────────────────
 
 function GoogleDriveSection({
-  fundId,
   connected,
   folderId,
   folderName,
   hasCredentials,
   onChanged,
 }: {
-  fundId: string
   connected: boolean
   folderId: string | null
   folderName: string | null
   hasCredentials: boolean
   onChanged: () => void
 }) {
+  const t = useTranslations('Settings.page.drive')
   const [folderError, setFolderError] = useState<string | null>(null)
   const [showPicker, setShowPicker] = useState(false)
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([])
   const [loadingFolders, setLoadingFolders] = useState(false)
-  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string; shared?: boolean }[]>([{ id: null, name: 'My Drive' }])
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string; shared?: boolean }[]>([{ id: null, name: t('myDrive') }])
   const [saving, setSaving] = useState(false)
   const [browseMode, setBrowseMode] = useState<'my' | 'shared'>('my')
   const [urlInput, setUrlInput] = useState('')
@@ -2341,7 +2473,7 @@ function GoogleDriveSection({
     if (!res.ok) {
       setSaving(false)
       const data = await res.json().catch(() => ({}))
-      setFolderError(data.error || 'Failed to use folder')
+      setFolderError(data.error || t('useFailed'))
       return
     }
     const { folderId, folderName } = await res.json()
@@ -2362,13 +2494,13 @@ function GoogleDriveSection({
       const res = await fetch(url)
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setFolderError(data.error || 'Failed to list folders')
+        setFolderError(data.error || t('listFailed'))
         return
       }
       const data = await res.json()
       setFolders(data.folders ?? [])
     } catch {
-      setFolderError('Failed to list folders')
+      setFolderError(t('listFailed'))
     } finally {
       setLoadingFolders(false)
     }
@@ -2378,19 +2510,19 @@ function GoogleDriveSection({
     setShowPicker(true)
     setBrowseMode('my')
     setUrlInput('')
-    setBreadcrumbs([{ id: null, name: 'My Drive' }])
+    setBreadcrumbs([{ id: null, name: t('myDrive') }])
     loadFolders()
   }
 
   const switchToShared = () => {
     setBrowseMode('shared')
-    setBreadcrumbs([{ id: null, name: 'Shared with me', shared: true }])
+    setBreadcrumbs([{ id: null, name: t('shared'), shared: true }])
     loadFolders(undefined, true)
   }
 
   const switchToMyDrive = () => {
     setBrowseMode('my')
-    setBreadcrumbs([{ id: null, name: 'My Drive' }])
+    setBreadcrumbs([{ id: null, name: t('myDrive') }])
     loadFolders()
   }
 
@@ -2423,7 +2555,7 @@ function GoogleDriveSection({
       onChanged()
     } else {
       const data = await res.json().catch(() => ({}))
-      setFolderError(data.error || 'Failed to select folder')
+      setFolderError(data.error || t('selectFailed'))
     }
   }
 
@@ -2436,13 +2568,13 @@ function GoogleDriveSection({
       const res = await fetch('/api/settings/drive', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder_id: 'root', folder_name: 'My Drive' }),
+        body: JSON.stringify({ folder_id: 'root', folder_name: t('myDrive') }),
       })
       setSaving(false)
       if (res.ok) { setShowPicker(false); onChanged() }
       else {
         const data = await res.json().catch(() => ({}))
-        setFolderError(data.error || 'Failed to select folder')
+        setFolderError(data.error || t('selectFailed'))
       }
     } else {
       await selectFolder({ id: current.id, name: current.name })
@@ -2455,12 +2587,12 @@ function GoogleDriveSection({
         <p className="text-xs font-medium">Google Drive</p>
         <p className="text-xs text-muted-foreground">
           {hasCredentials
-            ? 'Google credentials are configured. Connect your Google account to enable Drive storage.'
-            : 'Set up your Google OAuth credentials in the Google section in Email settings, then connect your account to enable Drive storage.'}
+            ? t('credentialsReady')
+            : t('credentialsNeeded')}
         </p>
         {hasCredentials && (
           <Button size="sm" onClick={() => { window.location.href = '/api/auth/google' }}>
-            Connect Google account
+            {t('connect')}
           </Button>
         )}
       </div>
@@ -2471,24 +2603,24 @@ function GoogleDriveSection({
     <div className="space-y-3">
       <p className="text-xs font-medium">Google Drive</p>
       <p className="text-xs text-muted-foreground">
-        Google Drive is connected. Attachments from processed emails will be saved automatically.
+        {t('connected')}
       </p>
 
       {folderName ? (
         <div className="flex items-center gap-2 text-sm">
           <FolderOpen className="h-4 w-4 text-muted-foreground" />
-          <span>Saving to: <span className="font-medium">{folderName}</span></span>
+          <span>{t('savingTo')} <span className="font-medium">{folderName}</span></span>
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          No folder selected. Pick a folder to start saving reports.
+          {t('noneSelected')}
         </p>
       )}
 
       {showPicker ? (
         <div className="border rounded-lg p-3 space-y-3">
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Paste a Google Drive folder URL</label>
+            <label className="text-xs text-muted-foreground">{t('pasteUrl')}</label>
             <div className="flex gap-2">
               <Input
                 value={urlInput}
@@ -2499,14 +2631,14 @@ function GoogleDriveSection({
                 disabled={saving}
               />
               <Button size="sm" onClick={selectByUrl} disabled={saving || !urlInput.trim()}>
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Use'}
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('use')}
               </Button>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="h-px flex-1 bg-border" />
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">or browse</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('orBrowse')}</span>
             <div className="h-px flex-1 bg-border" />
           </div>
 
@@ -2515,13 +2647,13 @@ function GoogleDriveSection({
               onClick={switchToMyDrive}
               className={`px-2 py-1 rounded ${browseMode === 'my' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              My Drive
+              {t('myDrive')}
             </button>
             <button
               onClick={switchToShared}
               className={`px-2 py-1 rounded ${browseMode === 'shared' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              Shared with me
+              {t('shared')}
             </button>
           </div>
 
@@ -2545,7 +2677,7 @@ function GoogleDriveSection({
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : folders.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No folders found</p>
+              <p className="text-xs text-muted-foreground text-center py-4">{t('noFolders')}</p>
             ) : (
               folders.map(f => (
                 <div
@@ -2567,7 +2699,7 @@ function GoogleDriveSection({
                     onClick={() => selectFolder(f)}
                     disabled={saving}
                   >
-                    Select
+                    {t('select')}
                   </Button>
                 </div>
               ))
@@ -2582,35 +2714,36 @@ function GoogleDriveSection({
 
           <div className="flex gap-2 justify-end">
             <Button size="sm" variant="outline" onClick={() => { setShowPicker(false); setFolderError(null); setUrlInput('') }}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button size="sm" onClick={selectCurrentFolder} disabled={saving}>
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-              Use this folder
+              {t('useThis')}
             </Button>
           </div>
         </div>
       ) : (
         <Button size="sm" variant="outline" onClick={openPicker}>
-          {folderId ? 'Change folder' : 'Pick folder'}
+          {folderId ? t('changeFolder') : t('pickFolder')}
         </Button>
       )}
 
       {folderId && connected && (
-        <GoogleDriveCompanyFolders fundId={fundId} />
+        <GoogleDriveCompanyFolders />
       )}
     </div>
   )
 }
 
-function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
+function GoogleDriveCompanyFolders() {
+  const t = useTranslations('Settings.page.drive')
   const [expanded, setExpanded] = useState(false)
   const [companies, setCompanies] = useState<{ id: string; name: string; google_drive_folder_id: string | null; google_drive_folder_name: string | null }[]>([])
   const [loading, setLoading] = useState(false)
   const [pickerCompanyId, setPickerCompanyId] = useState<string | null>(null)
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([])
   const [loadingFolders, setLoadingFolders] = useState(false)
-  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string; shared?: boolean }[]>([{ id: null, name: 'My Drive' }])
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string; shared?: boolean }[]>([{ id: null, name: t('myDrive') }])
   const [browseMode, setBrowseMode] = useState<'my' | 'shared'>('my')
   const [saving, setSaving] = useState<string | null>(null)
   const [folderError, setFolderError] = useState<string | null>(null)
@@ -2652,13 +2785,13 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
       const res = await fetch(url)
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setFolderError(data.error || 'Failed to list folders')
+        setFolderError(data.error || t('listFailed'))
         return
       }
       const data = await res.json()
       setFolders(data.folders ?? [])
     } catch {
-      setFolderError('Failed to list folders')
+      setFolderError(t('listFailed'))
     } finally {
       setLoadingFolders(false)
     }
@@ -2668,7 +2801,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
     setPickerCompanyId(companyId)
     setBrowseMode('my')
     setUrlInput('')
-    setBreadcrumbs([{ id: null, name: 'My Drive' }])
+    setBreadcrumbs([{ id: null, name: t('myDrive') }])
     setFolderError(null)
     loadFolders()
   }
@@ -2688,7 +2821,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
     if (!res.ok) {
       setSaving(null)
       const data = await res.json().catch(() => ({}))
-      setFolderError(data.error || 'Failed to use folder')
+      setFolderError(data.error || t('useFailed'))
       return
     }
     const { folderId, folderName } = await res.json()
@@ -2739,8 +2872,8 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
     <div className="border-t pt-3 mt-3">
       <button onClick={handleExpand} className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        Company Folders
-        <span className="font-normal">(optional overrides)</span>
+        {t('companyFolders')}
+        <span className="font-normal">{t('optionalOverrides')}</span>
       </button>
 
       {expanded && (
@@ -2750,7 +2883,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
           ) : companies.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">No companies found.</p>
+            <p className="text-xs text-muted-foreground py-2">{t('noCompanies')}</p>
           ) : (
             <div className="border rounded-lg divide-y">
               {companies.map(c => (
@@ -2762,7 +2895,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
                         <>
                           <span className="text-xs text-muted-foreground truncate max-w-[200px]">{c.google_drive_folder_name}</span>
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => openPicker(c.id)} disabled={saving === c.id}>
-                            Change
+                            {t('changeFolder')}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => clearFolder(c.id)} disabled={saving === c.id}>
                             {saving === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
@@ -2770,9 +2903,9 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
                         </>
                       ) : (
                         <>
-                          <span className="text-xs text-muted-foreground">Default (auto-created)</span>
+                          <span className="text-xs text-muted-foreground">{t('defaultFolder')}</span>
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => openPicker(c.id)}>
-                            Set folder
+                            {t('setFolder')}
                           </Button>
                         </>
                       )}
@@ -2782,7 +2915,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
                   {pickerCompanyId === c.id && (
                     <div className="border rounded-lg p-3 mt-2 space-y-3">
                       <div className="space-y-1.5">
-                        <label className="text-xs text-muted-foreground">Paste a Google Drive folder URL</label>
+                        <label className="text-xs text-muted-foreground">{t('pasteUrl')}</label>
                         <div className="flex gap-2">
                           <Input
                             value={urlInput}
@@ -2793,26 +2926,26 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
                             disabled={saving === c.id}
                           />
                           <Button size="sm" onClick={() => selectByUrl(c.id)} disabled={saving === c.id || !urlInput.trim()}>
-                            {saving === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Use'}
+                            {saving === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('use')}
                           </Button>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <div className="h-px flex-1 bg-border" />
-                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">or browse</span>
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('orBrowse')}</span>
                         <div className="h-px flex-1 bg-border" />
                       </div>
 
                       <div className="flex items-center gap-2 text-xs">
                         <button
-                          onClick={() => { setBrowseMode('my'); setBreadcrumbs([{ id: null, name: 'My Drive' }]); loadFolders() }}
+                          onClick={() => { setBrowseMode('my'); setBreadcrumbs([{ id: null, name: t('myDrive') }]); loadFolders() }}
                           className={`px-2 py-1 rounded ${browseMode === 'my' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                        >My Drive</button>
+                        >{t('myDrive')}</button>
                         <button
-                          onClick={() => { setBrowseMode('shared'); setBreadcrumbs([{ id: null, name: 'Shared with me', shared: true }]); loadFolders(undefined, true) }}
+                          onClick={() => { setBrowseMode('shared'); setBreadcrumbs([{ id: null, name: t('shared'), shared: true }]); loadFolders(undefined, true) }}
                           className={`px-2 py-1 rounded ${browseMode === 'shared' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                        >Shared with me</button>
+                        >{t('shared')}</button>
                       </div>
 
                       <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
@@ -2832,7 +2965,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           </div>
                         ) : folders.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-4">No folders found</p>
+                          <p className="text-xs text-muted-foreground text-center py-4">{t('noFolders')}</p>
                         ) : (
                           folders.map(f => (
                             <div key={f.id} className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 group">
@@ -2842,7 +2975,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
                                 <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
                               </button>
                               <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 h-7 text-xs" onClick={() => selectFolder(c.id, f)} disabled={saving === c.id}>
-                                Select
+                                {t('select')}
                               </Button>
                             </div>
                           ))
@@ -2857,7 +2990,7 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
 
                       <div className="flex gap-2 justify-end">
                         <Button size="sm" variant="outline" onClick={() => { setPickerCompanyId(null); setFolderError(null); setUrlInput('') }}>
-                          Cancel
+                          {t('cancel')}
                         </Button>
                       </div>
                     </div>
@@ -2875,32 +3008,29 @@ function GoogleDriveCompanyFolders({ fundId }: { fundId: string }) {
 // ──────────────────────────── Storage ────────────────────────────
 
 function StorageSection({
-  fundId,
   fileStorageProvider,
   googleDriveConnected,
   googleDriveFolderId,
   googleDriveFolderName,
   hasGoogleCredentials,
-  googleClientId,
   dropboxConnected,
   hasDropboxCredentials,
   dropboxAppKey,
   dropboxFolderPath,
   onChanged,
 }: {
-  fundId: string
   fileStorageProvider: string | null
   googleDriveConnected: boolean
   googleDriveFolderId: string | null
   googleDriveFolderName: string | null
   hasGoogleCredentials: boolean
-  googleClientId: string
   dropboxConnected: boolean
   hasDropboxCredentials: boolean
   dropboxAppKey: string
   dropboxFolderPath: string | null
   onChanged: () => void
 }) {
+  const t = useTranslations('Settings.page.storage')
   const [selectedProvider, setSelectedProvider] = useState(fileStorageProvider || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -2922,14 +3052,14 @@ function StorageSection({
   }
 
   return (
-    <Section title="Storage">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-4">
-        All portfolio data, company details, metrics, and email content are stored in the database (Supabase/PostgreSQL). By default, email attachments are also stored in the database. Optionally, connect Google Drive or Dropbox to store portfolio reports and attachments externally.
+        {t('description')}
       </p>
 
       <div className="space-y-4">
         <div>
-          <Label>File storage provider</Label>
+          <Label>{t('provider')}</Label>
           <div className="flex items-center gap-2">
             <select
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -2937,7 +3067,7 @@ function StorageSection({
               onChange={(e) => handleProviderChange(e.target.value)}
               disabled={saving}
             >
-              <option value="">None (database only)</option>
+              <option value="">{t('databaseOnly')}</option>
               <option value="google_drive">Google Drive</option>
               <option value="dropbox">Dropbox</option>
             </select>
@@ -2949,7 +3079,6 @@ function StorageSection({
         {selectedProvider === 'google_drive' && (
           <div className="border-t pt-4">
             <GoogleDriveSection
-              fundId={fundId}
               connected={googleDriveConnected}
               folderId={googleDriveFolderId}
               folderName={googleDriveFolderName}
@@ -2962,7 +3091,6 @@ function StorageSection({
         {selectedProvider === 'dropbox' && (
           <div className="border-t pt-4">
             <DropboxSection
-              fundId={fundId}
               connected={dropboxConnected}
               hasCredentials={hasDropboxCredentials}
               appKey={dropboxAppKey}
@@ -2979,20 +3107,19 @@ function StorageSection({
 // ──────────────────────────── Dropbox ────────────────────────────
 
 function DropboxSection({
-  fundId,
   connected,
   hasCredentials,
   appKey: existingAppKey,
   folderPath,
   onChanged,
 }: {
-  fundId: string
   connected: boolean
   hasCredentials: boolean
   appKey: string
   folderPath: string | null
   onChanged: () => void
 }) {
+  const t = useTranslations('Settings.page.dropbox')
   const [editingCreds, setEditingCreds] = useState(!hasCredentials)
   const [newAppKey, setNewAppKey] = useState(existingAppKey)
   const [newAppSecret, setNewAppSecret] = useState('')
@@ -3051,7 +3178,7 @@ function DropboxSection({
       onChanged()
     } else {
       const data = await res.json().catch(() => ({}))
-      setFolderError(data.error || 'Failed to create folder')
+      setFolderError(data.error || t('createFailed'))
     }
   }
 
@@ -3063,36 +3190,36 @@ function DropboxSection({
       {(editingCreds || !hasCredentials) ? (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            Create a Dropbox app at{' '}
+            {t('createApp')}{' '}
             <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline">
               Dropbox App Console
             </a>
-            . Add <code className="text-[11px] bg-muted px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/dropbox/callback</code> as a redirect URI.
+            . {t('addRedirect')} <code className="text-[11px] bg-muted px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/dropbox/callback</code>
           </p>
           <div>
-            <Label>App key</Label>
+            <Label>{t('appKey')}</Label>
             <Input
               value={newAppKey}
               onChange={(e) => setNewAppKey(e.target.value)}
-              placeholder="Dropbox app key"
+              placeholder={t('appKey')}
             />
           </div>
           <div>
-            <Label>App secret</Label>
+            <Label>{t('appSecret')}</Label>
             <Input
               type="password"
               value={newAppSecret}
               onChange={(e) => setNewAppSecret(e.target.value)}
-              placeholder="Dropbox app secret"
+              placeholder={t('appSecret')}
             />
           </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={saveCredentials} disabled={savingCreds || !newAppKey.trim() || !newAppSecret.trim()}>
-              {savingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save credentials'}
+              {savingCreds ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('saveCredentials')}
             </Button>
             {hasCredentials && (
               <Button size="sm" variant="outline" onClick={() => setEditingCreds(false)}>
-                Cancel
+                {t('cancel')}
               </Button>
             )}
           </div>
@@ -3100,11 +3227,11 @@ function DropboxSection({
       ) : (
         <div className="flex items-center gap-2">
           <p className="text-xs text-muted-foreground flex-1">
-            Dropbox credentials configured.
-            {credsSaved && <span className="text-emerald-600 ml-1">Saved!</span>}
+            {t('configured')}
+            {credsSaved && <span className="text-emerald-600 ml-1">{t('saved')}</span>}
           </p>
           <Button size="sm" variant="outline" onClick={() => setEditingCreds(true)} className="text-xs h-7">
-            Update credentials
+            {t('updateCredentials')}
           </Button>
         </div>
       )}
@@ -3112,7 +3239,7 @@ function DropboxSection({
       {/* Connection section */}
       {hasCredentials && !connected && (
         <Button size="sm" onClick={() => { window.location.href = '/api/auth/dropbox' }}>
-          Connect Dropbox account
+          {t('connect')}
         </Button>
       )}
 
@@ -3120,25 +3247,25 @@ function DropboxSection({
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
             <Check className="h-4 w-4 text-green-600 shrink-0" />
-            <span>Dropbox account connected.</span>
+            <span>{t('connected')}</span>
           </div>
 
           {/* Folder management */}
           {folderPath ? (
             <div className="flex items-center gap-2 text-sm">
               <FolderOpen className="h-4 w-4 text-muted-foreground" />
-              <span>Saving to: <span className="font-medium">{folderPath}</span></span>
+              <span>{t('savingTo')} <span className="font-medium">{folderPath}</span></span>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              No folder selected. Set a folder path to start saving reports.
+              {t('noneSelected')}
             </p>
           )}
 
           {showFolderInput ? (
             <div className="border rounded-lg p-3 space-y-3">
               <div>
-                <Label>Folder path</Label>
+                <Label>{t('folderPath')}</Label>
                 <Input
                   value={newFolderPath}
                   onChange={(e) => { setNewFolderPath(e.target.value); setFolderError(null) }}
@@ -3146,7 +3273,7 @@ function DropboxSection({
                   onKeyDown={(e) => { if (e.key === 'Enter') createFolder() }}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  A folder at this path will be created in your Dropbox. If it already exists, the existing folder will be used.
+                  {t('folderHelp')}
                 </p>
               </div>
               {folderError && (
@@ -3156,18 +3283,18 @@ function DropboxSection({
               )}
               <div className="flex gap-2 justify-end">
                 <Button size="sm" variant="outline" onClick={() => { setShowFolderInput(false); setFolderError(null) }}>
-                  Cancel
+                  {t('cancel')}
                 </Button>
                 <Button size="sm" onClick={createFolder} disabled={creatingFolder || !newFolderPath.trim()}>
                   {creatingFolder ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-                  {folderPath ? 'Update folder' : 'Set folder'}
+                  {folderPath ? t('updateFolder') : t('setFolder')}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => setShowFolderInput(true)}>
-                {folderPath ? 'Change folder' : 'Set folder'}
+                {folderPath ? t('changeFolder') : t('setFolder')}
               </Button>
               <Button
                 size="sm"
@@ -3177,13 +3304,13 @@ function DropboxSection({
                 className="text-destructive hover:text-destructive"
               >
                 {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5 mr-1" />}
-                Disconnect
+                {t('disconnect')}
               </Button>
             </div>
           )}
 
           {folderPath && (
-            <DropboxCompanyFolders fundId={fundId} />
+            <DropboxCompanyFolders />
           )}
         </div>
       )}
@@ -3191,7 +3318,8 @@ function DropboxSection({
   )
 }
 
-function DropboxCompanyFolders({ fundId }: { fundId: string }) {
+function DropboxCompanyFolders() {
+  const t = useTranslations('Settings.page.dropbox')
   const [expanded, setExpanded] = useState(false)
   const [companies, setCompanies] = useState<{ id: string; name: string; dropbox_folder_path: string | null }[]>([])
   const [loading, setLoading] = useState(false)
@@ -3260,8 +3388,8 @@ function DropboxCompanyFolders({ fundId }: { fundId: string }) {
     <div className="border-t pt-3 mt-3">
       <button onClick={handleExpand} className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        Company Folders
-        <span className="font-normal">(optional overrides)</span>
+        {t('companyFolders')}
+        <span className="font-normal">{t('optionalOverrides')}</span>
       </button>
 
       {expanded && (
@@ -3271,7 +3399,7 @@ function DropboxCompanyFolders({ fundId }: { fundId: string }) {
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
           ) : companies.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">No companies found.</p>
+            <p className="text-xs text-muted-foreground py-2">{t('noCompanies')}</p>
           ) : (
             <div className="border rounded-lg divide-y">
               {companies.map(c => (
@@ -3289,17 +3417,17 @@ function DropboxCompanyFolders({ fundId }: { fundId: string }) {
                             onKeyDown={(e) => { if (e.key === 'Enter') savePath(c.id) }}
                           />
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => savePath(c.id)} disabled={saving === c.id}>
-                            {saving === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
+                            {saving === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : t('save')}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingId(null)}>
-                            Cancel
+                            {t('cancel')}
                           </Button>
                         </div>
                       ) : c.dropbox_folder_path ? (
                         <>
                           <span className="text-xs text-muted-foreground truncate max-w-[200px]">{c.dropbox_folder_path}</span>
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => startEdit(c.id, c.dropbox_folder_path)}>
-                            Change
+                            {t('changeFolder')}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => clearPath(c.id)} disabled={saving === c.id}>
                             {saving === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
@@ -3307,9 +3435,9 @@ function DropboxCompanyFolders({ fundId }: { fundId: string }) {
                         </>
                       ) : (
                         <>
-                          <span className="text-xs text-muted-foreground">Default (auto-created)</span>
+                          <span className="text-xs text-muted-foreground">{t('defaultFolder')}</span>
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => startEdit(c.id, null)}>
-                            Set path
+                            {t('setPath')}
                           </Button>
                         </>
                       )}
@@ -3358,8 +3486,9 @@ function OutboundEmailSection({
   googleClientId: string
   onSaved: () => void
 }) {
-  const defaultSubject = "You've been approved to join {{fundName}}"
-  const defaultBody = `<h2>Congrats!</h2>\n<p>You've been approved to join <strong>{{fundName}}</strong>.</p>\n<p><a href="{{siteUrl}}/auth">Sign in to get started</a></p>`
+  const t = useTranslations('Settings.page.outbound')
+  const defaultSubject = t('defaultSubject', { fundName: '{{fundName}}' })
+  const defaultBody = `<h2>${t('congratulations')}</h2>\n<p>${t('approvalBody', { fundName: '<strong>{{fundName}}</strong>' })}</p>\n<p><a href="{{siteUrl}}/auth">${t('signIn')}</a></p>`
 
   const [systemProvider, setSystemProvider] = useState(provider || '')
   const [selectedAsksProvider, setSelectedAsksProvider] = useState(asksProvider || '')
@@ -3428,22 +3557,22 @@ function OutboundEmailSection({
   const selectClass = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
   return (
-    <Section title="Outbound email">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Configure email providers for system notifications and portfolio asks.
+        {t('description')}
       </p>
       <div className="space-y-3">
         <div>
-          <Label>System emails</Label>
+          <Label>{t('systemEmails')}</Label>
           <p className="text-xs text-muted-foreground mb-1.5">
-            Automated notifications like member approvals.
+            {t('systemHelp')}
           </p>
           <select
             className={selectClass}
             value={systemProvider}
             onChange={(e) => setSystemProvider(e.target.value)}
           >
-            <option value="">None (disabled)</option>
+            <option value="">{t('none')}</option>
             <option value="resend">Resend</option>
             <option value="postmark">Postmark</option>
             <option value="mailgun">Mailgun</option>
@@ -3460,26 +3589,26 @@ function OutboundEmailSection({
                 className="flex items-center gap-1.5 text-sm font-medium hover:text-foreground transition-colors"
               >
                 {showApprovalEmail ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                Member accepted email
+                {t('acceptedEmail')}
               </button>
               <p className="text-xs text-muted-foreground mt-0.5 ml-5">
-                Sent when a new member is approved to join the fund.
+                {t('acceptedHelp')}
               </p>
             </div>
             {showApprovalEmail && (
               <>
                 <div>
-                  <Label>From name</Label>
+                  <Label>{t('fromName')}</Label>
                   <Input
                     value={fromName}
                     onChange={(e) => setFromName(e.target.value)}
-                    placeholder="e.g. Acme Ventures"
+                    placeholder={t('fromNamePlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label>From address</Label>
+                  <Label>{t('fromAddress')}</Label>
                   <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
-                    Must be a verified sender address for your email provider.{systemProvider === 'gmail' ? ' Ignored when using Gmail, emails are sent from your connected Google account.' : ''}
+                    {t('fromAddressHelp')}{systemProvider === 'gmail' ? t('gmailFromHelp') : ''}
                   </p>
                   <Input
                     type="email"
@@ -3490,9 +3619,9 @@ function OutboundEmailSection({
                   />
                 </div>
                 <div>
-                  <Label>Subject</Label>
+                  <Label>{t('subject')}</Label>
                   <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
-                    Use {'{{fundName}}'} as a placeholder.
+                    {t('subjectHelp', { fundName: '{{fundName}}' })}
                   </p>
                   <Input
                     value={approvalSubject}
@@ -3501,9 +3630,9 @@ function OutboundEmailSection({
                   />
                 </div>
                 <div>
-                  <Label>Body</Label>
+                  <Label>{t('body')}</Label>
                   <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">
-                    HTML body. Use {'{{fundName}}'} and {'{{siteUrl}}'} as placeholders.
+                    {t('bodyHelp', { fundName: '{{fundName}}', siteUrl: '{{siteUrl}}' })}
                   </p>
                   <Textarea
                     value={approvalBody}
@@ -3519,16 +3648,16 @@ function OutboundEmailSection({
         )}
 
         <div>
-          <Label>Asks emails</Label>
+          <Label>{t('asksEmails')}</Label>
           <p className="text-xs text-muted-foreground mb-1.5">
-            Quarterly reporting requests from the Asks page.
+            {t('asksHelp')}
           </p>
           <select
             className={selectClass}
             value={selectedAsksProvider}
             onChange={(e) => setSelectedAsksProvider(e.target.value)}
           >
-            <option value="">None (disabled)</option>
+            <option value="">{t('none')}</option>
             <option value="resend">Resend</option>
             <option value="postmark">Postmark</option>
             <option value="mailgun">Mailgun</option>
@@ -3539,17 +3668,17 @@ function OutboundEmailSection({
         {activeProviders.size > 0 && (
           <>
             <div className="border-t pt-3">
-              <p className="text-sm font-medium">Settings for selected email providers</p>
+              <p className="text-sm font-medium">{t('providerSettings')}</p>
             </div>
           </>
         )}
 
         {activeProviders.has('resend') && (
           <div>
-            <Label>Resend API key</Label>
+            <Label>{t('resendKey')}</Label>
             {hasResendKey && (
               <p className="text-xs text-muted-foreground mt-1 mb-1.5">
-                A key is already saved. Enter a new one to replace it.
+                {t('keySaved')}
               </p>
             )}
             <Input
@@ -3563,17 +3692,17 @@ function OutboundEmailSection({
 
         {activeProviders.has('postmark') && (
           <div>
-            <Label>Postmark server token</Label>
+            <Label>{t('postmarkToken')}</Label>
             {hasPostmarkServerToken && (
               <p className="text-xs text-muted-foreground mt-1 mb-1.5">
-                A token is already saved. Enter a new one to replace it.
+                {t('tokenSaved')}
               </p>
             )}
             <Input
               type="password"
               value={postmarkToken}
               onChange={(e) => setPostmarkToken(e.target.value)}
-              placeholder={hasPostmarkServerToken ? '••••••••' : 'Server token'}
+              placeholder={hasPostmarkServerToken ? '••••••••' : t('serverTokenPlaceholder')}
             />
           </div>
         )}
@@ -3581,10 +3710,10 @@ function OutboundEmailSection({
         {activeProviders.has('mailgun') && (
           <>
             <div>
-              <Label>Mailgun API key</Label>
+              <Label>{t('mailgunKey')}</Label>
               {hasMailgunApiKey && (
                 <p className="text-xs text-muted-foreground mt-1 mb-1.5">
-                  A key is already saved. Enter a new one to replace it.
+                  {t('keySaved')}
                 </p>
               )}
               <Input
@@ -3595,14 +3724,14 @@ function OutboundEmailSection({
               />
             </div>
             <div>
-              <Label>Sending domain</Label>
+              <Label>{t('sendingDomain')}</Label>
               <Input
                 value={mgDomain}
                 onChange={(e) => setMgDomain(e.target.value)}
                 placeholder="mg.yourdomain.com"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                The verified domain in Mailgun used for sending emails.
+                {t('sendingDomainHelp')}
               </p>
             </div>
           </>
@@ -3610,9 +3739,9 @@ function OutboundEmailSection({
 
         {activeProviders.has('gmail') && (
           <div className="space-y-2">
-            <Label>Gmail connection</Label>
+            <Label>{t('gmailConnection')}</Label>
             <p className="text-xs text-muted-foreground">
-              Emails will be sent from your connected Google account. The same Google connection is used for Gmail and Google Drive.
+              {t('gmailHelp')}
             </p>
             <GoogleConnectionUI
               connected={googleConnected}
@@ -3624,7 +3753,7 @@ function OutboundEmailSection({
         )}
 
         <Button onClick={handleSave} disabled={saving || !canSave} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
     </Section>
@@ -3640,6 +3769,7 @@ function SendersSection({
   senders: Sender[]
   onChanged: () => void
 }) {
+  const t = useTranslations('Settings.page.senders')
   const [email, setEmail] = useState('')
   const [label, setLabel] = useState('')
   const [adding, setAdding] = useState(false)
@@ -3670,9 +3800,9 @@ function SendersSection({
   }
 
   return (
-    <Section title="Authorized senders">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Only emails from these addresses will be processed.
+        {t('description')}
       </p>
 
       {senders.length > 0 && (
@@ -3683,7 +3813,7 @@ function SendersSection({
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2"
           >
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? '' : '-rotate-90'}`} />
-            {senders.length} sender{senders.length !== 1 ? 's' : ''}
+            {t('count', { count: senders.length })}
           </button>
           {expanded && (
             <div className="border rounded-lg divide-y">
@@ -3711,7 +3841,7 @@ function SendersSection({
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
         <div className="flex-1">
-          <Label>Email</Label>
+          <Label>{t('email')}</Label>
           <Input
             type="email"
             value={email}
@@ -3720,11 +3850,11 @@ function SendersSection({
           />
         </div>
         <div className="sm:w-32">
-          <Label>Label</Label>
+          <Label>{t('label')}</Label>
           <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="optional"
+            placeholder={t('optional')}
           />
         </div>
         <Button onClick={handleAdd} disabled={adding || !email.trim()} size="sm">
@@ -3743,58 +3873,48 @@ interface WhitelistEntry {
   created_at: string
 }
 
-const AUTH_EMAIL_TEMPLATES = [
-  { name: 'Confirm signup', file: 'confirmation.html', desc: 'Sent when a user signs up' },
-  { name: 'Invite user', file: 'invite.html', desc: 'Sent when an admin invites someone' },
-  { name: 'One-time code', file: 'magic_link.html', desc: 'Passwordless sign-in code' },
-  { name: 'Reset password', file: 'recovery.html', desc: 'Password reset request' },
-  { name: 'Change email', file: 'email_change.html', desc: 'Confirm new email address' },
-  { name: 'Reauthentication', file: 'reauthentication.html', desc: 'OTP code for re-verification' },
-  { name: 'Password changed', file: 'password_changed.html', desc: 'Security notification' },
-  { name: 'Email changed', file: 'email_changed.html', desc: 'Security notification' },
-  { name: 'MFA added', file: 'mfa_factor_enrolled.html', desc: 'Security notification' },
-  { name: 'MFA removed', file: 'mfa_factor_unenrolled.html', desc: 'Security notification' },
-]
+const AUTH_EMAIL_TEMPLATES = ['confirmation', 'invite', 'magic_link', 'recovery', 'email_change', 'reauthentication', 'password_changed', 'email_changed', 'mfa_factor_enrolled', 'mfa_factor_unenrolled'] as const
 
 function AuthEmailTemplatesSection() {
+  const t = useTranslations('Settings.page.authentication')
   const [showGuide, setShowGuide] = useState(false)
 
   return (
-    <Section title="Authentication">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Email/password authentication is handled by Supabase Auth. This install includes preconfigured email templates for all authentication emails, signup confirmation, invitations, password reset, one-time sign-in codes, email change, and security notifications.
+        {t('description')}
       </p>
 
       {showGuide ? (
         <div className="space-y-3">
           <button onClick={() => setShowGuide(false)} className="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1">
-            <ChevronDown className="h-3 w-3" /> Setup instructions
+            <ChevronDown className="h-3 w-3" /> {t('setup')}
           </button>
 
           <div className="text-xs text-muted-foreground space-y-2">
-            <p className="font-medium text-foreground">If self-hosting with Supabase CLI:</p>
-            <p>Templates are applied automatically from <code className="text-[11px] bg-muted px-1 rounded font-mono">templates/</code> via <code className="text-[11px] bg-muted px-1 rounded font-mono">config.toml</code>, no action needed.</p>
+            <p className="font-medium text-foreground">{t('selfHosted')}</p>
+            <p>{t.rich('selfHostedHelp', { code: chunks => <code className="text-[11px] bg-muted px-1 rounded font-mono">{chunks}</code> })}</p>
 
-            <p className="font-medium text-foreground pt-2">If using hosted Supabase (dashboard):</p>
+            <p className="font-medium text-foreground pt-2">{t('hosted')}</p>
             <ol className="list-decimal list-inside space-y-1">
-              <li>Go to your Supabase project dashboard → <strong>Authentication</strong> → <strong>Email Templates</strong></li>
-              <li>For each template type, copy the HTML from the corresponding file in <code className="text-[11px] bg-muted px-1 rounded font-mono">templates/</code></li>
-              <li>Update the subject line to match</li>
+              <li>{t('hostedStep1')}</li>
+              <li>{t.rich('hostedStep2', { code: chunks => <code className="text-[11px] bg-muted px-1 rounded font-mono">{chunks}</code> })}</li>
+              <li>{t('hostedStep3')}</li>
             </ol>
 
-            <p className="font-medium text-foreground pt-2">SMTP provider:</p>
+            <p className="font-medium text-foreground pt-2">{t('smtp')}</p>
             <p>
-              To send real emails, configure an SMTP provider in your Supabase dashboard under <strong>Project Settings → Auth → SMTP Settings</strong>, or in <code className="text-[11px] bg-muted px-1 rounded font-mono">config.toml</code> under <code className="text-[11px] bg-muted px-1 rounded font-mono">[auth.email.smtp]</code>.
+              {t.rich('smtpHelp', { strong: chunks => <strong>{chunks}</strong>, code: chunks => <code className="text-[11px] bg-muted px-1 rounded font-mono">{chunks}</code> })}
             </p>
 
-            <p className="font-medium text-foreground pt-2">Auth hook (signup whitelist):</p>
+            <p className="font-medium text-foreground pt-2">{t('hook')}</p>
             <p>
-              A <code className="text-[11px] bg-muted px-1 rounded font-mono">before-user-created</code> auth hook enforces the signup whitelist at the database level, preventing direct signups that bypass the API.
+              {t.rich('hookHelp', { code: chunks => <code className="text-[11px] bg-muted px-1 rounded font-mono">{chunks}</code> })}
             </p>
             <ol className="list-decimal list-inside space-y-1">
-              <li>Run the migration in <code className="text-[11px] bg-muted px-1 rounded font-mono">migrations/20260306120000_before_user_created_hook.sql</code></li>
-              <li>Go to <strong>Authentication → Hooks</strong> in your Supabase dashboard</li>
-              <li>Enable <strong>Before User Created</strong>, select <strong>Postgres Function</strong>, and choose <code className="text-[11px] bg-muted px-1 rounded font-mono">hook_before_user_created</code></li>
+              <li>{t.rich('hookStep1', { code: chunks => <code className="text-[11px] bg-muted px-1 rounded font-mono">{chunks}</code> })}</li>
+              <li>{t('hookStep2')}</li>
+              <li>{t.rich('hookStep3', { code: chunks => <code className="text-[11px] bg-muted px-1 rounded font-mono">{chunks}</code> })}</li>
             </ol>
           </div>
 
@@ -3802,17 +3922,17 @@ function AuthEmailTemplatesSection() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left px-3 py-1.5 font-medium">Template</th>
-                  <th className="text-left px-3 py-1.5 font-medium">File</th>
-                  <th className="text-left px-3 py-1.5 font-medium hidden sm:table-cell">Description</th>
+                  <th className="text-left px-3 py-1.5 font-medium">{t('template')}</th>
+                  <th className="text-left px-3 py-1.5 font-medium">{t('file')}</th>
+                  <th className="text-left px-3 py-1.5 font-medium hidden sm:table-cell">{t('tableDescription')}</th>
                 </tr>
               </thead>
               <tbody>
-                {AUTH_EMAIL_TEMPLATES.map((t) => (
-                  <tr key={t.file} className="border-b last:border-0">
-                    <td className="px-3 py-1.5">{t.name}</td>
-                    <td className="px-3 py-1.5 font-mono text-[11px] text-muted-foreground">{t.file}</td>
-                    <td className="px-3 py-1.5 text-muted-foreground hidden sm:table-cell">{t.desc}</td>
+                {AUTH_EMAIL_TEMPLATES.map((template) => (
+                  <tr key={template} className="border-b last:border-0">
+                    <td className="px-3 py-1.5">{t(`templates.${template}.name`)}</td>
+                    <td className="px-3 py-1.5 font-mono text-[11px] text-muted-foreground">{template}.html</td>
+                    <td className="px-3 py-1.5 text-muted-foreground hidden sm:table-cell">{t(`templates.${template}.description`)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -3826,13 +3946,13 @@ function AuthEmailTemplatesSection() {
               rel="noopener noreferrer"
               className="underline underline-offset-4 hover:text-foreground"
             >
-              Supabase email template docs
+              {t('docs')}
             </a>
           </p>
         </div>
       ) : (
         <button onClick={() => setShowGuide(true)} className="text-xs text-muted-foreground hover:text-foreground underline">
-          Setup instructions
+          {t('setup')}
         </button>
       )}
     </Section>
@@ -3840,6 +3960,7 @@ function AuthEmailTemplatesSection() {
 }
 
 function WhitelistSection() {
+  const t = useTranslations('Settings.page.whitelist')
   const [entries, setEntries] = useState<WhitelistEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [pattern, setPattern] = useState('')
@@ -3885,14 +4006,14 @@ function WhitelistSection() {
   }
 
   return (
-    <Section title="Signup whitelist">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Only these emails or domains can create accounts. Use <code className="text-[11px] bg-muted px-1 rounded">*@domain.com</code> to allow an entire domain.
+        {t.rich('description', { code: chunks => <code className="text-[11px] bg-muted px-1 rounded">{chunks}</code> })}
       </p>
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading...
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loading')}
         </div>
       ) : (
         <>
@@ -3915,11 +4036,11 @@ function WhitelistSection() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
             <div className="flex-1">
-              <Label>Email or domain pattern</Label>
+              <Label>{t('pattern')}</Label>
               <Input
                 value={pattern}
                 onChange={(e) => { setPattern(e.target.value); setError(null) }}
-                placeholder="user@example.com or *@example.com"
+                placeholder={t('placeholder')}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
               />
             </div>
@@ -3959,6 +4080,8 @@ interface JoinRequest {
 // `featureVisibility` is threaded through to the access grid so it re-derives what's grantable the
 // moment a switch above changes — see AccessGrid's note.
 function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; featureVisibility: Record<string, string> }) {
+  const locale = useLocale()
+  const t = useTranslations('Settings.page.team')
   const [members, setMembers] = useState<Member[]>([])
   const [pendingRequests, setPendingRequests] = useState<JoinRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -3992,9 +4115,9 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
         return
       }
       const body = await res.json().catch(() => null) as { error?: string } | null
-      setMemberActionError(body?.error ?? 'Unable to update this request right now.')
+      setMemberActionError(body?.error ?? t('updateError'))
     } catch {
-      setMemberActionError('Unable to update this request right now.')
+      setMemberActionError(t('updateError'))
     } finally {
       setProcessingId(null)
     }
@@ -4009,10 +4132,10 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
   }
 
   return (
-    <Section title="Team">
+    <Section title={t('title')}>
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading...
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loading')}
         </div>
       ) : (
         <div className="space-y-4">
@@ -4025,11 +4148,11 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                   {m.role === 'admin' ? (
                     <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary rounded-full px-2 py-0.5">
                       <Shield className="h-2.5 w-2.5" />
-                      Admin
+                      {t('admin')}
                     </span>
                   ) : (
                     <>
-                      <span className="text-xs text-muted-foreground">Member</span>
+                      <span className="text-xs text-muted-foreground">{t('member')}</span>
                       {isAdmin && confirmRemoveId === m.id ? (
                         <div className="flex items-center gap-1">
                           <Button
@@ -4039,7 +4162,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                             disabled={processingId === m.id}
                             className="h-6 text-[11px] px-2"
                           >
-                            {processingId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Confirm'}
+                            {processingId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : t('confirm')}
                           </Button>
                           <Button
                             size="sm"
@@ -4047,7 +4170,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                             onClick={() => setConfirmRemoveId(null)}
                             className="h-6 text-[11px] px-2"
                           >
-                            Cancel
+                            {t('cancel')}
                           </Button>
                         </div>
                       ) : isAdmin ? (
@@ -4057,7 +4180,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                           onClick={() => setConfirmRemoveId(m.id)}
                           className="h-6 text-[11px] px-2 text-muted-foreground hover:text-destructive"
                         >
-                          Remove
+                          {t('remove')}
                         </Button>
                       ) : null}
                     </>
@@ -4070,7 +4193,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
           {/* Pending requests (admin only) */}
           {isAdmin && pendingRequests.length > 0 && (
             <div>
-              <p className="text-xs font-medium mb-2">Pending requests</p>
+              <p className="text-xs font-medium mb-2">{t('pending')}</p>
               {memberActionError && (
                 <p className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">
                   {memberActionError}
@@ -4082,7 +4205,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                     <div>
                       <span className="text-sm">{r.email}</span>
                       <span className="text-xs text-muted-foreground ml-2">
-                        {new Date(r.createdAt).toLocaleDateString()}
+                        {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(r.createdAt))}
                       </span>
                     </div>
                     <div className="flex gap-1">
@@ -4093,7 +4216,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                         disabled={processingId === r.id || r.status === 'provisioning'}
                         className="h-7 text-xs"
                       >
-                        Reject
+                        {t('reject')}
                       </Button>
                       <Button
                         size="sm"
@@ -4103,7 +4226,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                       >
                         {processingId === r.id
                           ? <Loader2 className="h-3 w-3 animate-spin" />
-                          : r.status === 'provisioning' ? 'Retry approval' : 'Approve'}
+                          : r.status === 'provisioning' ? t('retryApproval') : t('approve')}
                       </Button>
                     </div>
                   </div>
@@ -4117,7 +4240,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
               you end up with a member nobody remembered to scope. */}
           {isAdmin && (
             <div className="pt-2 border-t">
-              <p className="text-xs font-medium mb-2 mt-3">Access</p>
+              <p className="text-xs font-medium mb-2 mt-3">{t('access')}</p>
               <AccessGrid featureVisibility={featureVisibility as FeatureVisibilityMap} />
             </div>
           )}
@@ -4130,6 +4253,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
 // ──────────────────────────── Danger Zone ────────────────────────────
 
 function DangerZone({ onDeleted }: { onDeleted: () => void }) {
+  const t = useTranslations('Settings.page.danger')
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState('')
   const [deleting, setDeleting] = useState(false)
@@ -4150,26 +4274,26 @@ function DangerZone({ onDeleted }: { onDeleted: () => void }) {
 
   return (
     <div className="rounded-lg border border-destructive/30 p-5">
-      <h2 className="text-sm font-medium text-destructive mb-1 flex items-center gap-1.5"><Lock className="h-3 w-3 text-destructive" />Danger zone</h2>
+      <h2 className="text-sm font-medium text-destructive mb-1 flex items-center gap-1.5"><Lock className="h-3 w-3 text-destructive" />{t('title')}</h2>
       <p className="text-xs text-muted-foreground mb-3">
-        Permanently delete your fund and all associated data. This cannot be undone.
+        {t('description')}
       </p>
       <Button variant="destructive" size="sm" onClick={() => setOpen(true)}>
-        Delete all data
+        {t('deleteAll')}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete all data</DialogTitle>
+            <DialogTitle>{t('deleteAll')}</DialogTitle>
             <DialogDescription>
-              This will permanently delete your fund, all companies, metrics, emails, and reviews. This action cannot be undone.
+              {t('dialogDescription')}
             </DialogDescription>
           </DialogHeader>
 
           <div>
             <Label>
-              Type <code className="text-xs bg-muted px-1 rounded">DELETE ALL DATA</code> to confirm
+              {t.rich('confirmHelp', { code: chunks => <code className="text-xs bg-muted px-1 rounded">{chunks}</code> })}
             </Label>
             <Input
               value={confirm}
@@ -4180,13 +4304,13 @@ function DangerZone({ onDeleted }: { onDeleted: () => void }) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t('cancel')}</Button>
             <Button
               variant="destructive"
               disabled={confirm !== 'DELETE ALL DATA' || deleting}
               onClick={handleDelete}
             >
-              {deleting ? 'Deleting...' : 'Delete everything'}
+              {deleting ? t('deleting') : t('deleteEverything')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -4206,6 +4330,7 @@ function AnalyticsSection({
   gaMeasurementId: string | null
   onSaved: () => void
 }) {
+  const t = useTranslations('Settings.page.analytics')
   const [fathom, setFathom] = useState(fathomSiteId ?? '')
   const [ga, setGa] = useState(gaMeasurementId ?? '')
   const [saving, setSaving] = useState(false)
@@ -4234,13 +4359,13 @@ function AnalyticsSection({
   }
 
   return (
-    <Section title="Analytics tracking">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-4">
-        Add analytics scripts to your app. These are rendered on authenticated pages only.
+        {t('description')}
       </p>
       <div className="space-y-4">
         <div>
-          <Label>Fathom Site ID</Label>
+          <Label>{t('fathom')}</Label>
           <Input
             value={fathom}
             onChange={(e) => setFathom(e.target.value)}
@@ -4249,7 +4374,7 @@ function AnalyticsSection({
           />
         </div>
         <div>
-          <Label>Google Analytics Measurement ID</Label>
+          <Label>{t('google')}</Label>
           <Input
             value={ga}
             onChange={(e) => setGa(e.target.value)}
@@ -4258,7 +4383,7 @@ function AnalyticsSection({
           />
         </div>
         <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
     </Section>
@@ -4274,6 +4399,7 @@ function UsageTrackingSection({
   disableUserTracking: boolean
   onSaved: () => void
 }) {
+  const t = useTranslations('Settings.page.usageTracking')
   const [disabled, setDisabled] = useState(disableUserTracking)
   const [saving, setSaving] = useState(false)
 
@@ -4290,9 +4416,9 @@ function UsageTrackingSection({
   }
 
   return (
-    <Section title="Usage tracking">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-4">
-        AI token usage is always tracked to help you monitor costs. User activity tracking (logins, actions, and the activity feed on the Usage page) can be turned off if you prefer not to log individual user actions.
+        {t('description')}
       </p>
       <div className="flex items-center gap-3">
         <Switch
@@ -4301,7 +4427,7 @@ function UsageTrackingSection({
           disabled={saving}
         />
         <Label className="text-sm font-normal">
-          Disable user activity tracking
+          {t('disable')}
         </Label>
         {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
       </div>
@@ -4323,6 +4449,7 @@ function UsageTrackingSection({
  * mean nothing until this is on.
  */
 function LpPortalCard({ enabled, onSaved }: { enabled: boolean; onSaved: () => void }) {
+  const t = useTranslations('Settings.page.lpPortal')
   const [on, setOn] = useState(enabled)
   const [saving, setSaving] = useState(false)
 
@@ -4340,35 +4467,19 @@ function LpPortalCard({ enabled, onSaved }: { enabled: boolean; onSaved: () => v
 
   return (
     <SettingsCard
-      title="LP portal"
-      subtitle="For your investors, not your team: whether LPs can sign in and see what you’ve shared. While it’s off, “LP documents & sharing” and “LP activity log” are unavailable — to your team and to you. Everything else LP-related (letters, LP capital, GP entities) works either way."
+      title={t('title')}
+      subtitle={t('description')}
       aside={saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : undefined}
     >
       <div className="flex items-center gap-3">
         <Switch checked={on} onCheckedChange={handleToggle} disabled={saving} />
-        <Label className="text-sm font-normal">{on ? 'On — LPs can sign in' : 'Off — nothing reaches LPs'}</Label>
+        <Label className="text-sm font-normal">{on ? t('on') : t('off')}</Label>
       </div>
     </SettingsCard>
   )
 }
 
 // ──────────────────────────── Deals ────────────────────────────
-
-const DEFAULT_DEAL_SCREENING_PROMPT = `You are a senior partner at a venture capital fund. The fund's thesis is provided above.
-
-For the inbound email and any attached materials, return structured output containing:
-
-- The standard extraction fields (company, founders, intro source, stage, industry, raise).
-- A company_summary describing what they do, who they sell to, stage, traction signals,
-  and team highlights drawn directly from the materials.
-- A thesis_fit_analysis covering:
-   - Alignment with each pillar of the thesis (cite specific evidence).
-   - Disqualifiers, if any.
-   - Open questions a partner would ask before a first meeting.
-- A single thesis_fit_score: strong | moderate | weak | out_of_thesis | spam (spam = non-pitches like newsletters or vendor solicitations).
-
-Be specific. Avoid hedging adjectives. If a key fact is not in the materials, say so
-explicitly rather than inferring.`
 
 function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, onSaved }: {
   thesis: string | null
@@ -4377,8 +4488,10 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
   submissionToken: string | null
   onSaved: () => void
 }) {
+  const t = useTranslations('Settings.page.dealScreening')
+  const defaultPrompt = t('defaultPrompt')
   const [thesisVal, setThesisVal] = useState(thesis ?? '')
-  const [promptVal, setPromptVal] = useState(prompt ?? DEFAULT_DEAL_SCREENING_PROMPT)
+  const [promptVal, setPromptVal] = useState(prompt ?? defaultPrompt)
   const [intake, setIntake] = useState(intakeEnabled)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -4386,6 +4499,10 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
   const [previewResult, setPreviewResult] = useState<string | null>(null)
   const [tokenBusy, setTokenBusy] = useState(false)
   const [tokenCopied, setTokenCopied] = useState(false)
+
+  useEffect(() => {
+    if (prompt === null) setPromptVal(defaultPrompt)
+  }, [prompt, defaultPrompt])
 
   const isCustomized = prompt !== null
   const submissionUrl = submissionToken ? `${typeof window !== 'undefined' ? window.location.origin : ''}/submit/${submissionToken}` : null
@@ -4398,7 +4515,7 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
   }
 
   async function clearToken() {
-    if (!confirm('Disable the public submission form? Anyone with the current URL will see a not-found page.')) return
+    if (!confirm(t('disableConfirm'))) return
     setTokenBusy(true)
     const res = await fetch('/api/settings/deal-submission-token', { method: 'DELETE' })
     setTokenBusy(false)
@@ -4440,7 +4557,7 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
     })
     setSaving(false)
     if (res.ok) {
-      setPromptVal(DEFAULT_DEAL_SCREENING_PROMPT)
+      setPromptVal(defaultPrompt)
       onSaved()
     }
   }
@@ -4459,27 +4576,26 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
       setPreviewResult(JSON.stringify(body.analysis ?? body, null, 2))
     } else {
       const err = await res.text()
-      setPreviewResult(`Error: ${err}`)
+      setPreviewResult(t('previewError', { error: err }))
     }
   }
 
   return (
-    <Section title="Deal screening">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Configure how inbound pitches are screened against your fund's thesis. The thesis is included
-        verbatim before the screening instructions in the AI prompt.
+        {t('description')}
       </p>
 
-      <label className="block text-xs font-medium text-muted-foreground mb-1">Investment thesis</label>
+      <label className="block text-xs font-medium text-muted-foreground mb-1">{t('thesis')}</label>
       <textarea
         className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm font-mono leading-relaxed mb-4"
         rows={6}
         value={thesisVal}
         onChange={e => setThesisVal(e.target.value)}
-        placeholder="Describe your thesis: stages, sectors, geographies, check sizes, what you avoid..."
+        placeholder={t('thesisPlaceholder')}
       />
 
-      <label className="block text-xs font-medium text-muted-foreground mb-1">Screening instructions</label>
+      <label className="block text-xs font-medium text-muted-foreground mb-1">{t('instructions')}</label>
       <textarea
         className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm font-mono leading-relaxed"
         rows={10}
@@ -4489,24 +4605,24 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
 
       <label className="flex items-center gap-2 mt-4 text-sm cursor-pointer">
         <input type="checkbox" checked={intake} onChange={e => setIntake(e.target.checked)} className="h-4 w-4" />
-        <span>Enable inbound deal intake</span>
+        <span>{t('enableIntake')}</span>
       </label>
       <p className="text-xs text-muted-foreground ml-6 mt-1">
-        When off, the classifier still runs in shadow mode (results recorded on each email) but no email is routed to Deals.
+        {t('intakeHelp')}
       </p>
 
       <div className="flex items-center gap-2 mt-4">
         <Button onClick={handleSave} disabled={saving} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
         {isCustomized && (
           <Button onClick={handleResetPrompt} disabled={saving} variant="outline" size="sm">
-            Reset prompt
+            {t('resetPrompt')}
           </Button>
         )}
         <Button onClick={handlePreview} disabled={previewing || saving} variant="outline" size="sm">
           {previewing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-          Preview
+          {t('preview')}
         </Button>
       </div>
 
@@ -4517,10 +4633,9 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
       )}
 
       <div className="border-t mt-6 pt-4">
-        <h3 className="text-sm font-medium mb-1">Public submission form</h3>
+        <h3 className="text-sm font-medium mb-1">{t('publicForm')}</h3>
         <p className="text-xs text-muted-foreground mb-3">
-          Share a public URL where founders can submit pitches directly. Each submission runs through the same screening pipeline as inbound emails.
-          Generating a new URL invalidates the previous one.
+          {t('publicFormHelp')}
         </p>
         {submissionUrl ? (
           <div className="space-y-2">
@@ -4532,21 +4647,21 @@ function DealScreeningSection({ thesis, prompt, intakeEnabled, submissionToken, 
             </div>
             <div className="flex gap-2">
               <Button onClick={generateToken} disabled={tokenBusy} variant="outline" size="sm">
-                Regenerate URL
+                {t('regenerateUrl')}
               </Button>
               <Button onClick={clearToken} disabled={tokenBusy} variant="outline" size="sm">
-                Disable form
+                {t('disableForm')}
               </Button>
             </div>
             {!intake && (
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                Note: the form is currently inactive because deal intake is disabled above.
+                {t('inactiveNote')}
               </p>
             )}
           </div>
         ) : (
           <Button onClick={generateToken} disabled={tokenBusy} variant="outline" size="sm">
-            Generate submission URL
+            {t('generateUrl')}
           </Button>
         )}
       </div>
@@ -4563,6 +4678,7 @@ interface KnownReferrer {
 }
 
 function KnownReferrersSection() {
+  const t = useTranslations('Settings.page.referrers')
   const [items, setItems] = useState<KnownReferrer[]>([])
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -4592,27 +4708,26 @@ function KnownReferrersSection() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Remove this referrer?')) return
+    if (!confirm(t('removeConfirm'))) return
     const res = await fetch(`/api/known-referrers/${id}`, { method: 'DELETE' })
     if (res.ok) setItems(items.filter(x => x.id !== id))
   }
 
   return (
-    <Section title="Known referrers">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Email addresses of scouts and friends-of-fund whose intros and forwards should bias toward Deals.
-        The classifier reads this as a soft signal, not a hard rule.
+        {t('description')}
       </p>
 
       <div className="grid grid-cols-12 gap-2 mb-3">
         <Input className="col-span-4 h-9" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} />
-        <Input className="col-span-3 h-9" placeholder="Name (optional)" value={name} onChange={e => setName(e.target.value)} />
-        <Input className="col-span-4 h-9" placeholder="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} />
-        <Button onClick={add} disabled={adding || !email.trim()} size="sm" className="col-span-1">Add</Button>
+        <Input className="col-span-3 h-9" placeholder={t('namePlaceholder')} value={name} onChange={e => setName(e.target.value)} />
+        <Input className="col-span-4 h-9" placeholder={t('notesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} />
+        <Button onClick={add} disabled={adding || !email.trim()} size="sm" className="col-span-1">{t('add')}</Button>
       </div>
 
       {items.length === 0 ? (
-        <div className="text-xs text-muted-foreground">No known referrers yet.</div>
+        <div className="text-xs text-muted-foreground">{t('empty')}</div>
       ) : (
         <div className="rounded border divide-y">
           {items.map(r => (
@@ -4639,6 +4754,7 @@ function RoutingSection({ threshold, model, onSaved }: {
   model: string | null
   onSaved: () => void
 }) {
+  const t = useTranslations('Settings.page.routing')
   const [thresholdVal, setThresholdVal] = useState(threshold !== null ? String(threshold) : '')
   const [modelVal, setModelVal] = useState(model ?? '')
   const [saving, setSaving] = useState(false)
@@ -4663,30 +4779,29 @@ function RoutingSection({ threshold, model, onSaved }: {
   }
 
   return (
-    <Section title="Email Routing">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-3">
-        Tune how the inbound classifier routes emails. Leave the threshold blank to accept all classifier
-        decisions; set it (e.g. 0.7) once you've observed shadow-mode confidence distributions.
+        {t('description')}
       </p>
 
       <div className="grid grid-cols-12 gap-3 mb-3">
         <div className="col-span-4">
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Confidence threshold</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">{t('threshold')}</label>
           <Input
             type="number"
             min="0" max="1" step="0.05"
             value={thresholdVal}
             onChange={e => setThresholdVal(e.target.value)}
-            placeholder="(none)"
+            placeholder={t('none')}
             className="h-9"
           />
         </div>
         <div className="col-span-8">
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Routing model override</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">{t('model')}</label>
           <Input
             value={modelVal}
             onChange={e => setModelVal(e.target.value)}
-            placeholder="e.g. claude-haiku-4-5 (defaults to fund's primary model)"
+            placeholder={t('modelPlaceholder')}
             className="h-9"
           />
         </div>
@@ -4694,12 +4809,12 @@ function RoutingSection({ threshold, model, onSaved }: {
 
       <div className="flex items-center gap-2 mb-3">
         <Button onClick={save} disabled={saving} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
         </Button>
       </div>
 
       <div className="flex flex-wrap gap-3 text-xs">
-        <Link href="/settings/email-routing" className="text-muted-foreground hover:underline">Email routing →</Link>
+        <Link href="/settings/email-routing" className="text-muted-foreground hover:underline">{t('details')} →</Link>
       </div>
     </Section>
   )
@@ -4727,33 +4842,34 @@ function MemoAgentSubsection({ title, desc, children }: { title: string; desc: s
 }
 
 function MemoAgentSection() {
+  const t = useTranslations('Settings.page.diligence')
   return (
-    <Section title="Diligence">
+    <Section title={t('title')}>
       <p className="text-xs text-muted-foreground mb-1">
-        Configure how the diligence agent reads data rooms, sources external research, runs partner Q&amp;A, and drafts memos.
+        {t('description')}
       </p>
       <div className="divide-y border-t">
         <MemoAgentSubsection
-          title="Schemas"
-          desc="The seven YAML/MD files that govern the agent: rubric, Q&A library, ingestion shape, research shape, memo output, style anchors, and instructions."
+          title={t('schemas.title')}
+          desc={t('schemas.description')}
         >
           <SchemasInline />
         </MemoAgentSubsection>
         <MemoAgentSubsection
-          title="Style anchors"
-          desc="Upload past investment memos so the agent learns your firm's voice and structure. Reference only; never copied into new memos as facts."
+          title={t('anchors.title')}
+          desc={t('anchors.description')}
         >
           <StyleAnchorsInline />
         </MemoAgentSubsection>
         <MemoAgentSubsection
-          title="Defaults & caps"
-          desc="Per-deal and monthly token caps, the research web-search toggle, and the Deepgram transcription check."
+          title={t('defaults.title')}
+          desc={t('defaults.description')}
         >
           <DefaultsEditor embedded section="caps" />
         </MemoAgentSubsection>
         <MemoAgentSubsection
-          title="Per-stage AI models"
-          desc="The AI provider and model each memo-agent stage runs on (ingest, research, draft, score, …)."
+          title={t('models.title')}
+          desc={t('models.description')}
         >
           <DefaultsEditor embedded section="stages" />
         </MemoAgentSubsection>

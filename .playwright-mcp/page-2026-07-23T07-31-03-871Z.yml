@@ -1,0 +1,75 @@
+- generic [active] [ref=f24e1]:
+  - generic [ref=f24e3]:
+    - banner [ref=f24e4]:
+      - generic [ref=f24e5]: test@example.com
+      - generic [ref=f24e12]:
+        - generic [ref=f24e13]: test@example.com
+        - button "Sign out" [ref=f24e15] [cursor=pointer]
+    - generic [ref=f24e17]:
+      - complementary [ref=f24e18]:
+        - navigation [ref=f24e20]:
+          - link "Pending Actions" [ref=f24e22] [cursor=pointer]:
+            - /url: /pending-actions
+          - link "Inbound" [ref=f24e28] [cursor=pointer]:
+            - /url: /emails
+          - link "Deals" [ref=f24e34] [cursor=pointer]:
+            - /url: /deals
+          - generic [ref=f24e41]:
+            - link "Feeds" [ref=f24e42] [cursor=pointer]:
+              - /url: /feeds
+            - generic [ref=f24e51]:
+              - link "Today" [ref=f24e52] [cursor=pointer]:
+                - /url: /feeds
+              - link "Follow sources" [ref=f24e57] [cursor=pointer]:
+                - /url: /feeds/sources
+          - link "Portfolio" [ref=f24e63] [cursor=pointer]:
+            - /url: /dashboard
+          - link "LPs" [ref=f24e70] [cursor=pointer]:
+            - /url: /lps
+          - link "Usage" [ref=f24e78] [cursor=pointer]:
+            - /url: /usage
+          - link "Settings" [ref=f24e89] [cursor=pointer]:
+            - /url: /settings
+          - link "Support" [ref=f24e95] [cursor=pointer]:
+            - /url: /support
+          - button "System" [ref=f24e104] [cursor=pointer]
+          - button "Hide Sidebar" [ref=f24e108] [cursor=pointer]
+      - main [ref=f24e113]:
+        - generic [ref=f24e115]:
+          - generic [ref=f24e116]:
+            - generic [ref=f24e117]:
+              - heading "Today" [level=1] [ref=f24e118]
+              - paragraph [ref=f24e119]: Curated healthcare and investment intelligence.
+            - button "Refresh curated articles" [ref=f24e120] [cursor=pointer]
+          - navigation "Today view" [ref=f24e121]:
+            - link "Me" [ref=f24e122] [cursor=pointer]:
+              - /url: /feeds
+            - link "Explore" [ref=f24e123] [cursor=pointer]:
+              - /url: /feeds?view=explore
+          - generic [ref=f24e124]:
+            - generic "Explore categories" [ref=f24e125]:
+              - button "All" [pressed] [ref=f24e126] [cursor=pointer]
+            - generic [ref=f24e127]:
+              - generic [ref=f24e128]: Search curated articles
+              - textbox "Search curated articles" [ref=f24e129]
+          - paragraph [ref=f24e130]
+          - generic "Loading articles" [ref=f24e132]
+        - list [ref=f24e170]:
+          - listitem [ref=f24e171]:
+            - text: Made by
+            - link "Hemrock" [ref=f24e172] [cursor=pointer]:
+              - /url: https://hemrock.com
+          - listitem [ref=f24e175]:
+            - link "View on GitHub" [ref=f24e176] [cursor=pointer]:
+              - /url: https://github.com/tdavidson/reporting
+          - listitem [ref=f24e180]:
+            - link "License" [ref=f24e181] [cursor=pointer]:
+              - /url: /license
+          - listitem [ref=f24e186]:
+            - link "Terms" [ref=f24e187] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=f24e188]:
+            - link "Privacy" [ref=f24e189] [cursor=pointer]:
+              - /url: /privacy
+  - region "Notifications alt+T"
+  - alert [ref=f24e190]

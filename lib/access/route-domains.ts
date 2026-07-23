@@ -258,6 +258,12 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/diligence/[id]/drafts/[draftId]': { domain: 'diligence' },
   'api/diligence/[id]/drafts/[draftId]/finalize': { domain: 'diligence' },
   'api/diligence/[id]/email-intake': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations/generate': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations/[requestId]/invite': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations/[requestId]/match': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations/[requestId]/retry-materialization': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations/[requestId]/select': { domain: 'diligence' },
   'api/diligence/[id]/memo-config': { domain: 'diligence' },
   'api/diligence/[id]/notes': { domain: 'diligence' },
   'api/diligence/[id]/notes/[noteId]': { domain: 'diligence' },
@@ -270,6 +276,8 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/diligence/memo-presets': { domain: 'diligence' },
   'api/diligence/memo-presets/[presetId]': { domain: 'diligence' },
   'api/diligence/prompts': { domain: 'diligence' },
+  'api/experts': { domain: 'diligence' },
+  'api/experts/[expertId]': { domain: 'diligence' },
   // The memo agent's firm-wide configuration: house style, schemas, defaults.
   'api/firm/memo-agent-defaults': { domain: 'diligence' },
   'api/firm/schemas': { domain: 'diligence' },
@@ -305,6 +313,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/onboarding/senders': { domain: 'admin' },
   'api/usage': { domain: 'admin' },
   'api/test-claude-key': { domain: 'admin' },
+  'api/test-custom-provider': { domain: 'admin' },
   'api/test-gemini-key': { domain: 'admin' },
   'api/test-ollama': { domain: 'admin' },
   'api/test-openai-key': { domain: 'admin' },
@@ -369,10 +378,13 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/auth/google/callback': 'OAuth callback.',
   'api/auth/logout': 'Ends a session.',
   'api/auth/signup': 'Pre-auth by definition.',
+  'api/locale': 'Public UI preference only; same-origin handler validates the fixed locale allowlist.',
   'api/setup': 'First-run bootstrap, before any fund exists.',
   'api/onboarding/check-domain': 'Pre-fund: is this email domain claimed.',
   'api/onboarding/fund': 'Creates the fund and its first admin.',
   'api/onboarding/join': 'Requests membership; the caller has none yet.',
+  'api/public/expert-response/resolve': 'Bearer invitation token is the only credential; handler enforces scope, expiry and rate limits.',
+  'api/public/expert-response/submit': 'Bearer invitation token is the only credential; handler enforces one-time submission and rate limits.',
 
   // Their own credential, not a session. These resolve an API key or OAuth token and enforce
   // access per tool — see lib/accounting/api-keys.ts.

@@ -1,0 +1,146 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - button:
+            - generic: Open menu
+          - generic: test@example.com
+        - generic:
+          - generic:
+            - button
+      - generic:
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Today
+                  - paragraph: The latest from sources you follow.
+                - generic:
+                  - button: Mark all as read
+                  - button
+              - navigation:
+                - link:
+                  - /url: /feeds
+                  - text: Me
+                - link:
+                  - /url: /feeds?view=explore
+                  - text: Explore
+              - generic:
+                - generic:
+                  - button: unread
+                  - button [pressed]: all
+                  - button: saved
+                - generic:
+                  - generic: Search articles
+                  - textbox:
+                    - /placeholder: Search articles
+              - paragraph: Articles refreshed
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=2]: All
+                    - generic:
+                      - article:
+                        - generic:
+                          - button: What Can Quantum Computing Do To Healthcare?
+                          - paragraph: The Medical Futurist · 8d ago
+                          - paragraph: "A leap from bits to qubits: this two-letter change could mean entirely new horizons for healthcare. Quantum computing might bring supersonic drug design, in silico clinical trials with virtual humans simulated ‘live’, full-speed whole genome sequencing and analytics, the movem…"
+                        - button
+                      - article:
+                        - generic:
+                          - button: 3 Things Transhumanism Can Give To Healthcare
+                          - paragraph: The Medical Futurist · 8d ago
+                          - paragraph: Imagine a future where aging is not a fate but a solvable puzzle, reshaping the very fabric of medical science. This is what transhumanism aims for. Although this goal is surely too ambitious, we might learn a thing or two from this futuristic movement. What is transhumanism?…
+                        - button
+                      - article:
+                        - generic:
+                          - button: Digital Health, Menopause, And The $150 Billion Ignorance
+                          - paragraph: The Medical Futurist · 8d ago
+                          - paragraph: The idea of this story came from personal experience. During the past year, I have spent countless hours and a bucketload of money trying to figure out what the heck is wrong with my health. I was feeling worse and worse, having various symptoms, totally inexplicable with my i…
+                        - button
+                      - article:
+                        - generic:
+                          - button: Drug Discovery In The Age of AI
+                          - paragraph: The Medical Futurist · 21d ago
+                          - paragraph: Previously, we contemplated the practical opportunities of the assistance of artificial intelligence (AI) technologies in clinical trials for drug development. Such assistance extends before and after trials commence, and in this article, we will focus on the pre-clinical tria…
+                        - button
+                      - article:
+                        - generic:
+                          - button: What Happens To Your Medical Data After You Die?
+                          - paragraph: The Medical Futurist · 21d ago
+                          - paragraph: “Almost no one has thought about what is going to happen to all of the medical records that sit around after people die,” said Jon Cornwall, senior lecturer in the Centre for Early Learning in Medicine at the University of Otago in New Zealand. Indeed, even if death is one of…
+                        - button
+                      - article:
+                        - generic:
+                          - button: How To Analyse Your Sleep Quality?
+                          - paragraph: The Medical Futurist · 21d ago
+                          - paragraph: Fitbit, Misfit, Live by Earlysense, Jawbone. The market for sleep trackers is skyrocketing and finally, more and more people track the quality of their bedtime. However, getting conclusions from sleep measurements is tricky. Let me help you by sharing my experience! I experime…
+                        - button
+                      - article:
+                        - generic:
+                          - button: What Do Digital Biomarkers Mean?
+                          - paragraph: The Medical Futurist · 21d ago
+                          - paragraph: The spread of wearable digital technologies in healthcare generating big data entailed the appearance of a new type of medical information. They produce actionable insights into the biological state of individuals, just like “general” biomarkers, but are collected through digi…
+                        - button
+                      - article:
+                        - generic:
+                          - button: Are Physicians Losing Skills Due To AI? What Is Cognitive Offloading?
+                          - paragraph: The Medical Futurist · 30d ago
+                          - paragraph: In the current age of artificial intelligence (AI), physicians are able to rely on the technology for a myriad of purposes. From triaging patients to assistance with radiological scans, they can turn to AI tools to assist them in their healthcare-related tasks. However, by off…
+                        - button
+                      - article:
+                        - generic:
+                          - button: When A Longevity Screening Come To Your Home
+                          - paragraph: The Medical Futurist · 34d ago
+                          - paragraph: Longevity, especially the practical side of it, has become one of the biggest business opportunities in healthcare worldwide. Longevity clinics, practices, services and technologies have flooded the market, promising people a chance to live longer and healthier lives. And whil…
+                        - button
+                      - article:
+                        - generic:
+                          - button: Four Scenarios of AI Scribe Adoption in Healthcare
+                          - paragraph: The Medical Futurist · 41d ago
+                          - paragraph: AI scribes, the apps that can listen in to the conversations between patients and healthcare professionals and transform them into the exact electronic medical record format the given hospital or practice is using, have taken the healthcare industry by storm. For the past 1-2…
+                        - button
+                  - generic:
+                    - paragraph: Showing 10 of 10
+          - generic:
+            - list:
+              - listitem:
+                - text: Made by
+                - link:
+                  - /url: https://hemrock.com
+                  - text: Hemrock
+              - listitem:
+                - link:
+                  - /url: https://github.com/tdavidson/reporting
+                  - text: View on GitHub
+              - listitem:
+                - link:
+                  - /url: /license
+                  - text: License
+              - listitem:
+                - link:
+                  - /url: /terms
+                  - text: Terms
+              - listitem:
+                - link:
+                  - /url: /privacy
+                  - text: Privacy
+  - region "Notifications alt+T"
+  - alert
+  - dialog "Article reader" [active] [ref=f15e185]:
+    - button "Close article reader" [ref=f15e186] [cursor=pointer]
+    - generic [ref=f15e187]:
+      - generic [ref=f15e188]:
+        - button "Mark read" [ref=f15e198] [cursor=pointer]
+        - button "Save for later" [ref=f15e190] [cursor=pointer]
+        - link "Open original article" [ref=f15e191] [cursor=pointer]:
+          - /url: https://medicalfuturist.com/quantum-computing-in-healthcare
+      - article [ref=f15e192]:
+        - generic [ref=f15e193]:
+          - heading "What Can Quantum Computing Do To Healthcare?" [level=1] [ref=f15e194]
+          - paragraph [ref=f15e195]: The Medical Futurist · berci.mesko · Jul 14, 2026, 7:35 AM
+          - generic [ref=f15e196]: "A leap from bits to qubits: this two-letter change could mean entirely new horizons for healthcare. Quantum computing might bring supersonic drug design, in silico clinical trials with virtual humans simulated ‘live’, full-speed whole genome sequencing and analytics, the movement of hospitals to the cloud, the achievement of predictive health, or the security of medical data via quantum uncertainty. Jaw-dropping, isn’t it? Quantum supremacy, light bulbs, and 42 If you want annoying people to stay away from your birthday party or scare off unwanted relatives from visiting, just start to talk about quantum computing or how Google reached ‘quantum supremacy’. Some maybe ask back whether Deep Thought, the highly intelligent computer from The Hitchhiker’s Guide To The Galaxy counts as a quantum computer, but most of them will leave without a word and with a bottle of overpriced rum they brought from the Caribbeans. However, for a few interested folks, you should actually tell the story of how Google’s 54-qubit computer was able to complete a task in 200 seconds that Google estimated would take over 10,000 years for non-quantum, traditional computers. It is leaping into the future at lightning speed. But for all the fanfare, critics, such as Christopher Monroe, a physicist at the University of Maryland and co-founder of the quantum computing startup IonQ, say that Google’s paper might be a milestone in quantum computing, but it is an academic one. We are still far from practical applications. Still, how does quantum computing differ from regular computing? While we don’t really want to go down the rabbit hole of technicalities as the team is rather far off from quantum physics, as far as we understand it, this is not just a better and faster way of computing – it has a fundamentally different basis. Just as with the candle and the light bulb: while both throw out light, you know that the latter is definitely not an upgraded version of the former. But okay, let’s see quantum computing in a tiny bit more detailed manner. We had the chance to talk with Dr. Frederik Flöther, an IBM Quantum Industry Consultant and Computational Scientist for the healthcare and life sciences industries, who highlighted what we can expect from the field. What the hell is quantum computing? As it was explained in very plain words to me, we can imagine quantum computing as a process where calculations don’t follow each other as in regular computing but take place all at the same time. A quantum computer is able to run all the calculations simultaneously that a regular computer has to crunch in a linear order. Shohini Gose quantum physicist says in her TED talk that quantum physics describes the behaviour of atoms and fundamental particles, like electrons or photons. A quantum computer operates by controlling the behaviour of these particles, which is very different from the way our traditional computers work. It isn’t by chance that quantum computers don’t measure their performance in bits, but qubits – while the former represents either ones or zeros, and thus the mathematical description of problems, the latter signifies states, which can simultaneously take up ones and zeros, or anything in-between. This means qubits have fluid identities or signify certain percentages and probabilities between two endpoints. As phenomena in nature are not necessarily describable by ones and zeros, quantum computing could open up better ways to simulate nature. As Richard Feynman, Nobel-prize winner theoretical physicist said in his inimitable way, ‘nature isn’t classical, dammit, and if you want to make a simulation of nature, you’d better make it quantum mechanical’. And as the previously mentioned light bulb had the potential to completely transform society, quantum computers have a truly revolutionary way to impact many parts of our lives – including medicine, pharma, and healthcare. Here, we collected all the fields where quantum computing could have a transformative effect. And quantum teleportation is coming as well Quantum computing is developing rapidly, as we can see from recent announcements. Access to world-class quantum hardware and software will be available to the uOttawa research community as well as government and industry partners. Bringing quantum computers into research communities will allow collaboration towards the advancement of the development of quantum computing, novel quantum algorithms and applications by validating the use-cases in real-world settings. IBM Quantum computer, Image source: creative commons And this is not everything. Quantum computers are a thing. But how could they reach their full potential on their own? Here is where quantum internet – or quantum teleportation – comes into the picture. What is it? In simple terms that is a network that can send quantum information between physically distant machines. A research team in the Netherlands was able to teleport quantum information between three different endpoints. The significance is profound: it means information can travel between points while the matter around it remains stationary. This is something maybe even Einstein would frown upon. 1) Supersonic drug design Developing pharmaceuticals through lengthy and costly clinical trials is definitely passé: scientists and pharma companies started to experiment with alternative ways, such as using artificial intelligence, human organs-on-chips or in silico trials, to speed up the process and make drug discovery and development more cost-effective. For example, Atomwise uses supercomputers that root out therapies from a database of molecular structures. Its deep convolutional neural network, AtomNet, screens more than 100 million compounds each day. In 2015, Atomwise launched a virtual search for safe, existing medicines that could be redesigned to treat the Ebola virus. They found two drug candidates in less than one day – shortening a months-long searching process. In another example, InSilico Medicine made headlines with the announcement that the process of developing a new drug candidate lasted just 46 days with the help of its smart algorithm. And what if these smart algorithms were leveled up as never seen before? Running searches on quantum computers could unfold looking through all possible molecules at unimaginable speed for drug target tests conducted in every potential cell model or in silico human tissues and networks in the shortest amount of time possible. This would open the gates to finding the antidote to diseases we never dreamt about before: Alzheimer’s? Various types of cancer? The possibilities seem to become endless. 2) Reaching the age of in silico clinical trials In silico clinical trials mean that no humans, no animals, not even a single cell is required for testing a particular therapy, treatment option, or drug, yet its impact can be perfectly charted. It means an individualised computer simulation used in the development or regulatory evaluation of a medicinal product, device, or intervention. Completely simulated clinical trials are not feasible with our current technology and understanding of biology – yet, but their development would be expected to have major benefits over current in vivo trials. Quantum computing could greatly advance the building of ‘virtual humans’ and complete simulations such as the HumMod, which features more than 1,500 equations and 10,000 variables such as body fluids, circulation, electrolytes, hormones, metabolism, and skin temperature. It would even open the door to ‘live’ clinical trials with as many virtual patients as possible and with components of the liking of the testers. It would not only massively shorten the time necessary for such trials but also their quality and completeness. Prepare yourself, the age when new drugs reach the market within weeks of the first discovery of their drug candidacy is coming. 3) Sequencing and analysing DNA full speed The last two decades saw radical changes in genetics and genomics. It took more than 15 years to crack the code of the human DNA: the Human Genome Project started in 1990, cost billions of dollars and could present its final results in 2006. In contrast, by now, there are more than 2,000 genetic tests for human conditions – and direct-to-consumer genetic testing companies make it even possible to order them online. These tests enable patients to learn their genetic risks for diseases and also help healthcare professionals to diagnose illnesses. Even whole-genome sequencing is possible for a few hundred dollars now – I also got my genome sequenced a little while ago by Dante Labs and detailed my experiences here. Image source: madartzgraphics creative commons Although the technical conditions, the time and the cost of sequencing genomes were reduced by a factor of 1 million in less than 10 years, the revolution lags behind. We believe that quantum computing could give a significant push to the area: faster sequencing, as well as a more comprehensive and faster analysis of the entire genome, will be possible with it. Plus, predictions will be more reliable as quantum computers could take into account even more information as traditional computers, and they could even build every piece of genomic data into health records. Quantum computing could take out the guesswork from genomics and genetics for ensuring better health for everyone. 4) Making patients truly the point of care Currently, we are able to measure a gazillion of health data about ourselves – but we know that it’s still not that widespread. In the future, health sensors, wearables, and tiny medical gadgets could send zettabytes of data about patients into the cloud. Just as a comparison: while in 2013, the amount of digital data encompassed 4.4 zettabytes, by 2025 the digital universe – the information we create and copy annually – is predicted to reach 175 zettabytes, or 175 trillion gigabytes (!). Quantum computers will be able to make sense of these huge amounts of data, including bits and pieces of health information. Moreover, surveillance of patients through connected sensory systems might render physical hospitals useless – and truly make patients the point of care. Quantum computing could ensure the ‘home front’ for smoothly running these systems. Yet another possibility of this groundbreaking emerging technology connected to measurements is raising lifestyle prediction to a whole new level. There are already attempts to move from preventive to predictive health, but these are rather sporadic and in their infancy. For example, there is an ophthalmology app that shows the patient how their vision would change with cataracts 5 years from now while keeping the same lifestyle they have now. Using quantum computers, fed with huge amounts of health parameters, genetic information, sensory data, and other personal health information, might be able to give a comprehensive prediction about a given person’s future health. That’s what we could really call predictive health. 5) Arriving at the perfect decision support system We have long surpassed the era when the accumulated knowledge of medical professionals could ‘reside’ in one professor’s head. It’s just too much. On Pubmed, there are 34 million papers. If a single doctor could only read 3-4 studies of their field of interest per week, they could not finish it in a lifetime and meanwhile, millions of new studies would come out. That has already been a problem for a while, thus IBM created a supercomputer and its algorithm, IBM Watson, to sift through millions of studies in a second – although there is some uncertainty about what will happen to these initiatives after the sale of Watson. Quantum computing would take that to a whole new level and even augment it with special skills. What if such computers could offer perfect decision support for doctors? They could skim through all the studies at once, they could find correlations and causations that the human eye would never find, and it might stumble upon diagnoses or treatment options that the human doctor could have never figured out by themselves. At the very endpoint of this development, quantum computers could create an elevated version of PubMed, where information would reside in the system but not in the traditional written form, but in qubits of data as no one except the computer would ‘read’ the studies anymore. 6) Creating the safest medical data systems ever In her TED talk, Shohini Ghose mentioned the use of quantum uncertainty for encryption as one of the most probable applications of quantum computing. She believes it could be used for creating private keys for encrypting messages sent from one location to another – so that hackers could not copy the key perfectly due to quantum uncertainty. They would have to break the laws of quantum physics to hack such keys. Imagine that level of security with regards to sensitive medical information: electronic health records, genetic and genomic data, or any other private information that the health system generates about our bodies. There are already some examples. In January 2018, a joint China-Austria team showed that communication between continents with quantum encryption was possible. The latest breakthrough achieved by this group consists of combining quantum communication from the Micius satellite with the fiber-optic network in Beijing. It is the first practical proof that the technology that allows networks to use quantum encryption is already available. How long will it be before we see a commercial application? We probably won’t have to wait for long. I bet your jaw dropped. Quantum computing has indeed amazing potential – in theory. However, we still have to wait a lot until any of this can be applied in real life, so this is rather science fiction at the moment. Plus, another problem with quantum computing is that very few people know what it means and understand its workings completely. What if we apply it to practical solutions and we won’t be able to grasp anything from it? You could say that you are using hairdryers without understanding their operation, but would you be that relaxed if your doctor didn’t understand the prediction or recommended treatment that came from a quantum computer? How far should we go in relying on technology? The post What Can Quantum Computing Do To Healthcare? appeared first on The Medical Futurist."
+          - link "Visit original website" [ref=f15e197] [cursor=pointer]:
+            - /url: https://medicalfuturist.com/quantum-computing-in-healthcare

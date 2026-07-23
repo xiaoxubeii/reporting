@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { ChevronRight, Check, AlertTriangle, X, ExternalLink, Clock, Loader2, Link as LinkIcon } from 'lucide-react'
 import { AnalystToggleButton } from '@/components/analyst-button'
 import { AnalystPanel } from '@/components/analyst-panel'
@@ -24,7 +24,7 @@ interface ComplianceItem {
   applicability_text: string
   filing_system: string
   filing_portal_url: string | null
-  regulation_url: string
+  regulation_url: string | null
   complexity: string
   notes: string | null
   alert: string | null
@@ -45,14 +45,6 @@ interface FundSetting {
   notes: string | null
 }
 
-interface Deadline {
-  id: string
-  compliance_item_id: string
-  year: number
-  due_date: string | null
-  status: string
-}
-
 interface ComplianceLink {
   id: string
   compliance_item_id: string | null
@@ -65,137 +57,125 @@ interface ComplianceLink {
 const QUESTIONS = [
   {
     key: 'registration_status',
-    question: 'How is your firm registered with the SEC?',
-    explainer: 'Most VC firms are ERAs under the Dodd-Frank Act, they file limited sections of Form ADV but aren\'t fully registered. If your firm advises only qualifying VC funds and has filed Form ADV checking the \'exempt reporting adviser\' box, you\'re an ERA.',
+    translationKey: 'registrationStatus',
     options: [
-      { value: 'ria', label: 'SEC-Registered Investment Adviser (RIA)' },
-      { value: 'era', label: 'Exempt Reporting Adviser (ERA)' },
-      { value: 'not_registered', label: 'Not registered / Venture Capital Fund Adviser exemption only' },
-      { value: 'unsure', label: 'I\'m not sure' },
+      { value: 'ria', translationKey: 'ria' },
+      { value: 'era', translationKey: 'era' },
+      { value: 'not_registered', translationKey: 'notRegistered' },
+      { value: 'unsure', translationKey: 'unsure' },
     ],
   },
   {
     key: 'aum_range',
-    question: 'What is your firm\'s approximate regulatory assets under management (AUM)?',
-    explainer: 'Regulatory AUM is calculated per the Form ADV instructions and may differ from your fund\'s NAV.',
+    translationKey: 'aumRange',
     options: [
-      { value: 'under_25m', label: 'Under $25 million' },
-      { value: '25m_100m', label: '$25M – $100M' },
-      { value: '100m_150m', label: '$100M – $150M' },
-      { value: '150m_500m', label: '$150M – $500M' },
-      { value: '500m_1.5b', label: '$500M – $1.5B' },
-      { value: 'over_1.5b', label: 'Over $1.5B' },
-      { value: 'unsure', label: 'I\'m not sure' },
+      { value: 'under_25m', translationKey: 'under25m' },
+      { value: '25m_100m', translationKey: 'from25mTo100m' },
+      { value: '100m_150m', translationKey: 'from100mTo150m' },
+      { value: '150m_500m', translationKey: 'from150mTo500m' },
+      { value: '500m_1.5b', translationKey: 'from500mTo1_5b' },
+      { value: 'over_1.5b', translationKey: 'over1_5b' },
+      { value: 'unsure', translationKey: 'unsure' },
     ],
   },
   {
     key: 'fund_structure',
-    question: 'How is your fund structured?',
-    explainer: 'Most VC funds are limited partnerships, which file Form 1065 and issue K-1s to partners.',
+    translationKey: 'fundStructure',
     options: [
-      { value: 'lp', label: 'Limited Partnership' },
-      { value: 'llc_partnership', label: 'LLC taxed as partnership' },
-      { value: 'llc_corp', label: 'LLC taxed as corporation' },
-      { value: 'other', label: 'Other' },
+      { value: 'lp', translationKey: 'limitedPartnership' },
+      { value: 'llc_partnership', translationKey: 'llcPartnership' },
+      { value: 'llc_corp', translationKey: 'llcCorporation' },
+      { value: 'other', translationKey: 'other' },
     ],
   },
   {
     key: 'fundraising_status',
-    question: 'What is your fund\'s current fundraising status?',
-    explainer: 'This determines whether Form D amendments and Blue Sky renewal filings are needed.',
+    translationKey: 'fundraisingStatus',
     options: [
-      { value: 'actively_raising', label: 'Actively raising capital' },
-      { value: 'closed_recent', label: 'Closed within the last 12 months' },
-      { value: 'closed_over_12m', label: 'Closed more than 12 months ago' },
-      { value: 'evergreen', label: 'Evergreen / continuous offering' },
+      { value: 'actively_raising', translationKey: 'activelyRaising' },
+      { value: 'closed_recent', translationKey: 'closedRecent' },
+      { value: 'closed_over_12m', translationKey: 'closedOver12m' },
+      { value: 'evergreen', translationKey: 'evergreen' },
     ],
   },
   {
     key: 'reg_d_exemption',
-    question: 'Did your fund raise capital under Regulation D (Rule 506)?',
-    explainer: 'Almost all VC funds raise under Reg D. If your fund has a PPM and subscription agreements, you\'re almost certainly using Reg D.',
+    translationKey: 'regDExemption',
     options: [
-      { value: '506b', label: 'Yes, Rule 506(b) (no general solicitation)' },
-      { value: '506c', label: 'Yes, Rule 506(c) (general solicitation permitted)' },
-      { value: 'no', label: 'No / not applicable' },
-      { value: 'unsure', label: 'I\'m not sure' },
+      { value: '506b', translationKey: 'rule506b' },
+      { value: '506c', translationKey: 'rule506c' },
+      { value: 'no', translationKey: 'no' },
+      { value: 'unsure', translationKey: 'unsure' },
     ],
   },
   {
     key: 'investor_state_count',
-    question: 'In how many U.S. states do your fund investors reside?',
-    explainer: 'Each state where you have investors may require a Blue Sky notice filing.',
+    translationKey: 'investorStateCount',
     options: [
-      { value: 'single_state', label: 'Just one state' },
-      { value: '2_to_5', label: '2–5 states' },
-      { value: '6_to_15', label: '6–15 states' },
-      { value: '16_plus', label: '16 or more states' },
-      { value: 'unsure', label: 'I\'m not sure' },
+      { value: 'single_state', translationKey: 'singleState' },
+      { value: '2_to_5', translationKey: 'twoToFive' },
+      { value: '6_to_15', translationKey: 'sixToFifteen' },
+      { value: '16_plus', translationKey: 'sixteenPlus' },
+      { value: 'unsure', translationKey: 'unsure' },
     ],
   },
   {
     key: 'california_nexus',
-    question: 'Does your firm have any connection to California?',
-    explainer: 'California\'s diversity reporting law (SB 54 / FIPVCC) has broad \'nexus\' triggers. Even firms headquartered outside CA may be covered.',
+    translationKey: 'californiaNexus',
     multi: true,
     options: [
-      { value: 'hq_ca', label: 'Headquartered or have an office in CA' },
-      { value: 'investors_ca', label: 'Have investors based in CA' },
-      { value: 'investments_ca', label: 'Made investments in CA-based companies' },
-      { value: 'fundraising_ca', label: 'Raised capital from CA-based sources' },
-      { value: 'none', label: 'No California connection' },
+      { value: 'hq_ca', translationKey: 'headquarters' },
+      { value: 'investors_ca', translationKey: 'investors' },
+      { value: 'investments_ca', translationKey: 'investments' },
+      { value: 'fundraising_ca', translationKey: 'fundraising' },
+      { value: 'none', translationKey: 'none' },
     ],
   },
   {
     key: 'public_equity',
-    question: 'Do any of your funds hold publicly traded equity securities?',
-    explainer: 'Most VC funds hold only private company equity, which means 13F, 13G, 13H, and N-PX don\'t apply.',
+    translationKey: 'publicEquity',
     options: [
-      { value: 'yes_over_100m', label: 'Yes, over $100M in public equities' },
-      { value: 'yes_under_100m', label: 'Yes, under $100M' },
-      { value: 'yes_5pct_single', label: 'Yes, and we hold 5%+ of a single public company' },
-      { value: 'no', label: 'No, private investments only' },
-      { value: 'unsure', label: 'I\'m not sure' },
+      { value: 'yes_over_100m', translationKey: 'over100m' },
+      { value: 'yes_under_100m', translationKey: 'under100m' },
+      { value: 'yes_5pct_single', translationKey: 'fivePercent' },
+      { value: 'no', translationKey: 'no' },
+      { value: 'unsure', translationKey: 'unsure' },
     ],
   },
   {
     key: 'cftc_activity',
-    question: 'Does your fund engage in any commodity, futures, or swap trading?',
-    explainer: 'If your fund uses any hedging instruments, interest rate swaps, or commodity-linked investments, you may need to file an exemption with the NFA.',
+    translationKey: 'cftcActivity',
     options: [
-      { value: 'yes_with_exemption', label: 'Yes, and we\'ve filed a CPO exemption (e.g., §4.13(a)(3))' },
-      { value: 'yes_no_exemption', label: 'Yes, but we haven\'t filed an exemption' },
-      { value: 'no', label: 'No commodity/futures/swap activity' },
-      { value: 'unsure', label: 'I\'m not sure' },
+      { value: 'yes_with_exemption', translationKey: 'withExemption' },
+      { value: 'yes_no_exemption', translationKey: 'withoutExemption' },
+      { value: 'no', translationKey: 'no' },
+      { value: 'unsure', translationKey: 'unsure' },
     ],
   },
   {
     key: 'access_person_count',
-    question: 'How many people at your firm have access to nonpublic information about fund holdings or transactions?',
-    explainer: 'These are your \'Access Persons\' under the Code of Ethics. They\'ll need to provide periodic personal trading and holdings disclosures.',
+    translationKey: 'accessPersonCount',
     options: [
-      { value: '1_to_3', label: '1–3 people' },
-      { value: '4_to_10', label: '4–10 people' },
-      { value: '11_plus', label: '11 or more' },
+      { value: '1_to_3', translationKey: 'oneToThree' },
+      { value: '4_to_10', translationKey: 'fourToTen' },
+      { value: '11_plus', translationKey: 'elevenPlus' },
     ],
   },
   {
     key: 'has_foreign_entities',
-    question: 'Are any of your fund entities formed under the laws of a foreign country?',
-    explainer: 'As of March 2025, FinCEN exempted all U.S.-formed entities from BOI reporting. Only foreign-formed entities registered to do business in the U.S. still need to file.',
+    translationKey: 'foreignEntities',
     options: [
-      { value: 'yes', label: 'Yes, we have offshore/foreign fund entities registered in the U.S.' },
-      { value: 'no', label: 'No, all entities are U.S.-formed' },
+      { value: 'yes', translationKey: 'yes' },
+      { value: 'no', translationKey: 'no' },
     ],
   },
   {
     key: 'has_foreign_investors',
-    question: 'Does your fund have any foreign (non-U.S.) investors?',
-    explainer: 'Funds with foreign investors have FATCA withholding and reporting obligations (Form 1042-S, Form 1042) and may have CRS reporting obligations depending on jurisdiction. W-8BEN/W-8BEN-E forms must be collected from foreign investors.',
+    translationKey: 'foreignInvestors',
     options: [
-      { value: 'yes', label: 'Yes, one or more investors are non-U.S. persons or entities' },
-      { value: 'no', label: 'No, all investors are U.S. persons' },
-      { value: 'unsure', label: 'Unsure' },
+      { value: 'yes', translationKey: 'yes' },
+      { value: 'no', translationKey: 'no' },
+      { value: 'unsure', translationKey: 'unsure' },
     ],
   },
 ] as const
@@ -223,15 +203,19 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 }
 const DEFAULT_CATEGORY_COLORS = { bg: 'bg-muted', text: 'text-muted-foreground' }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 type CalendarEntry = { item: ComplianceItem; group?: string }
+const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4'] as const
 
 function entryKey(e: CalendarEntry) {
   return e.group ? `${e.item.id}::${e.group}` : e.item.id
 }
 
+function translatedLabel(labels: Readonly<Record<string, string>>, value: string) {
+  return labels[value] ?? value
+}
+
 export default function CompliancePage() {
+  const t = useTranslations('Compliance')
   const searchParams = useSearchParams()
   const initialView = (['calendar', 'items', 'setup'].includes(searchParams.get('view') ?? '') ? searchParams.get('view') as View : 'calendar')
   const [loading, setLoading] = useState(true)
@@ -277,7 +261,7 @@ export default function CompliancePage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [])
+  }, [searchParams])
 
   // Compute applicability from profile
   const applicability = useMemo(() => {
@@ -495,13 +479,13 @@ export default function CompliancePage() {
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Compliance</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
             <AnalystToggleButton />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Track regulatory filings and compliance deadlines</p>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
         {profile && (
           <div className="flex items-center justify-between flex-wrap gap-2 pt-2">
             <ComplianceNav active={view} onSelect={(tab) => setView(tab)} />
@@ -519,7 +503,7 @@ export default function CompliancePage() {
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {f}
+                    {t(`filters.${f}`)}
                   </button>
                 ))}
               </div>
@@ -549,10 +533,6 @@ export default function CompliancePage() {
               getStatus={getStatus}
               applicability={applicability}
               getSetting={getSetting}
-              expandedItem={expandedItem}
-              setExpandedItem={setExpandedItem}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
               onToggleDismiss={handleToggleDismiss}
               onMarkComplete={handleMarkComplete}
               links={links}
@@ -568,7 +548,6 @@ export default function CompliancePage() {
               expandedItem={expandedItem}
               setExpandedItem={setExpandedItem}
               statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
               onToggleDismiss={handleToggleDismiss}
               onMarkComplete={handleMarkComplete}
               links={links}
@@ -597,13 +576,14 @@ function IntakeQuestionnaire({
   saving: boolean
   isEdit: boolean
 }) {
+  const t = useTranslations('Compliance')
+
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-lg font-medium mb-1">{isEdit ? 'Update Fund Profile' : 'Fund Profile Setup'}</h2>
+        <h2 className="text-lg font-medium mb-1">{isEdit ? t('setup.updateTitle') : t('setup.title')}</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Answer these questions to determine which compliance obligations apply to your fund.
-          Your answers auto-determine applicability, you can override any result later.
+          {t('setup.description')}
         </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
@@ -612,7 +592,7 @@ function IntakeQuestionnaire({
               style={{ width: `${(answeredCount / totalCount) * 100}%` }}
             />
           </div>
-          <span>{answeredCount} of {totalCount} answered</span>
+          <span>{t('setup.progress', { answered: answeredCount, total: totalCount })}</span>
         </div>
       </div>
 
@@ -623,9 +603,9 @@ function IntakeQuestionnaire({
             <div key={q.key} className="rounded-lg border p-4">
               <p className="font-medium text-sm mb-1">
                 <span className="text-muted-foreground mr-2">{idx + 1}.</span>
-                {q.question}
+                {t(`setup.questions.${q.translationKey}.question`)}
               </p>
-              <p className="text-xs text-muted-foreground mb-3">{q.explainer}</p>
+              <p className="text-xs text-muted-foreground mb-3">{t(`setup.questions.${q.translationKey}.explainer`)}</p>
               {'multi' in q && q.multi ? (
                 <div className="space-y-1.5">
                   {q.options.map(opt => {
@@ -651,7 +631,7 @@ function IntakeQuestionnaire({
                             : 'border-border hover:bg-accent/50'
                         }`}
                       >
-                        {opt.label}
+                        {t(`setup.questions.${q.translationKey}.options.${opt.translationKey}` as never)}
                       </button>
                     )
                   })}
@@ -668,7 +648,7 @@ function IntakeQuestionnaire({
                           : 'border-border hover:bg-accent/50'
                       }`}
                     >
-                      {opt.label}
+                      {t(`setup.questions.${q.translationKey}.options.${opt.translationKey}` as never)}
                     </button>
                   ))}
                 </div>
@@ -681,10 +661,12 @@ function IntakeQuestionnaire({
       <div className="mt-6 flex items-center gap-3">
         <Button onClick={onSubmit} disabled={saving || answeredCount === 0}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {isEdit ? 'Update & Re-evaluate' : 'Save & Evaluate'}
+          {isEdit ? t('setup.updateAndEvaluate') : t('setup.saveAndEvaluate')}
         </Button>
         <span className="text-xs text-muted-foreground">
-          {answeredCount < totalCount ? `${totalCount - answeredCount} unanswered questions will be marked for review` : 'All questions answered'}
+          {answeredCount < totalCount
+            ? t('setup.unanswered', { count: totalCount - answeredCount })
+            : t('setup.allAnswered')}
         </span>
       </div>
     </div>
@@ -693,22 +675,20 @@ function IntakeQuestionnaire({
 
 // --- Calendar View ---
 function CalendarView({
-  calendarData, items, getStatus, applicability, getSetting, expandedItem, setExpandedItem,
-  statusFilter, setStatusFilter, onToggleDismiss, onMarkComplete, links,
+  calendarData, items, getStatus, applicability, getSetting,
+  onToggleDismiss, onMarkComplete, links,
 }: {
   calendarData: { months: Record<number, CalendarEntry[]> }
   items: ComplianceItem[]
   getStatus: (id: string, group?: string) => Applicability
   applicability: Record<string, { result: Applicability; reason: string }>
   getSetting: (id: string, group?: string) => FundSetting | undefined
-  expandedItem: string | null
-  setExpandedItem: (id: string | null) => void
-  statusFilter: StatusFilter
-  setStatusFilter: (v: StatusFilter) => void
   onToggleDismiss: (id: string, dismiss: boolean, reason?: string, group?: string) => void
   onMarkComplete: (id: string, completed: boolean, note?: string, link?: string, group?: string) => void
   links: ComplianceLink[]
 }) {
+  const locale = useLocale()
+  const t = useTranslations('Compliance')
   const now = new Date()
   const currentMonth = now.getMonth() + 1
   // Track which entry is expanded (item id + optional group)
@@ -733,7 +713,7 @@ function CalendarView({
                 className={`rounded-lg border p-3 ${isPast ? 'opacity-60' : ''}`}
               >
                 <p className={`text-base font-semibold mb-2 ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  {MONTHS[month - 1]}
+                  {new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, month - 1, 1))}
                 </p>
                 <div className="space-y-1">
                   {entries.map(entry => {
@@ -756,7 +736,11 @@ function CalendarView({
                         >
                           {item.short_name}
                           {group && <span className="ml-1 opacity-70">· {group}</span>}
-                          {item.deadline_day && !group && <span className="ml-1 opacity-70">({item.deadline_month}/{item.deadline_day})</span>}
+                          {item.deadline_day && item.deadline_month && !group && (
+                            <span className="ml-1 opacity-70">
+                              ({new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(new Date(2024, item.deadline_month - 1, item.deadline_day))})
+                            </span>
+                          )}
                         </button>
                         {/* Inline detail on mobile */}
                         {isExpanded && (
@@ -802,7 +786,7 @@ function CalendarView({
             </div>
           ) : (
             <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-              Click an item to view details
+              {t('calendar.selectItem')}
             </div>
           )}
         </div>
@@ -821,7 +805,7 @@ function instanceKey(inst: ItemInstance) {
 
 function ItemsView({
   items, getStatus, applicability, getSetting, expandedItem, setExpandedItem,
-  statusFilter, setStatusFilter, onToggleDismiss, onMarkComplete, links,
+  statusFilter, onToggleDismiss, onMarkComplete, links,
   portfolioGroups, closeMonths,
 }: {
   items: ComplianceItem[]
@@ -831,16 +815,24 @@ function ItemsView({
   expandedItem: string | null
   setExpandedItem: (id: string | null) => void
   statusFilter: StatusFilter
-  setStatusFilter: (v: StatusFilter) => void
   onToggleDismiss: (id: string, dismiss: boolean, reason?: string, group?: string) => void
   onMarkComplete: (id: string, completed: boolean, note?: string, link?: string, group?: string) => void
   links: ComplianceLink[]
   portfolioGroups: string[]
   closeMonths: Record<string, number[]>
 }) {
+  const t = useTranslations('Compliance')
+  const categoryLabels = {
+    'SEC Filings': t('categories.secFilings'),
+    'Securities Offerings': t('categories.securitiesOfferings'),
+    'Tax Filings': t('categories.taxFilings'),
+    'Fund Reporting': t('categories.fundReporting'),
+    'Internal Compliance': t('categories.internalCompliance'),
+    'State Compliance': t('categories.stateCompliance'),
+    CFTC: t('categories.cftc'),
+    'AML / FinCEN': t('categories.amlFinCen'),
+  }
   const CATEGORY_ORDER = ['SEC Filings', 'Securities Offerings', 'Tax Filings', 'Fund Reporting', 'Internal Compliance', 'State Compliance', 'CFTC', 'AML / FinCEN']
-  const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
-
   // Build instances: expand vehicle-scoped items per fund, quarterly items per quarter
   const categoryInstances = useMemo(() => {
     const groups: Record<string, ItemInstance[]> = {}
@@ -903,7 +895,9 @@ function ItemsView({
         const instances = categoryInstances[category]
         return (
           <div key={category} className="mb-6">
-            <h3 className={`text-xs font-medium mb-2 ${catColors.text}`}>{category} ({instances.length})</h3>
+            <h3 className={`text-xs font-medium mb-2 ${catColors.text}`}>
+              {t('items.categoryCount', { category: translatedLabel(categoryLabels, category), count: instances.length })}
+            </h3>
             <div className="space-y-1">
               {instances.map(inst => {
                 const ik = instanceKey(inst)
@@ -932,8 +926,8 @@ function ItemsView({
                         {inst.group && <span className="text-xs text-muted-foreground">· {inst.group}</span>}
                       </span>
                       <span className="flex items-center gap-2">
-                        {isCompleted && <span className="text-xs text-blue-600 dark:text-blue-400">Completed</span>}
-                        {isDismissed && <span className="text-xs text-muted-foreground">Dismissed</span>}
+                        {isCompleted && <span className="text-xs text-blue-600 dark:text-blue-400">{t('statuses.completed')}</span>}
+                        {isDismissed && <span className="text-xs text-muted-foreground">{t('statuses.dismissed')}</span>}
                         <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                       </span>
                     </button>
@@ -975,6 +969,30 @@ function ItemDetail({
   onMarkComplete: (id: string, completed: boolean, note?: string, link?: string, group?: string) => void
   links?: ComplianceLink[]
 }) {
+  const locale = useLocale()
+  const t = useTranslations('Compliance')
+  const categoryLabels = {
+    'SEC Filings': t('categories.secFilings'),
+    'Securities Offerings': t('categories.securitiesOfferings'),
+    'Tax Filings': t('categories.taxFilings'),
+    'Fund Reporting': t('categories.fundReporting'),
+    'Internal Compliance': t('categories.internalCompliance'),
+    'State Compliance': t('categories.stateCompliance'),
+    CFTC: t('categories.cftc'),
+    'AML / FinCEN': t('categories.amlFinCen'),
+  }
+  const frequencyLabels = {
+    Annual: t('frequencies.annual'),
+    Quarterly: t('frequencies.quarterly'),
+    'Event-driven': t('frequencies.eventDriven'),
+    Monthly: t('frequencies.monthly'),
+    Ongoing: t('frequencies.ongoing'),
+  }
+  const complexityLabels = {
+    low: t('complexities.low'),
+    medium: t('complexities.medium'),
+    high: t('complexities.high'),
+  }
   const [showCompleteForm, setShowCompleteForm] = useState(false)
   const [completeNote, setCompleteNote] = useState(setting?.completed_note ?? '')
   const [completeLink, setCompleteLink] = useState(setting?.completed_link ?? '')
@@ -989,17 +1007,21 @@ function ItemDetail({
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="font-medium text-sm">{item.name}{group && <span className="text-muted-foreground font-normal"> · {group}</span>}</h3>
-          <p className="text-sm text-muted-foreground">{item.category} · {item.frequency} · {item.complexity} complexity</p>
+          <p className="text-sm text-muted-foreground">
+            {translatedLabel(categoryLabels, item.category)} · {translatedLabel(frequencyLabels, item.frequency)} · {t('detail.complexity', { complexity: translatedLabel(complexityLabels, item.complexity.toLowerCase()) })}
+          </p>
         </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground" aria-label={t('detail.close')}>
           <X className="h-4 w-4" />
         </button>
       </div>
 
       {isCompleted && (
         <div className="text-sm px-2.5 py-1.5 rounded mb-3 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-          <span className="font-medium">Completed</span>
-          {setting?.completed_at && <span> on {new Date(setting.completed_at).toLocaleDateString()}</span>}
+          <span className="font-medium">{t('statuses.completed')}</span>
+          {setting?.completed_at && (
+            <span> {t('detail.completedOn', { date: new Intl.DateTimeFormat(locale).format(new Date(setting.completed_at)) })}</span>
+          )}
           {setting?.completed_note && <p className="mt-1">{setting.completed_note}</p>}
           {setting?.completed_link && (
             <a href={setting.completed_link} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 underline underline-offset-2 hover:opacity-80">
@@ -1029,14 +1051,14 @@ function ItemDetail({
 
       {item.id === 'ca-diversity' && (
         <p className="text-sm text-muted-foreground mb-3">
-          <a href="https://www.fipvcc.com/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">FIPVCC</a> provides standardized questionnaires for collecting demographic data from founders.
+          <a href="https://www.fipvcc.com/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">FIPVCC</a>{' '}{t('detail.fipvccDescription')}
         </p>
       )}
 
       <div className="text-sm text-muted-foreground mb-3 space-y-0.5">
-        <p><strong>Deadline:</strong> {item.deadline_description}</p>
-        <p><strong>Filing system:</strong> {item.filing_system}</p>
-        <p><strong>Applies to:</strong> {item.applicability_text}</p>
+        <p><strong>{t('detail.deadline')}:</strong> {item.deadline_description}</p>
+        <p><strong>{t('detail.filingSystem')}:</strong> {item.filing_system}</p>
+        <p><strong>{t('detail.appliesTo')}:</strong> {item.applicability_text}</p>
       </div>
 
       {links && links.length > 0 && (
@@ -1060,17 +1082,17 @@ function ItemDetail({
       {/* Complete form (shown when clicking Mark Complete) */}
       {showCompleteForm && (
         <div className="mb-3 rounded border p-3 space-y-2">
-          <p className="text-xs font-medium">Mark as completed</p>
+          <p className="text-xs font-medium">{t('detail.markAsCompleted')}</p>
           <input
             type="text"
-            placeholder="Note (optional)"
+            placeholder={t('detail.notePlaceholder')}
             value={completeNote}
             onChange={e => setCompleteNote(e.target.value)}
             className="w-full text-sm px-2 py-1.5 rounded border bg-background"
           />
           <input
             type="url"
-            placeholder="Link (optional, e.g. filing URL)"
+            placeholder={t('detail.linkPlaceholder')}
             value={completeLink}
             onChange={e => setCompleteLink(e.target.value)}
             className="w-full text-sm px-2 py-1.5 rounded border bg-background"
@@ -1083,14 +1105,14 @@ function ItemDetail({
                 setShowCompleteForm(false)
               }}
             >
-              Complete
+              {t('detail.complete')}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowCompleteForm(false)}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
           </div>
         </div>
@@ -1104,7 +1126,7 @@ function ItemDetail({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground underline"
           >
-            <ExternalLink className="h-3.5 w-3.5" />View Regulation
+            <ExternalLink className="h-3.5 w-3.5" />{t('detail.viewRegulation')}
           </a>
         )}
         {item.filing_portal_url && (
@@ -1114,7 +1136,7 @@ function ItemDetail({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground underline"
           >
-            <ExternalLink className="h-3.5 w-3.5" />Filing Portal
+            <ExternalLink className="h-3.5 w-3.5" />{t('detail.filingPortal')}
           </a>
         )}
         <span className="flex-1" />
@@ -1126,7 +1148,7 @@ function ItemDetail({
               className="text-muted-foreground"
               onClick={() => setShowCompleteForm(true)}
             >
-              Edit
+              {t('common.edit')}
             </Button>
             <Button
               variant="outline"
@@ -1134,7 +1156,7 @@ function ItemDetail({
               className="text-muted-foreground"
               onClick={() => onMarkComplete(item.id, false, undefined, undefined, group)}
             >
-              Restore
+              {t('detail.restore')}
             </Button>
           </>
         ) : isDismissed ? (
@@ -1145,7 +1167,7 @@ function ItemDetail({
               className="text-muted-foreground"
               onClick={() => setShowCompleteForm(true)}
             >
-              Mark Complete
+              {t('detail.markComplete')}
             </Button>
             <Button
               variant="outline"
@@ -1153,7 +1175,7 @@ function ItemDetail({
               className="text-muted-foreground"
               onClick={() => onToggleDismiss(item.id, false, undefined, group)}
             >
-              Restore
+              {t('detail.restore')}
             </Button>
           </>
         ) : (
@@ -1164,7 +1186,7 @@ function ItemDetail({
               className="text-muted-foreground"
               onClick={() => setShowCompleteForm(true)}
             >
-              Mark Complete
+              {t('detail.markComplete')}
             </Button>
             <Button
               variant="outline"
@@ -1172,7 +1194,7 @@ function ItemDetail({
               className="text-muted-foreground"
               onClick={() => onToggleDismiss(item.id, true, 'Manually dismissed', group)}
             >
-              Dismiss
+              {t('detail.dismiss')}
             </Button>
           </>
         )}

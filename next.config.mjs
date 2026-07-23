@@ -1,5 +1,8 @@
 import { withBotId } from 'botid/next/config'
 import { isIP } from 'node:net'
+import createNextIntlPlugin from 'next-intl/plugin'
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 function isSafeCspHostname(hostname) {
   const unwrapped = hostname.replace(/^\[|\]$/g, '')
@@ -19,8 +22,7 @@ function isLoopbackHostname(hostname) {
   return unwrapped.split('.')[0] === '127'
 }
 
-function configuredSupabaseOrigin() {
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+function safeSupabaseOrigin(rawUrl) {
   if (!rawUrl || /[\s*;]/.test(rawUrl)) return null
 
   try {
@@ -37,8 +39,8 @@ function configuredSupabaseOrigin() {
   }
 }
 
-function configuredSupabaseConnectSources() {
-  const origin = configuredSupabaseOrigin()
+export function supabaseConnectSources(rawUrl) {
+  const origin = safeSupabaseOrigin(rawUrl)
   if (!origin) return []
 
   const url = new URL(origin)
@@ -78,7 +80,7 @@ const nextConfig = {
   // for no visible reason.
   async rewrites() {
     const supabaseOrigin = isDevelopmentSupabaseProxyEnabled()
-      ? configuredSupabaseOrigin()
+      ? safeSupabaseOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL)
       : null
     return [
       ...(supabaseOrigin ? [{
@@ -104,7 +106,14 @@ const nextConfig = {
     ]
   },
   async headers() {
-    const supabaseConnectSources = configuredSupabaseConnectSources().join(' ')
+    const connectSources = [
+      "'self'",
+      ...supabaseConnectSources(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      'https://cdn.usefathom.com',
+      'https://www.google-analytics.com',
+      'https://api.github.com',
+      'https://calendly.com',
+    ]
     const securityHeaders = [
       { key: 'X-Frame-Options', value: 'DENY' },
       { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -113,7 +122,7 @@ const nextConfig = {
       { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       {
         key: 'Content-Security-Policy',
-        value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' ${supabaseConnectSources} https://cdn.usefathom.com https://www.google-analytics.com https://api.github.com https://calendly.com; frame-src https://calendly.com; object-src 'none'; base-uri 'self'`,
+        value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src ${connectSources.join(' ')}; frame-src https://calendly.com; object-src 'none'; base-uri 'self'`,
       },
     ]
 
@@ -139,4 +148,4 @@ const nextConfig = {
     ]
   },
 }
-export default withBotId(nextConfig)
+export default withBotId(withNextIntl(nextConfig))

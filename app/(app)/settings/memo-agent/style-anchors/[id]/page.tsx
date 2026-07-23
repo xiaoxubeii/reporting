@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { AnchorEditor } from './editor'
+import { AnchorEditor, type Anchor } from './editor'
 
-export const metadata: Metadata = { title: 'Reference memo' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Settings.anchorEditor')
+  return { title: t('metadataTitle') }
+}
 
 export default async function StyleAnchorEditorPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -24,9 +28,9 @@ export default async function StyleAnchorEditorPage({ params }: { params: { id: 
     .from('style_anchor_memos')
     .select('*')
     .eq('id', params.id)
-    .eq('fund_id', (membership as any).fund_id)
+    .eq('fund_id', membership.fund_id)
     .maybeSingle()
   if (!anchor) notFound()
 
-  return <AnchorEditor anchor={anchor as any} />
+  return <AnchorEditor anchor={anchor as Anchor} />
 }

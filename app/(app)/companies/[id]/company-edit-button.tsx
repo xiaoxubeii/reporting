@@ -13,8 +13,10 @@ import {
 } from '@/components/ui/dialog'
 import { CompanyForm } from '@/components/company-form'
 import type { Company } from '@/lib/types/database'
+import { useTranslations } from 'next-intl'
 
 export function CompanyEditButton({ company }: { company: Company }) {
+  const t = useTranslations('CompanyDetail')
   const [open, setOpen] = useState(false)
   const router = useRouter()
 
@@ -27,7 +29,7 @@ export function CompanyEditButton({ company }: { company: Company }) {
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Company</DialogTitle>
+          <DialogTitle>{t('editCompany')}</DialogTitle>
         </DialogHeader>
         <CompanyForm
           company={company}

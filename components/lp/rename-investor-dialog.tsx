@@ -5,6 +5,7 @@
 // not silently merged. Merging is an explicit, double-confirmed action the user opts into.
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -14,6 +15,7 @@ export function RenameInvestorDialog({ target, onClose, onSaved }: {
   onClose: () => void
   onSaved: () => void
 }) {
+  const t = useTranslations('LPs.admin.rename')
   const [name, setName] = useState(target.name)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -23,7 +25,7 @@ export function RenameInvestorDialog({ target, onClose, onSaved }: {
   async function save() {
     if (!name.trim()) return
     setSaving(true); setErr(null)
-    const body: Record<string, any> = { name: name.trim() }
+    const body: Record<string, string> = { name: name.trim() }
     if (target.investorId) body.id = target.investorId
     else if (target.entityId) body.entityId = target.entityId
 
@@ -37,7 +39,7 @@ export function RenameInvestorDialog({ target, onClose, onSaved }: {
       setConflict({ conflictId: d.conflictId, sourceId: d.sourceId })
       return
     }
-    setErr(d.error === 'duplicate_name' ? 'An investor with that name already exists.' : (d.error ?? 'Could not rename'))
+    setErr(d.error === 'duplicate_name' ? t('duplicate') : (d.error ?? t('error')))
   }
 
   async function merge() {
@@ -49,14 +51,14 @@ export function RenameInvestorDialog({ target, onClose, onSaved }: {
       body: JSON.stringify({ sourceId: conflict.sourceId, targetId: conflict.conflictId }),
     })
     setSaving(false)
-    if (!res.ok) { const d = await res.json().catch(() => ({})); setErr(d.error ?? 'Could not merge'); return }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setErr(d.error ?? t('mergeError')); return }
     onSaved()
   }
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose() }}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle>Rename investor</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{t('title')}</DialogTitle></DialogHeader>
 
         <Input
           value={name}
@@ -71,10 +73,10 @@ export function RenameInvestorDialog({ target, onClose, onSaved }: {
         {conflict && !confirmMerge && (
           <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
             <p className="text-xs text-destructive">
-              An investor named &ldquo;{name.trim()}&rdquo; already exists. Rename won&rsquo;t merge them.
+              {t('conflict', { name: name.trim() })}
             </p>
             <Button variant="outline" size="sm" onClick={() => setConfirmMerge(true)} disabled={saving}>
-              Merge instead…
+              {t('mergeInstead')}
             </Button>
           </div>
         )}
@@ -82,21 +84,21 @@ export function RenameInvestorDialog({ target, onClose, onSaved }: {
         {conflict && confirmMerge && (
           <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
             <p className="text-xs text-destructive">
-              This deletes this investor and moves its positions into &ldquo;{name.trim()}&rdquo;. This can&rsquo;t be undone.
+              {t('confirmDescription', { name: name.trim() })}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setConfirmMerge(false)} disabled={saving}>Back</Button>
+              <Button variant="outline" size="sm" onClick={() => setConfirmMerge(false)} disabled={saving}>{t('back')}</Button>
               <Button variant="destructive" size="sm" onClick={merge} disabled={saving}>
-                {saving ? 'Merging…' : 'Confirm merge'}
+                {saving ? t('merging') : t('confirmMerge')}
               </Button>
             </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>{t('cancel')}</Button>
           {!conflict && (
-            <Button onClick={save} disabled={saving || !name.trim()}>{saving ? 'Saving…' : 'Save'}</Button>
+            <Button onClick={save} disabled={saving || !name.trim()}>{saving ? t('saving') : t('save')}</Button>
           )}
         </DialogFooter>
       </DialogContent>

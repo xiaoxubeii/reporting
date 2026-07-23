@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { FileText, Trash2, Loader2, ChevronDown, ChevronRight, FileSpreadsheet, FileImage, File, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface Document {
   id: string
@@ -22,10 +23,10 @@ interface Props {
   dropboxFolderPath?: string | null
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+function formatFileSize(bytes: number, formatNumber: (value: number, options?: { maximumFractionDigits?: number }) => string): string {
+  if (bytes < 1024) return `${formatNumber(bytes)} B`
+  if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, { maximumFractionDigits: 0 })} KB`
+  return `${formatNumber(bytes / (1024 * 1024), { maximumFractionDigits: 1 })} MB`
 }
 
 function FileIcon({ fileType, source }: { fileType: string; source: string }) {
@@ -45,6 +46,8 @@ function FileIcon({ fileType, source }: { fileType: string; source: string }) {
 }
 
 export function CompanyDocuments({ companyId, storageProvider, googleDriveFolderId, dropboxFolderPath }: Props) {
+  const t = useTranslations('CompanyDetail.documents')
+  const format = useFormatter()
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -78,10 +81,10 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
         setDocuments(prev => prev.filter(d => d.id !== docId))
       } else {
         const data = await res.json()
-        setError(data.error ?? 'Failed to delete document')
+        setError(data.error ?? t('deleteFailed'))
       }
     } catch {
-      setError('Failed to delete document')
+      setError(t('deleteFailed'))
     } finally {
       setDeletingId(null)
     }
@@ -92,7 +95,7 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
       <div className="mt-6">
         <div className="flex items-center gap-2 mb-2">
           <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-sm font-medium text-muted-foreground">Documents</span>
+          <span className="text-sm font-medium text-muted-foreground">{t('title')}</span>
         </div>
         <div className="animate-pulse space-y-2">
           <div className="h-8 bg-muted rounded w-full" />
@@ -111,7 +114,7 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
         >
           {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
           <FileText className="h-3.5 w-3.5" />
-          Documents
+          {t('title')}
           {documents.length > 0 && (
             <span className="text-xs bg-muted rounded-full px-1.5 py-0.5">{documents.length}</span>
           )}
@@ -133,10 +136,10 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
                 <FileIcon fileType={doc.file_type} source={doc.source} />
                 <span className="truncate">{doc.filename}</span>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  {formatFileSize(doc.file_size)}
+                  {formatFileSize(doc.file_size, (value, options) => format.number(value, options))}
                 </span>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  {new Date(doc.created_at).toLocaleDateString(undefined, {
+                  {format.dateTime(new Date(doc.created_at), {
                     month: 'short', day: 'numeric',
                   })}
                 </span>
@@ -163,10 +166,10 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
 
       {expanded && documents.length > 0 && (
         <p className="text-xs text-muted-foreground/70 px-3 pt-2">
-          Documents listed here show what was used for AI extraction.{' '}
+          {t('extractionDescription')}{' '}
           {storageProvider === 'google_drive' && googleDriveFolderId ? (
             <>
-              Raw documents can be found in{' '}
+              {t('rawDocumentsFoundIn')}{' '}
               <a
                 href={`https://drive.google.com/drive/folders/${googleDriveFolderId}`}
                 target="_blank"
@@ -174,11 +177,11 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
                 className="underline underline-offset-4 hover:text-foreground"
               >
                 Google Drive
-              </a>.
+              </a>{t('sentencePeriod')}
             </>
           ) : storageProvider === 'dropbox' && dropboxFolderPath ? (
             <>
-              Raw documents can be found in{' '}
+              {t('rawDocumentsFoundIn')}{' '}
               <a
                 href={`https://www.dropbox.com/home${dropboxFolderPath}`}
                 target="_blank"
@@ -186,12 +189,12 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
                 className="underline underline-offset-4 hover:text-foreground"
               >
                 Dropbox
-              </a>.
+              </a>{t('sentencePeriod')}
             </>
           ) : (
             <>
-              To store and access raw documents, enable a storage option in{' '}
-              <a href="/settings" className="underline underline-offset-4 hover:text-foreground">Settings</a>.
+              {t('enableStorageBefore')}{' '}
+              <a href="/settings" className="underline underline-offset-4 hover:text-foreground">{t('settings')}</a>{t('sentencePeriod')}
             </>
           )}
         </p>
@@ -199,7 +202,7 @@ export function CompanyDocuments({ companyId, storageProvider, googleDriveFolder
 
       {expanded && documents.length === 0 && (
         <p className="text-xs text-muted-foreground px-3 py-2">
-          No documents yet. Upload files from the Analyst above, or documents will appear here from email attachments.
+          {t('empty')}
         </p>
       )}
     </div>

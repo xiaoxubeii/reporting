@@ -100,8 +100,15 @@ export function domainGrantableToMembers(
   domain: Domain,
   features: FeatureVisibilityMap | undefined,
 ): boolean {
-  const level = domainFundLevel(domain, features)
-  return level === null || level === 'everyone'
+  const meta = DOMAIN_META[domain]
+  if (!meta.primaryFeature) return true
+
+  // A domain grant can serve more than one independently switched feature. If any of them is
+  // open to members, the grant is meaningful even when the primary feature remains admin-only.
+  // Example: Feeds and Deals share Dealflow, but opening Feeds must not require opening Deals.
+  return meta.features.some(key => (
+    features?.[key] ?? DEFAULT_FEATURE_VISIBILITY[key]
+  ) === 'everyone')
 }
 
 export const DOMAIN_META: Record<Domain, DomainMeta> = {

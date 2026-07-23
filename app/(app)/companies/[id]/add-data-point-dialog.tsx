@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Metric } from '@/lib/types/database'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface Props {
   open: boolean
@@ -28,6 +29,8 @@ export function AddDataPointDialog({
   metric,
   onSuccess,
 }: Props) {
+  const t = useTranslations('CompanyDetail.dataPoint')
+  const format = useFormatter()
   const [value, setValue] = useState('')
   const [periodYear, setPeriodYear] = useState(new Date().getFullYear().toString())
   const [periodMonth, setPeriodMonth] = useState('')
@@ -38,10 +41,9 @@ export function AddDataPointDialog({
   const buildPeriodLabel = () => {
     const yr = periodYear
     if (periodMonth) {
-      const month = new Date(2000, parseInt(periodMonth) - 1).toLocaleString('en', { month: 'short' })
-      return `${month} ${yr}`
+      return `${yr}-${periodMonth.padStart(2, '0')}`
     }
-    return `Year End ${yr}`
+    return `FY ${yr}`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,17 +53,17 @@ export function AddDataPointDialog({
 
     const pYear = parseInt(periodYear)
     if (isNaN(pYear)) {
-      setError('Invalid year')
+      setError(t('errors.invalidYear'))
       setSaving(false)
       return
     }
 
     const label = buildPeriodLabel()
-    const pMonth = periodMonth ? parseInt(periodMonth) : 12
+    const pMonth = periodMonth ? parseInt(periodMonth) : null
     const body: Record<string, unknown> = {
       period_label: label,
       period_year: pYear,
-      period_quarter: Math.ceil(pMonth / 3),
+      period_quarter: pMonth ? Math.ceil(pMonth / 3) : null,
       period_month: pMonth,
       value: metric.value_type === 'text' ? value : parseFloat(value),
       notes: notes || null,
@@ -78,7 +80,7 @@ export function AddDataPointDialog({
 
     if (!res.ok) {
       const data = await res.json()
-      setError(data.error ?? 'Failed to add data point')
+      setError(data.error ?? t('errors.addFailed'))
       setSaving(false)
       return
     }
@@ -94,13 +96,13 @@ export function AddDataPointDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add data point, {metric.name}</DialogTitle>
+          <DialogTitle>{t('addTitle', { metric: metric.name })}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Year</Label>
+              <Label>{t('year')}</Label>
               <Input
                 type="number"
                 value={periodYear}
@@ -109,16 +111,16 @@ export function AddDataPointDialog({
               />
             </div>
             <div>
-              <Label>Month</Label>
+              <Label>{t('month')}</Label>
               <select
                 value={periodMonth}
                 onChange={(e) => setPeriodMonth(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
               >
-                <option value="">— (year-end / annual)</option>
+                <option value="">{t('yearEndAnnual')}</option>
                 {Array.from({ length: 12 }, (_, i) => (
                   <option key={i + 1} value={String(i + 1)}>
-                    {new Date(2000, i).toLocaleString('en', { month: 'long' })}
+                    {format.dateTime(new Date(2000, i), { month: 'long' })}
                   </option>
                 ))}
               </select>
@@ -127,7 +129,7 @@ export function AddDataPointDialog({
 
           <div>
             <Label>
-              Value
+              {t('value')}
               {metric.unit && (
                 <span className="text-muted-foreground font-normal ml-1">({metric.unit})</span>
               )}
@@ -142,11 +144,11 @@ export function AddDataPointDialog({
           </div>
 
           <div>
-            <Label>Notes (optional)</Label>
+            <Label>{t('notesOptional')}</Label>
             <Input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Source: board deck Q4"
+              placeholder={t('notesPlaceholder')}
             />
           </div>
 
@@ -154,10 +156,10 @@ export function AddDataPointDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Add'}
+              {saving ? t('saving') : t('add')}
             </Button>
           </DialogFooter>
         </form>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { SchemaEditor } from './[name]/schema-editor'
 
@@ -8,14 +9,9 @@ const SCHEMA_ORDER = [
   'rubric', 'qa_library', 'data_room_ingestion', 'research_dossier', 'memo_output', 'style_anchors', 'instructions',
 ] as const
 
-const SCHEMA_LABELS: Record<string, { label: string; description: string }> = {
-  rubric: { label: 'Rubric', description: 'Scoring dimensions, scale, criteria' },
-  qa_library: { label: 'Q&A Library', description: 'Partner Q&A pool, categories, skip logic, references to rubric dimensions' },
-  data_room_ingestion: { label: 'Data Room Ingestion', description: 'Per-document extraction, claims, gap analysis' },
-  research_dossier: { label: 'Research Dossier', description: 'External research, source quality tiers, founder constraints' },
-  memo_output: { label: 'Memo Output', description: 'Memo assembly, sections, paragraph-level provenance, partner-only fields' },
-  style_anchors: { label: 'Style Anchors', description: 'Metadata for uploaded reference memos, voice and structure aggregation rules' },
-  instructions: { label: 'Instructions', description: 'Operating manual, hard rules, six-stage flow, behavioral defaults' },
+interface ActiveSchema {
+  schema_version: string
+  yaml_content: string
 }
 
 /**
@@ -24,7 +20,8 @@ const SCHEMA_LABELS: Record<string, { label: string; description: string }> = {
  * the full SchemaEditor without a second fetch.
  */
 export function SchemasInline() {
-  const [schemas, setSchemas] = useState<Record<string, any> | null>(null)
+  const t = useTranslations('Settings.schemas')
+  const [schemas, setSchemas] = useState<Record<string, ActiveSchema> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [openName, setOpenName] = useState<string | null>(null)
 
@@ -32,16 +29,15 @@ export function SchemasInline() {
     fetch('/api/firm/schemas')
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('failed'))))
       .then(b => setSchemas(b.schemas ?? {}))
-      .catch(() => setError('Could not load schemas.'))
-  }, [])
+      .catch(() => setError(t('loadError')))
+  }, [t])
 
   if (error) return <div className="text-xs text-destructive">{error}</div>
-  if (!schemas) return <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> Loading…</div>
+  if (!schemas) return <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</div>
 
   return (
     <div className="divide-y border-t">
       {SCHEMA_ORDER.map(name => {
-        const meta = SCHEMA_LABELS[name]
         const row = schemas[name]
         const isOpen = openName === name
         return (
@@ -52,11 +48,11 @@ export function SchemasInline() {
             >
               {isOpen ? <ChevronDown className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />}
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium">{meta.label}</div>
-                <div className="text-xs text-muted-foreground">{meta.description}</div>
+                <div className="text-sm font-medium">{t(`items.${name}.label`)}</div>
+                <div className="text-xs text-muted-foreground">{t(`items.${name}.description`)}</div>
               </div>
               <div className="text-right text-xs text-muted-foreground shrink-0">
-                {row ? <span className="font-mono">{row.schema_version}</span> : <span className="italic">not seeded</span>}
+                {row ? <span className="font-mono">{row.schema_version}</span> : <span className="italic">{t('notSeeded')}</span>}
               </div>
             </button>
             {isOpen && (
@@ -64,7 +60,7 @@ export function SchemasInline() {
                 {row ? (
                   <SchemaEditor schemaName={name} initialContent={row.yaml_content ?? ''} initialVersion={row.schema_version ?? ''} embedded />
                 ) : (
-                  <div className="text-xs text-muted-foreground py-2">This schema hasn&apos;t been seeded yet, run the diligence agent once to initialize it.</div>
+                  <div className="text-xs text-muted-foreground py-2">{t('seedHelp')}</div>
                 )}
               </div>
             )}

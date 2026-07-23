@@ -1,0 +1,49 @@
+- generic [active] [ref=f19e1]:
+  - generic [ref=f19e3]:
+    - banner [ref=f19e4]:
+      - generic [ref=f19e5]:
+        - button "Open menu" [ref=f19e6] [cursor=pointer]
+        - generic [ref=f19e13]: test@example.com
+      - button [ref=f19e16] [cursor=pointer]
+    - main [ref=f19e18]:
+      - generic [ref=f19e20]:
+        - generic [ref=f19e21]:
+          - generic [ref=f19e22]:
+            - heading "Today" [level=1] [ref=f19e23]
+            - paragraph [ref=f19e24]: The latest from sources you follow.
+          - generic [ref=f19e25]:
+            - button "Mark all as read" [disabled]
+            - button "Refresh articles" [ref=f19e26] [cursor=pointer]
+        - navigation "Today view" [ref=f19e27]:
+          - link "Me" [ref=f19e28] [cursor=pointer]:
+            - /url: /feeds
+          - link "Explore" [ref=f19e29] [cursor=pointer]:
+            - /url: /feeds?view=explore
+        - generic [ref=f19e30]:
+          - generic "Article filter" [ref=f19e31]:
+            - button "unread" [pressed] [ref=f19e32] [cursor=pointer]
+            - button "all" [ref=f19e33] [cursor=pointer]
+            - button "saved" [ref=f19e34] [cursor=pointer]
+          - generic [ref=f19e35]:
+            - generic [ref=f19e36]: Search articles
+            - textbox "Search articles" [ref=f19e37]
+        - paragraph [ref=f19e38]
+        - generic "Loading articles" [ref=f19e40]
+      - list [ref=f19e78]:
+        - listitem [ref=f19e79]:
+          - text: Made by
+          - link "Hemrock" [ref=f19e80] [cursor=pointer]:
+            - /url: https://hemrock.com
+        - listitem [ref=f19e83]:
+          - link "View on GitHub" [ref=f19e84] [cursor=pointer]:
+            - /url: https://github.com/tdavidson/reporting
+        - listitem [ref=f19e88]:
+          - link "License" [ref=f19e89] [cursor=pointer]:
+            - /url: /license
+        - listitem [ref=f19e94]:
+          - link "Terms" [ref=f19e95] [cursor=pointer]:
+            - /url: /terms
+        - listitem [ref=f19e96]:
+          - link "Privacy" [ref=f19e97] [cursor=pointer]:
+            - /url: /privacy
+  - region "Notifications alt+T"

@@ -2,62 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Loader2, Check, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { recommendedModel } from '@/lib/ai/recommended'
+import { CUSTOM_AI_PROVIDER_LABEL } from '@/lib/ai/custom-provider'
 
 const STAGES = ['ingest', 'ingest_synthesis', 'checklist_assessment', 'research', 'qa', 'draft', 'draft_review', 'score'] as const
 type Stage = typeof STAGES[number]
 
 const FEATURES = ['deal_classify', 'deal_analysis', 'portfolio'] as const
 type Feature = typeof FEATURES[number]
-
-const FEATURE_LABEL: Record<Feature, string> = {
-  deal_classify: 'Deals: inbound email classifier',
-  deal_analysis: 'Deals: deal screening / analysis',
-  portfolio: 'Inbound analysis / portfolio tracking',
-}
-
-const FEATURE_HINT: Record<Feature, string> = {
-  deal_classify: 'Routes every inbound email to reporting, interactions, deals, or other.',
-  deal_analysis: 'Screens each pitch: thesis fit, field extraction, and duplicate detection.',
-  portfolio: 'Extracts company updates and metrics from inbound reporting emails.',
-}
-
-const STAGE_LABEL: Record<Stage, string> = {
-  ingest: 'Stage 1a, Ingest (per-doc)',
-  ingest_synthesis: 'Stage 1b, Ingest synthesis',
-  checklist_assessment: 'Stage 1c, Checklist assessment',
-  research: 'Stage 2, Research',
-  qa: 'Stage 3, Q&A',
-  draft: 'Stage 4, Draft (outline + fills)',
-  draft_review: 'Stage 4c, Draft review',
-  score: 'Stage 5, Score',
-}
-
-// Speed-vs-depth tradeoff hint per stage. Stages with heavy structured I/O
-// and modest reasoning are good Haiku candidates; stages that produce prose
-// or do deep multi-source reasoning are better on Sonnet/Opus.
-const STAGE_HINT: Record<Stage, string> = {
-  ingest:           'Structured extraction from each document in the data room.',
-  ingest_synthesis: 'Cross-document gap analysis and conflict detection over the per-doc summaries.',
-  checklist_assessment: 'Matches data-room findings to each checklist item.',
-  research:         'Verifies findings via web search, maps competitors, and builds founder dossiers.',
-  qa:               'Interactive partner Q&A about the deal.',
-  draft:            'Writes the memo — outline, then the section prose.',
-  draft_review:     'Edits the first draft: the quality pass over the whole memo.',
-  score:            'Scores the deal against the rubric, with rationale.',
-}
-
-const PROVIDER_LABEL: Record<string, string> = {
-  '': 'Use fund default',
-  anthropic: 'Anthropic (Claude)',
-  openai: 'OpenAI',
-  gemini: 'Gemini',
-  ollama: 'Ollama (self-hosted)',
-  openrouter: 'OpenRouter',
-}
 
 const PROVIDER_MODELS_ENDPOINT: Record<string, string> = {
   anthropic: '/api/claude-models',
@@ -105,6 +61,7 @@ function ModelRow({ label, hint, recommendedKey, current, onChange, defaultProvi
   modelsByProvider: Record<string, AIModel[]>
   loadingProviders: Set<string>
 }) {
+  const t = useTranslations('Settings.defaults')
   const effProvider = current?.provider || defaultProvider
   const effModel = current?.model || recommendedModel(recommendedKey, effProvider, defaultModels[effProvider] ?? '')
   const models = modelsByProvider[effProvider]
@@ -121,7 +78,7 @@ function ModelRow({ label, hint, recommendedKey, current, onChange, defaultProvi
           onChange={e => onChange(e.target.value, undefined)}
           className="h-9 px-2 rounded-md border border-input bg-background text-sm"
         >
-          {PROVIDERS.map(v => <option key={v} value={v}>{PROVIDER_LABEL[v]}</option>)}
+          {PROVIDERS.map(v => <option key={v} value={v}>{v === 'ollama' ? t('providers.ollama') : v === 'openrouter' ? CUSTOM_AI_PROVIDER_LABEL : v === 'anthropic' ? 'Anthropic (Claude)' : v === 'openai' ? 'OpenAI' : 'Gemini'}</option>)}
         </select>
         {models && models.length > 0 ? (
           <select
@@ -136,7 +93,7 @@ function ModelRow({ label, hint, recommendedKey, current, onChange, defaultProvi
           <Input
             value={effModel}
             onChange={e => onChange(effProvider, e.target.value || undefined)}
-            placeholder={loading ? 'Loading models…' : 'Model id'}
+            placeholder={loading ? t('loadingModels') : t('modelId')}
             className="font-mono text-xs"
             disabled={loading}
           />
@@ -149,6 +106,8 @@ function ModelRow({ label, hint, recommendedKey, current, onChange, defaultProvi
 type EditorSection = 'caps' | 'stages' | 'features' | 'export'
 
 export function DefaultsEditor({ embedded, section }: { embedded?: boolean; section?: EditorSection } = {}) {
+  const locale = useLocale()
+  const t = useTranslations('Settings.defaults')
   // When a section is set, render + save only that slice (so the editor can be
   // split across several settings locations without instances clobbering each
   // other's fields on save).
@@ -246,13 +205,13 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
       })
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}))
-        throw new Error(errBody.error ?? 'Save failed')
+        throw new Error(errBody.error ?? t('saveFailed'))
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(err instanceof Error ? err.message : t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -280,11 +239,11 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
     try {
       const res = await fetch('/api/transcription/test')
       const body = await res.json()
-      if (!res.ok) throw new Error(body?.error ?? 'Test failed')
+      if (!res.ok) throw new Error(body?.error ?? t('testFailed'))
       setDgResult(body)
     } catch (err) {
       setDgResult({
-        deepgram: { ok: false, detail: err instanceof Error ? err.message : 'Test failed' },
+        deepgram: { ok: false, detail: err instanceof Error ? err.message : t('testFailed') },
         webhook_secret_set: false,
         webhook_url_resolvable: false,
         ready: false,
@@ -294,9 +253,9 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
     }
   }
 
-  if (!data) return <div className="p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading…</div>
+  if (!data) return <div className="p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />{t('loading')}</div>
 
-  const monthName = new Date(data.month_window.from).toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  const monthName = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(data.month_window.from))
   const monthlyPct = data.monthly_token_cap ? Math.min(100, (data.monthly_used / data.monthly_token_cap) * 100) : 0
 
   return (
@@ -304,12 +263,11 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
       {!embedded && (
         <>
           <Link href="/settings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to settings
+            <ArrowLeft className="h-3.5 w-3.5" /> {t('back')}
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight mb-1">Diligence Defaults</h1>
+          <h1 className="text-2xl font-semibold tracking-tight mb-1">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
-            Cost guardrails and per-stage AI provider overrides. Caps are checked before each agent
-            stage runs; if the estimate would exceed a cap, the run is blocked.
+            {t('description')}
           </p>
         </>
       )}
@@ -319,41 +277,46 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
       <div className="space-y-4">
         {show('caps') && (
           <div className="space-y-3 text-sm">
-            <div className="text-sm font-medium">Token caps</div>
+            <div className="text-sm font-medium">{t('tokenCaps')}</div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Per-deal cap</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">{t('perDealCap')}</label>
                 <Input
                   type="number"
                   value={perDeal}
                   onChange={e => setPerDeal(e.target.value)}
-                  placeholder="(unlimited)"
+                  placeholder={t('unlimited')}
                   className="font-mono"
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Maximum total tokens (input + output) across all stages for a single deal. Blank = no cap.
+                  {t('perDealHelp')}
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Monthly cap (fund-wide)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">{t('monthlyCap')}</label>
                 <Input
                   type="number"
                   value={monthly}
                   onChange={e => setMonthly(e.target.value)}
-                  placeholder="(unlimited)"
+                  placeholder={t('unlimited')}
                   className="font-mono"
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Tracks the calendar month. Resets at month rollover.
+                  {t('monthlyHelp')}
                 </p>
               </div>
             </div>
 
             <div className="rounded-md border bg-muted/20 p-3">
               <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-medium">{monthName}, usage</span>
+                <span className="font-medium">{t('monthUsage', { month: monthName })}</span>
                 <span className="font-mono text-muted-foreground">
-                  {data.monthly_used.toLocaleString()}{data.monthly_token_cap ? ` / ${data.monthly_token_cap.toLocaleString()}` : ''} tokens
+                  {data.monthly_token_cap
+                    ? t('tokenUsageWithCap', {
+                        used: new Intl.NumberFormat(locale).format(data.monthly_used),
+                        cap: new Intl.NumberFormat(locale).format(data.monthly_token_cap),
+                      })
+                    : t('tokenUsageNoCap', { used: new Intl.NumberFormat(locale).format(data.monthly_used) })}
                 </span>
               </div>
               {data.monthly_token_cap && (
@@ -373,8 +336,8 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
             {STAGES.map(stage => (
               <ModelRow
                 key={stage}
-                label={STAGE_LABEL[stage]}
-                hint={STAGE_HINT[stage]}
+                label={t(`stages.${stage}.label`)}
+                hint={t(`stages.${stage}.hint`)}
                 recommendedKey={stage}
                 current={stageModels[stage]}
                 onChange={(provider, model) => setStage(stage, provider, model)}
@@ -392,8 +355,8 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
             {FEATURES.map(feature => (
               <ModelRow
                 key={feature}
-                label={FEATURE_LABEL[feature]}
-                hint={FEATURE_HINT[feature]}
+                label={t(`features.${feature}.label`)}
+                hint={t(`features.${feature}.hint`)}
                 recommendedKey={feature}
                 current={featureModels[feature]}
                 onChange={(provider, model) => setFeature(feature, provider, model)}
@@ -408,7 +371,7 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
 
         {show('caps') && (
           <div className="space-y-2 text-sm">
-            <div className="text-sm font-medium">Research web search</div>
+            <div className="text-sm font-medium">{t('webSearch.title')}</div>
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -417,12 +380,12 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
                 className="mt-0.5"
               />
               <div className="space-y-1">
-                <div className="font-medium">Enable Anthropic web search during research</div>
+                <div className="font-medium">{t('webSearch.enable')}</div>
                 <p className="text-xs text-muted-foreground max-w-2xl">
-                  When on, Stage 2 attaches Anthropic&apos;s <span className="font-mono">web_search</span> tool so the
-                  agent can verify claims against external sources and cite URLs in findings. Only active when the
-                  research stage is running on Anthropic. <span className="font-medium text-foreground">Adds external billing
-                  </span> at Anthropic&apos;s rate (~$10 per 1,000 searches) on top of token usage; capped at 5 searches per run.
+                  {t.rich('webSearch.help', {
+                    tool: chunks => <span className="font-mono">{chunks}</span>,
+                    billing: chunks => <span className="font-medium text-foreground">{chunks}</span>,
+                  })}
                 </p>
               </div>
             </label>
@@ -431,14 +394,13 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
 
         {show('export') && (
         <div className="space-y-3 text-sm">
-            <div className="text-sm font-medium">Memo export formatting</div>
+            <div className="text-sm font-medium">{t('export.title')}</div>
             <p className="text-xs text-muted-foreground max-w-2xl">
-              Base font and size for Word / Google Doc exports. Headings scale from the base size.
-              Citations and the appendix are omitted from exported documents.
+              {t('export.description')}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Base font</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">{t('export.baseFont')}</label>
                 <input
                   list="export-font-options"
                   value={exportFont}
@@ -450,12 +412,11 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
                   {EXPORT_FONT_OPTIONS.map(f => <option key={f} value={f} />)}
                 </datalist>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Any font name is accepted. Google Docs renders web fonts like DM Sans natively; Word
-                  substitutes if the font isn&apos;t installed locally.
+                  {t('export.fontHelp')}
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Base font size (pt)</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">{t('export.fontSize')}</label>
                 <Input
                   type="number"
                   min={6}
@@ -465,7 +426,7 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
                   placeholder="11"
                   className="font-mono"
                 />
-                <p className="text-[11px] text-muted-foreground mt-1">Body text size. 6–32pt.</p>
+                <p className="text-[11px] text-muted-foreground mt-1">{t('export.sizeHelp')}</p>
               </div>
             </div>
         </div>
@@ -473,30 +434,29 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
 
         {show('stages') && (
           <div className="space-y-3 text-sm pt-1">
-            <div className="text-sm font-medium">Call transcription (Deepgram)</div>
+            <div className="text-sm font-medium">{t('transcription.title')}</div>
             <p className="text-xs text-muted-foreground max-w-2xl">
-              Audio/video recordings uploaded to a deal&apos;s data room are transcribed via Deepgram.
-              Test that the API key and webhook environment are configured correctly.
+              {t('transcription.description')}
             </p>
             <Button variant="outline" size="sm" onClick={testTranscription} disabled={dgTesting}>
               {dgTesting ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
-              Test Deepgram connection
+              {t('transcription.test')}
             </Button>
             {dgResult && (
               <div className="rounded-md border bg-muted/20 p-3 space-y-1.5 text-xs">
-                <ResultRow ok={dgResult.deepgram.ok} label="Deepgram API" detail={dgResult.deepgram.detail} />
+                <ResultRow ok={dgResult.deepgram.ok} label={t('transcription.deepgramApi')} detail={dgResult.deepgram.detail} />
                 <ResultRow
                   ok={dgResult.webhook_secret_set}
-                  label="Webhook secret"
-                  detail={dgResult.webhook_secret_set ? 'TRANSCRIPTION_WEBHOOK_SECRET is set.' : 'TRANSCRIPTION_WEBHOOK_SECRET is missing.'}
+                  label={t('transcription.webhookSecret')}
+                  detail={dgResult.webhook_secret_set ? t('transcription.secretSet') : t('transcription.secretMissing')}
                 />
                 <ResultRow
                   ok={dgResult.webhook_url_resolvable}
-                  label="Webhook URL"
-                  detail={dgResult.webhook_url_resolvable ? 'A callback base URL is resolvable.' : 'No callback base URL (set TRANSCRIPTION_WEBHOOK_URL or NEXT_PUBLIC_SITE_URL).'}
+                  label={t('transcription.webhookUrl')}
+                  detail={dgResult.webhook_url_resolvable ? t('transcription.urlReady') : t('transcription.urlMissing')}
                 />
                 <div className={`pt-1 font-medium ${dgResult.ready ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                  {dgResult.ready ? 'Transcription is ready to use.' : 'Transcription is not fully configured.'}
+                  {dgResult.ready ? t('transcription.ready') : t('transcription.notReady')}
                 </div>
               </div>
             )}
@@ -506,7 +466,7 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : saved ? <Check className="h-4 w-4 mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-            {saved ? 'Saved' : 'Save'}
+            {saved ? t('saved') : t('save')}
           </Button>
         </div>
       </div>

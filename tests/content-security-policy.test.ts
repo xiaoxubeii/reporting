@@ -83,6 +83,16 @@ describe('Content Security Policy', () => {
 
     expect(csp).not.toContain('supabase.internal.example')
   })
+
+  it('rejects cleartext loopback Supabase origins in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:8000')
+
+    const csp = await contentSecurityPolicy()
+
+    expect(csp).not.toContain('http://127.0.0.1:8000')
+    expect(csp).not.toContain('ws://127.0.0.1:8000')
+  })
 })
 
 describe('Supabase browser proxy', () => {

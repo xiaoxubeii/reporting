@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { IngestionOutput } from '@/lib/memo-agent/stages/ingest'
+import { useFormatter, useTranslations } from 'next-intl'
 
 const CRIT_BADGE: Record<string, string> = {
   blocker: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
@@ -31,6 +32,11 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
   draftId?: string
   editable?: boolean
 }) {
+  const t = useTranslations('Diligence.ingestion')
+  const levelLabels: Record<string, string> = {
+    blocker: t('levels.blocker'), important: t('levels.important'), nice_to_have: t('levels.niceToHave'),
+    high: t('levels.high'), material: t('levels.material'), medium: t('levels.medium'), minor: t('levels.minor'), low: t('levels.low'),
+  }
   const totalClaims = output.documents.reduce((acc, d) => acc + d.claims.length, 0)
   const canEdit = !!(editable && dealId && draftId)
 
@@ -54,10 +60,10 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
       })
       if (!res.ok) {
         const b = await res.json().catch(() => ({}))
-        throw new Error(b.error ?? 'Save failed')
+        throw new Error(b.error ?? t('saveFailed'))
       }
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Save failed')
+      setSaveError(err instanceof Error ? err.message : t('saveFailed'))
       setGap(gap)  // revert
     }
   }
@@ -67,9 +73,9 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-3 text-sm">
-        <Stat label="Documents" value={output.documents.length} />
-        <Stat label="Findings extracted" value={totalClaims} />
-        <Stat label="Missing docs" value={activeMissing} />
+        <Stat label={t('stats.documents')} value={output.documents.length} />
+        <Stat label={t('stats.findings')} value={totalClaims} />
+        <Stat label={t('stats.missing')} value={activeMissing} />
       </div>
 
       {saveError && (
@@ -79,15 +85,15 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
       {gap.missing.length > 0 && (
         <section>
           <h3 className="text-sm font-medium mb-2">
-            Missing documents
-            {canEdit && <span className="ml-2 text-xs font-normal text-muted-foreground">— dismiss anything the agent flagged wrongly</span>}
+            {t('missingDocuments')}
+            {canEdit && <span className="ml-2 text-xs font-normal text-muted-foreground">— {t('dismissHelp')}</span>}
           </h3>
           <div className="rounded-md border bg-card divide-y">
             {gap.missing.map((g, i) => (
               <div key={i} className={`p-3 text-sm flex items-start gap-2 ${g.dismissed ? 'opacity-50' : ''}`}>
-                <Crit level={g.criticality}>{g.criticality.replace(/_/g, ' ')}</Crit>
+                <Crit level={g.criticality}>{levelLabels[g.criticality] ?? g.criticality}</Crit>
                 <div className="flex-1 min-w-0">
-                  <div className={`font-medium ${g.dismissed ? 'line-through' : ''}`}>{g.expected_type ?? 'Unknown'}</div>
+                  <div className={`font-medium ${g.dismissed ? 'line-through' : ''}`}>{g.expected_type ?? t('unknown')}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">{g.rationale}</div>
                 </div>
                 {canEdit && (
@@ -95,7 +101,7 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
                     onClick={() => setDismissed('missing', i, !g.dismissed)}
                     className="shrink-0 text-[11px] text-muted-foreground hover:text-foreground"
                   >
-                    {g.dismissed ? 'Restore' : 'Dismiss'}
+                    {g.dismissed ? t('restore') : t('dismiss')}
                   </button>
                 )}
               </div>
@@ -107,15 +113,15 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
       {gap.inadequate.length > 0 && (
         <section>
           <h3 className="text-sm font-medium mb-2">
-            Inadequate documents
-            {canEdit && <span className="ml-2 text-xs font-normal text-muted-foreground">— dismiss anything the agent flagged wrongly</span>}
+            {t('inadequateDocuments')}
+            {canEdit && <span className="ml-2 text-xs font-normal text-muted-foreground">— {t('dismissHelp')}</span>}
           </h3>
           <div className="rounded-md border bg-card divide-y">
             {gap.inadequate.map((g, i) => (
               <div key={i} className={`p-3 text-sm flex items-start gap-2 ${g.dismissed ? 'opacity-50' : ''}`}>
-                <Crit level={g.criticality}>{g.criticality.replace(/_/g, ' ')}</Crit>
+                <Crit level={g.criticality}>{levelLabels[g.criticality] ?? g.criticality}</Crit>
                 <div className="flex-1 min-w-0">
-                  <div className={`font-medium ${g.dismissed ? 'line-through' : ''}`}>{g.document_id ? (fileNamesById[g.document_id] ?? g.document_id) : 'Unknown'}</div>
+                  <div className={`font-medium ${g.dismissed ? 'line-through' : ''}`}>{g.document_id ? (fileNamesById[g.document_id] ?? g.document_id) : t('unknown')}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">{g.rationale}</div>
                 </div>
                 {canEdit && (
@@ -123,7 +129,7 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
                     onClick={() => setDismissed('inadequate', i, !g.dismissed)}
                     className="shrink-0 text-[11px] text-muted-foreground hover:text-foreground"
                   >
-                    {g.dismissed ? 'Restore' : 'Dismiss'}
+                    {g.dismissed ? t('restore') : t('dismiss')}
                   </button>
                 )}
               </div>
@@ -133,14 +139,14 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
       )}
 
       <section>
-        <h3 className="text-sm font-medium mb-2">Per-document extraction</h3>
+        <h3 className="text-sm font-medium mb-2">{t('perDocument')}</h3>
         <div className="space-y-3">
           {output.documents.map(doc => (
             <div key={doc.document_id} className="rounded-md border bg-card">
               <div className="p-3 border-b">
                 <div className="font-medium text-sm">{fileNamesById[doc.document_id] ?? doc.document_id}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {doc.detected_type} <span className="text-muted-foreground">· {doc.type_confidence} confidence · {doc.claims.length} finding{doc.claims.length === 1 ? '' : 's'}</span>
+                  {doc.detected_type} <span className="text-muted-foreground">· {t('documentSummary', { confidence: doc.type_confidence, count: doc.claims.length })}</span>
                 </div>
                 {doc.summary && <p className="text-sm mt-2">{doc.summary}</p>}
                 {doc.issues && doc.issues.length > 0 && (
@@ -152,12 +158,12 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
               {doc.claims.length > 0 && (
                 <details className="text-sm">
                   <summary className="px-3 py-2 cursor-pointer text-xs text-muted-foreground hover:bg-muted/30">
-                    Show findings
+                    {t('showFindings')}
                   </summary>
                   <div className="px-3 pb-3 space-y-1">
                     {doc.claims.map(c => (
                       <div key={c.id} className="flex items-start gap-2 text-xs">
-                        <Crit level={c.criticality}>{c.criticality}</Crit>
+                        <Crit level={c.criticality}>{levelLabels[c.criticality] ?? c.criticality}</Crit>
                         <div className="min-w-0 flex-1">
                           <span className="font-medium">{c.field}</span>
                           <span className="ml-2">{c.value}</span>
@@ -177,9 +183,10 @@ export function IngestionSummary({ output, fileNamesById, dealId, draftId, edita
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
+  const format = useFormatter()
   return (
     <div className="rounded-md border bg-card p-3">
-      <div className="text-2xl font-semibold tracking-tight">{value}</div>
+      <div className="text-2xl font-semibold tracking-tight">{format.number(value)}</div>
       <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
     </div>
   )
@@ -200,6 +207,10 @@ export function InconsistenciesList({ contradictions, crossDocFlags, fileNamesBy
   draftId?: string
   editable?: boolean
 }) {
+  const t = useTranslations('Diligence.ingestion')
+  const levelLabels: Record<string, string> = {
+    high: t('levels.high'), material: t('levels.material'), medium: t('levels.medium'), minor: t('levels.minor'), low: t('levels.low'),
+  }
   const canEdit = !!(editable && dealId && draftId)
   // Local copy so re-rate / dismiss toggles are instant; resync when new
   // ingestion output arrives (e.g. after a re-analyze).
@@ -219,10 +230,10 @@ export function InconsistenciesList({ contradictions, crossDocFlags, fileNamesBy
       })
       if (!res.ok) {
         const b = await res.json().catch(() => ({}))
-        throw new Error(b.error ?? 'Save failed')
+        throw new Error(b.error ?? t('saveFailed'))
       }
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Save failed')
+      setSaveError(err instanceof Error ? err.message : t('saveFailed'))
       setFlags(flags) // revert
     }
   }
@@ -238,7 +249,7 @@ export function InconsistenciesList({ contradictions, crossDocFlags, fileNamesBy
   ].sort((a, b) => (SEV_RANK[a.sev] ?? 1) - (SEV_RANK[b.sev] ?? 1))
 
   if (rows.length === 0) {
-    return <p className="text-xs text-muted-foreground italic">No contradictions or cross-document inconsistencies found.</p>
+    return <p className="text-xs text-muted-foreground italic">{t('noInconsistencies')}</p>
   }
 
   return (
@@ -250,7 +261,7 @@ export function InconsistenciesList({ contradictions, crossDocFlags, fileNamesBy
         {rows.map((r, i) => (
           r.kind === 'contradiction' ? (
             <div key={`c-${i}`} className="p-3 text-sm flex items-start gap-2">
-              <Crit level={r.sev}>{r.sev}</Crit>
+              <Crit level={r.sev}>{levelLabels[r.sev] ?? r.sev}</Crit>
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{r.topic}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">{r.description}</div>
@@ -263,19 +274,19 @@ export function InconsistenciesList({ contradictions, crossDocFlags, fileNamesBy
                   value={r.sev}
                   onChange={e => setCrossFlag(r.idx, { severity: e.target.value as 'high' | 'medium' | 'low' })}
                   className={`shrink-0 cursor-pointer rounded px-1 py-0.5 text-[10px] font-medium border-0 outline-none ${CRIT_BADGE[r.sev] ?? CRIT_BADGE.medium}`}
-                  title="Severity"
+                  title={t('severityLabel')}
                 >
-                  <option value="high">high</option>
-                  <option value="medium">medium</option>
-                  <option value="low">low</option>
+                  <option value="high">{levelLabels.high}</option>
+                  <option value="medium">{levelLabels.medium}</option>
+                  <option value="low">{levelLabels.low}</option>
                 </select>
               ) : (
-                <Crit level={r.sev}>{r.sev}</Crit>
+                <Crit level={r.sev}>{levelLabels[r.sev] ?? r.sev}</Crit>
               )}
               <div className="flex-1 min-w-0">
                 <div className={r.dismissed ? 'line-through' : ''}>{r.description}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Across: {r.doc_ids.map(id => fileNamesById[id] ?? id).join(', ')}
+                  {t('across', { sources: r.doc_ids.map(id => fileNamesById[id] ?? id).join(', ') })}
                 </div>
               </div>
               {canEdit && (
@@ -283,7 +294,7 @@ export function InconsistenciesList({ contradictions, crossDocFlags, fileNamesBy
                   onClick={() => setCrossFlag(r.idx, { dismissed: !r.dismissed })}
                   className="shrink-0 text-[11px] text-muted-foreground hover:text-foreground"
                 >
-                  {r.dismissed ? 'Restore' : 'Dismiss'}
+                  {r.dismissed ? t('restore') : t('dismiss')}
                 </button>
               )}
             </div>

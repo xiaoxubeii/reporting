@@ -9,6 +9,7 @@ import { usePanelContext } from './company-panel-context'
 import { useAnalystContext } from '@/components/analyst-context'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 import { MobileDrawerPanel } from '@/components/mobile-drawer-panel'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface Note {
   id: string
@@ -22,22 +23,8 @@ interface Note {
   edited: boolean
 }
 
-function formatRelativeTime(dateStr: string) {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHr = Math.floor(diffMs / 3600000)
-  const diffDay = Math.floor(diffMs / 86400000)
-
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  if (diffHr < 24) return `${diffHr}h ago`
-  if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 export function ChatButton() {
+  const t = useTranslations('CompanyDetail.notes')
   const { notesOpen, toggleNotes, unreadCount } = usePanelContext()
   const fv = useFeatureVisibility()
   const notesAdminOnly = fv.notes === 'admin'
@@ -54,7 +41,7 @@ export function ChatButton() {
           <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
         )}
       </span>
-      Notes
+      {t('title')}
       {notesAdminOnly && <Lock className="h-3 w-3 text-amber-500" />}
       {!notesOpen && unreadCount > 0 && (
         <span className="text-[10px] font-medium bg-blue-500 text-white rounded-full px-1 min-w-[16px] text-center">
@@ -75,6 +62,8 @@ export function CompanyNotesPanel() {
 }
 
 function NotesPanel() {
+  const t = useTranslations('CompanyDetail.notes')
+  const format = useFormatter()
   const { companyId, userId, isAdmin, inputRef, closeNotes, setUnreadCount } = usePanelContext()
   const { fundName } = useAnalystContext()
   const [notes, setNotes] = useState<Note[]>([])
@@ -86,6 +75,20 @@ function NotesPanel() {
   const [members, setMembers] = useState<MentionMember[]>([])
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([])
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  function formatRelativeTime(dateStr: string) {
+    const date = new Date(dateStr)
+    const diffMs = Date.now() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    const diffHr = Math.floor(diffMs / 3600000)
+    const diffDay = Math.floor(diffMs / 86400000)
+
+    if (diffMin < 1) return t('relative.justNow')
+    if (diffMin < 60) return t('relative.minutes', { count: diffMin })
+    if (diffHr < 24) return t('relative.hours', { count: diffHr })
+    if (diffDay < 7) return t('relative.days', { count: diffDay })
+    return format.dateTime(date, { month: 'short', day: 'numeric' })
+  }
 
   useEffect(() => {
     fetch('/api/notes/members').then(r => r.json()).then(data => {
@@ -190,7 +193,7 @@ function NotesPanel() {
     <div className="flex flex-col h-full">
     <div className="max-h-[80vh] lg:max-h-[calc(100vh-6rem)] rounded-lg border bg-card flex flex-col flex-1">
       <div className="px-4 py-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-muted-foreground">Notes</h2>
+        <h2 className="text-sm font-medium text-muted-foreground">{t('title')}</h2>
         <button onClick={closeNotes} className="hidden lg:block">
           <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
         </button>
@@ -198,10 +201,10 @@ function NotesPanel() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-3 space-y-3">
         {loading && (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">{t('loading')}</p>
         )}
         {!loading && notes.length === 0 && (
-          <p className="text-sm text-muted-foreground">No notes yet.</p>
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
         )}
         {notes.map(note => (
           <div key={note.id} className="group">
@@ -216,7 +219,7 @@ function NotesPanel() {
                 {formatRelativeTime(note.createdAt)}
               </span>
               {note.edited && (
-                <span className="text-[10px] text-muted-foreground italic">edited</span>
+                <span className="text-[10px] text-muted-foreground italic">{t('edited')}</span>
               )}
               <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-auto flex items-center gap-1">
                 {note.userId === userId && (
@@ -280,7 +283,7 @@ function NotesPanel() {
                 handlePost()
               }
             }}
-            placeholder="Write a note... (@ to tag people or companies)"
+            placeholder={t('placeholder')}
             rows={2}
             className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
@@ -296,7 +299,7 @@ function NotesPanel() {
       </div>
     </div>
     <p className="text-[10px] text-muted-foreground/60 text-center mt-3 px-4">
-      All chat history is saved by {fundName}.
+      {t('historySavedBy', { fundName })}
     </p>
     </div>
   )

@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, Loader2, Inbox } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface InboxItem {
   id: string
@@ -40,12 +40,14 @@ const URGENCY_BADGE: Record<string, string> = {
 }
 
 export function InboxView() {
+  const t = useTranslations('Diligence.inbox')
+  const format = useFormatter()
   const [data, setData] = useState<InboxResponse | null>(null)
   const [statusFilter, setStatusFilter] = useState<'open' | 'ignore' | 'done' | 'all'>('open')
   const [urgencyFilter, setUrgencyFilter] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams()
     params.set('status', statusFilter)
@@ -53,9 +55,9 @@ export function InboxView() {
     const res = await fetch(`/api/diligence/inbox?${params}`)
     if (res.ok) setData(await res.json())
     setLoading(false)
-  }
+  }, [statusFilter, urgencyFilter])
 
-  useEffect(() => { load() }, [statusFilter, urgencyFilter])
+  useEffect(() => { load() }, [load])
 
   async function updateStatus(item: InboxItem, status: 'open' | 'ignore' | 'done') {
     setData(prev => prev ? {
@@ -76,10 +78,10 @@ export function InboxView() {
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Inbox className="h-5 w-5" /> Inbox
+            <Inbox className="h-5 w-5" /> {t('title')}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Open items across every active deal
+            {t('description')}
           </p>
         </div>
       </div>
@@ -98,7 +100,7 @@ export function InboxView() {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {s}{data && s !== 'all' ? <span className="ml-1.5 opacity-60">({data.counts[s]})</span> : null}
+              {t(`statuses.${s}`)}{data && s !== 'all' ? <span className="ml-1.5 opacity-60">({format.number(data.counts[s])})</span> : null}
             </button>
           ))}
         </div>
@@ -107,21 +109,21 @@ export function InboxView() {
           onChange={e => setUrgencyFilter(e.target.value)}
           className="h-9 px-3 rounded-md border border-input bg-background text-sm"
         >
-          <option value="">All urgencies</option>
-          <option value="must_address">Must address {data ? `(${data.counts.must_address})` : ''}</option>
-          <option value="should_address">Should address {data ? `(${data.counts.should_address})` : ''}</option>
-          <option value="fyi">FYI {data ? `(${data.counts.fyi})` : ''}</option>
+          <option value="">{t('allUrgencies')}</option>
+          <option value="must_address">{t('urgencies.mustAddress')} {data ? `(${format.number(data.counts.must_address)})` : ''}</option>
+          <option value="should_address">{t('urgencies.shouldAddress')} {data ? `(${format.number(data.counts.should_address)})` : ''}</option>
+          <option value="fyi">{t('urgencies.fyi')} {data ? `(${format.number(data.counts.fyi)})` : ''}</option>
         </select>
       </div>
 
       {loading ? (
         <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
+          <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> {t('loading')}
         </div>
       ) : !data || data.items.length === 0 ? (
         <div className="rounded-md border bg-card p-12 text-center text-sm text-muted-foreground">
           <AlertTriangle className="h-6 w-6 mx-auto mb-2 opacity-40" />
-          No items match the current filters.
+          {t('empty')}
         </div>
       ) : (
         <div className="rounded-md border bg-card divide-y">
@@ -129,7 +131,7 @@ export function InboxView() {
             <div key={item.id} className="p-3">
               <div className="flex items-start gap-2">
                 <span className={`shrink-0 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${URGENCY_BADGE[item.urgency] ?? ''}`}>
-                  {item.urgency.replace(/_/g, ' ')}
+                  {item.urgency === 'must_address' ? t('urgencies.mustAddress') : item.urgency === 'should_address' ? t('urgencies.shouldAddress') : t('urgencies.fyi')}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -141,7 +143,7 @@ export function InboxView() {
                   </div>
                   <p className="text-sm mt-1">{item.body}</p>
                   <div className="text-[11px] text-muted-foreground mt-1">
-                    {new Date(item.created_at).toLocaleString()}
+                    {format.dateTime(new Date(item.created_at), { dateStyle: 'medium', timeStyle: 'short' })}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {item.draft_id && (
@@ -149,21 +151,21 @@ export function InboxView() {
                         href={`/diligence/${item.deal_id}/drafts/${item.draft_id}`}
                         className="text-[11px] underline text-muted-foreground hover:text-foreground"
                       >
-                        Open in editor
+                        {t('actions.openEditor')}
                       </Link>
                     )}
                     {item.status === 'open' ? (
                       <>
                         <button onClick={() => updateStatus(item, 'done')} className="text-[11px] underline text-muted-foreground hover:text-foreground">
-                          Mark done
+                          {t('actions.markDone')}
                         </button>
                         <button onClick={() => updateStatus(item, 'ignore')} className="text-[11px] underline text-muted-foreground hover:text-foreground">
-                          Ignore
+                          {t('actions.ignore')}
                         </button>
                       </>
                     ) : (
                       <button onClick={() => updateStatus(item, 'open')} className="text-[11px] underline text-muted-foreground hover:text-foreground">
-                        Reopen
+                        {t('actions.reopen')}
                       </button>
                     )}
                   </div>

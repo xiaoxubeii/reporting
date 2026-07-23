@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, ArrowLeft, Printer, FileDown, Calendar, Search, X, CheckSquare, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,6 +46,8 @@ function totalsOf(rows: ReportCardRow[]): ReportCardTotals {
 }
 
 export default function LiveCardsPage() {
+  const t = useTranslations('LPs.cards')
+  const locale = useLocale()
   const [asOf, setAsOf] = useState('')
   const [applied, setApplied] = useState('')
   const [data, setData] = useState<Payload | null>(null)
@@ -71,10 +74,10 @@ export default function LiveCardsPage() {
     if (data && !touched) setSelected(new Set(data.investors.map(i => i.investorId)))
   }, [data, touched])
 
-  const investors = data?.investors ?? []
+  const investors = useMemo(() => data?.investors ?? [], [data])
   const allGroups = useMemo(
-    () => Array.from(new Set(investors.flatMap(i => i.rows.map(r => r.portfolioGroup)))).sort(),
-    [investors],
+    () => Array.from(new Set(investors.flatMap(i => i.rows.map(r => r.portfolioGroup)))).sort(new Intl.Collator(locale).compare),
+    [investors, locale],
   )
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -88,7 +91,12 @@ export default function LiveCardsPage() {
 
   function toggle(id: string) {
     setTouched(true)
-    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
   function toggleAll() {
     setTouched(true)
@@ -113,15 +121,15 @@ export default function LiveCardsPage() {
           asOf: applied || undefined,
           investorIds: selectedInvestors.map(i => i.investorId),
           excludedGroups: Array.from(excludedGroups),
-          snapshotName: `LP Report${asOfLabel ? ` — ${asOfLabel}` : ''}`,
+          snapshotName: t('reportName', { date: asOfLabel ? ` — ${asOfLabel}` : '' }),
         }),
       })
-      if (!res.ok) { const e = await res.json().catch(() => ({})); alert(`PDF generation failed: ${e?.error ?? res.statusText}`); return }
+      if (!res.ok) { const e = await res.json().catch(() => ({})); alert(t('pdfError', { error: e?.error ?? res.statusText })); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'LP Reports - Individual PDFs.zip'
+      a.download = t('zipFilename')
       a.click()
       URL.revokeObjectURL(url)
     } finally {
@@ -137,49 +145,57 @@ export default function LiveCardsPage() {
       <div className="no-print">
         {/* Back link above the title, matching the other LP sub-pages. */}
         <Link href="/lps" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2">
-          <ArrowLeft className="h-3.5 w-3.5" /> LPs
+          <ArrowLeft className="h-3.5 w-3.5" /> {t('back')}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight mb-4">LP Reports</h1>
+        <h1 className="text-2xl font-semibold tracking-tight mb-4">{t('title')}</h1>
 
         <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <label className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> As of</label>
+          <label className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> {t('asOf')}</label>
           <Input type="date" value={asOf} onChange={e => { setAsOf(e.target.value); setApplied(e.target.value) }} className="h-9 w-40" />
-          {applied && <Button size="sm" variant="ghost" onClick={() => { setAsOf(''); setApplied('') }}>Latest</Button>}
+          {applied && <Button size="sm" variant="ghost" onClick={() => { setAsOf(''); setApplied('') }}>{t('latest')}</Button>}
           <span className="flex-1" />
           {allGroups.length > 1 && (
             <PortfolioGroupFilter
               allGroups={allGroups}
               excludedGroups={excludedGroups}
-              onToggle={g => setExcludedGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n })}
+              onToggle={group => setExcludedGroups(prev => {
+                const next = new Set(prev)
+                if (next.has(group)) next.delete(group)
+                else next.add(group)
+                return next
+              })}
               onToggleAll={() => setExcludedGroups(prev => prev.size === 0 ? new Set(allGroups) : new Set())}
             />
           )}
           <Button size="sm" variant="outline" onClick={printCombined} disabled={selected.size === 0 || printing || zipping}>
-            {printing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Printer className="h-4 w-4 mr-1" />} Combined PDF
+            {printing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Printer className="h-4 w-4 mr-1" />} {t('combinedPdf')}
           </Button>
           <Button size="sm" variant="outline" onClick={downloadIndividual} disabled={selected.size === 0 || printing || zipping}>
             {zipping ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
-            {zipping ? 'Generating…' : `Individual PDFs (${selected.size})`}
+            {zipping ? t('generating') : t('individualPdfs', { count: selected.size })}
           </Button>
         </div>
 
         {zipping && (
           <p className="text-xs text-muted-foreground mb-3">
-            Generating {selected.size} individual PDF{selected.size !== 1 ? 's' : ''}. This typically takes {selected.size <= 10 ? '5–15' : selected.size <= 50 ? '15–30' : '30–60'} seconds — keep this tab open.
+            {t('generatingHint', {
+              count: selected.size,
+              seconds: selected.size <= 10 ? '5–15' : selected.size <= 50 ? '15–30' : '30–60',
+            })}
           </p>
         )}
 
         {loading && !data ? (
-          <div className="flex items-center py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Building cards…</div>
+          <div className="flex items-center py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('building')}</div>
         ) : investors.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No LP data to print.</p>
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
         ) : (
           <>
             {/* Search */}
             <div className="relative max-w-xl mb-3">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
-                type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search investors…"
+                type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search')}
                 className="w-full pl-8 pr-8 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
               />
               {search && (
@@ -193,14 +209,14 @@ export default function LiveCardsPage() {
             <div className="border rounded-lg max-w-xl">
               <div className="flex items-center gap-3 px-4 py-2 border-b bg-muted cursor-pointer hover:bg-muted/80" onClick={toggleAll}>
                 {selected.size === investors.length ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
-                <span className="text-sm font-medium">Select all ({investors.length} investors)</span>
+                <span className="text-sm font-medium">{t('selectAll', { count: investors.length })}</span>
               </div>
               <div className="max-h-[60vh] overflow-y-auto">
                 {filtered.map(inv => (
                   <div key={inv.investorId} className="flex items-center gap-3 px-4 py-2 border-b last:border-b-0 cursor-pointer hover:bg-muted/30" onClick={() => toggle(inv.investorId)}>
                     {selected.has(inv.investorId) ? <CheckSquare className="h-4 w-4 text-primary shrink-0" /> : <Square className="h-4 w-4 text-muted-foreground shrink-0" />}
                     <span className="text-sm truncate">{inv.investorName}</span>
-                    <span className="text-xs text-muted-foreground ml-auto shrink-0">{rowsFor(inv).length} inv.</span>
+                    <span className="text-xs text-muted-foreground ml-auto shrink-0">{t('investmentCount', { count: rowsFor(inv).length })}</span>
                   </div>
                 ))}
               </div>

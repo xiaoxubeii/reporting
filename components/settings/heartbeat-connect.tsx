@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,7 @@ interface Status {
 }
 
 export function HeartbeatConnect() {
+  const t = useTranslations('Settings.heartbeat')
   const [status, setStatus] = useState<Status | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [apiKey, setApiKey] = useState('')
@@ -79,13 +81,13 @@ export function HeartbeatConnect() {
       })
       const body = await res.json()
       if (!res.ok) {
-        setError(body.error ?? 'Could not connect')
+        setError(body.error ?? t('connectFailed'))
         return
       }
       setApiKey('')
       await refresh()
     } catch {
-      setError('Could not reach Heartbeat.')
+      setError(t('unreachable'))
     } finally {
       setSaving(false)
     }
@@ -115,7 +117,7 @@ export function HeartbeatConnect() {
       })
       const body = await res.json()
       if (!res.ok) {
-        setError(body.error ?? 'Could not save channels')
+        setError(body.error ?? t('saveChannelsFailed'))
         return
       }
       await refresh()
@@ -157,12 +159,10 @@ export function HeartbeatConnect() {
       <Section title="Heartbeat">
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Connect your Heartbeat community so that a new thread in a channel you choose arrives
-          in Deals automatically, screened against your thesis like an emailed pitch.
+          {t('description')}
         </p>
         <p className="text-xs text-muted-foreground">
-          A Heartbeat key is issued for the whole community and can read every channel, so only
-          an admin can set it. It is stored encrypted and never shown again after you save it.
+          {t('keyHelp')}
         </p>
 
         {!status?.connected ? (
@@ -172,11 +172,11 @@ export function HeartbeatConnect() {
               value={apiKey}
               onChange={e => setApiKey(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && apiKey.trim()) connect() }}
-              placeholder="Heartbeat API key"
+              placeholder={t('apiKey')}
               autoComplete="off"
             />
             <Button onClick={connect} disabled={saving || !apiKey.trim()}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('connect')}
             </Button>
           </div>
         ) : (
@@ -184,10 +184,10 @@ export function HeartbeatConnect() {
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <span>
-                Connected
+                {t('connected')}
                 {status.imported_count > 0 && (
                   <span className="text-muted-foreground">
-                    {' '}— {status.imported_count} deal{status.imported_count === 1 ? '' : 's'} imported so far
+                    {' '}— {t('importedCount', { count: status.imported_count })}
                   </span>
                 )}
               </span>
@@ -196,7 +196,7 @@ export function HeartbeatConnect() {
             {status.last_error && (
               <div className="flex items-start gap-2 text-sm text-amber-600">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{status.last_error} Re-enter your key below to reconnect.</span>
+                <span>{status.last_error} {t('reconnectHelp')}</span>
               </div>
             )}
 
@@ -204,17 +204,16 @@ export function HeartbeatConnect() {
                 a community is a firehose, and turning every thread in #general into a
                 deal would bury the real dealflow. */}
             <div className="rounded-md border p-3 space-y-2">
-              <p className="text-xs font-medium">Channels to watch</p>
+              <p className="text-xs font-medium">{t('channels.title')}</p>
 
               {status.channels_error ? (
                 <p className="text-xs text-amber-600">{status.channels_error}</p>
               ) : status.channels.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No channels found in this community.</p>
+                <p className="text-xs text-muted-foreground">{t('channels.empty')}</p>
               ) : (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    Only threads posted in these channels become deals. Threads posted before you
-                    started watching a channel are left alone.
+                    {t('channels.help')}
                   </p>
                   <div className="max-h-56 overflow-y-auto space-y-1 pt-1">
                     {status.channels.map(c => (
@@ -236,7 +235,7 @@ export function HeartbeatConnect() {
                   </div>
                   {dirty && (
                     <Button size="sm" onClick={saveChannels} disabled={savingChannels}>
-                      {savingChannels ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save channels'}
+                      {savingChannels ? <Loader2 className="h-4 w-4 animate-spin" /> : t('channels.save')}
                     </Button>
                   )}
                 </>
@@ -251,10 +250,9 @@ export function HeartbeatConnect() {
                 className="mt-1 h-3.5 w-3.5"
               />
               <span>
-                Import new threads as deals
+                {t('import.enable')}
                 <span className="block text-xs text-muted-foreground">
-                  Uncheck to pause without disconnecting — your key and watched channels are kept,
-                  and nothing is imported until you switch it back on.
+                  {t('import.help')}
                 </span>
               </span>
             </label>
@@ -264,41 +262,29 @@ export function HeartbeatConnect() {
                 type="password"
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
-                placeholder="Replace with a new key…"
+                placeholder={t('replaceKey')}
                 autoComplete="off"
               />
               <Button onClick={connect} disabled={saving || !apiKey.trim()}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update'}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('update')}
               </Button>
               <Button variant="outline" onClick={disconnect} disabled={saving}>
-                Disconnect
+                {t('disconnect')}
               </Button>
             </div>
 
             {status.watched.some(w => !w.webhook_registered) && (
               <p className="text-xs text-amber-600">
-                Some channels have no live webhook, so their threads will arrive on the hourly
-                sweep instead of immediately. Re-saving your key re-registers them.
+                {t('webhookWarning')}
               </p>
             )}
 
             <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
-              <p className="text-xs font-medium">How it works</p>
+              <p className="text-xs font-medium">{t('how.title')}</p>
               <ul className="text-xs text-muted-foreground space-y-1 list-disc ml-4">
-                <li>
-                  <strong>A new thread in a watched channel becomes a deal within seconds</strong>,
-                  via a webhook Heartbeat calls. It is screened against your thesis exactly like an
-                  emailed pitch, and shows up in Deals with the source “Heartbeat”.
-                </li>
-                <li>
-                  <strong>An hourly sweep re-reads each watched channel</strong> as a safety net, so
-                  a thread posted while the webhook was down still lands. A thread never becomes two
-                  deals.
-                </li>
-                <li>
-                  <strong>Very short threads are ignored</strong> — a “+1” or a bare link is not a
-                  pitch, and won&rsquo;t be turned into one.
-                </li>
+                <li>{t.rich('how.webhook', { strong: chunks => <strong>{chunks}</strong> })}</li>
+                <li>{t.rich('how.sweep', { strong: chunks => <strong>{chunks}</strong> })}</li>
+                <li>{t.rich('how.short', { strong: chunks => <strong>{chunks}</strong> })}</li>
               </ul>
             </div>
           </>
@@ -307,7 +293,7 @@ export function HeartbeatConnect() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <p className="text-xs text-muted-foreground">
-          Generate a key in Heartbeat under Settings → Integrations → API.
+          {t('generateKeyHelp')}
         </p>
       </div>
       </Section>

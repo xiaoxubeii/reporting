@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   Table,
   TableBody,
@@ -45,13 +45,8 @@ const STATUS_STYLES = {
   na: 'bg-muted text-muted-foreground',
 }
 
-const STATUS_LABELS = {
-  yes: 'Yes',
-  no: 'No',
-  na: 'N/A',
-}
-
 export function ResponseTracker({ quarters, data, onStatusChange }: Props) {
+  const t = useTranslations('Requests')
   if (data.length === 0) return null
 
   return (
@@ -60,7 +55,7 @@ export function ResponseTracker({ quarters, data, onStatusChange }: Props) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">Company</TableHead>
+              <TableHead className="w-[200px]">{t('tracker.company')}</TableHead>
               {quarters.map((q) => (
                 <TableHead key={q.label} className="text-center">{q.label}</TableHead>
               ))}
@@ -87,9 +82,12 @@ export function ResponseTracker({ quarters, data, onStatusChange }: Props) {
                           onStatusChange?.(row.companyId, q.quarter, q.year, next)
                         }}
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${STATUS_STYLES[cell.status]}`}
-                        title={`Click to change (${cell.status} → ${STATUS_CYCLE[cell.status]})`}
+                        title={t('tracker.changeStatus', {
+                          current: t(`tracker.status.${cell.status}`),
+                          next: t(`tracker.status.${STATUS_CYCLE[cell.status]}`),
+                        })}
                       >
-                        {STATUS_LABELS[cell.status]}
+                        {t(`tracker.status.${cell.status}`)}
                       </button>
                     </TableCell>
                   )

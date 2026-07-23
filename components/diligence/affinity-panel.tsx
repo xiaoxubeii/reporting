@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, Link2, RefreshCw, Search, Unlink, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFormatter, useTranslations } from 'next-intl'
 
 /**
  * Link a deal to an Affinity company and pull its notes + attached files into
@@ -48,6 +49,8 @@ export function AffinityPanel({
   dealName: string
   onImported: () => void
 }) {
+  const t = useTranslations('Diligence.affinity')
+  const format = useFormatter()
   const [status, setStatus] = useState<LinkStatus | null>(null)
   const [open, setOpen] = useState(false)
   const [term, setTerm] = useState(dealName)
@@ -75,16 +78,16 @@ export function AffinityPanel({
       const res = await fetch(`/api/diligence/${dealId}/affinity?search=${encodeURIComponent(term)}`)
       const body = await res.json()
       if (!res.ok) {
-        setError(body.error ?? 'Search failed')
+        setError(body.error ?? t('errors.search'))
         setResults([])
       } else {
         setResults(body.organizations ?? [])
         if ((body.organizations ?? []).length === 0) {
-          setError(`No companies in Affinity match "${term}".`)
+          setError(t('errors.noMatches', { term }))
         }
       }
     } catch {
-      setError('Could not reach Affinity.')
+      setError(t('errors.unreachable'))
     } finally {
       setSearching(false)
     }
@@ -99,7 +102,7 @@ export function AffinityPanel({
     })
     const body = await res.json()
     if (!res.ok) {
-      setError(body.error ?? 'Could not link')
+      setError(body.error ?? t('errors.link'))
       return
     }
     setStatus(s => ({
@@ -135,7 +138,7 @@ export function AffinityPanel({
 
       if (!res.ok || !res.body) {
         const body = await res.json().catch(() => ({}))
-        setError(body.error ?? 'Import failed')
+        setError(body.error ?? t('errors.import'))
         setImporting(false)
         return
       }
@@ -161,7 +164,7 @@ export function AffinityPanel({
 
       onImported()
     } catch {
-      setError('Import stream failed.')
+      setError(t('errors.stream'))
     } finally {
       setImporting(false)
       setProgress(null)
@@ -174,7 +177,7 @@ export function AffinityPanel({
         setLines(l => [...l, event.message])
         break
       case 'listed':
-        setLines(l => [...l, `Found ${event.notes} note${event.notes === 1 ? '' : 's'} and ${event.files} file${event.files === 1 ? '' : 's'} in Affinity.`])
+        setLines(l => [...l, t('events.listed', { notes: event.notes, files: event.files })])
         break
       case 'progress':
         setProgress({ current: event.current, total: event.total })
@@ -189,7 +192,7 @@ export function AffinityPanel({
         setLines(l => [...l, `✗ ${event.item}: ${event.error}`])
         break
       case 'done':
-        setLines(l => [...l, `Done — ${event.imported} imported, ${event.skipped} skipped, ${event.errors} error${event.errors === 1 ? '' : 's'}.`])
+        setLines(l => [...l, t('events.done', { imported: event.imported, skipped: event.skipped, errors: event.errors })])
         break
     }
   }
@@ -206,7 +209,7 @@ export function AffinityPanel({
       <div className="flex items-center gap-2">
         {!status.linked ? (
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <Link2 className="h-3.5 w-3.5 mr-1" /> Link Affinity
+            <Link2 className="h-3.5 w-3.5 mr-1" /> {t('linkButton')}
           </Button>
         ) : (
           <Button
@@ -216,14 +219,14 @@ export function AffinityPanel({
             disabled={importing || !status.caller_connected}
             title={
               status.caller_connected
-                ? 'Pull any new Affinity notes and files into the data room'
-                : 'Connect your Affinity account in Settings to import'
+                ? t('pullHelp')
+                : t('connectHelp')
             }
           >
             {importing
               ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
               : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-            {importing ? 'Importing…' : 'Pull from Affinity'}
+            {importing ? t('importing') : t('pullButton')}
           </Button>
         )}
       </div>
@@ -231,7 +234,7 @@ export function AffinityPanel({
       {status.linked && !status.sync_active && (
         <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
           <AlertCircle className="h-3 w-3" />
-          Background sync is paused — the person who linked this deal has disconnected Affinity.
+          {t('syncPaused')}
         </p>
       )}
 
@@ -240,7 +243,7 @@ export function AffinityPanel({
         <div className="mt-2 rounded-md border bg-muted/30 p-3 text-xs">
           {progress && (
             <div className="mb-2 text-muted-foreground">
-              {progress.current} of {progress.total}…
+              {t('progress', { current: progress.current, total: progress.total })}
             </div>
           )}
           <div className="max-h-40 overflow-y-auto space-y-0.5 font-mono">
@@ -253,7 +256,7 @@ export function AffinityPanel({
               className="mt-2 text-muted-foreground underline"
               onClick={() => setLines([])}
             >
-              Clear
+              {t('clear')}
             </button>
           )}
         </div>
@@ -265,13 +268,13 @@ export function AffinityPanel({
 
       {status.linked && (
         <p className="mt-1 text-xs text-muted-foreground">
-          Linked to Affinity company #{status.organization_id}
+          {t('linkedCompany', { id: status.organization_id ?? '—' })}
           {status.last_synced_at
-            ? ` · last synced ${new Date(status.last_synced_at).toLocaleString()}`
-            : ' · not yet synced'}
+            ? ` · ${t('lastSynced', { date: format.dateTime(new Date(status.last_synced_at), { dateStyle: 'medium', timeStyle: 'short' }) })}`
+            : ` · ${t('notSynced')}`}
           {' · '}
           <button className="underline" onClick={unlink}>
-            <Unlink className="h-3 w-3 inline mr-0.5" />unlink
+            <Unlink className="h-3 w-3 inline mr-0.5" />{t('unlink')}
           </button>
         </p>
       )}
@@ -280,10 +283,9 @@ export function AffinityPanel({
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
           <div className="w-full max-w-lg rounded-lg border bg-card p-5" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-1">Link to Affinity</h3>
+            <h3 className="text-base font-semibold mb-1">{t('dialog.title')}</h3>
             <p className="text-sm text-muted-foreground mb-3">
-              Find this company in your Affinity. Once linked, its notes and attached files are
-              pulled into the data room, and new notes keep syncing hourly.
+              {t('dialog.description')}
             </p>
 
             <div className="flex gap-2">
@@ -291,7 +293,7 @@ export function AffinityPanel({
                 value={term}
                 onChange={e => setTerm(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') search() }}
-                placeholder="Company name or domain"
+                placeholder={t('dialog.placeholder')}
                 autoFocus
               />
               <Button onClick={search} disabled={searching || !term.trim()}>
@@ -312,14 +314,14 @@ export function AffinityPanel({
                 >
                   <div className="text-sm font-medium">{org.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {org.domain ?? 'no domain'} · Affinity #{org.id}
+                    {org.domain ?? t('dialog.noDomain')} · Affinity #{org.id}
                   </div>
                 </button>
               ))}
             </div>
 
             <div className="mt-4 flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button variant="outline" size="sm" onClick={() => setOpen(false)}>{t('dialog.cancel')}</Button>
             </div>
           </div>
         </div>

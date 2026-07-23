@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Sparkles, Send, X, Save, Clock, Plus, Trash2, ArrowLeft, Paperclip } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
@@ -17,27 +18,9 @@ interface Scope {
   domain: AnalystDomain | null
 }
 
-/** What the Analyst offers to do here, before anything has been asked. Ordered by how specific the
- *  scope is — a deal or company is narrower than a whole domain. */
-function emptyState({ dealId, companyId, vehicle, domain }: Scope): string {
-  if (dealId) return "Ask about this deal — fit against your thesis, founder background, dilution math, or comparable deals you've seen."
-  if (companyId) return 'Ask about this company’s metrics, performance, documents, or portfolio position. You can also ask the AI to draft a summary.'
-  if (vehicle) return `Ask about ${vehicle}’s financials or ask me to draft a journal entry for you to review. You can attach a capital-call notice, invoice, or wire confirmation and I’ll draft the entry from it.`
-  if (domain === 'lps') return 'Ask about your LPs — who’s furthest behind on funding, who has the largest unfunded commitment, how DPI and TVPI look across the fund.'
-  if (domain === 'diligence') return 'Ask about your diligence pipeline — what’s active, what’s stalled mid-memo, how deals break down by sector or stage.'
-  return 'Ask about your portfolio, compare companies, or get high-level insights across all investments.'
-}
-
-function inputPlaceholder({ dealId, companyId, vehicle, domain }: Scope): string {
-  if (dealId) return 'Ask about this deal...'
-  if (companyId) return 'Ask about this company...'
-  if (vehicle) return `Ask about ${vehicle}...`
-  if (domain === 'lps') return 'Ask about your LPs...'
-  if (domain === 'diligence') return 'Ask about your pipeline...'
-  return 'Ask about your portfolio...'
-}
-
 export function AnalystPanel() {
+  const locale = useLocale()
+  const t = useTranslations('Analyst')
   const {
     open,
     close,
@@ -50,7 +33,6 @@ export function AnalystPanel() {
     selectedModel,
     setSelectedModel,
     availableModels,
-    fundName,
     conversationId,
     setConversationId,
     conversations,
@@ -84,6 +66,10 @@ export function AnalystPanel() {
     }
   }, [open])
 
+  useEffect(() => {
+    setError(null)
+  }, [locale])
+
   // The thread was reset (new conversation, or a scope change cleared it) — the drafts that went
   // with those messages go too, since they're keyed by message index.
   useEffect(() => {
@@ -111,7 +97,7 @@ export function AnalystPanel() {
       for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
       setDoc({ name: file.name, format, base64: btoa(binary) })
     } catch {
-      setError('Could not read that file.')
+      setError(t('errors.readFile'))
     }
   }
 
@@ -120,7 +106,9 @@ export function AnalystPanel() {
     if ((!input.trim() && !doc) || loading) return
     const userMessage = {
       role: 'user' as const,
-      content: input.trim() || `Draft the entry that records ${doc?.name ?? 'the attached document'}.`,
+      content: input.trim() || t('documentDraftPrompt', {
+        document: doc?.name ?? t('attachedDocument'),
+      }),
     }
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
@@ -145,7 +133,7 @@ export function AnalystPanel() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error ?? 'Request failed')
+        setError(data.error ?? t('errors.requestFailed'))
         return
       }
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
@@ -160,7 +148,7 @@ export function AnalystPanel() {
         setConversationId(data.conversationId)
       }
     } catch {
-      setError('Network error. Please try again.')
+      setError(t('errors.network'))
     } finally {
       setLoading(false)
     }
@@ -178,10 +166,10 @@ export function AnalystPanel() {
       })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error ?? 'Failed to save summary')
+        setError(data.error ?? t('errors.saveSummary'))
       }
     } catch {
-      setError('Failed to save summary')
+      setError(t('errors.saveSummary'))
     } finally {
       setSavingIdx(null)
     }
@@ -197,14 +185,36 @@ export function AnalystPanel() {
     const now = new Date()
     const diffMs = now.getTime() - d.getTime()
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return 'Yesterday'
-    if (diffDays < 7) return `${diffDays}d ago`
-    return d.toLocaleDateString()
+    if (diffDays === 0) return t('today')
+    if (diffDays === 1) return t('yesterday')
+    if (diffDays < 7) return t('daysAgo', { count: diffDays })
+    return d.toLocaleDateString(locale)
   }
 
   const modelKey = selectedModel ? `${selectedModel.provider}:${selectedModel.id}` : 'auto'
   const scope: Scope = { dealId, companyId, vehicle, domain }
+  const emptyStateText = scope.dealId
+    ? t('empty.deal')
+    : scope.companyId
+      ? t('empty.company')
+      : scope.vehicle
+        ? t('empty.vehicle', { vehicle: scope.vehicle })
+        : scope.domain === 'lps'
+          ? t('empty.lps')
+          : scope.domain === 'diligence'
+            ? t('empty.diligence')
+            : t('empty.portfolio')
+  const inputPlaceholderText = scope.dealId
+    ? t('placeholder.deal')
+    : scope.companyId
+      ? t('placeholder.company')
+      : scope.vehicle
+        ? t('placeholder.vehicle', { vehicle: scope.vehicle })
+        : scope.domain === 'lps'
+          ? t('placeholder.lps')
+          : scope.domain === 'diligence'
+            ? t('placeholder.diligence')
+            : t('placeholder.portfolio')
 
   return (
     <MobileDrawerPanel open={open} onOpenChange={(isOpen) => { if (!isOpen) close() }}>
@@ -214,7 +224,7 @@ export function AnalystPanel() {
         <div className="px-4 py-3 flex items-center gap-2">
           <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 shrink-0">
             <Sparkles className="h-3.5 w-3.5" />
-            Analyst
+            {t('title')}
           </h2>
           {availableModels.length > 0 && !showHistory && (
             <Select
@@ -232,7 +242,7 @@ export function AnalystPanel() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">Auto</SelectItem>
+                <SelectItem value="auto">{t('auto')}</SelectItem>
                 {availableModels.map((m) => (
                   <SelectItem key={`${m.provider}:${m.id}`} value={`${m.provider}:${m.id}`}>
                     {m.name}
@@ -244,19 +254,19 @@ export function AnalystPanel() {
           <div className="flex items-center gap-1 shrink-0 ml-auto">
             <button
               onClick={handleShowHistory}
-              title="Conversation history"
+              title={t('conversationHistory')}
               className="p-1 rounded hover:bg-muted"
             >
               <Clock className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
             </button>
             <button
               onClick={startNewConversation}
-              title="New conversation"
+              title={t('newConversation')}
               className="p-1 rounded hover:bg-muted"
             >
               <Plus className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
             </button>
-            <button onClick={close} className="p-1 rounded hover:bg-muted hidden lg:block">
+            <button onClick={close} aria-label={t('closePanel')} className="p-1 rounded hover:bg-muted hidden lg:block">
               <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
             </button>
           </div>
@@ -268,14 +278,15 @@ export function AnalystPanel() {
             <div className="flex items-center gap-2 mb-3">
               <button
                 onClick={() => setShowHistory(false)}
+                aria-label={t('backToConversation')}
                 className="p-1 rounded hover:bg-muted"
               >
                 <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <span className="text-xs font-medium text-muted-foreground">Conversation History</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('conversationHistory')}</span>
             </div>
             {conversations.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No previous conversations.</p>
+              <p className="text-xs text-muted-foreground">{t('noPreviousConversations')}</p>
             ) : (
               <div className="space-y-1">
                 {conversations.map((conv) => (
@@ -289,7 +300,7 @@ export function AnalystPanel() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm truncate">{conv.title}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {conv.message_count} messages &middot; {formatDate(conv.updated_at)}
+                        {t('messageCount', { count: conv.message_count })} &middot; {formatDate(conv.updated_at)}
                       </p>
                     </div>
                     <button
@@ -298,7 +309,7 @@ export function AnalystPanel() {
                         deleteConversation(conv.id)
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10"
-                      title="Delete conversation"
+                      title={t('deleteConversation')}
                     >
                       <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
                     </button>
@@ -313,14 +324,14 @@ export function AnalystPanel() {
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-3 space-y-3">
               {messages.length === 0 && !loading && (
                 <p className="text-xs text-muted-foreground">
-                  {emptyState(scope)}
+                  {emptyStateText}
                 </p>
               )}
               {messages.map((msg, i) => (
                 <div key={i}>
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-xs font-medium">
-                      {msg.role === 'user' ? 'You' : 'Analyst'}
+                      {msg.role === 'user' ? t('you') : t('title')}
                     </span>
                   </div>
                   {msg.role === 'assistant' ? (
@@ -343,7 +354,7 @@ export function AnalystPanel() {
                       className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
                     >
                       <Save className="h-3 w-3" />
-                      {savingIdx === i ? 'Saving...' : 'Save as Summary'}
+                      {savingIdx === i ? t('saving') : t('saveAsSummary')}
                     </button>
                   )}
                 </div>
@@ -351,9 +362,9 @@ export function AnalystPanel() {
               {loading && (
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-medium">Analyst</span>
+                    <span className="text-xs font-medium">{t('title')}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Thinking...</p>
+                  <p className="text-sm text-muted-foreground">{t('thinking')}</p>
                 </div>
               )}
               {error && (
@@ -370,14 +381,14 @@ export function AnalystPanel() {
                     <span className="inline-flex max-w-full items-center gap-1.5 rounded border bg-accent/50 px-2 py-1 text-[11px]">
                       <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
                       <span className="truncate">{doc.name}</span>
-                      <button onClick={() => setDoc(null)} className="text-muted-foreground hover:text-foreground" aria-label="Remove document">
+                      <button onClick={() => setDoc(null)} className="text-muted-foreground hover:text-foreground" aria-label={t('removeDocument')}>
                         <X className="h-3 w-3" />
                       </button>
                     </span>
                   ) : (
                     <label className="inline-flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1 text-[11px] text-muted-foreground hover:bg-accent">
                       <Paperclip className="h-3 w-3" />
-                      Attach document
+                      {t('attachDocument')}
                       <input type="file" accept=".pdf,.docx,.xlsx,.xls,.md,.txt,.csv" onChange={handleFile} className="hidden" />
                     </label>
                   )}
@@ -394,7 +405,7 @@ export function AnalystPanel() {
                       handleSend()
                     }
                   }}
-                  placeholder={inputPlaceholder(scope)}
+                  placeholder={inputPlaceholderText}
                   rows={2}
                   className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
@@ -402,6 +413,7 @@ export function AnalystPanel() {
                   size="icon"
                   onClick={handleSend}
                   disabled={(!input.trim() && !doc) || loading}
+                  aria-label={t('sendMessage')}
                   className="h-auto self-end px-2 py-2"
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -412,7 +424,7 @@ export function AnalystPanel() {
         )}
       </div>
       <p className="text-[10px] text-muted-foreground/60 text-center mt-3 px-4 shrink-0">
-        Conversations are stored to provide context and improve AI performance.
+        {t('storageNotice')}
       </p>
     </div>
     </MobileDrawerPanel>

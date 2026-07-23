@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Mail, Paperclip, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useFormatter, useTranslations } from 'next-intl'
 
 /**
  * Inbound emails the router matched to this deal, waiting for a human to accept
@@ -40,6 +41,8 @@ export function EmailIntakeTray({
   dealId: string
   onAccepted: () => void
 }) {
+  const t = useTranslations('Diligence.emailIntake')
+  const format = useFormatter()
   const [emails, setEmails] = useState<PendingEmail[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -100,13 +103,13 @@ export function EmailIntakeTray({
       })
       const body = await res.json()
       if (!res.ok) {
-        setError(body.error ?? 'Could not add to the data room.')
+        setError(body.error ?? t('addFailed'))
         return
       }
       setEmails(prev => prev.filter(e => e.id !== email.id))
       onAccepted()
     } catch {
-      setError('Could not add to the data room.')
+      setError(t('addFailed'))
     } finally {
       setBusyId(null)
     }
@@ -129,11 +132,11 @@ export function EmailIntakeTray({
       <div className="flex items-center gap-2 mb-1">
         <Mail className="h-4 w-4 text-amber-700 dark:text-amber-400" />
         <h3 className="text-sm font-semibold">
-          {emails.length} inbound email{emails.length === 1 ? '' : 's'} matched to this deal
+          {t('matchedCount', { count: emails.length })}
         </h3>
       </div>
       <p className="text-xs text-muted-foreground mb-3">
-        Nothing is added to the data room until you accept it. Pick which attachments to keep.
+        {t('description')}
       </p>
 
       {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
@@ -147,13 +150,12 @@ export function EmailIntakeTray({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">
-                    {email.subject || '(no subject)'}
+                    {email.subject || t('noSubject')}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {email.from_address ?? 'unknown sender'}
-                    {email.received_at && ` · ${new Date(email.received_at).toLocaleString()}`}
-                    {typeof email.confidence === 'number' &&
-                      ` · match confidence ${(email.confidence * 100).toFixed(0)}%`}
+                    {email.from_address ?? t('unknownSender')}
+                    {email.received_at && ` · ${format.dateTime(new Date(email.received_at), { dateStyle: 'medium', timeStyle: 'short' })}`}
+                    {typeof email.confidence === 'number' && ` · ${t('matchConfidence', { value: format.number(email.confidence, { style: 'percent', maximumFractionDigits: 0 }) })}`}
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1">
@@ -161,9 +163,9 @@ export function EmailIntakeTray({
                     {busy
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       : <Check className="h-3.5 w-3.5 mr-1" />}
-                    {busy ? '' : 'Accept'}
+                    {busy ? '' : t('accept')}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => reject(email)} disabled={busy}>
+                  <Button size="sm" variant="ghost" onClick={() => reject(email)} disabled={busy} aria-label={t('reject')} title={t('reject')}>
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -183,14 +185,14 @@ export function EmailIntakeTray({
                     setIncludeBody(prev => ({ ...prev, [email.id]: e.target.checked }))
                   }
                 />
-                Add the email text itself as a document
+                {t('includeBody')}
               </label>
 
               {email.attachments.length > 0 && (
                 <div className="mt-2 space-y-1">
                   <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                     <Paperclip className="h-3 w-3" />
-                    Attachments
+                    {t('attachments')}
                   </div>
                   {email.attachments.map(att => (
                     <label key={att.index} className="flex items-center gap-2 text-xs">
@@ -201,7 +203,11 @@ export function EmailIntakeTray({
                       />
                       <span className="truncate">{att.name}</span>
                       <span className="text-muted-foreground shrink-0">
-                        {formatSize(att.size_bytes)}
+                        {att.size_bytes === 0 ? '' : att.size_bytes < 1024
+                          ? `${format.number(att.size_bytes)} B`
+                          : att.size_bytes < 1024 * 1024
+                            ? `${format.number(att.size_bytes / 1024, { maximumFractionDigits: 0 })} KB`
+                            : `${format.number(att.size_bytes / 1024 / 1024, { maximumFractionDigits: 1 })} MB`}
                       </span>
                     </label>
                   ))}
@@ -213,11 +219,4 @@ export function EmailIntakeTray({
       </div>
     </div>
   )
-}
-
-function formatSize(bytes: number): string {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }

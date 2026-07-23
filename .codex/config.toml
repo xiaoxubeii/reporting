@@ -1,0 +1,39 @@
+# BEGIN HARNESSKIT
+[features]
+multi_agent = true
+
+[agents.explorer_config]
+description = "Read-only codebase exploration and evidence gathering."
+config = ".harnesskit/codex/agents/explorer.toml"
+
+[agents.reviewer_config]
+description = "Correctness, regression, and maintainability review."
+config = ".harnesskit/codex/agents/reviewer.toml"
+
+[agents.docs_researcher_config]
+description = "Primary-source API and release-note verification."
+config = ".harnesskit/codex/agents/docs-researcher.toml"
+
+[agents.security_reviewer_config]
+description = "Security review for auth, secrets, data, network, and execution boundaries."
+config = ".harnesskit/codex/agents/security-reviewer.toml"
+
+[agents.worker_config]
+description = "Bounded implementation worker with explicit file or module ownership."
+config = ".harnesskit/codex/agents/worker.toml"
+
+[agents.feature_worker_config]
+description = "One-feature implementation worker assigned to one dedicated git worktree."
+config = ".harnesskit/codex/agents/feature-worker.toml"
+
+[mcp_servers.context-mode]
+command = "context-mode"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest"]
+# END HARNESSKIT

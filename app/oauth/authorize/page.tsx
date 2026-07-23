@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export default async function AuthorizePage({ searchParams }: Props) {
+  const t = await getTranslations('OAuth')
   const q = (k: string): string | null => {
     const v = searchParams[k]
     return typeof v === 'string' && v.trim() ? v.trim() : null
@@ -57,22 +59,29 @@ export default async function AuthorizePage({ searchParams }: Props) {
   }
 
   if (!clientId || !redirectUri) {
-    return <Problem title="Invalid request" detail="This authorization link is missing its client_id or redirect_uri." />
+    return <Problem title={t('problems.invalidRequest.title')} detail={t('problems.invalidRequest.detail')} />
   }
   if (responseType !== 'code') {
-    return <Problem title="Unsupported request" detail={`Only the authorization-code flow is supported (got response_type="${responseType ?? 'none'}").`} />
+    return (
+      <Problem
+        title={t('problems.unsupportedRequest.title')}
+        detail={t('problems.unsupportedRequest.detail', {
+          responseType: responseType ?? t('values.none'),
+        })}
+      />
+    )
   }
   if (!codeChallenge || codeChallengeMethod !== 'S256') {
-    return <Problem title="Insecure request" detail="This server requires PKCE with S256. The app that sent you here did not provide a valid code challenge." />
+    return <Problem title={t('problems.insecureRequest.title')} detail={t('problems.insecureRequest.detail')} />
   }
 
   const admin = createAdminClient()
   const client = await getClient(admin, clientId)
   if (!client) {
-    return <Problem title="Unknown application" detail="The app requesting access is not registered with this server." />
+    return <Problem title={t('problems.unknownApplication.title')} detail={t('problems.unknownApplication.detail')} />
   }
   if (!redirectUriAllowed(client, redirectUri)) {
-    return <Problem title="Invalid redirect" detail="The app asked to be sent back to an address it never registered. Refusing, in case someone is trying to steal the authorization." />
+    return <Problem title={t('problems.invalidRedirect.title')} detail={t('problems.invalidRedirect.detail')} />
   }
 
   const { data: membership } = await admin
@@ -82,19 +91,19 @@ export default async function AuthorizePage({ searchParams }: Props) {
     .maybeSingle()
 
   if (!membership) {
-    return <Problem title="No fund" detail="Your account isn't a member of a fund, so there is nothing to grant access to." />
+    return <Problem title={t('problems.noFund.title')} detail={t('problems.noFund.detail')} />
   }
   const { fund_id: fundId, role } = membership as { fund_id: string; role: string }
 
   if (role === 'viewer') {
-    return <Problem title="Read-only demo" detail="The demo account cannot authorize external agents." />
+    return <Problem title={t('problems.readOnlyDemo.title')} detail={t('problems.readOnlyDemo.detail')} />
   }
 
   if (!(await agentApiEnabled(admin, fundId))) {
     return (
       <Problem
-        title="Agent access is turned off"
-        detail="An admin of this fund has not enabled the agent API. Turn it on in Settings → Agent access, then try connecting again."
+        title={t('problems.agentAccessDisabled.title')}
+        detail={t('problems.agentAccessDisabled.detail')}
       />
     )
   }
@@ -110,8 +119,8 @@ export default async function AuthorizePage({ searchParams }: Props) {
 
   return (
     <ConsentForm
-      clientName={client.client_name ?? 'An external application'}
-      fundName={(fund as { name?: string } | null)?.name ?? 'your fund'}
+      clientName={client.client_name ?? t('values.externalApplication')}
+      fundName={(fund as { name?: string } | null)?.name ?? t('values.yourFund')}
       willWrite={willWrite}
       downgraded={!!scope?.includes('write') && !willWrite}
       params={{

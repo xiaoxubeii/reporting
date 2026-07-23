@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -7,7 +8,10 @@ import { FUND_SUBPAGE_SLUGS } from '@/components/fund-subpages'
 import { resolveVehicleParam } from './resolve'
 import { FundDetailView } from './fund-detail-view'
 
-export const metadata: Metadata = { title: 'Fund' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Funds.pages.detail')
+  return { title: t('metadataTitle') }
+}
 
 /**
  * The fund detail page — the LEAD page for a single vehicle.
@@ -33,11 +37,12 @@ export default async function FundDetailPage({ params }: { params: { id: string 
 
   const { fundId } = await requireAccountingAccess()
   const { vehicle, vehicleId } = await resolveVehicleParam(fundId, params.id)
+  const t = await getTranslations('Funds.pages.detail')
 
   return (
     <div className="pt-4 md:pt-8 pb-8 w-full">
       <Link href="/funds" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="h-3.5 w-3.5" />All funds
+        <ArrowLeft className="h-3.5 w-3.5" />{t('allFunds')}
       </Link>
       <FundDetailView vehicle={vehicle} vehicleId={vehicleId} />
     </div>

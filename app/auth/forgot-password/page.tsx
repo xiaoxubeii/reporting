@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { OtpCodeForm } from '@/components/auth/otp-code-form'
+import { useLocale, useTranslations } from 'next-intl'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -18,20 +19,22 @@ export default function ForgotPasswordPage() {
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const t = useTranslations('Auth')
+  const locale = useLocale()
 
   const router = useRouter()
   const supabase = createClient()
 
   async function handleSend() {
     if (!email.trim()) {
-      setError('Enter your email address.')
+      setError(t('emailAddressRequired'))
       return
     }
     setError(null)
     setLoading(true)
     // No redirectTo — the email carries a 6-digit recovery code, not a link.
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase())
-    if (error) setError(error.message)
+    if (error) setError(locale === 'en' ? error.message : t('genericError'))
     else setSent(true)
     setLoading(false)
   }
@@ -45,7 +48,7 @@ export default function ForgotPasswordPage() {
       token: code,
     })
     if (error) {
-      setError(error.message)
+      setError(locale === 'en' ? error.message : t('genericError'))
       setVerifying(false)
     } else {
       // Recovery session is now active — let the user set a new password.
@@ -58,11 +61,11 @@ export default function ForgotPasswordPage() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Reset your password</CardTitle>
+            <CardTitle className="text-lg">{t('forgotTitle')}</CardTitle>
             <CardDescription>
               {sent
-                ? 'Enter the 6-digit code we emailed you, then set a new password.'
-                : "Enter your email and we'll send you a 6-digit code to reset your password."}
+                ? t('forgotSentDescription')
+                : t('forgotDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -82,11 +85,11 @@ export default function ForgotPasswordPage() {
                   </Alert>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('email')}</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t('emailPlaceholder')}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSend()}
@@ -95,14 +98,14 @@ export default function ForgotPasswordPage() {
                   />
                 </div>
                 <Button className="w-full" onClick={handleSend} disabled={loading}>
-                  {loading ? 'Sending…' : 'Email me a code'}
+                  {loading ? t('sending') : t('emailCode')}
                 </Button>
               </>
             )}
 
             <p className="text-center text-sm text-muted-foreground">
               <Link href="/auth" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                Back to sign in
+                {t('backToSignIn')}
               </Link>
             </p>
           </CardContent>

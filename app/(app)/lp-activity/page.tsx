@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { LpActivityDashboard } from './lp-activity-dashboard'
 
-export const metadata: Metadata = { title: 'LP Activity' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('LPActivity.metadata')
+  return { title: t('title') }
+}
 
 export default async function LpActivityPage() {
   const supabase = createClient()
@@ -16,11 +20,12 @@ export default async function LpActivityPage() {
   if (!page) redirect('/dashboard')
 
   const admin = createAdminClient()
-  const { data: fundSettings } = await (admin as any)
+  const { data: rawFundSettings } = await admin
     .from('fund_settings')
     .select('lp_portal_enabled')
     .eq('fund_id', page.fundId)
     .maybeSingle()
+  const fundSettings = rawFundSettings as unknown as { lp_portal_enabled: boolean } | null
 
   // Master switch off → the LP portal (and its activity log) is unavailable.
   if (!fundSettings?.lp_portal_enabled) redirect('/dashboard')

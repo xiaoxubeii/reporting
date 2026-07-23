@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,20 +42,6 @@ interface SendResult {
   error?: string
 }
 
-const DEFAULT_SUBJECT = 'Laconia - Q4 and YE 2025 Information Request'
-
-const DEFAULT_BODY = `Hi! We are finalizing Laconia's quarterly and year-end reporting and need your help obtaining the following information:
-
-- Q4 and YE 2025 Income Statement (Monthly and Quarterly will be great, if possible)
-- YE 2025 Balance Sheet (Monthly and Quarterly will be great, if possible)
-- Q4 and YE 2025 Cashflow Statement (Monthly and Quarterly will be great, if possible)
-- Any financing activities that occurred during the quarter (If a new financing closed, please include the fully executed documents)
-- Any other crucial materials, such as the latest board decks or key KPIs
-
-Please provide the above information by Friday, February 20, 2026. Contact me or anyone on the Laconia team if you have any questions. Thank you,
-
-Taylor`
-
 function plainTextToHtml(text: string): string {
   const escaped = text
     .replace(/&/g, '&amp;')
@@ -72,6 +59,7 @@ function plainTextToHtml(text: string): string {
 }
 
 export default function RequestsPage() {
+  const t = useTranslations('Requests')
   const fv = useFeatureVisibility()
   const [settings, setSettings] = useState<Settings | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
@@ -81,8 +69,8 @@ export default function RequestsPage() {
 
   const [fromName, setFromName] = useState('')
   const [fromAddress, setFromAddress] = useState('')
-  const [subject, setSubject] = useState(DEFAULT_SUBJECT)
-  const [bodyText, setBodyText] = useState(DEFAULT_BODY)
+  const [subject, setSubject] = useState(() => t('defaults.subject'))
+  const [bodyText, setBodyText] = useState(() => t('defaults.body'))
   const [cc, setCc] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmSend, setConfirmSend] = useState(false)
@@ -196,7 +184,7 @@ export default function RequestsPage() {
         cc: cc.trim() || undefined,
         from_name: fromName.trim() || undefined,
         from_address: fromAddress.trim() || undefined,
-        recipients: [{ emails: [testEmail.trim()], companyName: 'Test' }],
+        recipients: [{ emails: [testEmail.trim()], companyName: t('test.companyName') }],
       }),
     })
 
@@ -204,7 +192,7 @@ export default function RequestsPage() {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      setTestResult({ success: false, error: data.error || 'Failed to send' })
+      setTestResult({ success: false, error: data.error || t('errors.send') })
       return
     }
 
@@ -213,7 +201,7 @@ export default function RequestsPage() {
       setTestResult({ success: true })
     } else {
       const detail = data.results?.[0]?.error
-      setTestResult({ success: false, error: detail || 'Failed to send' })
+      setTestResult({ success: false, error: detail || t('errors.send') })
     }
   }
 
@@ -244,7 +232,7 @@ export default function RequestsPage() {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      setError(data.error || 'Failed to send')
+      setError(data.error || t('errors.send'))
       return
     }
 
@@ -258,8 +246,8 @@ export default function RequestsPage() {
       <div className="p-4 md:p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.asks === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}Asks</h1>
-            <p className="text-sm text-muted-foreground mt-1">Monitor responses to quarterly reporting asks</p>
+            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.asks === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('description')}</p>
           </div>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
@@ -286,8 +274,8 @@ export default function RequestsPage() {
       <div className="p-4 md:p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.asks === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}Asks</h1>
-            <p className="text-sm text-muted-foreground mt-1">Quarterly reporting email program</p>
+            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.asks === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('viewer.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
@@ -301,10 +289,10 @@ export default function RequestsPage() {
           )}
           <div className="rounded-lg border border-dashed p-12 text-center space-y-2">
             <p className="text-muted-foreground">
-              Administrators can configure and send quarterly reporting request emails to portfolio companies from this page.
+              {t('viewer.adminOnly')}
             </p>
             <p className="text-xs text-muted-foreground">
-              Contact your fund admin to set up or manage the email program.
+              {t('viewer.contactAdmin')}
             </p>
           </div>
         </div>
@@ -323,13 +311,13 @@ export default function RequestsPage() {
     <div className="p-4 md:p-8">
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.asks === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}Asks</h1>
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.asks === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
             <AnalystToggleButton />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Monitor responses to quarterly reporting asks</p>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -338,13 +326,13 @@ export default function RequestsPage() {
         <ResponseTracker quarters={trackerQuarters} data={trackerData} onStatusChange={handleResponseStatusChange} />
       )}
 
-      <h2 className="text-lg font-semibold tracking-tight">Create an Ask</h2>
+      <h2 className="text-lg font-semibold tracking-tight">{t('compose.title')}</h2>
 
       {!hasEmailProvider && (
         <div className="rounded-lg border border-dashed p-4 text-center space-y-1">
-          <p className="text-sm text-muted-foreground">Set up an outbound email provider in Settings to enable sending emails.</p>
+          <p className="text-sm text-muted-foreground">{t('provider.required')}</p>
           <p className="text-xs text-muted-foreground">
-            Choose from Gmail, Resend, Mailgun, or Postmark in Settings &gt; Outbound Email.
+            {t('provider.options')}
           </p>
         </div>
       )}
@@ -354,15 +342,15 @@ export default function RequestsPage() {
         {settings?.asksEmailProvider && settings.asksEmailProvider !== 'gmail' && (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>From name</Label>
+              <Label>{t('compose.fromName')}</Label>
               <Input
                 value={fromName}
                 onChange={(e) => setFromName(e.target.value)}
-                placeholder="e.g. Acme Ventures"
+                placeholder={t('compose.fromNamePlaceholder')}
               />
             </div>
             <div>
-              <Label>From address</Label>
+              <Label>{t('compose.fromAddress')}</Label>
               <Input
                 type="email"
                 value={fromAddress}
@@ -374,37 +362,37 @@ export default function RequestsPage() {
         )}
 
         <div>
-          <Label>Subject</Label>
+          <Label>{t('compose.subject')}</Label>
           <Input
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="Q4 2025 Portfolio Update Request"
+            placeholder={t('compose.subjectPlaceholder')}
           />
         </div>
 
         <div>
-          <Label>Email body</Label>
+          <Label>{t('compose.body')}</Label>
           <textarea
             className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring leading-relaxed"
             rows={14}
             value={bodyText}
             onChange={(e) => setBodyText(e.target.value)}
-            placeholder="Hi! Please send us your quarterly update..."
+            placeholder={t('compose.bodyPlaceholder')}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Plain text email body. Line breaks and formatting will be preserved. Pre-populated from your last sent request.
+            {t('compose.bodyHint')}
           </p>
         </div>
 
         <div>
-          <Label>CC</Label>
+          <Label>{t('compose.cc')}</Label>
           <Input
             value={cc}
             onChange={(e) => setCc(e.target.value)}
             placeholder="cc@example.com"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Optional. CC'd on every email sent.
+            {t('compose.ccHint')}
           </p>
         </div>
       </div>
@@ -412,18 +400,18 @@ export default function RequestsPage() {
       {/* Recipients */}
       <div className="rounded-lg border bg-card p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium">Recipients ({selected.size} of {companies.length})</h2>
+          <h2 className="text-sm font-medium">{t('recipients.count', { selected: selected.size, total: companies.length })}</h2>
           <button
             onClick={toggleAll}
             className="text-xs text-primary hover:underline"
           >
-            {selected.size === companies.length ? 'Deselect all' : 'Select all'}
+            {selected.size === companies.length ? t('recipients.deselectAll') : t('recipients.selectAll')}
           </button>
         </div>
 
         {companies.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No companies with contact emails found. Add contact emails to your companies first.
+            {t('recipients.empty')}
           </p>
         ) : (
           <div className="border rounded-lg divide-y max-h-[400px] overflow-y-auto">
@@ -450,7 +438,7 @@ export default function RequestsPage() {
 
       {/* Test send */}
       <div className="rounded-lg border bg-card p-5 space-y-3">
-        <h2 className="text-sm font-medium">Test send</h2>
+        <h2 className="text-sm font-medium">{t('test.title')}</h2>
         <div className="flex items-center gap-2">
           <Input
             value={testEmail}
@@ -465,25 +453,25 @@ export default function RequestsPage() {
             disabled={testSending || !testEmail.trim() || !subject.trim() || !bodyText.trim() || !hasEmailProvider}
           >
             {testSending ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Sending...</>
+              <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> {t('sending')}</>
             ) : (
-              'Send test'
+              t('test.send')
             )}
           </Button>
           {testResult && (
             testResult.success ? (
               <span className="text-xs text-emerald-600 flex items-center gap-1">
-                <Check className="h-3 w-3" /> Sent
+                <Check className="h-3 w-3" /> {t('sent')}
               </span>
             ) : (
               <span className="text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> {testResult.error || 'Failed'}
+                <AlertCircle className="h-3 w-3" /> {testResult.error || t('failed')}
               </span>
             )
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Send a test email to yourself before sending to all recipients.
+          {t('test.hint')}
         </p>
       </div>
 
@@ -494,7 +482,7 @@ export default function RequestsPage() {
             onClick={() => setConfirmSend(true)}
             disabled={sending || !subject.trim() || !bodyText.trim() || selected.size === 0 || !hasEmailProvider}
           >
-            <Send className="h-4 w-4 mr-1.5" /> Send to {selected.size} recipient{selected.size !== 1 ? 's' : ''}
+            <Send className="h-4 w-4 mr-1.5" /> {t('sendToRecipients', { count: selected.size })}
           </Button>
         ) : (
           <>
@@ -504,9 +492,9 @@ export default function RequestsPage() {
               disabled={sending}
             >
               {sending ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Sending...</>
+                <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> {t('sending')}</>
               ) : (
-                <>Confirm, send {selected.size} email{selected.size !== 1 ? 's' : ''} now</>
+                <>{t('confirmSend', { count: selected.size })}</>
               )}
             </Button>
             <Button
@@ -514,7 +502,7 @@ export default function RequestsPage() {
               onClick={() => setConfirmSend(false)}
               disabled={sending}
             >
-              Cancel
+              {t('cancel')}
             </Button>
           </>
         )}
@@ -531,7 +519,7 @@ export default function RequestsPage() {
       {results && (
         <div className="rounded-lg border bg-card p-5 space-y-3">
           <h2 className="text-sm font-medium">
-            Results: {results.sent} sent, {results.failed} failed
+            {t('results.title', { sent: results.sent, failed: results.failed })}
           </h2>
           <div className="border rounded-lg divide-y max-h-[300px] overflow-y-auto">
             {results.details.map((r, i) => (
@@ -539,11 +527,11 @@ export default function RequestsPage() {
                 <span className="text-sm">{r.emails}</span>
                 {r.success ? (
                   <span className="text-xs text-emerald-600 flex items-center gap-1">
-                    <Check className="h-3 w-3" /> Sent
+                    <Check className="h-3 w-3" /> {t('sent')}
                   </span>
                 ) : (
                   <span className="text-xs text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> {r.error || 'Failed'}
+                    <AlertCircle className="h-3 w-3" /> {r.error || t('failed')}
                   </span>
                 )}
               </div>

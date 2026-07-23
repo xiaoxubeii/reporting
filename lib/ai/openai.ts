@@ -1,13 +1,34 @@
 import OpenAI from 'openai'
 import type { AIProvider, AIModel, AIResult, CreateMessageParams, CreateChatParams, ContentBlock } from './types'
+import {
+  parseCustomAIProviderRequestParameters,
+  type CustomAIProviderRequestParameters,
+} from './custom-provider'
+import { safeCustomProviderFetch } from './custom-provider-fetch'
+
+export interface OpenAIProviderOptions {
+  requestParameters?: CustomAIProviderRequestParameters
+  rejectRedirects?: boolean
+}
 
 export class OpenAIProvider implements AIProvider {
   private client: OpenAI
   private customBaseURL: boolean
+  private requestParameters: CustomAIProviderRequestParameters
 
-  constructor(apiKey: string, baseURL?: string) {
-    this.client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) })
+  constructor(apiKey: string, baseURL?: string, options: OpenAIProviderOptions = {}) {
+    const safeFetch: typeof fetch | undefined = options.rejectRedirects
+      ? safeCustomProviderFetch
+      : undefined
+    this.client = new OpenAI({
+      apiKey,
+      ...(baseURL ? { baseURL } : {}),
+      ...(safeFetch ? { fetch: safeFetch } : {}),
+    })
     this.customBaseURL = !!baseURL
+    const parsed = parseCustomAIProviderRequestParameters(options.requestParameters)
+    if (!parsed.ok) throw new Error(parsed.error)
+    this.requestParameters = parsed.value
   }
 
   async createMessage(params: CreateMessageParams): Promise<AIResult> {
@@ -24,10 +45,11 @@ export class OpenAIProvider implements AIProvider {
     messages.push({ role: 'user', content: userContent })
 
     const response = await this.client.chat.completions.create({
+      ...this.requestParameters,
       model: params.model,
       max_tokens: params.maxTokens,
       messages,
-    })
+    } as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming)
 
     return {
       text: response.choices[0]?.message?.content ?? '',
@@ -51,10 +73,11 @@ export class OpenAIProvider implements AIProvider {
     }
 
     const response = await this.client.chat.completions.create({
+      ...this.requestParameters,
       model: params.model,
       max_tokens: params.maxTokens,
       messages,
-    })
+    } as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming)
 
     return {
       text: response.choices[0]?.message?.content ?? '',

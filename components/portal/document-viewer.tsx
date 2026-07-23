@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Loader2, Download, X, FileWarning } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { AccessHistory } from '@/components/portal/access-history'
 
 export interface ViewerDoc {
@@ -37,6 +38,7 @@ function previewKind(d: ViewerDoc): PreviewKind {
  * history alongside.
  */
 export function DocumentViewer({ doc, onClose }: { doc: ViewerDoc; onClose: () => void }) {
+  const t = useTranslations('Portal')
   const kind = previewKind(doc)
   const [url, setUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,6 +86,9 @@ export function DocumentViewer({ doc, onClose }: { doc: ViewerDoc; onClose: () =
       <div
         className="flex h-full max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border bg-card shadow-xl"
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={doc.title}
       >
         {/* Header */}
         <div className="flex items-center gap-3 border-b px-4 py-3">
@@ -97,9 +102,9 @@ export function DocumentViewer({ doc, onClose }: { doc: ViewerDoc; onClose: () =
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground disabled:opacity-60"
           >
             {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            Download
+            {t('documentViewer.download')}
           </button>
-          <button onClick={onClose} title="Close" className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted/40 hover:text-foreground">
+          <button onClick={onClose} title={t('documentViewer.close')} className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted/40 hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -109,29 +114,29 @@ export function DocumentViewer({ doc, onClose }: { doc: ViewerDoc; onClose: () =
           {kind === 'none' ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
               <FileWarning className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">This file type can&apos;t be previewed in the browser.</p>
+              <p className="text-sm text-muted-foreground">{t('documentViewer.notPreviewable')}</p>
               <button
                 onClick={download}
                 disabled={downloading}
                 className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground disabled:opacity-60"
               >
                 {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Download to view
+                {t('documentViewer.downloadToView')}
               </button>
             </div>
           ) : loading ? (
             <div className="flex h-full items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading preview…
+              <Loader2 className="h-4 w-4 animate-spin" /> {t('documentViewer.loadingPreview')}
             </div>
           ) : error || !url ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
               <FileWarning className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Couldn&apos;t load a preview.</p>
+              <p className="text-sm text-muted-foreground">{t('documentViewer.previewFailed')}</p>
               <button
                 onClick={download}
                 className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
               >
-                <Download className="h-4 w-4" /> Download instead
+                <Download className="h-4 w-4" /> {t('documentViewer.downloadInstead')}
               </button>
             </div>
           ) : kind === 'image' ? (

@@ -1,17 +1,23 @@
-import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeSummary } from '@/lib/investments'
 import type { InvestmentTransaction, CompanyStatus } from '@/lib/types/database'
 
-export const metadata: Metadata = { title: 'Portfolio' }
 import { DashboardCompanies } from './dashboard-companies'
 import { DashboardNotesLayout, DashboardChatButton, DashboardNotesPanel } from './dashboard-notes'
 import { AnalystToggleButton } from '@/components/analyst-button'
 import { AnalystPanel } from '@/components/analyst-panel'
 
+export async function generateMetadata() {
+  const t = await getTranslations('Dashboard')
+  return { title: t('metadataTitle') }
+}
+
 export default async function DashboardPage() {
+  const t = await getTranslations('Dashboard')
+  const locale = await getLocale()
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
@@ -23,8 +29,6 @@ export default async function DashboardPage() {
     .maybeSingle() as { data: { role: string } | null }
 
   const isAdmin = membership?.role === 'admin'
-
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
 
   // Fetch companies with their first 2 metrics and review counts
   type CompanyRow = {
@@ -87,10 +91,9 @@ export default async function DashboardPage() {
     if (row.period_month) {
       // Use last day of the month
       const lastDay = new Date(row.period_year, row.period_month, 0)
-      lastMetricPeriod.set(row.company_id, lastDay.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }))
+      lastMetricPeriod.set(row.company_id, lastDay.toLocaleDateString(locale, { month: 'short', year: 'numeric' }))
     } else if (row.period_quarter) {
-      const qLabels = ['Q1', 'Q2', 'Q3', 'Q4']
-      lastMetricPeriod.set(row.company_id, `${qLabels[row.period_quarter - 1]} ${row.period_year}`)
+      lastMetricPeriod.set(row.company_id, t('quarter', { quarter: row.period_quarter, year: row.period_year }))
     } else {
       lastMetricPeriod.set(row.company_id, `${row.period_year}`)
     }
@@ -125,6 +128,7 @@ export default async function DashboardPage() {
   const allCompanyIds = companies.map(c => c.id)
   const admin = createAdminClient()
   const { data: allTxns } = await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generated database types do not include this legacy table
     .from('investment_transactions' as any)
     .select('*')
     .in('company_id', allCompanyIds)
@@ -176,25 +180,23 @@ export default async function DashboardPage() {
     unrealizedValue: investmentSummaries.get(c.id)?.unrealizedValue ?? null,
   }))
 
-  const allGroups = Array.from(new Set(companiesWithInvestments.flatMap(c => c.portfolioGroup ?? []))).sort()
-
   return (
-    <DashboardNotesLayout userId={user.id} isAdmin={isAdmin} companies={companiesWithInvestments.map(c => ({ id: c.id, name: c.name }))}>
+    <DashboardNotesLayout userId={user.id} isAdmin={isAdmin} companies={companiesWithInvestments.map(c => ({ id: c.id, name: c.name, portfolioGroup: c.portfolioGroup }))}>
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Portfolio</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <div className="flex items-center gap-2">
             <DashboardChatButton />
             <AnalystToggleButton />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Track performance and activity across your portfolio companies</p>
+        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div className="flex-1 min-w-0 max-w-7xl w-full">
-          <DashboardCompanies companies={companiesWithInvestments} allGroups={allGroups} />
+          <DashboardCompanies companies={companiesWithInvestments} />
         </div>
         <DashboardNotesPanel />
         <AnalystPanel />

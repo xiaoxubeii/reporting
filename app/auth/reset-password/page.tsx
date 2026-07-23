@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useLocale, useTranslations } from 'next-intl'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
@@ -17,6 +18,8 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const t = useTranslations('Auth')
+  const locale = useLocale()
 
   const router = useRouter()
   const supabase = createClient()
@@ -25,18 +28,18 @@ export default function ResetPasswordPage() {
     setError(null)
 
     if (!password || password.length < 8) {
-      setError('Password must be at least 8 characters.')
+      setError(t('passwordMinimumError'))
       return
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.')
+      setError(t('passwordMismatch'))
       return
     }
 
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
     if (error) {
-      setError(error.message)
+      setError(locale === 'en' ? error.message : t('genericError'))
     } else {
       setSuccess(true)
     }
@@ -48,9 +51,9 @@ export default function ResetPasswordPage() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Set new password</CardTitle>
+            <CardTitle className="text-lg">{t('setPasswordTitle')}</CardTitle>
             <CardDescription>
-              {success ? 'Your password has been updated.' : 'Choose a new password for your account.'}
+              {success ? t('passwordUpdatedDescription') : t('choosePasswordDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -64,17 +67,17 @@ export default function ResetPasswordPage() {
               <div className="space-y-4">
                 <Alert>
                   <AlertDescription>
-                    Your password has been updated successfully. You can now sign in with your new password.
+                    {t('passwordUpdated')}
                   </AlertDescription>
                 </Alert>
                 <Button className="w-full" onClick={() => router.push('/')}>
-                  Continue
+                  {t('continue')}
                 </Button>
               </div>
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="password">New password</Label>
+                  <Label htmlFor="password">{t('newPassword')}</Label>
                   <Input
                     id="password"
                     type="password"
@@ -82,13 +85,13 @@ export default function ResetPasswordPage() {
                     onChange={e => setPassword(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && resetPassword()}
                     autoComplete="new-password"
-                    placeholder="At least 8 characters"
+                    placeholder={t('passwordMinimumPlaceholder')}
                     autoFocus
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm password</Label>
+                  <Label htmlFor="confirm-password">{t('confirmPassword')}</Label>
                   <Input
                     id="confirm-password"
                     type="password"
@@ -100,14 +103,14 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <Button className="w-full" onClick={resetPassword} disabled={loading}>
-                  {loading ? 'Updating…' : 'Update password'}
+                  {loading ? t('updating') : t('updatePassword')}
                 </Button>
               </>
             )}
 
             <p className="text-center text-sm text-muted-foreground">
               <Link href="/auth" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                Back to sign in
+                {t('backToSignIn')}
               </Link>
             </p>
           </CardContent>

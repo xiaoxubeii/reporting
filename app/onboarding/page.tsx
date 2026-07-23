@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,13 +35,15 @@ interface MatchingFund {
 // ---------------------------------------------------------------------------
 
 const STEPS = [
-  { n: 1, label: 'Fund setup' },
-  { n: 2, label: 'Email integration' },
-  { n: 3, label: 'Senders' },
-  { n: 4, label: 'Google Drive' },
-]
+  { n: 1, key: 'steps.fundSetup' },
+  { n: 2, key: 'steps.emailIntegration' },
+  { n: 3, key: 'steps.senders' },
+  { n: 4, key: 'steps.googleDrive' },
+] as const
 
 function StepIndicator({ current }: { current: number }) {
+  const t = useTranslations('Onboarding')
+
   return (
     <div className="flex items-center gap-2 mb-8">
       {STEPS.map((step, i) => (
@@ -60,7 +63,7 @@ function StepIndicator({ current }: { current: number }) {
                 current === step.n ? 'font-medium' : 'text-muted-foreground'
               }`}
             >
-              {step.label}
+              {t(step.key)}
             </span>
           </div>
           {i < STEPS.length - 1 && (
@@ -91,6 +94,7 @@ export default function OnboardingPage() {
 function OnboardingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations('Onboarding')
 
   const [loading, setLoading] = useState(true)
   const [matchingFund, setMatchingFund] = useState<MatchingFund | null>(null)
@@ -160,7 +164,7 @@ function OnboardingContent() {
     <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
       <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
       <AlertDescription className="text-green-800 dark:text-green-200">
-        Your email has been confirmed. You&apos;re all set to get started.
+        {t('emailConfirmed')}
       </AlertDescription>
     </Alert>
   ) : null
@@ -174,9 +178,9 @@ function OnboardingContent() {
       <div className="w-full max-w-lg">
         {confirmedBanner}
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Set up your fund</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            This takes about 3 minutes. You can update everything later in Settings.
+            {t('description')}
           </p>
         </div>
 
@@ -228,6 +232,7 @@ function JoinFundScreen({
   confirmedBanner?: React.ReactNode
 }) {
   const router = useRouter()
+  const t = useTranslations('Onboarding')
   const [requesting, setRequesting] = useState(false)
   const [requested, setRequested] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -243,11 +248,15 @@ function JoinFundScreen({
         body: JSON.stringify({ fundId: fund.id }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) {
+        setError(typeof data.error === 'string' ? data.error : t('errors.generic'))
+        setRequesting(false)
+        return
+      }
       setRequested(true)
       setTimeout(() => router.push('/pending'), 1500)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
+      setError(t('errors.generic'))
     }
     setRequesting(false)
   }
@@ -257,9 +266,9 @@ function JoinFundScreen({
       <div className="w-full max-w-md space-y-4">
         {confirmedBanner}
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('join.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            We found a fund matching your email domain.
+            {t('join.description')}
           </p>
         </div>
 
@@ -274,8 +283,8 @@ function JoinFundScreen({
             {requested ? (
               <div className="text-center py-4">
                 <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-                <p className="font-medium">Request sent</p>
-                <p className="text-sm text-muted-foreground">Redirecting...</p>
+                <p className="font-medium">{t('join.requestSent')}</p>
+                <p className="text-sm text-muted-foreground">{t('join.redirecting')}</p>
               </div>
             ) : (
               <>
@@ -283,31 +292,31 @@ function JoinFundScreen({
                   <Building2 className="h-8 w-8 text-muted-foreground shrink-0" />
                   <div>
                     <p className="font-medium">{fund.name}</p>
-                    <p className="text-xs text-muted-foreground">Existing fund at your organization</p>
+                    <p className="text-xs text-muted-foreground">{t('join.existingFund')}</p>
                   </div>
                 </div>
 
                 <Button className="w-full" onClick={requestJoin} disabled={requesting}>
                   {requesting ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Requesting...</>
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('join.requesting')}</>
                   ) : (
-                    'Request to join'
+                    t('join.request')
                   )}
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
-                  Your request will be reviewed by a fund administrator.
+                  {t('join.reviewNotice')}
                 </p>
 
                 <div className="relative py-2">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">or</span>
+                    <span className="bg-card px-2 text-muted-foreground">{t('join.or')}</span>
                   </div>
                 </div>
 
                 <Button variant="outline" className="w-full" onClick={onCreateInstead}>
-                  Create a new fund instead
+                  {t('join.createInstead')}
                 </Button>
               </>
             )}
@@ -323,6 +332,7 @@ function JoinFundScreen({
 // ---------------------------------------------------------------------------
 
 function Step1({ onComplete }: { onComplete: (fundId: string, webhookToken: string) => void }) {
+  const t = useTranslations('Onboarding')
   const [fundName, setFundName] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [testing, setTesting] = useState(false)
@@ -347,18 +357,18 @@ function Step1({ onComplete }: { onComplete: (fundId: string, webhookToken: stri
         setTestResult('success')
       } else {
         setTestResult('error')
-        setTestError(data.error ?? 'Connection failed')
+        setTestError(data.error ?? t('errors.connectionFailed'))
       }
     } catch {
       setTestResult('error')
-      setTestError('Network error')
+      setTestError(t('errors.network'))
     }
     setTesting(false)
   }
 
   async function submit() {
     if (!fundName.trim() || !apiKey.trim()) {
-      setError('Both fields are required.')
+      setError(t('step1.bothRequired'))
       return
     }
     setError(null)
@@ -370,10 +380,14 @@ function Step1({ onComplete }: { onComplete: (fundId: string, webhookToken: stri
         body: JSON.stringify({ fundName, claudeApiKey: apiKey }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) {
+        setError(typeof data.error === 'string' ? data.error : t('errors.generic'))
+        setSaving(false)
+        return
+      }
       onComplete(data.fundId, data.webhookToken)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
+      setError(t('errors.generic'))
     }
     setSaving(false)
   }
@@ -381,9 +395,9 @@ function Step1({ onComplete }: { onComplete: (fundId: string, webhookToken: stri
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fund name &amp; Claude API key</CardTitle>
+        <CardTitle>{t('step1.title')}</CardTitle>
         <CardDescription>
-          Your API key is encrypted before storage and never exposed.
+          {t('step1.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -394,17 +408,17 @@ function Step1({ onComplete }: { onComplete: (fundId: string, webhookToken: stri
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="fund-name">Fund name</Label>
+          <Label htmlFor="fund-name">{t('step1.fundName')}</Label>
           <Input
             id="fund-name"
-            placeholder="Acme Ventures"
+            placeholder={t('step1.fundNamePlaceholder')}
             value={fundName}
             onChange={e => setFundName(e.target.value)}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="api-key">Claude API key</Label>
+          <Label htmlFor="api-key">{t('step1.apiKey')}</Label>
           <div className="flex gap-2">
             <Input
               id="api-key"
@@ -418,19 +432,19 @@ function Step1({ onComplete }: { onComplete: (fundId: string, webhookToken: stri
               className="flex-1"
             />
             <Button variant="outline" onClick={testKey} disabled={testing || !apiKey.trim()}>
-              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Test'}
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : t('step1.test')}
             </Button>
           </div>
           {testResult === 'success' && (
             <p className="text-sm text-green-600 flex items-center gap-1">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Connected successfully
+              <CheckCircle2 className="h-3.5 w-3.5" /> {t('step1.connected')}
             </p>
           )}
           {testResult === 'error' && (
             <p className="text-sm text-destructive">{testError}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            Get your key at{' '}
+            {t('step1.getKeyAt')}{' '}
             <a
               href="https://console.anthropic.com"
               target="_blank"
@@ -443,7 +457,7 @@ function Step1({ onComplete }: { onComplete: (fundId: string, webhookToken: stri
         </div>
 
         <Button className="w-full" onClick={submit} disabled={saving}>
-          {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving…</> : 'Next →'}
+          {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('saving')}</> : t('next')}
         </Button>
       </CardContent>
     </Card>
@@ -463,6 +477,7 @@ function Step2({
   webhookToken: string
   onComplete: () => void
 }) {
+  const t = useTranslations('Onboarding')
   const [provider, setProvider] = useState<'postmark' | 'mailgun'>('postmark')
   const [inboundAddress, setInboundAddress] = useState('')
   const [mgDomain, setMgDomain] = useState('')
@@ -479,11 +494,11 @@ function Step2({
 
   async function submit() {
     if (provider === 'postmark' && !inboundAddress.trim()) {
-      setError('Postmark inbound address is required.')
+      setError(t('step2.postmarkAddressRequired'))
       return
     }
     if (provider === 'mailgun' && !mgDomain.trim()) {
-      setError('Mailgun inbound domain is required.')
+      setError(t('step2.mailgunDomainRequired'))
       return
     }
     setError(null)
@@ -502,10 +517,14 @@ function Step2({
         body: JSON.stringify(body),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) {
+        setError(typeof data.error === 'string' ? data.error : t('errors.generic'))
+        setSaving(false)
+        return
+      }
       onComplete()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
+      setError(t('errors.generic'))
     }
     setSaving(false)
   }
@@ -513,9 +532,9 @@ function Step2({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Inbound email integration</CardTitle>
+        <CardTitle>{t('step2.title')}</CardTitle>
         <CardDescription>
-          Choose how portfolio companies will send reports to your fund.
+          {t('step2.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -526,7 +545,7 @@ function Step2({
         )}
 
         <div className="space-y-2">
-          <Label>Email provider</Label>
+          <Label>{t('step2.provider')}</Label>
           <div className="flex gap-2">
             <button
               type="button"
@@ -539,7 +558,7 @@ function Step2({
             >
               <span className="font-medium">Postmark</span>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Managed inbound address with webhook forwarding
+                {t('step2.postmarkDescription')}
               </p>
             </button>
             <button
@@ -553,26 +572,27 @@ function Step2({
             >
               <span className="font-medium">Mailgun</span>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Route emails from your own domain
+                {t('step2.mailgunDescription')}
               </p>
             </button>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Webhook base URL</Label>
+          <Label htmlFor="webhook-base-url">{t('step2.baseUrl')}</Label>
           <Input
+            id="webhook-base-url"
             value={baseUrl}
             onChange={e => setBaseUrl(e.target.value)}
             placeholder="https://your-app.vercel.app"
           />
           <p className="text-xs text-muted-foreground">
-            For local development, use your ngrok or tunnel URL (e.g. https://abc123.ngrok.io).
+            {t('step2.baseUrlHelp')}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label>Your webhook URL</Label>
+          <Label>{t('step2.webhookUrl')}</Label>
           <div className="flex items-center gap-2">
             <code className="flex-1 bg-muted rounded-md px-3 py-2 text-xs break-all font-mono">
               {provider === 'postmark' ? postmarkWebhookUrl : mailgunWebhookUrl}
@@ -584,35 +604,35 @@ function Step2({
                 provider === 'postmark' ? postmarkWebhookUrl : mailgunWebhookUrl
               )}
             >
-              Copy
+              {t('step2.copy')}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
             {provider === 'postmark' ? (
-              <>
-                In your{' '}
+              t.rich('step2.postmarkWebhookHelp', {
+                settings: chunks => (
                 <a
                   href="https://account.postmarkapp.com/servers"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline"
                 >
-                  Postmark server settings
+                  {chunks}
                 </a>
-                , go to <strong>Inbound</strong> and paste this URL as the webhook endpoint.
-              </>
+                ),
+                strong: chunks => <strong>{chunks}</strong>,
+              })
             ) : (
-              <>
-                In Mailgun, go to <strong>Receiving</strong> &gt; <strong>Create Route</strong> and
-                forward matching emails to this URL.
-              </>
+              t.rich('step2.mailgunWebhookHelp', {
+                strong: chunks => <strong>{chunks}</strong>,
+              })
             )}
           </p>
         </div>
 
         {provider === 'postmark' && (
           <div className="space-y-2">
-            <Label htmlFor="inbound-address">Postmark inbound email address</Label>
+            <Label htmlFor="inbound-address">{t('step2.postmarkAddress')}</Label>
             <Input
               id="inbound-address"
               type="email"
@@ -621,7 +641,7 @@ function Step2({
               onChange={e => setInboundAddress(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Found on the same Inbound settings page. Share this with your portfolio founders.
+              {t('step2.postmarkAddressHelp')}
             </p>
           </div>
         )}
@@ -629,7 +649,7 @@ function Step2({
         {provider === 'mailgun' && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="mg-domain">Mailgun inbound domain</Label>
+              <Label htmlFor="mg-domain">{t('step2.mailgunDomain')}</Label>
               <Input
                 id="mg-domain"
                 placeholder="mg.yourdomain.com"
@@ -637,27 +657,27 @@ function Step2({
                 onChange={e => setMgDomain(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                The domain configured for inbound routing in Mailgun.
+                {t('step2.mailgunDomainHelp')}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mg-signing-key">Webhook signing key (optional)</Label>
+              <Label htmlFor="mg-signing-key">{t('step2.signingKey')}</Label>
               <Input
                 id="mg-signing-key"
                 type="password"
-                placeholder="Mailgun webhook signing key"
+                placeholder={t('step2.signingKeyPlaceholder')}
                 value={mgSigningKey}
                 onChange={e => setMgSigningKey(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Found in the Mailgun dashboard under Sending &gt; Webhooks. Used to verify inbound requests.
+                {t('step2.signingKeyHelp')}
               </p>
             </div>
           </>
         )}
 
         <Button className="w-full" onClick={submit} disabled={saving}>
-          {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving…</> : 'Next →'}
+          {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('saving')}</> : t('next')}
         </Button>
       </CardContent>
     </Card>
@@ -669,6 +689,7 @@ function Step2({
 // ---------------------------------------------------------------------------
 
 function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void }) {
+  const t = useTranslations('Onboarding')
   const [senders, setSenders] = useState<Sender[]>([])
   const [newEmail, setNewEmail] = useState('')
   const [newLabel, setNewLabel] = useState('')
@@ -689,7 +710,7 @@ function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void 
   async function submit() {
     const valid = senders.filter(s => s.email.trim())
     if (valid.length === 0) {
-      setError('Add at least one authorized sender.')
+      setError(t('step3.senderRequired'))
       return
     }
     setError(null)
@@ -701,10 +722,14 @@ function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void 
         body: JSON.stringify({ fundId, senders: valid }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) {
+        setError(typeof data.error === 'string' ? data.error : t('errors.generic'))
+        setSaving(false)
+        return
+      }
       onComplete()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
+      setError(t('errors.generic'))
     }
     setSaving(false)
   }
@@ -712,10 +737,9 @@ function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Authorized senders</CardTitle>
+        <CardTitle>{t('step3.title')}</CardTitle>
         <CardDescription>
-          Only emails from these addresses will trigger report parsing. Add founders,
-          CFOs, and anyone who will send portfolio reports.
+          {t('step3.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -742,6 +766,7 @@ function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void 
                   variant="ghost"
                   size="icon"
                   onClick={() => removeSender(i)}
+                  aria-label={t('step3.removeSender', { email: sender.email })}
                   className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                 >
                   <X className="h-4 w-4" />
@@ -753,7 +778,7 @@ function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void 
 
         {/* Add sender */}
         <div className="space-y-2">
-          <Label>Add sender</Label>
+          <Label>{t('step3.addSender')}</Label>
           <div className="flex gap-2">
             <Input
               type="email"
@@ -764,13 +789,19 @@ function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void 
               className="flex-1"
             />
             <Input
-              placeholder="Label (optional)"
+              placeholder={t('step3.labelPlaceholder')}
               value={newLabel}
               onChange={e => setNewLabel(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addSender()}
               className="w-36"
             />
-            <Button variant="outline" size="icon" onClick={addSender} disabled={!newEmail.trim()}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={addSender}
+              disabled={!newEmail.trim()}
+              aria-label={t('step3.addSenderAction')}
+            >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -778,9 +809,9 @@ function Step3({ fundId, onComplete }: { fundId: string; onComplete: () => void 
 
         <Button className="w-full" onClick={submit} disabled={saving}>
           {saving ? (
-            <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving…</>
+            <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('saving')}</>
           ) : (
-            'Next →'
+            t('next')
           )}
         </Button>
       </CardContent>
@@ -799,6 +830,7 @@ function Step4({
   googleConnected: boolean
   onComplete: () => void
 }) {
+  const t = useTranslations('Onboarding')
   const [configured, setConfigured] = useState(false)
   const [connectError, setConnectError] = useState<string | null>(null)
 
@@ -832,17 +864,16 @@ function Step4({
       setConfigured(true)
     } else {
       const data = await res.json().catch(() => ({}))
-      setConnectError(data.error || 'Failed to save credentials')
+      setConnectError(data.error || t('step4.saveCredentialsFailed'))
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Google Drive</CardTitle>
+        <CardTitle>{t('step4.title')}</CardTitle>
         <CardDescription>
-          Optionally connect Google Drive to automatically save email attachments and reports to a folder.
-          You can always set this up later in Settings.
+          {t('step4.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -850,9 +881,9 @@ function Step4({
           <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50">
             <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0" />
             <div>
-              <p className="font-medium text-sm">Google Drive connected</p>
+              <p className="font-medium text-sm">{t('step4.connected')}</p>
               <p className="text-xs text-muted-foreground">
-                You can choose a specific folder in Settings after setup.
+                {t('step4.connectedHelp')}
               </p>
             </div>
           </div>
@@ -861,25 +892,27 @@ function Step4({
             <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed">
               <HardDrive className="h-6 w-6 text-muted-foreground shrink-0" />
               <div className="flex-1">
-                <p className="font-medium text-sm">Save reports to Google Drive</p>
+                <p className="font-medium text-sm">{t('step4.saveReports')}</p>
                 <p className="text-xs text-muted-foreground">
-                  Enter your Google OAuth credentials to get started.
+                  {t('step4.enterCredentials')}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
               <div>
-                <Label>Client ID</Label>
+                <Label htmlFor="google-client-id">{t('step4.clientId')}</Label>
                 <Input
+                  id="google-client-id"
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
                   placeholder="123456789.apps.googleusercontent.com"
                 />
               </div>
               <div>
-                <Label>Client secret</Label>
+                <Label htmlFor="google-client-secret">{t('step4.clientSecret')}</Label>
                 <Input
+                  id="google-client-secret"
                   type="password"
                   value={clientSecret}
                   onChange={(e) => setClientSecret(e.target.value)}
@@ -887,11 +920,17 @@ function Step4({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Create credentials at{' '}
+                {t('step4.createCredentialsAt')}{' '}
                 <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">
-                  Google Cloud Console
+                  {t('step4.googleCloudConsole')}
                 </a>
-                . Add <code className="text-[11px] bg-muted px-1 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/google/callback</code> as an authorized redirect URI.
+                {t.rich('step4.redirectUriHelp', {
+                  callback: () => (
+                    <code className="text-[11px] bg-muted px-1 rounded">
+                      {typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/google/callback
+                    </code>
+                  ),
+                })}
               </p>
               <Button
                 className="w-full"
@@ -900,7 +939,7 @@ function Step4({
                 disabled={savingCreds || !clientId.trim() || !clientSecret.trim()}
               >
                 {savingCreds ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Save credentials
+                {t('step4.saveCredentials')}
               </Button>
             </div>
           </div>
@@ -908,9 +947,9 @@ function Step4({
           <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed">
             <HardDrive className="h-6 w-6 text-muted-foreground shrink-0" />
             <div className="flex-1">
-              <p className="font-medium text-sm">Save reports to Google Drive</p>
+              <p className="font-medium text-sm">{t('step4.saveReports')}</p>
               <p className="text-xs text-muted-foreground">
-                Credentials configured. Connect your Google account to get started.
+                {t('step4.credentialsConfigured')}
               </p>
             </div>
           </div>
@@ -932,12 +971,12 @@ function Step4({
               }}
             >
               <HardDrive className="h-4 w-4 mr-2" />
-              Connect Google Drive
+              {t('step4.connect')}
             </Button>
           )}
 
           <Button className="w-full" onClick={onComplete}>
-            {googleConnected ? 'Finish setup' : 'Skip for now'}
+            {googleConnected ? t('step4.finish') : t('step4.skip')}
           </Button>
         </div>
       </CardContent>

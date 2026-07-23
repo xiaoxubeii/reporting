@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 /**
  * Shown in the GP app header only for dual users (a GP who is also an active
@@ -11,6 +12,7 @@ import { ExternalLink } from 'lucide-react'
  */
 export function LpPortalSwitchLink() {
   const [isLp, setIsLp] = useState(false)
+  const t = useTranslations('Header')
 
   useEffect(() => {
     fetch('/api/portal/me')
@@ -24,10 +26,10 @@ export function LpPortalSwitchLink() {
     <Link
       href="/portal/snapshots"
       className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 whitespace-nowrap"
-      title="Switch to your LP portal"
+      title={t('switchToLpPortal')}
     >
       <ExternalLink className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">LP Portal</span>
+      <span className="hidden sm:inline">{t('lpPortal')}</span>
     </Link>
   )
 }

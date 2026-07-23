@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, ClipboardCheck, ListChecks, Mail, Upload, Send, Settings, LifeBuoy, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, BarChart3, TrendingUp, Lock, Users, Handshake, ArrowDownCircle, FileText, Briefcase, Crown, ShieldCheck, Lightbulb, Microscope, BookOpen, Rss } from 'lucide-react'
+import { Building2, ClipboardCheck, ListChecks, Mail, Settings, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Lock, Users, ArrowDownCircle, Crown, Lightbulb, Microscope, BookOpen, Rss } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
+import { useTranslations } from 'next-intl'
 import { useSidebar } from '@/components/sidebar-context'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { ACCOUNTING_SECTIONS } from '@/lib/accounting/nav'
 import { useVehicle, FUND_SUBPAGE_SLUGS } from '@/components/accounting-vehicle'
 import type { FeatureKey, FeatureVisibilityMap } from '@/lib/types/features'
@@ -16,11 +18,14 @@ import type { AccessLevel } from '@/lib/access/effective'
 
 const THEME_CYCLE = ['system', 'light', 'dark'] as const
 const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon }
-const THEME_LABELS = { system: 'System', light: 'Light', dark: 'Dark' }
+import type englishMessages from '@/messages/en.json'
+
+type NavigationKey = keyof typeof englishMessages.Navigation
 
 interface NavChild {
   href: string
-  label: string
+  label?: string
+  labelKey?: NavigationKey
   adminOnly?: boolean
   featureKey?: FeatureKey
   /** Only where the featureKey can't imply it (or there is no featureKey). */
@@ -33,7 +38,7 @@ interface NavChild {
 }
 interface NavItem {
   href: string
-  label: string
+  labelKey: NavigationKey
   icon: LucideIcon
   badgeKey?: 'review' | 'settings' | 'notes'
   adminOnly?: boolean
@@ -65,7 +70,7 @@ function canSee(
   if (entry.adminOnly && !isAdmin) return false
 
   const domain = entry.domain ?? (entry.featureKey ? domainForFeature(entry.featureKey) : undefined)
-  // No domain and no feature: an always-available entry (Settings, Support).
+  // No domain and no feature: an always-available entry (Settings).
   if (!domain) return true
 
   const level = access(domain, entry.featureKey)
@@ -73,56 +78,56 @@ function canSee(
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/review', label: 'Review', icon: ClipboardCheck, badgeKey: 'review', domain: 'portfolio' },
+  { href: '/review', labelKey: 'review', icon: ClipboardCheck, badgeKey: 'review', domain: 'portfolio' },
   // The queue spans domains; gate the nav on portfolio (like Review) and let the list filter rows.
-  { href: '/pending-actions', label: 'Pending Actions', icon: ListChecks, domain: 'portfolio' },
-  { href: '/emails', label: 'Inbound', icon: Mail, domain: 'dealflow' },
+  { href: '/pending-actions', labelKey: 'pendingActions', icon: ListChecks, domain: 'portfolio' },
+  { href: '/emails', labelKey: 'inbound', icon: Mail, domain: 'dealflow' },
   {
-    href: '/deals', label: 'Deals', icon: Lightbulb, featureKey: 'deals',
+    href: '/deals', labelKey: 'deals', icon: Lightbulb, featureKey: 'deals',
     children: [
-      { href: '/settings/email-audit',       label: 'Email audit',       adminOnly: true },
-      { href: '/settings/routing-accuracy',  label: 'Routing accuracy',  adminOnly: true },
+      { href: '/settings/email-audit',       labelKey: 'emailAudit',       adminOnly: true },
+      { href: '/settings/routing-accuracy',  labelKey: 'routingAccuracy',  adminOnly: true },
     ],
   },
   {
-    href: '/feeds', label: 'Feeds', icon: Rss, featureKey: 'feeds',
+    href: '/feeds', labelKey: 'feeds', icon: Rss, featureKey: 'feeds',
     children: [
-      { href: '/feeds', label: 'Today', featureKey: 'feeds', exact: true },
-      { href: '/feeds/sources', label: 'Follow sources', featureKey: 'feeds' },
+      { href: '/feeds', labelKey: 'today', featureKey: 'feeds', exact: true },
+      { href: '/feeds/sources', labelKey: 'followSources', featureKey: 'feeds' },
     ],
   },
   {
-    href: '/diligence', label: 'Diligence', icon: Microscope, featureKey: 'diligence',
+    href: '/diligence', labelKey: 'diligence', icon: Microscope, featureKey: 'diligence',
     children: [
-      { href: '/diligence/inbox',     label: 'Inbox' },
-      { href: '/diligence/analytics', label: 'Analytics', adminOnly: true },
+      { href: '/diligence/inbox',     labelKey: 'inbox' },
+      { href: '/diligence/analytics', labelKey: 'analytics', adminOnly: true },
     ],
   },
   {
-    href: '/dashboard', label: 'Portfolio', icon: Building2, domain: 'portfolio',
+    href: '/dashboard', labelKey: 'portfolio', icon: Building2, domain: 'portfolio',
     children: [
-      { href: '/import',       label: 'Import',       featureKey: 'imports' },
-      { href: '/investments',  label: 'Investments',  featureKey: 'investments' },
-      { href: '/requests',     label: 'Asks',         featureKey: 'asks' },
-      { href: '/interactions', label: 'Interactions', featureKey: 'interactions' },
+      { href: '/import',       labelKey: 'import',       featureKey: 'imports' },
+      { href: '/investments',  labelKey: 'investments',  featureKey: 'investments' },
+      { href: '/requests',     labelKey: 'asks',         featureKey: 'asks' },
+      { href: '/interactions', labelKey: 'interactions', featureKey: 'interactions' },
       // Letters are generated from PORTFOLIO data (the companies) and can be produced without
       // any LP tracking, so they live under Portfolio, not LPs.
-      { href: '/letters',      label: 'Letters',      featureKey: 'lp_letters' },
+      { href: '/letters',      labelKey: 'letters',      featureKey: 'lp_letters' },
       // Notes are about companies, so they belong under the portfolio rather than as a
       // top-level peer of it.
-      { href: '/notes',        label: 'Notes',        featureKey: 'notes', badgeKey: 'notes' },
-      { href: '/compliance',   label: 'Compliance',   featureKey: 'compliance' },
+      { href: '/notes',        labelKey: 'notes',        featureKey: 'notes', badgeKey: 'notes' },
+      { href: '/compliance',   labelKey: 'compliance',   featureKey: 'compliance' },
     ],
   },
   {
-    href: '/lps', label: 'LPs', icon: Crown, featureKey: 'lps',
+    href: '/lps', labelKey: 'lps', icon: Crown, featureKey: 'lps',
     children: [
-      { href: '/lps/capital',   label: 'Capital accounts', featureKey: 'lp_tracking' },
-      { href: '/lp-portal',     label: 'Documents',        featureKey: 'lp_portal' },
+      { href: '/lps/capital',   labelKey: 'capitalAccounts', featureKey: 'lp_tracking' },
+      { href: '/lp-portal',     labelKey: 'documents',        featureKey: 'lp_portal' },
       // See the portal exactly as an LP does ("viewing as …"). Admin-only, and only where a
       // portal exists to preview.
-      { href: '/lps/preview',   label: 'Preview portal',   featureKey: 'lp_portal', adminOnly: true },
-      { href: '/lp-activity',   label: 'Activity',         featureKey: 'lp_activity' },
+      { href: '/lps/preview',   labelKey: 'previewPortal',   featureKey: 'lp_portal', adminOnly: true },
+      { href: '/lp-activity',   labelKey: 'activity',         featureKey: 'lp_activity' },
     ],
   },
   {
@@ -133,13 +138,22 @@ const NAV_ITEMS: NavItem[] = [
     // No `adminOnly` — the featureKey already gates it (defaults to 'off', and a fund
     // that turns it on to 'admin' still only shows it to admins). Hard-coding adminOnly
     // on top of that also hid it from the read-only demo viewer, who should see the books.
-    href: '/funds', label: 'Funds', icon: BookOpen, featureKey: 'accounting',
+    href: '/funds', labelKey: 'funds', icon: BookOpen, featureKey: 'accounting',
     children: ACCOUNTING_SECTIONS.map(({ href, label, domain }) => ({ href, label, domain })),
   },
-  { href: '/usage', label: 'Usage', icon: Users, adminOnly: true, domain: 'admin' },
-  { href: '/settings', label: 'Settings', icon: Settings, badgeKey: 'settings' },
-  { href: '/support', label: 'Support', icon: LifeBuoy },
+  { href: '/usage', labelKey: 'usage', icon: Users, adminOnly: true, domain: 'admin' },
+  { href: '/settings', labelKey: 'settings', icon: Settings, badgeKey: 'settings' },
 ]
+
+const ACCOUNTING_LABEL_KEYS: Record<string, NavigationKey> = {
+  '/funds/status': 'admin',
+  '/funds/bank': 'bankTransactions',
+  '/funds/capital-accounts': 'capitalAccounts',
+  '/funds/journal': 'journal',
+  '/funds/periods': 'periodClose',
+  '/funds/schedule-of-investments': 'scheduleOfInvestments',
+  '/funds/statements': 'financialStatements',
+}
 
 interface AppSidebarProps {
   reviewBadge: number
@@ -156,6 +170,8 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
   const access = useAccess()
   const { collapsed, toggle } = useSidebar()
   const { theme, setTheme } = useTheme()
+  const t = useTranslations('Navigation')
+  const tTheme = useTranslations('Theme')
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
@@ -169,10 +185,11 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
   const fundSeg = pathFundSeg ?? vehicleId ?? (group ? encodeURIComponent(group) : null)
   const fundsChildren: NavChild[] = fundSeg
     ? [
-        { href: `/funds/${fundSeg}`, label: 'Overview', exact: true },
+        { href: `/funds/${fundSeg}`, labelKey: 'overview', exact: true },
         ...ACCOUNTING_SECTIONS.map(s => ({
           href: `/funds/${fundSeg}/${s.href.slice('/funds/'.length)}`,
           label: s.label,
+          labelKey: ACCOUNTING_LABEL_KEYS[s.href],
           domain: s.domain,
         })),
       ]
@@ -180,7 +197,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
 
   const currentTheme = (THEME_CYCLE.includes(theme as typeof THEME_CYCLE[number]) ? theme : 'system') as typeof THEME_CYCLE[number]
   const ThemeIcon = mounted ? THEME_ICONS[currentTheme] : Monitor
-  const themeLabel = mounted ? THEME_LABELS[currentTheme] : 'System'
+  const themeLabel = mounted ? tTheme(currentTheme) : tTheme('system')
 
   function cycleTheme() {
     const idx = THEME_CYCLE.indexOf(currentTheme)
@@ -195,7 +212,8 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
           if (item.badgeKey === 'review' && reviewBadge === 0) return false
           return true
         }).map((item) => {
-          const { href, label, icon: Icon, badgeKey, adminOnly, featureKey, beta } = item
+          const { href, labelKey, icon: Icon, badgeKey, adminOnly, featureKey, beta } = item
+          const label = t(labelKey)
           // The Funds children are computed per-render from the current fund (fund-first hrefs);
           // every other section uses its static children.
           const children = item.href === '/funds' ? fundsChildren : item.children
@@ -258,7 +276,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
                   collapsed ? (
                     <span className="hidden md:block absolute top-1 right-1 h-2 w-2 rounded-full bg-blue-500" />
                   ) : (
-                    <span className="text-[9px] font-medium text-blue-500 bg-blue-500/10 rounded px-1 py-0.5 leading-none uppercase tracking-wider self-center">beta</span>
+                    <span className="text-[9px] font-medium text-blue-500 bg-blue-500/10 rounded px-1 py-0.5 leading-none uppercase tracking-wider self-center">{t('beta')}</span>
                   )
                 )}
                 {showLock && !beta && !collapsed && (
@@ -271,7 +289,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
                 )}
                 {beta && showLock && !collapsed && (
                   <>
-                    <span className="text-[9px] font-medium text-blue-500 bg-blue-500/10 rounded px-1 py-0.5 leading-none uppercase tracking-wider self-center hidden md:inline">beta</span>
+                    <span className="text-[9px] font-medium text-blue-500 bg-blue-500/10 rounded px-1 py-0.5 leading-none uppercase tracking-wider self-center hidden md:inline">{t('beta')}</span>
                     <Lock className="h-3 w-3 text-amber-500 shrink-0 md:block hidden" />
                   </>
                 )}
@@ -300,7 +318,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                         }`}
                       >
-                        <span>{child.label}</span>
+                        <span>{child.labelKey ? t(child.labelKey) : child.label}</span>
                         {childShowLock && <Lock className="h-3 w-3 text-amber-500 shrink-0" />}
                         {child.badgeKey === 'notes' && (notesBadge ?? 0) > 0 && (
                           <span className="ml-auto text-[10px] font-medium rounded-full bg-muted-foreground/15 px-1.5 py-0.5 tabular-nums">
@@ -323,7 +341,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
             <Link
               href="/updates"
               onClick={onNavigate}
-              title={collapsed ? 'Updates' : undefined}
+              title={collapsed ? t('updates') : undefined}
               className={`relative flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
                 collapsed ? 'md:justify-center md:px-0' : ''
               } ${
@@ -333,7 +351,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
               }`}
             >
               <ArrowDownCircle className="h-5 w-5 shrink-0" />
-              <span className={`${collapsed ? 'md:hidden' : ''}`}>Updates</span>
+              <span className={`${collapsed ? 'md:hidden' : ''}`}>{t('updates')}</span>
               {collapsed ? (
                 <span className="hidden md:block absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />
               ) : (
@@ -357,10 +375,21 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
           </span>
         </button>
 
+        {/* Language selector: full label on mobile/expanded sidebar, icon-only when desktop-collapsed. */}
+        <div className={collapsed ? 'md:hidden' : undefined}>
+          <LanguageSwitcher className="w-full" />
+        </div>
+        {collapsed && (
+          <div className="hidden md:block">
+            <LanguageSwitcher compact />
+          </div>
+        )}
+
         {/* Hide Sidebar toggle, only shown on desktop */}
         <button
           onClick={toggle}
-          title={collapsed ? 'Show Sidebar' : 'Hide Sidebar'}
+          title={collapsed ? t('showSidebar') : t('hideSidebar')}
+          aria-label={collapsed ? t('showSidebar') : t('hideSidebar')}
           className={`hidden md:flex w-full items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent ${
             collapsed ? 'md:justify-center md:px-0' : ''
           }`}
@@ -371,7 +400,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
             <PanelLeftClose className="h-5 w-5 shrink-0" />
           )}
           <span className={`flex-1 text-left ${collapsed ? 'md:hidden' : ''}`}>
-            {collapsed ? 'Show Sidebar' : 'Hide Sidebar'}
+            {collapsed ? t('showSidebar') : t('hideSidebar')}
           </span>
         </button>
       </nav>

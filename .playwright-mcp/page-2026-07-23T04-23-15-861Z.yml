@@ -1,0 +1,76 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e3]:
+    - banner [ref=f5e4]:
+      - generic [ref=f5e5]:
+        - button "Open menu" [ref=f5e6]
+        - text: Feed browser 8e258c7d-ec9b-4758-88f0-5c194ab1e2c7
+      - generic [ref=f5e13]:
+        - text: feed-browser-8e258c7d-ec9b-4758-88f0-5c194ab1e2c7@example.invalid
+        - button "Sign out" [ref=f5e15]
+    - generic [ref=f5e19]:
+      - complementary [ref=f5e20]:
+        - navigation [ref=f5e22]:
+          - link "Pending Actions" [ref=f5e24] [cursor=pointer]:
+            - /url: /pending-actions
+          - link "Inbound" [ref=f5e29] [cursor=pointer]:
+            - /url: /emails
+          - link "Deals" [ref=f5e34] [cursor=pointer]:
+            - /url: /deals
+          - generic [ref=f5e40]:
+            - link "Feeds" [ref=f5e41] [cursor=pointer]:
+              - /url: /feeds
+            - generic [ref=f5e49]:
+              - link "Today" [ref=f5e50] [cursor=pointer]:
+                - /url: /feeds
+              - link "Follow sources" [ref=f5e54] [cursor=pointer]:
+                - /url: /feeds/sources
+          - link "Portfolio" [ref=f5e59] [cursor=pointer]:
+            - /url: /dashboard
+          - link "LPs" [ref=f5e65] [cursor=pointer]:
+            - /url: /lps
+          - link "Usage" [ref=f5e72] [cursor=pointer]:
+            - /url: /usage
+          - link "Settings" [ref=f5e82] [cursor=pointer]:
+            - /url: /settings
+          - link "Support" [ref=f5e87] [cursor=pointer]:
+            - /url: /support
+          - button "System" [ref=f5e95]
+          - button "Hide Sidebar" [ref=f5e98]
+      - main [ref=f5e102]:
+        - generic [ref=f5e104]:
+          - generic [ref=f5e105]:
+            - generic [ref=f5e106]:
+              - heading "Today" [level=1] [ref=f5e107]
+              - paragraph [ref=f5e108]: The latest from sources you follow.
+            - generic [ref=f5e109]:
+              - button "Mark all as read" [disabled] [ref=f5e110]
+              - button "Refresh articles" [ref=f5e114]
+          - generic [ref=f5e120]:
+            - generic "Article filter" [ref=f5e121]:
+              - button "unread" [pressed] [ref=f5e122]
+              - button "all" [ref=f5e123]
+              - button "saved" [ref=f5e124]
+            - generic [ref=f5e125]:
+              - text: Search articles
+              - textbox "Search articles" [ref=f5e129]
+          - paragraph
+          - generic:
+            - generic "Loading articles"
+        - list [ref=f5e131]:
+          - listitem [ref=f5e132]:
+            - text: Made by
+            - link "Hemrock" [ref=f5e133] [cursor=pointer]:
+              - /url: https://hemrock.com
+          - listitem [ref=f5e136]:
+            - link "View on GitHub" [ref=f5e137] [cursor=pointer]:
+              - /url: https://github.com/tdavidson/reporting
+          - listitem [ref=f5e141]:
+            - link "License" [ref=f5e142] [cursor=pointer]:
+              - /url: /license
+          - listitem [ref=f5e147]:
+            - link "Terms" [ref=f5e148] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=f5e149]:
+            - link "Privacy" [ref=f5e150] [cursor=pointer]:
+              - /url: /privacy
+  - region "Notifications alt+T"

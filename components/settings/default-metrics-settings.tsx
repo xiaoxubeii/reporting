@@ -6,6 +6,7 @@
 // copied into a company. Dedup on apply is by slug, so a company already tracking a slug is skipped.
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, Plus, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -32,6 +33,7 @@ const ENDPOINTS = {
 }
 
 export function DefaultMetricsSettings() {
+  const t = useTranslations('Settings.defaultMetrics')
   const [metrics, setMetrics] = useState<DefaultMetric[]>([])
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
@@ -65,29 +67,26 @@ export function DefaultMetricsSettings() {
     if (res.ok) {
       const { inserted, companies } = await res.json()
       flash(inserted === 0
-        ? `All ${companies} companies are already up to date.`
-        : `Added ${inserted} metric${inserted === 1 ? '' : 's'} across ${companies} companies.`)
+        ? t('allUpToDate', { companies })
+        : t('metricsAdded', { inserted, companies }))
     } else {
-      flash('Sync failed.')
+      flash(t('syncFailed'))
     }
   }
 
   return (
     <>
       <p className="mb-4 text-xs text-muted-foreground">
-        Metrics defined here are applied to <strong>every portfolio company</strong> — existing ones when you
-        add or sync, and any new company automatically at creation. A company already tracking a metric with the
-        same slug is skipped, so you never get duplicates. Removing a metric here does not delete it from companies
-        that already have it.
+        {t.rich('description', { strong: chunks => <strong>{chunks}</strong> })}
       </p>
 
       {loading ? (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loading')}
         </div>
       ) : metrics.length === 0 ? (
         <div className="rounded-md border px-3 py-4 text-xs text-muted-foreground">
-          No default metrics yet. Add one below to track it across all companies.
+          {t('empty')}
         </div>
       ) : (
         <SettingsCardGrid>
@@ -105,8 +104,8 @@ export function DefaultMetricsSettings() {
               }
               aside={
                 <>
-                  <button onClick={() => setEditing(m)} className="text-xs text-muted-foreground hover:text-foreground">Edit</button>
-                  <button onClick={() => remove(m.id)} className="text-xs text-muted-foreground hover:text-destructive">Remove</button>
+                  <button onClick={() => setEditing(m)} className="text-xs text-muted-foreground hover:text-foreground">{t('edit')}</button>
+                  <button onClick={() => remove(m.id)} className="text-xs text-muted-foreground hover:text-destructive">{t('remove')}</button>
                 </>
               }
             >
@@ -118,12 +117,12 @@ export function DefaultMetricsSettings() {
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add default metric
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t('addMetric')}
         </Button>
         {metrics.length > 0 && (
           <Button variant="ghost" size="sm" onClick={sync} disabled={syncing}>
             {syncing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1" />}
-            Sync to all companies
+            {t('syncAll')}
           </Button>
         )}
         {notice && <span className="text-xs text-muted-foreground">{notice}</span>}
@@ -132,20 +131,22 @@ export function DefaultMetricsSettings() {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add default metric</DialogTitle>
-            <DialogDescription>Applied to every company. Companies already tracking this slug are skipped.</DialogDescription>
+            <DialogTitle>{t('addDialog.title')}</DialogTitle>
+            <DialogDescription>{t('addDialog.description')}</DialogDescription>
           </DialogHeader>
           <MetricForm
             endpoints={ENDPOINTS}
-            submitLabel="Add to all companies"
-            onSuccess={(data: any) => {
+            submitLabel={t('addDialog.submit')}
+            onSuccess={data => {
               setAddOpen(false)
               load()
-              const applied = data?.applied
+              const applied = (data as typeof data & {
+                applied?: { inserted: number; companies: number }
+              }).applied
               if (applied) {
                 flash(applied.inserted === 0
-                  ? `Added to the profile. All ${applied.companies} companies already tracked it.`
-                  : `Added to ${applied.inserted} of ${applied.companies} companies.`)
+                  ? t('addedProfileOnly', { companies: applied.companies })
+                  : t('addedCompanies', { inserted: applied.inserted, companies: applied.companies }))
               }
             }}
             onCancel={() => setAddOpen(false)}
@@ -156,8 +157,8 @@ export function DefaultMetricsSettings() {
       <Dialog open={!!editing} onOpenChange={open => !open && setEditing(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit default metric</DialogTitle>
-            <DialogDescription>Changes affect only the profile and future companies — metrics already on companies are left as-is.</DialogDescription>
+            <DialogTitle>{t('editDialog.title')}</DialogTitle>
+            <DialogDescription>{t('editDialog.description')}</DialogDescription>
           </DialogHeader>
           {editing && (
             <MetricForm

@@ -4,8 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { DiligenceIndex } from './diligence-index'
+import { getTranslations } from 'next-intl/server'
 
-export const metadata: Metadata = { title: 'Diligence' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Diligence.metadata')
+  return { title: t('index') }
+}
 
 export default async function DiligencePage() {
   const supabase = createClient()

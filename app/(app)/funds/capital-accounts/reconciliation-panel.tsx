@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Check, AlertTriangle } from 'lucide-react'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useLedgerFetch } from '@/components/accounting-vehicle'
 import { Button } from '@/components/ui/button'
+import { formatMoney } from '../format'
 
 interface LedgerRow { lpEntityId: string; name: string; ending: number }
 interface ReconLine { lpEntityId: string; line: string; ledger: number; admin: number; delta: number; tiesOut: boolean }
@@ -19,8 +21,10 @@ interface ReconResult {
 }
 
 export function ReconciliationPanel() {
+  const locale = useLocale()
+  const t = useTranslations('Funds.reconciliation')
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
   const [rows, setRows] = useState<LedgerRow[]>([])
   const [adminInput, setAdminInput] = useState<Record<string, string>>({})
   const [result, setResult] = useState<ReconResult | null>(null)
@@ -67,13 +71,13 @@ export function ReconciliationPanel() {
   }
 
   if (loading) {
-    return <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
+    return <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
   }
 
   if (rows.length === 0) {
     return (
       <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
-        No ledger capital accounts to reconcile yet. Import opening balances and post a period first.
+        {t('empty')}
       </div>
     )
   }
@@ -89,12 +93,12 @@ export function ReconciliationPanel() {
         }`}>
           {result.allTieOut ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
           {result.allTieOut
-            ? 'Ties out — every LP matches the admin to the penny.'
-            : `Does not tie out — largest difference ${fmt(result.maxAbsDelta)}.`}
+            ? t('tiesOut')
+            : t('doesNotTie', { amount: fmt(result.maxAbsDelta) })}
           {(result.ledgerOnly.length > 0 || result.adminOnly.length > 0) && (
             <span className="text-muted-foreground">
-              {result.ledgerOnly.length > 0 && ` ${result.ledgerOnly.length} ledger-only LP(s).`}
-              {result.adminOnly.length > 0 && ` ${result.adminOnly.length} admin-only LP(s).`}
+              {result.ledgerOnly.length > 0 && ` ${t('ledgerOnly', { count: result.ledgerOnly.length })}`}
+              {result.adminOnly.length > 0 && ` ${t('adminOnly', { count: result.adminOnly.length })}`}
             </span>
           )}
         </div>
@@ -104,10 +108,10 @@ export function ReconciliationPanel() {
         <table className="w-full text-sm whitespace-nowrap">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left px-3 py-2 font-medium">LP</th>
-              <th className="text-right px-3 py-2 font-medium">Ledger ending</th>
-              <th className="text-right px-3 py-2 font-medium">Admin ending</th>
-              <th className="text-right px-3 py-2 font-medium">Delta</th>
+              <th className="text-left px-3 py-2 font-medium">{t('lp')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('ledgerEnding')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('adminEnding')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('delta')}</th>
               <th className="px-3 py-2 font-medium" />
             </tr>
           </thead>
@@ -144,9 +148,9 @@ export function ReconciliationPanel() {
       <div className="flex items-center gap-2">
         <Button onClick={runReconcile} disabled={running}>
           {running && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Reconcile
+          {t('reconcile')}
         </Button>
-        <Button variant="outline" onClick={loadSnapshot}>Load from LP snapshot</Button>
+        <Button variant="outline" onClick={loadSnapshot}>{t('loadSnapshot')}</Button>
       </div>
     </div>
   )
