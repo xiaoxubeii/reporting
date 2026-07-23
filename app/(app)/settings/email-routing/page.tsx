@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -6,7 +7,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { EmailRoutingTabs } from './email-routing-tabs'
 
-export const metadata: Metadata = { title: 'Email routing' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Settings.emailRouting')
+  return { title: t('metadataTitle') }
+}
 
 interface CorrectionRow {
   id: string
@@ -16,6 +20,7 @@ interface CorrectionRow {
 }
 
 export default async function EmailRoutingPage() {
+  const t = await getTranslations('Settings.emailRouting')
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
@@ -27,9 +32,9 @@ export default async function EmailRoutingPage() {
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) redirect('/dashboard')
-  if ((membership as any).role !== 'admin') redirect('/settings')
+  if (membership.role !== 'admin') redirect('/settings')
 
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
 
   // Audit queue: inbound emails the classifier dropped to "other".
   const { data: emails } = await admin
@@ -69,13 +74,13 @@ export default async function EmailRoutingPage() {
   return (
     <div className="p-4 md:py-8 md:pl-8 md:pr-4 max-w-4xl">
       <Link href="/settings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to settings
+        <ArrowLeft className="h-3.5 w-3.5" /> {t('back')}
       </Link>
-      <h1 className="text-2xl font-semibold tracking-tight mb-1">Email routing</h1>
+      <h1 className="text-2xl font-semibold tracking-tight mb-1">{t('title')}</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        The audit queue for emails the classifier wasn&apos;t sure about, and how its routing has been corrected over time.
+        {t('description')}
       </p>
-      <EmailRoutingTabs emails={(emails as any) ?? []} accuracy={{ totalsByOriginal, weekly }} />
+      <EmailRoutingTabs emails={emails ?? []} accuracy={{ totalsByOriginal, weekly }} />
     </div>
   )
 }

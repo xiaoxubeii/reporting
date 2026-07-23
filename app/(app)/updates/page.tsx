@@ -1,11 +1,19 @@
 import { redirect } from 'next/navigation'
+import { getFormatter, getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { APP_VERSION, checkForUpdate, getInstallationId } from '@/lib/version'
 
-export const metadata = { title: 'Updates' }
+export async function generateMetadata() {
+  const t = await getTranslations('Updates.metadata')
+  return { title: t('title') }
+}
 
 export default async function UpdatesPage() {
+  const [t, format] = await Promise.all([
+    getTranslations('Updates'),
+    getFormatter(),
+  ])
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
@@ -28,21 +36,21 @@ export default async function UpdatesPage() {
   return (
     <div className="p-6 md:p-10 max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Updates</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Check for new versions of the reporting platform.
+          {t('description')}
         </p>
       </div>
 
       <div className="rounded-lg border p-6 space-y-4">
         <div className="flex items-center gap-4">
           <div>
-            <p className="text-sm text-muted-foreground">Current version</p>
+            <p className="text-sm text-muted-foreground">{t('currentVersion')}</p>
             <p className="text-lg font-mono font-medium">v{APP_VERSION}</p>
           </div>
           {update && (
             <div>
-              <p className="text-sm text-muted-foreground">Latest version</p>
+              <p className="text-sm text-muted-foreground">{t('latestVersion')}</p>
               <p className={`text-lg font-mono font-medium ${update.hasUpdate ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}`}>
                 v{update.latestVersion}
               </p>
@@ -53,22 +61,22 @@ export default async function UpdatesPage() {
         {update?.hasUpdate ? (
           <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              A new version is available!
+              {t('available')}
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-              Published {new Date(update.publishedAt).toLocaleDateString()}
+              {t('published', { date: format.dateTime(new Date(update.publishedAt), { dateStyle: 'medium' }) })}
             </p>
           </div>
         ) : update ? (
           <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-4">
             <p className="text-sm font-medium text-green-800 dark:text-green-300">
-              You&apos;re up to date!
+              {t('upToDate')}
             </p>
           </div>
         ) : (
           <div className="rounded-md bg-muted p-4">
             <p className="text-sm text-muted-foreground">
-              Unable to check for updates. This may be due to network connectivity or GitHub API rate limits.
+              {t('unavailable')}
             </p>
           </div>
         )}
@@ -76,7 +84,7 @@ export default async function UpdatesPage() {
 
       {update?.hasUpdate && update.body && (
         <div className="rounded-lg border p-6 space-y-3">
-          <h2 className="text-lg font-semibold">Release Notes</h2>
+          <h2 className="text-lg font-semibold">{t('releaseNotes.title')}</h2>
           <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
             {update.body}
           </div>
@@ -86,47 +94,44 @@ export default async function UpdatesPage() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-sm text-primary hover:underline mt-2"
           >
-            View release on GitHub &rarr;
+            {t('releaseNotes.viewOnGitHub')} &rarr;
           </a>
         </div>
       )}
 
       {update?.hasUpdate && <div className="rounded-lg border p-6 space-y-3">
-        <h2 className="text-lg font-semibold">How to Update</h2>
+        <h2 className="text-lg font-semibold">{t('instructions.title')}</h2>
         <div className="text-sm text-muted-foreground space-y-2">
-          <p>To update your deployment, pull the latest code from GitHub and redeploy:</p>
+          <p>{t('instructions.pull')}</p>
           <pre className="rounded-md bg-muted p-3 font-mono text-xs overflow-x-auto">
 {`cd reporting
 git pull origin main
 npm install
 `}
           </pre>
-          <p>
-            Then redeploy on your hosting platform (Netlify, Vercel, etc.). If the new release includes
-            database migrations, run them against your Supabase project:
-          </p>
+          <p>{t('instructions.redeploy')}</p>
           <pre className="rounded-md bg-muted p-3 font-mono text-xs overflow-x-auto">
 {`npx supabase db push`}
           </pre>
-          <p>
-            Or paste any new migration files from <span className="font-mono">supabase/migrations/</span> into the
-            Supabase SQL Editor in filename order. Check the{' '}
-            <a
-              href="https://github.com/tdavidson/reporting/releases"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground underline underline-offset-4 hover:text-foreground/80"
-            >
-              release notes
-            </a>
-            {' '}for details on what changed in each version.
-          </p>
+          {t.rich('instructions.migrations', {
+            path: chunks => <span className="font-mono">{chunks}</span>,
+            releases: chunks => (
+              <a
+                href="https://github.com/tdavidson/reporting/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground underline underline-offset-4 hover:text-foreground/80"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </div>
       </div>}
 
       {installationId && (
         <p className="text-xs text-muted-foreground/60 font-mono">
-          Installation ID: {installationId}
+          {t('installationId', { installationId })}
         </p>
       )}
     </div>

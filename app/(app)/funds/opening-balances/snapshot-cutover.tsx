@@ -1,10 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Check, AlertTriangle, Undo2, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/confirm-dialog'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
+import { formatDate, formatMoney, formatNumber } from '../format'
 
 // Copy the latest LP snapshot into the vehicles as capital events.
 //
@@ -29,15 +31,13 @@ interface Preview {
   alreadyImported: boolean
 }
 
-const EVENT_LABEL: Record<string, string> = {
-  capital_call: 'Capital recognized',
-  distribution: 'Distributions',
-  valuation: 'Cumulative gain/(loss)',
-}
+const EVENT_TYPES = ['capital_call', 'distribution', 'valuation'] as const
 
 export function SnapshotCutover() {
+  const t = useTranslations('Funds.snapshotCutover')
+  const locale = useLocale()
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
   const confirm = useConfirm()
 
   const [preview, setPreview] = useState<Preview | null>(null)
@@ -52,19 +52,17 @@ export function SnapshotCutover() {
     fetch('/api/accounting/cutover')
       .then(r => r.json())
       .then(d => { if (d.error) setError(d.error); else { setPreview(d); setError(null) } })
-      .catch(() => setError('Could not load the snapshot.'))
+      .catch(() => setError(t('loadError')))
       .finally(() => setLoading(false))
-  }, [])
+  }, [t])
   useEffect(() => { load() }, [load])
 
   async function run() {
     if (!preview) return
     const ok = await confirm({
-      title: `Copy "${preview.snapshot.name}" into ${preview.totals.vehicles} vehicle${preview.totals.vehicles === 1 ? '' : 's'}?`,
-      description:
-        `This writes ${preview.totals.events} capital events for ${preview.totals.lps} LPs, dated ${preview.snapshot.asOf}. ` +
-        `Nothing is deleted, and it can be undone.`,
-      confirmLabel: 'Copy',
+      title: t('confirm.title', { name: preview.snapshot.name, vehicles: preview.totals.vehicles }),
+      description: t('confirm.description', { events: preview.totals.events, lps: preview.totals.lps, date: formatDate(preview.snapshot.asOf, locale) }),
+      confirmLabel: t('confirm.copy'),
     })
     if (!ok) return
     setRunning(true)
@@ -75,7 +73,7 @@ export function SnapshotCutover() {
     })
     const d = await res.json()
     setRunning(false)
-    if (!res.ok) { setError(d.error ?? 'Cutover failed'); return }
+    if (!res.ok) { setError(d.error ?? t('cutoverError')); return }
     setDone({ events: d.eventsWritten, commitments: d.commitmentsWritten, vehicles: d.vehicles, errors: d.errors ?? [] })
     load()
   }
@@ -83,9 +81,9 @@ export function SnapshotCutover() {
   async function revert() {
     if (!preview) return
     const ok = await confirm({
-      title: 'Undo this import?',
-      description: 'Deletes every capital event copied from this snapshot. Hand-entered events are untouched.',
-      confirmLabel: 'Undo import',
+      title: t('undo.title'),
+      description: t('undo.description'),
+      confirmLabel: t('undo.button'),
       variant: 'destructive',
     })
     if (!ok) return
@@ -93,7 +91,7 @@ export function SnapshotCutover() {
     const res = await fetch(`/api/accounting/cutover?snapshot=${preview.snapshot.id}`, { method: 'DELETE' })
     const d = await res.json()
     setRunning(false)
-    if (!res.ok) { setError(d.error ?? 'Revert failed'); return }
+    if (!res.ok) { setError(d.error ?? t('undo.error')); return }
     setDone(null)
     load()
   }
@@ -101,7 +99,7 @@ export function SnapshotCutover() {
   if (loading) {
     return (
       <div className="rounded-lg border p-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading the latest LP snapshot…
+        <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
       </div>
     )
   }
@@ -112,23 +110,39 @@ export function SnapshotCutover() {
 
   const copying = preview.vehicles.filter(v => v.action === 'copy')
   const skipped = preview.vehicles.filter(v => v.action === 'skip')
+  const localizeSkipReason = (reason?: string) => {
+    const keys: Record<string, 'skipped.skipList' | 'skipped.noMatch' | 'skipped.noRows' | 'skipped.hasLedger'> = {
+      'On the skip list — reconciled by hand already.': 'skipped.skipList',
+      'No matching vehicle in the registry.': 'skipped.noMatch',
+      'No rows for this vehicle in the snapshot.': 'skipped.noRows',
+      'Already on the ledger — it has books. Copying would duplicate its capital.': 'skipped.hasLedger',
+    }
+    return reason && keys[reason] ? t(keys[reason]) : reason ?? ''
+  }
+  const localizeWarning = (warning: string) => {
+    let match = warning.match(/^called \(([^)]+)\) and paid-in \(([^)]+)\) differ/)
+    if (match) return t('warnings.calledDiffers', { called: match[1], paidIn: match[2] })
+    match = warning.match(/^negative paid-in \(([^)]+)\)$/)
+    if (match) return t('warnings.negativePaidIn', { value: match[1] })
+    match = warning.match(/^derived NAV is negative \(([^)]+)\)/)
+    if (match) return t('warnings.negativeNav', { value: match[1] })
+    match = warning.match(/^paid-in \(([^)]+)\) exceeds commitment \(([^)]+)\)$/)
+    if (match) return t('warnings.exceedsCommitment', { paidIn: match[1], commitment: match[2] })
+    return warning
+  }
 
   return (
     <div className="rounded-lg border p-4 space-y-4">
       <div className="space-y-1">
-        <h2 className="text-sm font-medium">Copy the LP snapshot into the vehicles</h2>
+        <h2 className="text-sm font-medium">{t('title')}</h2>
         <p className="text-xs text-muted-foreground max-w-3xl">
-          Takes the figures from <strong>{preview.snapshot.name}</strong> (as of {preview.snapshot.asOf}) and writes them
-          into each vehicle as capital events, so capital accounts derive from the vehicle instead of the imported
-          spreadsheet. <strong>Fund-wide</strong> — it runs across every vehicle, not just the one selected above. The
-          snapshot is copied, not moved: it keeps working exactly as it does now.
+          {t.rich('description', { name: preview.snapshot.name, date: formatDate(preview.snapshot.asOf, locale), strong: chunks => <strong>{chunks}</strong> })}
         </p>
       </div>
 
       {preview.alreadyImported && !done && (
         <p className="text-xs rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-2.5 py-2">
-          This snapshot has already been copied in. Running it again is a no-op, not a double-count — but you probably
-          want <strong>Undo import</strong> if you meant to start over.
+          {t.rich('alreadyImported', { strong: chunks => <strong>{chunks}</strong> })}
         </p>
       )}
 
@@ -136,8 +150,7 @@ export function SnapshotCutover() {
         <div className="rounded-md border p-3 text-sm space-y-1">
           <p className="flex items-center gap-1.5 text-green-700 dark:text-green-400">
             <Check className="h-4 w-4" />
-            Copied {done.events} events{done.commitments > 0 ? ` and ${done.commitments} commitments` : ''} into{' '}
-            {done.vehicles.join(', ')}.
+            {t('done', { events: done.events, commitments: done.commitments, vehicles: done.vehicles.join(', ') })}
           </p>
           {done.errors.map((e, i) => <p key={i} className="text-xs text-amber-600">{e}</p>)}
         </div>
@@ -147,14 +160,14 @@ export function SnapshotCutover() {
 
       {/* Totals */}
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
-        <Stat label="Vehicles" value={String(preview.totals.vehicles)} />
-        <Stat label="LPs" value={String(preview.totals.lps)} />
-        <Stat label="Events" value={String(preview.totals.events)} />
-        <Stat label="Commitments to create" value={String(preview.totals.commitments)} />
+        <Stat label={t('stats.vehicles')} value={formatNumber(preview.totals.vehicles, locale)} />
+        <Stat label={t('stats.lps')} value={formatNumber(preview.totals.lps, locale)} />
+        <Stat label={t('stats.events')} value={formatNumber(preview.totals.events, locale)} />
+        <Stat label={t('stats.commitments')} value={formatNumber(preview.totals.commitments, locale)} />
         {preview.totals.warnings > 0 && (
           <span className="inline-flex items-center gap-1 text-amber-600">
             <AlertTriangle className="h-3.5 w-3.5" />
-            {preview.totals.warnings} warning{preview.totals.warnings === 1 ? '' : 's'}
+            {t('stats.warnings', { count: preview.totals.warnings })}
           </span>
         )}
       </div>
@@ -169,7 +182,7 @@ export function SnapshotCutover() {
             >
               <span className="text-sm font-medium">{v.vehicle}</span>
               <span className="text-xs text-muted-foreground">
-                {v.lps.length} LP{v.lps.length === 1 ? '' : 's'} · {v.eventCount} events · NAV {fmt(v.totalNav)}
+                {t('vehicleSummary', { lps: v.lps.length, events: v.eventCount, nav: fmt(v.totalNav) })}
               </span>
             </button>
 
@@ -179,12 +192,12 @@ export function SnapshotCutover() {
                   <thead className="text-muted-foreground">
                     <tr>
                       <th className="text-left px-3 py-1.5 font-medium">LP</th>
-                      <th className="text-right px-3 py-1.5 font-medium">Committed</th>
-                      {Object.keys(EVENT_LABEL).map(k => (
-                        <th key={k} className="text-right px-3 py-1.5 font-medium">{EVENT_LABEL[k]}</th>
+                      <th className="text-right px-3 py-1.5 font-medium">{t('columns.committed')}</th>
+                      {EVENT_TYPES.map(eventType => (
+                        <th key={eventType} className="text-right px-3 py-1.5 font-medium">{t(`columns.${eventType}`)}</th>
                       ))}
-                      <th className="text-right px-3 py-1.5 font-medium">Ending</th>
-                      <th className="text-right px-3 py-1.5 font-medium">Snapshot NAV</th>
+                      <th className="text-right px-3 py-1.5 font-medium">{t('columns.ending')}</th>
+                      <th className="text-right px-3 py-1.5 font-medium">{t('columns.snapshotNav')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -201,10 +214,10 @@ export function SnapshotCutover() {
                           <td className="px-3 py-1.5">
                             {lp.name}
                             {!lp.hasCommitment && lp.commitment > 0 && (
-                              <span className="ml-1.5 text-[10px] text-muted-foreground">+ commitment</span>
+                              <span className="ml-1.5 text-[10px] text-muted-foreground">{t('commitmentAdded')}</span>
                             )}
                             {lp.warnings.map((w, i) => (
-                              <span key={i} className="block text-[10px] text-amber-600">{w}</span>
+                              <span key={i} className="block text-[10px] text-amber-600">{localizeWarning(w)}</span>
                             ))}
                           </td>
                           <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{fmt(lp.commitment)}</td>
@@ -228,10 +241,10 @@ export function SnapshotCutover() {
 
         {skipped.length > 0 && (
           <div className="rounded-md border border-dashed p-3 space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Skipped</p>
+            <p className="text-xs font-medium text-muted-foreground">{t('skipped.title')}</p>
             {skipped.map(v => (
               <p key={v.vehicle} className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground/70">{v.vehicle}</span> — {v.skipReason}
+                <span className="font-medium text-foreground/70">{v.vehicle}</span> — {localizeSkipReason(v.skipReason)}
               </p>
             ))}
           </div>
@@ -239,20 +252,18 @@ export function SnapshotCutover() {
       </div>
 
       <p className="text-xs text-muted-foreground max-w-3xl">
-        The cumulative gain/(loss) is booked as an unrealized valuation: a snapshot cannot say how much of it was
-        realized, so it is right in total and not split. Funded-vs-unfunded is not in the snapshot either — every copied
-        LP starts with called = funded, and any unfunded call should be recorded afterwards as a call.
+        {t('footnote')}
       </p>
 
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={run} disabled={running || copying.length === 0}>
           {running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-1" />}
-          Copy into {copying.length} vehicle{copying.length === 1 ? '' : 's'}
+          {t('copyButton', { count: copying.length })}
         </Button>
         {preview.alreadyImported && (
           <Button size="sm" variant="outline" onClick={revert} disabled={running}>
             <Undo2 className="h-4 w-4 mr-1" />
-            Undo import
+            {t('undo.button')}
           </Button>
         )}
       </div>

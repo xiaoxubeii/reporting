@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { STATUS_OPTIONS, DEFAULT_STATUSES, STATUS_ORDER } from '@/lib/deals/statuses'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface Deal {
   id: string
@@ -30,12 +31,12 @@ interface Deal {
   created_at: string
 }
 
-const FIT_BADGE: Record<string, { label: string; cls: string }> = {
-  strong: { label: 'Strong', cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
-  moderate: { label: 'Moderate', cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
-  weak: { label: 'Weak', cls: 'bg-muted text-muted-foreground' },
-  out_of_thesis: { label: 'Out', cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
-  spam: { label: 'Spam', cls: 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 line-through' },
+const FIT_BADGE: Record<string, { cls: string }> = {
+  strong: { cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
+  moderate: { cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+  weak: { cls: 'bg-muted text-muted-foreground' },
+  out_of_thesis: { cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
+  spam: { cls: 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 line-through' },
 }
 
 const FIT_OPTIONS = ['strong', 'moderate', 'weak', 'out_of_thesis', 'spam']
@@ -58,7 +59,22 @@ const FIT_ORDER: Record<NonNullable<Deal['thesis_fit_score']>, number> = {
   moderate: 3,
   strong: 4,
 }
+
+function useDealLabels(): Record<string, string> {
+  const t = useTranslations('Deals.labels')
+  return {
+    new: t('new'), reviewing: t('reviewing'), advancing: t('advancing'), met: t('met'),
+    diligence: t('diligence'), invested: t('invested'), passed: t('passed'),
+    strong: t('strong'), moderate: t('moderate'), weak: t('weak'), out_of_thesis: t('outOfThesis'), spam: t('spam'),
+    referral: t('referral'), cold: t('cold'), warm_intro: t('warmIntro'), accelerator: t('accelerator'),
+    demo_day: t('demoDay'), event: t('event'), other: t('other'), heartbeat: t('heartbeat'),
+  }
+}
+
 export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
+  const t = useTranslations('Deals')
+  const format = useFormatter()
+  const labels = useDealLabels()
   const fv = useFeatureVisibility()
   const [deals, setDeals] = useState<Deal[]>(initialDeals)
   const [search, setSearch] = useState('')
@@ -152,9 +168,9 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             {fv.deals === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}
-            Deals
+            {t('title')}
           </h1>
-          <p className="text-sm text-muted-foreground">Inbound pitches screened against your fund thesis.</p>
+          <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex border rounded-md overflow-hidden bg-card">
@@ -162,17 +178,17 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
               onClick={() => setView('table')}
               className={`px-3 py-1.5 text-sm flex items-center gap-1.5 ${view === 'table' ? 'bg-muted' : 'hover:bg-muted/50'}`}
             >
-              <TableIcon className="h-3.5 w-3.5" /> Table
+              <TableIcon className="h-3.5 w-3.5" /> {t('views.table')}
             </button>
             <button
               onClick={() => setView('board')}
               className={`px-3 py-1.5 text-sm flex items-center gap-1.5 border-l ${view === 'board' ? 'bg-muted' : 'hover:bg-muted/50'}`}
             >
-              <Columns3 className="h-3.5 w-3.5" /> Board
+              <Columns3 className="h-3.5 w-3.5" /> {t('views.board')}
             </button>
           </div>
           <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> New Deal
+            <Plus className="h-4 w-4 mr-1" /> {t('newDeal.button')}
           </Button>
         </div>
       </div>
@@ -187,7 +203,7 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search company, founder, or email"
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-8 h-9 w-72"
@@ -199,16 +215,16 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
           onChange={e => setFitFilter(e.target.value)}
           className="h-9 px-3 rounded-md border border-input bg-background text-sm"
         >
-          <option value="">All fit scores</option>
-          {FIT_OPTIONS.map(o => <option key={o} value={o}>{FIT_BADGE[o].label}</option>)}
+          <option value="">{t('filters.allFitScores')}</option>
+          {FIT_OPTIONS.map(o => <option key={o} value={o}>{labels[o]}</option>)}
         </select>
         <select
           value={sourceFilter}
           onChange={e => setSourceFilter(e.target.value)}
           className="h-9 px-3 rounded-md border border-input bg-background text-sm"
         >
-          <option value="">All sources</option>
-          {sourceOptions.map(o => <option key={o} value={o}>{labelFor(o)}</option>)}
+          <option value="">{t('filters.allSources')}</option>
+          {sourceOptions.map(o => <option key={o} value={o}>{labels[o]}</option>)}
         </select>
         {inboundAddress && (
           <div className="ml-auto flex items-center gap-1.5">
@@ -216,7 +232,7 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
               type="text"
               readOnly
               value={inboundAddress}
-              title="Forward inbound pitches to this address"
+              title={t('inboundAddressTitle')}
               className="h-9 w-64 text-sm bg-muted text-muted-foreground cursor-default"
               tabIndex={-1}
             />
@@ -227,7 +243,7 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
                 setTimeout(() => setCopied(false), 2000)
               }}
               className="h-9 px-2 text-muted-foreground hover:text-foreground transition-colors"
-              title="Copy to clipboard"
+              title={t('copyToClipboard')}
             >
               {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </button>
@@ -242,12 +258,12 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr className="text-left text-xs uppercase text-muted-foreground">
-              <SortableTh label="Date"     sortKey="date"     sort={sort} onToggle={toggleSort} />
-              <SortableTh label="Company"  sortKey="company"  sort={sort} onToggle={toggleSort} />
-              <SortableTh label="Founder"  sortKey="founder"  sort={sort} onToggle={toggleSort} />
-              <SortableTh label="Source"   sortKey="source"   sort={sort} onToggle={toggleSort} />
-              <SortableTh label="Fit"      sortKey="fit"      sort={sort} onToggle={toggleSort} />
-              <SortableTh label="Status"   sortKey="status"   sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t('table.date')} sortKey="date" sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t('table.company')} sortKey="company" sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t('table.founder')} sortKey="founder" sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t('table.source')} sortKey="source" sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t('table.fit')} sortKey="fit" sort={sort} onToggle={toggleSort} />
+              <SortableTh label={t('table.status')} sortKey="status" sort={sort} onToggle={toggleSort} />
               <th className="px-3 py-2 font-medium"></th>
             </tr>
           </thead>
@@ -256,16 +272,16 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
               <tr>
                 <td colSpan={7} className="px-3 py-12 text-center text-muted-foreground">
                   {statusFilter.length === 0
-                    ? 'No statuses selected — pick at least one to see deals.'
+                    ? t('empty.noStatuses')
                     : statusFilter.length < STATUS_OPTIONS.length
-                      ? <>No deals match this filter. <button onClick={() => setStatusFilter([...STATUS_OPTIONS])} className="underline underline-offset-2 hover:text-foreground">Show all statuses</button>.</>
-                      : "No deals yet. When inbound pitches arrive, they'll appear here."}
+                      ? <>{t('empty.noMatchesBefore')} <button onClick={() => setStatusFilter([...STATUS_OPTIONS])} className="underline underline-offset-2 hover:text-foreground">{t('empty.showAllStatuses')}</button>{t('sentencePeriod')}</>
+                      : t('empty.noDeals')}
                 </td>
               </tr>
             ) : sorted.map(d => (
               <tr key={d.id} className="border-t hover:bg-muted/30">
                 <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
-                  {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {format.dateTime(new Date(d.created_at), { month: 'short', day: 'numeric' })}
                 </td>
                 <td className="px-3 py-2">
                   <Link href={`/deals/${d.id}`} className="font-medium hover:underline">
@@ -280,13 +296,13 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs">
-                  {d.intro_source ? labelFor(d.intro_source) : '—'}
+                  {d.intro_source ? labels[d.intro_source] : '—'}
                   {d.referrer_name && <div className="text-muted-foreground">{d.referrer_name}</div>}
                 </td>
                 <td className="px-3 py-2">
                   {d.thesis_fit_score && (
                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${FIT_BADGE[d.thesis_fit_score].cls}`}>
-                      {FIT_BADGE[d.thesis_fit_score].label}
+                      {labels[d.thesis_fit_score]}
                     </span>
                   )}
                 </td>
@@ -297,13 +313,13 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
                     className="h-7 px-2 rounded border border-input bg-background text-xs"
                   >
                     {STATUS_OPTIONS.map(s => (
-                      <option key={s} value={s}>{labelFor(s)}</option>
+                      <option key={s} value={s}>{labels[s]}</option>
                     ))}
                   </select>
                 </td>
                 <td className="px-3 py-2 text-right">
                   <Link href={`/deals/${d.id}`} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-                    View <ExternalLink className="h-3 w-3" />
+                    {t('view')} <ExternalLink className="h-3 w-3" />
                   </Link>
                 </td>
               </tr>
@@ -315,8 +331,11 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
 
       {sorted.length > 0 && view === 'table' && (
         <div className="mt-4 flex justify-end">
-          <Button variant="outline" size="sm" onClick={() => exportCsv(sorted)}>
-            Export CSV
+          <Button variant="outline" size="sm" onClick={() => exportCsv(sorted, [
+            t('csv.date'), t('csv.company'), t('csv.founder'), t('csv.email'), t('csv.source'),
+            t('csv.referrer'), t('csv.fit'), t('csv.stage'), t('csv.industry'), t('csv.raise'), t('csv.status'),
+          ])}>
+            {t('exportCsv')}
           </Button>
         </div>
       )}
@@ -334,15 +353,17 @@ function StatusFilter({ value, onChange }: {
   value: Deal['status'][]
   onChange: (v: Deal['status'][]) => void
 }) {
+  const t = useTranslations('Deals.filters')
+  const labels = useDealLabels()
   const [open, setOpen] = useState(false)
 
   const isDefault = value.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(s => value.includes(s))
   const label =
-    value.length === 0 ? 'No statuses'
-    : value.length === STATUS_OPTIONS.length ? 'All statuses'
-    : isDefault ? 'Active deals'
-    : value.length === 1 ? labelFor(value[0])
-    : `${value.length} statuses`
+    value.length === 0 ? t('noStatuses')
+    : value.length === STATUS_OPTIONS.length ? t('allStatuses')
+    : isDefault ? t('activeDeals')
+    : value.length === 1 ? labels[value[0]]
+    : t('statusCount', { count: value.length })
 
   function toggle(s: Deal['status']) {
     onChange(value.includes(s) ? value.filter(x => x !== s) : [...value, s])
@@ -360,9 +381,9 @@ function StatusFilter({ value, onChange }: {
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-1.5">
         <div className="flex items-center gap-1 px-1 pb-1.5 mb-1 border-b text-xs">
-          <button onClick={() => onChange(DEFAULT_STATUSES)} className="px-1.5 py-0.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground">Active</button>
-          <button onClick={() => onChange([...STATUS_OPTIONS])} className="px-1.5 py-0.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground">All</button>
-          <button onClick={() => onChange([])} className="px-1.5 py-0.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground">None</button>
+          <button onClick={() => onChange(DEFAULT_STATUSES)} className="px-1.5 py-0.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground">{t('active')}</button>
+          <button onClick={() => onChange([...STATUS_OPTIONS])} className="px-1.5 py-0.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground">{t('all')}</button>
+          <button onClick={() => onChange([])} className="px-1.5 py-0.5 rounded text-muted-foreground hover:bg-muted hover:text-foreground">{t('none')}</button>
         </div>
         {STATUS_OPTIONS.map(s => (
           <label
@@ -375,7 +396,7 @@ function StatusFilter({ value, onChange }: {
               onChange={() => toggle(s)}
               className="h-3.5 w-3.5 rounded border-input accent-foreground"
             />
-            <span>{labelFor(s)}</span>
+            <span>{labels[s]}</span>
           </label>
         ))}
       </PopoverContent>
@@ -383,17 +404,12 @@ function StatusFilter({ value, onChange }: {
   )
 }
 
-const BOARD_COLUMNS: { status: Deal['status']; label: string }[] = [
-  { status: 'new', label: 'New' },
-  { status: 'reviewing', label: 'Reviewing' },
-  { status: 'advancing', label: 'Advancing' },
-  { status: 'met', label: 'Met' },
-  { status: 'diligence', label: 'Diligence' },
-  { status: 'invested', label: 'Invested' },
-  { status: 'passed', label: 'Passed' },
-]
+const BOARD_COLUMNS: Deal['status'][] = ['new', 'reviewing', 'advancing', 'met', 'diligence', 'invested', 'passed']
 
 function DealsBoard({ deals, onMove }: { deals: Deal[]; onMove: (id: string, status: Deal['status']) => void }) {
+  const t = useTranslations('Deals')
+  const format = useFormatter()
+  const labels = useDealLabels()
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [overColumn, setOverColumn] = useState<Deal['status'] | null>(null)
 
@@ -428,24 +444,24 @@ function DealsBoard({ deals, onMove }: { deals: Deal[]; onMove: (id: string, sta
   return (
     <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
       <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${BOARD_COLUMNS.length}, minmax(220px, 1fr))`, minWidth: `${BOARD_COLUMNS.length * 220}px` }}>
-      {BOARD_COLUMNS.map(col => {
-        const colDeals = deals.filter(d => d.status === col.status)
-        const isOver = overColumn === col.status
+      {BOARD_COLUMNS.map(status => {
+        const colDeals = deals.filter(d => d.status === status)
+        const isOver = overColumn === status
         return (
           <div
-            key={col.status}
-            onDragOver={e => handleDragOver(e, col.status)}
+            key={status}
+            onDragOver={e => handleDragOver(e, status)}
             onDragLeave={() => setOverColumn(null)}
-            onDrop={e => handleDrop(e, col.status)}
+            onDrop={e => handleDrop(e, status)}
             className={`rounded-md border bg-card flex flex-col min-h-[400px] transition-colors ${isOver ? 'ring-2 ring-primary border-primary' : ''}`}
           >
             <div className="p-2 border-b flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{col.label}</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{labels[status]}</span>
               <span className="text-xs text-muted-foreground">{colDeals.length}</span>
             </div>
             <div className="p-2 space-y-2 flex-1 overflow-y-auto">
               {colDeals.length === 0 ? (
-                <div className="text-xs text-muted-foreground/60 italic px-1 py-4 text-center">drop here</div>
+                <div className="text-xs text-muted-foreground/60 italic px-1 py-4 text-center">{t('board.dropHere')}</div>
               ) : colDeals.map(d => (
                 <div
                   key={d.id}
@@ -459,15 +475,15 @@ function DealsBoard({ deals, onMove }: { deals: Deal[]; onMove: (id: string, sta
                       <div className="font-medium text-sm truncate">{d.company_name ?? '—'}</div>
                       {d.thesis_fit_score && (
                         <span className={`shrink-0 inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${FIT_BADGE[d.thesis_fit_score].cls}`}>
-                          {FIT_BADGE[d.thesis_fit_score].label}
+                          {labels[d.thesis_fit_score]}
                         </span>
                       )}
                     </div>
                     {d.founder_name && <div className="text-xs text-muted-foreground truncate">{d.founder_name}</div>}
                     <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                      {d.intro_source && <span>{labelFor(d.intro_source)}</span>}
+                      {d.intro_source && <span>{labels[d.intro_source]}</span>}
                       {d.stage && <span>· {d.stage}</span>}
-                      <span className="ml-auto">{new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      <span className="ml-auto">{format.dateTime(new Date(d.created_at), { month: 'short', day: 'numeric' })}</span>
                     </div>
                   </Link>
                 </div>
@@ -524,12 +540,7 @@ function strCmp(a: string | null, b: string | null): number {
   return a.localeCompare(b)
 }
 
-function labelFor(slug: string): string {
-  return slug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
-function exportCsv(deals: Deal[]) {
-  const headers = ['Date', 'Company', 'Founder', 'Email', 'Source', 'Referrer', 'Fit', 'Stage', 'Industry', 'Raise', 'Status']
+function exportCsv(deals: Deal[], headers: string[]) {
   const rows = deals.map(d => [
     d.created_at,
     d.company_name ?? '',
@@ -571,6 +582,8 @@ function NewDealDialog({ open, onOpenChange, onCreated }: {
   onOpenChange: (v: boolean) => void
   onCreated: (dealId: string | null) => void
 }) {
+  const t = useTranslations('Deals.newDeal')
+  const labels = useDealLabels()
   const [companyName, setCompanyName] = useState('')
   const [companyUrl, setCompanyUrl] = useState('')
   const [founderName, setFounderName] = useState('')
@@ -609,11 +622,14 @@ function NewDealDialog({ open, onOpenChange, onCreated }: {
 
       const res = await fetch('/api/deals/manual', { method: 'POST', body: form })
       const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error ?? 'Create failed')
+      if (!res.ok) {
+        setError(typeof body.error === 'string' ? body.error : t('createFailed'))
+        return
+      }
       reset()
       onCreated(body.deal_id ?? null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Create failed')
+    } catch {
+      setError(t('createFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -623,66 +639,66 @@ function NewDealDialog({ open, onOpenChange, onCreated }: {
     <Dialog open={open} onOpenChange={v => { if (!v) reset(); onOpenChange(v) }}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>New deal</DialogTitle>
-          <DialogDescription>Enter pitch details directly. The same AI screener runs as on inbound emails: thesis fit, dedupe, prior-deal check.</DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+        <div className="-ml-1 max-h-[60vh] space-y-3 overflow-y-auto pl-1 pr-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Company name *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('companyName')} *</label>
               <Input value={companyName} onChange={e => setCompanyName(e.target.value)} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Company URL</label>
-              <Input value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} placeholder="https://..." />
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('companyUrl')}</label>
+              <Input value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} placeholder="https://…" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Founder name *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('founderName')} *</label>
               <Input value={founderName} onChange={e => setFounderName(e.target.value)} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Founder email *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('founderEmail')} *</label>
               <Input type="email" value={founderEmail} onChange={e => setFounderEmail(e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Intro source</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('introSource')}</label>
               <select
                 value={introSource}
                 onChange={e => setIntroSource(e.target.value)}
                 className="h-9 w-full px-3 rounded-md border border-input bg-background text-sm"
               >
-                <option value="">(none)</option>
-                {SOURCE_OPTIONS.map(o => <option key={o} value={o}>{labelFor(o)}</option>)}
+                <option value="">{t('none')}</option>
+                {SOURCE_OPTIONS.map(o => <option key={o} value={o}>{labels[o]}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Referrer name</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('referrerName')}</label>
               <Input value={referrerName} onChange={e => setReferrerName(e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Referrer email</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">{t('referrerEmail')}</label>
             <Input type="email" value={referrerEmail} onChange={e => setReferrerEmail(e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Pitch / description *</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">{t('pitch')} *</label>
             <textarea
               value={pitch}
               onChange={e => setPitch(e.target.value)}
               rows={5}
-              placeholder="What the company does, traction, ask, anything you'd normally put in an intro email."
+              placeholder={t('pitchPlaceholder')}
               className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Attachments (optional)</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">{t('attachmentsOptional')}</label>
             <label className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-card text-sm hover:bg-muted/50 cursor-pointer ${submitting ? 'opacity-50 pointer-events-none' : ''}`}>
               <Plus className="h-3.5 w-3.5" />
-              {files.length === 0 ? 'Choose files' : `${files.length} file${files.length === 1 ? '' : 's'} selected`}
+              {files.length === 0 ? t('chooseFiles') : t('filesSelected', { count: files.length })}
               <input
                 type="file"
                 multiple
@@ -696,19 +712,18 @@ function NewDealDialog({ open, onOpenChange, onCreated }: {
                 {files.map((f, i) => <li key={i} className="truncate">{f.name}</li>)}
               </ul>
             )}
-            <p className="text-[11px] text-muted-foreground mt-1">Pitch deck, one-pager, financial model. Up to 10 files, 10MB each.</p>
+            <p className="text-[11px] text-muted-foreground mt-1">{t('attachmentHelp')}</p>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{t('cancel')}</Button>
           <Button variant="outline" onClick={submit} disabled={!canSubmit}>
             {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-            Create deal
+            {t('create')}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-

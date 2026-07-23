@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Menu, LogOut, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
@@ -22,20 +23,24 @@ interface AppHeaderProps {
 
 export function AppHeader({ fundName, fundLogo, userEmail, reviewBadge, settingsBadge, notesBadge, isAdmin, featureVisibility }: AppHeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const { collapsed } = useSidebar()
+  const t = useTranslations('Header')
 
   return (
     <header className="relative flex items-center justify-between px-4 py-3 shrink-0">
       {/* Left: hamburger + logo + fund name */}
       <div className="flex items-center gap-3">
         <Button
+          ref={menuButtonRef}
           variant="ghost"
           size="sm"
           className="md:hidden p-1.5"
           onClick={() => setDrawerOpen(true)}
+          aria-label={t('openMenu')}
         >
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">{t('openMenu')}</span>
         </Button>
         {fundLogo ? (
           <img
@@ -74,14 +79,24 @@ export function AppHeader({ fundName, fundLogo, userEmail, reviewBadge, settings
             className="text-muted-foreground gap-2"
           >
             <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Sign out</span>
+            <span className="hidden sm:inline">{t('signOut')}</span>
           </Button>
         </form>
       </div>
 
       {/* Mobile drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="p-0 pt-12 w-64">
+        <SheetContent
+          side="left"
+          closeLabel={t('closeMenu')}
+          dialogTitle={t('menuTitle')}
+          dialogDescription={t('menuDescription')}
+          onCloseAutoFocus={event => {
+            event.preventDefault()
+            menuButtonRef.current?.focus()
+          }}
+          className="p-0 pt-12 w-64"
+        >
           <AppSidebar
             reviewBadge={reviewBadge}
             settingsBadge={settingsBadge}

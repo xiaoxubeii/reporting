@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "tool": "harnesskit",
+  "project_name": "reporting",
+  "change_name": "bootstrap-harness",
+  "mode": "install",
+  "runtime_root": ".harnesskit",
+  "installed_at": "2026-07-22T11:56:42Z"
+}

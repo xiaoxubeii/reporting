@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Building2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 /**
  * The chrome for every signed-out, full-page screen: sign-in, sign-up, password reset,
@@ -28,7 +29,7 @@ export function AuthShell({
   wide?: boolean
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4 pb-4 pt-20 sm:p-4">
       <div className={`w-full space-y-6 ${wide ? 'max-w-lg' : 'max-w-md'}`}>
         {above}
         <AuthWordmark />
@@ -41,13 +42,15 @@ export function AuthShell({
 
 /** The logo tile + product name, linked home. */
 export function AuthWordmark() {
+  const t = useTranslations('Auth')
+
   return (
     <div className="text-center">
       <Link href="/" className="inline-block group">
         <div className="h-10 w-10 rounded bg-muted flex items-center justify-center mx-auto mb-2 transition-colors group-hover:bg-muted-foreground/20">
           <Building2 className="h-5 w-5 text-muted-foreground" />
         </div>
-        <h1 className="text-lg font-semibold tracking-tight">Portfolio Reporting</h1>
+        <h1 className="text-lg font-semibold tracking-tight">{t('brand')}</h1>
       </Link>
     </div>
   )

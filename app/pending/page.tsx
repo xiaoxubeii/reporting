@@ -1,10 +1,17 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Card, CardContent } from '@/components/ui/card'
 import { Clock } from 'lucide-react'
 
+export async function generateMetadata() {
+  const t = await getTranslations('Pending')
+  return { title: t('metadataTitle') }
+}
+
 export default async function PendingPage() {
+  const t = await getTranslations('Pending')
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
@@ -34,7 +41,7 @@ export default async function PendingPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-md space-y-4">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Pending Approval</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         </div>
 
         <Card>
@@ -42,11 +49,12 @@ export default async function PendingPage() {
             <div className="text-center space-y-4">
               <Clock className="h-12 w-12 text-muted-foreground mx-auto" />
               <div>
-                <p className="font-medium">
-                  Your request to join <span className="text-primary">{request.funds?.name}</span> is pending approval.
-                </p>
+                <p className="font-medium">{t.rich('requestPending', {
+                  fundName: request.funds?.name ?? '',
+                  fund: chunks => <span className="text-primary">{chunks}</span>,
+                })}</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  A fund administrator will review your request. You&apos;ll be able to access the dashboard once approved.
+                  {t('description')}
                 </p>
               </div>
 
@@ -55,7 +63,7 @@ export default async function PendingPage() {
                   type="submit"
                   className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
                 >
-                  Sign out
+                  {t('signOut')}
                 </button>
               </form>
             </div>

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { useTranslations } from 'next-intl'
 
 export interface DefaultMetricStatus {
   id: string
@@ -31,6 +32,7 @@ export function CompanyDefaultMetricsDialog({
   onOpenChange: (open: boolean) => void
   onChanged: () => void
 }) {
+  const t = useTranslations('CompanyDetail.defaultMetrics')
   const [items, setItems] = useState<DefaultMetricStatus[] | null>(null)
   const [seeding, setSeeding] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -66,20 +68,19 @@ export function CompanyDefaultMetricsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Fund default metrics</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            Metrics your fund applies to every company. Add the ones this company is missing, or
-            exclude any that don&apos;t apply here.
+            {t('description')}
           </DialogDescription>
         </DialogHeader>
 
         {items === null ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
           </div>
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4">
-            Your fund has no default metrics yet. An admin can add them in Settings → Default metrics.
+            {t('empty')}
           </p>
         ) : (
           <div className="space-y-1.5 max-h-[50vh] overflow-y-auto">
@@ -95,7 +96,7 @@ export function CompanyDefaultMetricsDialog({
                 <div className="shrink-0">
                   {i.status === 'tracked' ? (
                     <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
-                      <Check className="h-3.5 w-3.5" /> Tracked
+                      <Check className="h-3.5 w-3.5" /> {t('tracked')}
                     </span>
                   ) : i.status === 'excluded' ? (
                     <button
@@ -103,7 +104,7 @@ export function CompanyDefaultMetricsDialog({
                       disabled={busyId === i.id}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                      {busyId === i.id ? '…' : 'Excluded · include'}
+                      {busyId === i.id ? '…' : t('excludedInclude')}
                     </button>
                   ) : (
                     <button
@@ -111,7 +112,7 @@ export function CompanyDefaultMetricsDialog({
                       disabled={busyId === i.id}
                       className="text-xs text-muted-foreground hover:text-destructive"
                     >
-                      {busyId === i.id ? '…' : 'Exclude'}
+                      {busyId === i.id ? '…' : t('exclude')}
                     </button>
                   )}
                 </div>
@@ -124,7 +125,7 @@ export function CompanyDefaultMetricsDialog({
           <div className="flex items-center justify-end gap-2 pt-1">
             <Button size="sm" onClick={seedAvailable} disabled={seeding || availableCount === 0}>
               {seeding ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
-              {availableCount === 0 ? 'All added' : `Add ${availableCount} to this company`}
+              {availableCount === 0 ? t('allAdded') : t('addToCompany', { count: availableCount })}
             </Button>
           </div>
         )}

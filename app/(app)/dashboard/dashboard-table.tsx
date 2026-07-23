@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { useCurrency, getCurrencySymbol } from '@/components/currency-context'
 
 interface MetricData {
@@ -30,13 +31,12 @@ interface Props {
   grouped: [string, string[]][] | null
 }
 
-function formatValue(v: number | string | null, metric: MetricData, fundCurrency?: string): string {
+function formatValue(v: number | string | null, metric: MetricData, locale: string, fundCurrency?: string): string {
   if (v === null || v === undefined) return '—'
   if (typeof v === 'string') return v
   let str: string
-  if (Math.abs(v) >= 1_000_000) str = `${(v / 1_000_000).toFixed(1)}M`
-  else if (Math.abs(v) >= 1_000) str = `${(v / 1_000).toFixed(0)}K`
-  else str = v.toLocaleString()
+  if (Math.abs(v) >= 1_000) str = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(v)
+  else str = v.toLocaleString(locale)
   const metricCurrency = metric.currency ?? fundCurrency
   const currencySymbol = metricCurrency ? getCurrencySymbol(metricCurrency) : null
   const effectiveUnit = metric.unit ?? (metric.valueType === 'currency' && currencySymbol ? currencySymbol : null)
@@ -48,6 +48,8 @@ function formatValue(v: number | string | null, metric: MetricData, fundCurrency
 }
 
 export function DashboardTable({ companyIds, grouped }: Props) {
+  const t = useTranslations('Dashboard')
+  const locale = useLocale()
   const fundCurrency = useCurrency()
   const [data, setData] = useState<CompanyData[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -101,7 +103,7 @@ export function DashboardTable({ companyIds, grouped }: Props) {
   if (loading) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center">
-        <p className="text-muted-foreground text-sm">Loading table data…</p>
+        <p className="text-muted-foreground text-sm">{t('table.loading')}</p>
       </div>
     )
   }
@@ -109,7 +111,7 @@ export function DashboardTable({ companyIds, grouped }: Props) {
   if (!data || data.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center">
-        <p className="text-muted-foreground">No data available.</p>
+        <p className="text-muted-foreground">{t('table.noData')}</p>
       </div>
     )
   }
@@ -156,7 +158,7 @@ export function DashboardTable({ companyIds, grouped }: Props) {
               >
                 {metric ? (
                   <span className={metric.values[q] != null ? '' : 'text-muted-foreground/40'}>
-                    {formatValue(metric.values[q] ?? null, metric, fundCurrency)}
+                    {formatValue(metric.values[q] ?? null, metric, locale, fundCurrency)}
                   </span>
                 ) : (
                   <span className="text-muted-foreground/40">—</span>
@@ -171,6 +173,13 @@ export function DashboardTable({ companyIds, grouped }: Props) {
   }
 
   const totalCols = 2 + quarterColumns.length
+  const formatQuarter = (quarter: string) => {
+    const [quarterCode, year] = quarter.split(' ')
+    const quarterNumber = Number(quarterCode?.replace('Q', ''))
+    return Number.isFinite(quarterNumber) && year
+      ? t('quarter', { quarter: quarterNumber, year: Number(year) })
+      : quarter
+  }
 
   return (
     <div className="overflow-x-auto rounded-lg border bg-card">
@@ -181,20 +190,20 @@ export function DashboardTable({ companyIds, grouped }: Props) {
               className="sticky left-0 z-20 bg-card px-3 py-2 text-left text-[11px] font-medium text-muted-foreground"
               style={{ width: companyColWidth, minWidth: companyColWidth }}
             >
-              Company
+              {t('table.company')}
             </th>
             <th
               className="sticky z-20 bg-card px-3 py-2 text-left text-[11px] font-medium text-muted-foreground"
               style={{ left: companyColWidth, width: metricColWidth, minWidth: metricColWidth }}
             >
-              Metric
+              {t('table.metric')}
             </th>
             {quarterColumns.map(q => (
               <th
                 key={q}
                 className="px-3 py-2 text-right text-[11px] font-medium text-muted-foreground whitespace-nowrap"
               >
-                {q}
+                {formatQuarter(q)}
               </th>
             ))}
           </tr>

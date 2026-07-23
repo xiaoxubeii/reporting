@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import {
   CheckCircle2,
@@ -50,6 +51,7 @@ interface Section {
 }
 
 export default function SetupPage() {
+  const t = useTranslations('Setup')
   const [status, setStatus] = useState<SetupStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,15 +61,15 @@ export default function SetupPage() {
     setError(null)
     try {
       const res = await fetch('/api/setup')
-      if (!res.ok) throw new Error('Failed to fetch setup status')
+      if (!res.ok) throw new Error(t('errors.fetchFailed'))
       const data = await res.json()
       setStatus(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
+      setError(e instanceof Error ? e.message : t('errors.unknown'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchStatus()
@@ -77,11 +79,11 @@ export default function SetupPage() {
     const sections: Section[] = []
 
     sections.push({
-      title: 'Infrastructure',
+      title: t('sections.infrastructure'),
       checks: [
-        { label: 'NEXT_PUBLIC_SUPABASE_URL', passed: s.infrastructure.supabaseUrl, required: true, helpLabel: 'Supabase docs', helpUrl: 'https://supabase.com/docs/guides/getting-started' },
-        { label: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', passed: s.infrastructure.supabaseAnonKey, required: true, helpLabel: 'Supabase docs', helpUrl: 'https://supabase.com/docs/guides/getting-started' },
-        { label: 'SUPABASE_SERVICE_ROLE_KEY', passed: s.infrastructure.serviceRoleKey, required: true, helpLabel: 'Supabase docs', helpUrl: 'https://supabase.com/docs/guides/getting-started' },
+        { label: 'NEXT_PUBLIC_SUPABASE_URL', passed: s.infrastructure.supabaseUrl, required: true, helpLabel: t('actions.supabaseDocs'), helpUrl: 'https://supabase.com/docs/guides/getting-started' },
+        { label: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', passed: s.infrastructure.supabaseAnonKey, required: true, helpLabel: t('actions.supabaseDocs'), helpUrl: 'https://supabase.com/docs/guides/getting-started' },
+        { label: 'SUPABASE_SERVICE_ROLE_KEY', passed: s.infrastructure.serviceRoleKey, required: true, helpLabel: t('actions.supabaseDocs'), helpUrl: 'https://supabase.com/docs/guides/getting-started' },
         { label: 'ENCRYPTION_KEY', passed: s.infrastructure.encryptionKey, required: true },
         { label: 'NEXT_PUBLIC_APP_URL', passed: s.infrastructure.appUrl, required: true },
         { label: 'ENABLE_SETUP_PAGE', passed: s.infrastructure.setupPageEnabled, required: false },
@@ -90,11 +92,14 @@ export default function SetupPage() {
 
     if (s.database) {
       sections.push({
-        title: 'Database',
+        title: t('sections.database'),
         checks: [
-          { label: 'Database connection', passed: s.database.connected, required: true },
+          { label: t('checks.databaseConnection'), passed: s.database.connected, required: true },
           {
-            label: `Core tables (${s.database.coreTableCount}/${s.database.expectedTableCount})`,
+            label: t('checks.coreTables', {
+              current: s.database.coreTableCount,
+              expected: s.database.expectedTableCount,
+            }),
             passed: s.database.coreTablesExist,
             required: true,
           },
@@ -104,92 +109,95 @@ export default function SetupPage() {
 
     if (s.authentication) {
       sections.push({
-        title: 'Authentication',
+        title: t('sections.authentication'),
         checks: [
-          { label: 'At least one user created', passed: s.authentication.hasUser, required: true, helpLabel: 'Sign up', helpUrl: '/auth' },
+          { label: t('checks.userCreated'), passed: s.authentication.hasUser, required: true, helpLabel: t('actions.signUp'), helpUrl: '/auth' },
         ],
       })
     }
 
     if (s.fund) {
       sections.push({
-        title: 'Fund',
+        title: t('sections.fund'),
         checks: [
-          { label: 'Fund created', passed: s.fund.hasFund, required: true, helpLabel: 'Onboarding', helpUrl: '/onboarding' },
+          { label: t('checks.fundCreated'), passed: s.fund.hasFund, required: true, helpLabel: t('actions.onboarding'), helpUrl: '/onboarding' },
         ],
       })
     }
 
     if (s.ai) {
       sections.push({
-        title: 'AI',
+        title: t('sections.ai'),
         checks: [
-          { label: 'AI provider key configured', passed: s.ai.hasProvider, required: true, helpLabel: 'Settings', helpUrl: '/settings' },
+          { label: t('checks.aiProviderKey'), passed: s.ai.hasProvider, required: true, helpLabel: t('actions.settings'), helpUrl: '/settings' },
         ],
       })
     }
 
     if (s.inboundEmail) {
       sections.push({
-        title: 'Inbound Email',
+        title: t('sections.inboundEmail'),
         checks: [
-          { label: 'Inbound email provider set', passed: s.inboundEmail.providerConfigured, required: false, helpLabel: 'Settings', helpUrl: '/settings' },
-          { label: 'Inbound email key configured', passed: s.inboundEmail.keyConfigured, required: false, helpLabel: 'Settings', helpUrl: '/settings' },
+          { label: t('checks.inboundProvider'), passed: s.inboundEmail.providerConfigured, required: false, helpLabel: t('actions.settings'), helpUrl: '/settings' },
+          { label: t('checks.inboundKey'), passed: s.inboundEmail.keyConfigured, required: false, helpLabel: t('actions.settings'), helpUrl: '/settings' },
         ],
       })
     }
 
     if (s.outboundEmail) {
       sections.push({
-        title: 'Outbound Email',
+        title: t('sections.outboundEmail'),
         checks: [
-          { label: 'Outbound email provider set', passed: s.outboundEmail.providerConfigured, required: false, helpLabel: 'Settings', helpUrl: '/settings' },
-          { label: 'Outbound email key configured', passed: s.outboundEmail.keyConfigured, required: false, helpLabel: 'Settings', helpUrl: '/settings' },
+          { label: t('checks.outboundProvider'), passed: s.outboundEmail.providerConfigured, required: false, helpLabel: t('actions.settings'), helpUrl: '/settings' },
+          { label: t('checks.outboundKey'), passed: s.outboundEmail.keyConfigured, required: false, helpLabel: t('actions.settings'), helpUrl: '/settings' },
         ],
       })
     }
 
     if (s.fileStorage) {
       sections.push({
-        title: 'File Storage',
+        title: t('sections.fileStorage'),
         checks: [
-          { label: 'Google Drive or Dropbox connected', passed: s.fileStorage.connected, required: false, helpLabel: 'Settings', helpUrl: '/settings' },
+          { label: t('checks.fileStorageConnected'), passed: s.fileStorage.connected, required: false, helpLabel: t('actions.settings'), helpUrl: '/settings' },
         ],
       })
     }
 
     if (s.senders) {
       sections.push({
-        title: 'Authorized Senders',
+        title: t('sections.authorizedSenders'),
         checks: [
-          { label: `At least one sender (${s.senders.count} configured)`, passed: s.senders.count > 0, required: false, helpLabel: 'Settings', helpUrl: '/settings' },
+          { label: t('checks.authorizedSender', { count: s.senders.count }), passed: s.senders.count > 0, required: false, helpLabel: t('actions.settings'), helpUrl: '/settings' },
         ],
       })
     }
 
     if (s.memoAgent) {
       sections.push({
-        title: 'Memo Agent',
+        title: t('sections.memoAgent'),
         checks: [
           {
-            label: 'Schema set seeded (7 active schemas)',
+            label: t('checks.schemasSeeded', { count: 7 }),
             passed: s.memoAgent.schemasSeeded,
             required: false,
-            helpLabel: 'Open schemas',
+            helpLabel: t('actions.openSchemas'),
             helpUrl: '/settings/memo-agent/schemas',
           },
           {
-            label: `Reference memos uploaded (${s.memoAgent.styleAnchorCount}; recommended ≥3 for reliable voice match)`,
+            label: t('checks.referenceMemos', {
+              count: s.memoAgent.styleAnchorCount,
+              recommended: 3,
+            }),
             passed: s.memoAgent.styleAnchorCount >= 3,
             required: false,
-            helpLabel: 'Open style anchors',
+            helpLabel: t('actions.openStyleAnchors'),
             helpUrl: '/settings/memo-agent/style-anchors',
           },
           {
-            label: 'AI provider configured (required for the agent)',
+            label: t('checks.agentAiProvider'),
             passed: !!s.ai?.hasProvider,
             required: false,
-            helpLabel: 'Settings',
+            helpLabel: t('actions.settings'),
             helpUrl: '/settings',
           },
         ],
@@ -210,7 +218,7 @@ export default function SetupPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Settings className="h-6 w-6 text-muted-foreground" />
-            <h1 className="text-2xl font-semibold tracking-tight">Setup Checklist</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           </div>
           <Button variant="outline" size="sm" onClick={fetchStatus} disabled={loading}>
             {loading ? (
@@ -218,7 +226,7 @@ export default function SetupPage() {
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-            <span className="ml-2">Refresh</span>
+            <span className="ml-2">{t('refresh')}</span>
           </Button>
         </div>
 
@@ -244,8 +252,8 @@ export default function SetupPage() {
               }`}
             >
               {allRequiredPassed
-                ? 'All required checks passed!'
-                : `${passedRequired} of ${requiredChecks.length} required checks passing`}
+                ? t('summary.complete')
+                : t('summary.incomplete', { passed: passedRequired, total: requiredChecks.length })}
             </div>
 
             {sections.map((section) => (
@@ -283,7 +291,9 @@ export default function SetupPage() {
             ))}
 
             <p className="text-xs text-muted-foreground text-center">
-              Once setup is complete, set <code className="rounded bg-muted px-1 py-0.5">ENABLE_SETUP_PAGE=false</code> or remove it to disable this page.
+              {t.rich('disableHelp', {
+                setting: chunks => <code className="rounded bg-muted px-1 py-0.5">{chunks}</code>,
+              })}
             </p>
 
             <p className="text-xs text-muted-foreground text-center">v0.9.1</p>

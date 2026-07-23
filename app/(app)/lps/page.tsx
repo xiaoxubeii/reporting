@@ -10,6 +10,7 @@
 
 import Link from 'next/link'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, ChevronRight, ChevronDown, Calendar, Search, X, Download, FileText, Settings, Pencil, Users } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,8 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { useCurrency, formatCurrencyFull } from '@/components/currency-context'
-import { useConfirm } from '@/components/confirm-dialog'
-import { useFeatureVisibility, useIsAdmin, useLpPortalEnabled } from '@/components/feature-visibility-context'
+import { useIsAdmin, useLpPortalEnabled } from '@/components/feature-visibility-context'
 import { PortfolioGroupFilter } from '@/components/lp-portfolio-group-filter'
 import { LpSharePanel } from '@/components/lp-share-control'
 import { AnalystToggleButton } from '@/components/analyst-button'
@@ -61,8 +61,8 @@ interface Totals {
   pctFunded: number | null; dpi: number | null; rvpi: number | null; tvpi: number | null; irr: number | null
 }
 
-const moicX = (v: number | null | undefined) => (v == null ? '—' : `${v.toFixed(2)}x`)
-const pctX = (v: number | null | undefined) => (v == null ? '—' : `${(v * 100).toFixed(1)}%`)
+const moicX = (v: number | null | undefined, locale: string) => (v == null ? '—' : `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)}x`)
+const pctX = (v: number | null | undefined, locale: string) => (v == null ? '—' : new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v))
 
 function total(rows: LiveRow[]): Totals {
   const t = rows.reduce((a, r) => ({
@@ -89,12 +89,12 @@ export default function LpsPage() {
 }
 
 function LpsInner() {
+  const t = useTranslations('LPs.live')
+  const locale = useLocale()
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyFull(v, currency)
+  const fmt = (v: number) => formatCurrencyFull(v, currency, locale)
   const isAdmin = useIsAdmin()
-  const fv = useFeatureVisibility()
   const lpPortalEnabled = useLpPortalEnabled()
-  const confirm = useConfirm()
 
   const [asOf, setAsOf] = useState('')
   const [applied, setApplied] = useState('')
@@ -122,18 +122,18 @@ function LpsInner() {
         fetch('/api/lps/investors'),
       ])
       const rep = await repRes.json()
-      if (!repRes.ok) throw new Error(rep.error || 'Failed to build the report')
+      if (!repRes.ok) throw new Error(rep.error || t('errors.build'))
       setData(rep)
       if (invRes.ok) {
         const inv = await invRes.json()
-        setMeta((Array.isArray(inv) ? inv : inv.investors ?? []).map((i: any) => ({ id: i.id, name: i.name, parent_id: i.parent_id ?? null })))
+        setMeta((Array.isArray(inv) ? inv : inv.investors ?? []).map((i: InvestorMeta) => ({ id: i.id, name: i.name, parent_id: i.parent_id ?? null })))
       }
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
   useEffect(() => { load(applied) }, [load, applied])
 
   const allGroups = useMemo(
@@ -170,7 +170,9 @@ function LpsInner() {
       const q = search.trim().toLowerCase()
       list = list.filter(i => i.name.toLowerCase().includes(q) || i.rows.some(r => r.entity_name.toLowerCase().includes(q)))
     }
-    const val = (i: typeof list[number]) => (sort.key === 'name' ? i.name : (i.totals as any)[sort.key] as number | null)
+    const val = (i: typeof list[number]) => sort.key === 'name'
+      ? i.name
+      : (i.totals as unknown as Record<string, number | null>)[sort.key]
     return list.sort((a, b) => compareVals(val(a), val(b), sort.dir) || a.name.localeCompare(b.name))
   }, [visibleRows, parentOf, nameOf, search, sort])
 
@@ -186,7 +188,12 @@ function LpsInner() {
   )
   const showVehicleOnRow = scopedGroups.length > 1
 
-  const toggle = (id: string) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggle = (id: string) => setExpanded(current => {
+    const next = new Set(current)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
 
   async function exportExcel() {
     setExporting(true)
@@ -211,9 +218,9 @@ function LpsInner() {
           beside the body below, matching /dashboard and the accounting pages. */}
       <div className="flex items-start justify-between gap-3 mb-6">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Partners</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <p className="text-sm text-muted-foreground max-w-3xl">
-            Partner capital across all vehicles.
+            {t('description')}
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
@@ -231,7 +238,7 @@ function LpsInner() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search investors..."
+                placeholder={t('search')}
                 className="w-40 md:w-56 border border-input rounded pl-7 pr-6 py-1.5 text-sm bg-transparent placeholder:text-muted-foreground"
               />
               {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>}
@@ -240,21 +247,26 @@ function LpsInner() {
               <PortfolioGroupFilter
                 allGroups={allGroups}
                 excludedGroups={excludedGroups}
-                onToggle={g => setExcludedGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n })}
+                onToggle={g => setExcludedGroups(current => {
+                  const next = new Set(current)
+                  if (next.has(g)) next.delete(g)
+                  else next.add(g)
+                  return next
+                })}
                 onToggleAll={() => setExcludedGroups(prev => prev.size === 0 ? new Set(allGroups) : new Set())}
               />
             )}
             {/* Action buttons sit on the LEFT; the As-of date is pushed to the RIGHT to match the
                 other LP capital pages. */}
             <Button size="sm" variant="outline" className="text-muted-foreground" onClick={exportExcel} disabled={exporting || investors.length === 0}>
-              <Download className="h-4 w-4 mr-1" />{exporting ? 'Exporting…' : 'Export'}
+              <Download className="h-4 w-4 mr-1" />{exporting ? t('exporting') : t('export')}
             </Button>
             <Button size="sm" variant="outline" className="text-muted-foreground" asChild>
-              <Link href="/lps/cards"><FileText className="h-4 w-4 mr-1" /> PDFs</Link>
+              <Link href="/lps/cards"><FileText className="h-4 w-4 mr-1" /> {t('pdfs')}</Link>
             </Button>
             {isAdmin && (
               <Button size="sm" variant="outline" className="text-muted-foreground" onClick={() => setSettingsOpen(true)}>
-                <Settings className="h-4 w-4 mr-1" /> Settings
+                <Settings className="h-4 w-4 mr-1" /> {t('settings.button')}
               </Button>
             )}
             {/* Gate on the portal MASTER switch (like every other share/publish affordance), not on
@@ -262,31 +274,31 @@ function LpsInner() {
                 snapshot before the "portal is off" notice ever shows. */}
             {isAdmin && lpPortalEnabled && (
               <Button size="sm" variant="outline" className="text-muted-foreground" onClick={() => setShareOpen(true)} disabled={investors.length === 0}>
-                <Users className="h-4 w-4 mr-1" /> Share
+                <Users className="h-4 w-4 mr-1" /> {t('share.button')}
               </Button>
             )}
 
             <span className="flex-1" />
 
-            <label className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> As of</label>
+            <label className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> {t('asOf')}</label>
             {/* Changing the date rebuilds immediately — no separate apply button. Default (empty)
                 is the latest data; "Latest" resets back to it. */}
             <Input type="date" value={asOf} onChange={e => { setAsOf(e.target.value); setApplied(e.target.value) }} className="h-9 w-40" />
-            {applied && <Button size="sm" variant="ghost" onClick={() => { setAsOf(''); setApplied('') }}>Latest</Button>}
+            {applied && <Button size="sm" variant="ghost" onClick={() => { setAsOf(''); setApplied('') }}>{t('latest')}</Button>}
           </div>
 
           {error && <Card><CardContent className="p-4 text-red-600 text-sm">{error}</CardContent></Card>}
 
           {loading && !data ? (
-            <div className="flex items-center py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Deriving from the ledger…</div>
+            <div className="flex items-center py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('loading')}</div>
           ) : data ? (
             <>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <Stat label="Commitment" value={fmt(grand.commitment)} />
-                <Stat label="Called" value={fmt(grand.paid_in_capital)} />
-                <Stat label="Distributions" value={fmt(grand.distributions)} />
-                <Stat label="NAV" value={fmt(grand.nav)} />
-                <Stat label="TVPI" value={grand.tvpi != null ? `${grand.tvpi.toFixed(2)}x` : '—'} />
+                <Stat label={t('columns.commitment')} value={fmt(grand.commitment)} />
+                <Stat label={t('columns.called')} value={fmt(grand.paid_in_capital)} />
+                <Stat label={t('columns.distributions')} value={fmt(grand.distributions)} />
+                <Stat label={t('columns.nav')} value={fmt(grand.nav)} />
+                <Stat label={t('columns.tvpi')} value={moicX(grand.tvpi, locale)} />
               </div>
 
               <Card>
@@ -294,17 +306,17 @@ function LpsInner() {
                   <table className="w-full text-sm">
                     <thead className="text-xs text-muted-foreground">
                       <tr className="border-b bg-muted/40">
-                        <SortTh label="Investor" sortKey="name" sort={sort} onSort={onSort} />
-                        <SortTh label="Commitment" sortKey="commitment" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="Called" sortKey="paid_in_capital" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="Unfunded" sortKey="outstanding_balance" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="% Funded" sortKey="pctFunded" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="Distributions" sortKey="distributions" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="NAV" sortKey="nav" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="DPI" sortKey="dpi" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="RVPI" sortKey="rvpi" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="TVPI" sortKey="tvpi" sort={sort} onSort={onSort} align="right" />
-                        <SortTh label="IRR" sortKey="irr" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.investor')} sortKey="name" sort={sort} onSort={onSort} />
+                        <SortTh label={t('columns.commitment')} sortKey="commitment" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.called')} sortKey="paid_in_capital" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.unfunded')} sortKey="outstanding_balance" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.funded')} sortKey="pctFunded" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.distributions')} sortKey="distributions" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.nav')} sortKey="nav" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.dpi')} sortKey="dpi" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.rvpi')} sortKey="rvpi" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.tvpi')} sortKey="tvpi" sort={sort} onSort={onSort} align="right" />
+                        <SortTh label={t('columns.irr')} sortKey="irr" sort={sort} onSort={onSort} align="right" />
                       </tr>
                     </thead>
                     <tbody>
@@ -334,9 +346,9 @@ function LpsInner() {
                                   {/* Edit actions sit right next to the name, revealed on row hover. */}
                                   {isAdmin && (
                                     <span className="flex items-center gap-1.5 ml-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                      <Link href={`/lps/cards/${inv.id}`} title="Report card" className="hover:text-foreground"><FileText className="h-3.5 w-3.5" /></Link>
-                                      <button onClick={() => setRename({ id: inv.id, name: inv.name })} title="Rename" className="hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
-                                      <button onClick={() => setGrouping({ id: inv.id, name: inv.name })} title="Group under another investor" className="hover:text-foreground"><Users className="h-3.5 w-3.5" /></button>
+                                      <Link href={`/lps/cards/${inv.id}`} title={t('actions.reportCard')} className="hover:text-foreground"><FileText className="h-3.5 w-3.5" /></Link>
+                                      <button onClick={() => setRename({ id: inv.id, name: inv.name })} title={t('actions.rename')} className="hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
+                                      <button onClick={() => setGrouping({ id: inv.id, name: inv.name })} title={t('actions.group')} className="hover:text-foreground"><Users className="h-3.5 w-3.5" /></button>
                                     </span>
                                   )}
                                 </span>
@@ -344,13 +356,13 @@ function LpsInner() {
                               <Money v={inv.totals.commitment} fmt={fmt} />
                               <Money v={inv.totals.paid_in_capital} fmt={fmt} />
                               <Money v={inv.totals.outstanding_balance} fmt={fmt} />
-                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{pctX(inv.totals.pctFunded)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{pctX(inv.totals.pctFunded, locale)}</td>
                               <Money v={inv.totals.distributions} fmt={fmt} />
                               <Money v={inv.totals.nav} fmt={fmt} />
-                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{moicX(inv.totals.dpi)}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{moicX(inv.totals.rvpi)}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums">{moicX(inv.totals.tvpi)}</td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{pctX(inv.totals.irr)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{moicX(inv.totals.dpi, locale)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{moicX(inv.totals.rvpi, locale)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">{moicX(inv.totals.tvpi, locale)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{pctX(inv.totals.irr, locale)}</td>
                             </tr>
                             {open && inv.rows.map(r => (
                               <tr key={`${inv.id}-${r.entity_id}-${r.portfolio_group}`} className="border-b bg-muted/10 text-muted-foreground">
@@ -363,19 +375,19 @@ function LpsInner() {
                                       {r.portfolio_group}
                                       {r.entity_name !== inv.name && <span className="ml-1">· {r.entity_name}</span>}
                                     </span>
-                                    {r.lookThroughVia && <Badge variant="secondary" className="shrink-0 text-[10px] py-0 px-1">via {r.lookThroughVia}</Badge>}
+                                    {r.lookThroughVia && <Badge variant="secondary" className="shrink-0 text-[10px] py-0 px-1">{t('via', { name: r.lookThroughVia })}</Badge>}
                                   </span>
                                 </td>
                                 <Money v={r.commitment} fmt={fmt} small />
                                 <Money v={r.paid_in_capital} fmt={fmt} small />
                                 <Money v={r.outstanding_balance} fmt={fmt} small />
-                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{pctX(r.commitment > 0 ? r.paid_in_capital / r.commitment : null)}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{pctX(r.commitment > 0 ? r.paid_in_capital / r.commitment : null, locale)}</td>
                                 <Money v={r.distributions} fmt={fmt} small />
                                 <Money v={r.nav} fmt={fmt} small />
-                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{moicX(r.dpi)}</td>
-                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{moicX(r.rvpi)}</td>
-                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{moicX(r.tvpi)}</td>
-                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{pctX(r.irr)}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{moicX(r.dpi, locale)}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{moicX(r.rvpi, locale)}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{moicX(r.tvpi, locale)}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-xs">{pctX(r.irr, locale)}</td>
                               </tr>
                             ))}
                           </Fragment>
@@ -383,24 +395,24 @@ function LpsInner() {
                       })}
                       {investors.length === 0 && (
                         <tr><td colSpan={11} className="p-8 text-center text-muted-foreground">
-                          {search ? 'No investors match your search.' : 'No LP capital found. Track a vehicle’s positions or book its history.'}
+                          {search ? t('emptySearch') : t('empty')}
                         </td></tr>
                       )}
                     </tbody>
                     {investors.length > 0 && (
                       <tfoot>
                         <tr className="border-t-2 font-medium bg-muted/30">
-                          <td className="px-3 py-1.5">Total</td>
+                          <td className="px-3 py-1.5">{t('total')}</td>
                           <Money v={grand.commitment} fmt={fmt} />
                           <Money v={grand.paid_in_capital} fmt={fmt} />
                           <Money v={grand.outstanding_balance} fmt={fmt} />
-                          <td className="px-3 py-1.5 text-right tabular-nums">{pctX(grand.pctFunded)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{pctX(grand.pctFunded, locale)}</td>
                           <Money v={grand.distributions} fmt={fmt} />
                           <Money v={grand.nav} fmt={fmt} />
-                          <td className="px-3 py-1.5 text-right tabular-nums">{moicX(grand.dpi)}</td>
-                          <td className="px-3 py-1.5 text-right tabular-nums">{moicX(grand.rvpi)}</td>
-                          <td className="px-3 py-1.5 text-right tabular-nums">{moicX(grand.tvpi)}</td>
-                          <td className="px-3 py-1.5 text-right tabular-nums">{grand.irr != null ? pctX(grand.irr) : '—'}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{moicX(grand.dpi, locale)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{moicX(grand.rvpi, locale)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{moicX(grand.tvpi, locale)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{grand.irr != null ? pctX(grand.irr, locale) : '—'}</td>
                         </tr>
                       </tfoot>
                     )}
@@ -422,10 +434,9 @@ function LpsInner() {
           <Dialog open={shareOpen} onOpenChange={setShareOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Publish the live report to LPs</DialogTitle>
+                <DialogTitle>{t('share.title')}</DialogTitle>
                 <DialogDescription>
-                  Check the LPs who should see their position in their portal. They see the live data — the same as this
-                  page, always current — not a frozen statement.
+                  {t('share.description')}
                 </DialogDescription>
               </DialogHeader>
               {shareOpen && <LpSharePanel shareEndpoint="/api/lps/live-report/share" />}
@@ -459,6 +470,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 // ---------------------------------------------------------------------------
 
 function ReportSettingsDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslations('LPs.live.settings')
   const [description, setDescription] = useState('')
   const [footer, setFooter] = useState('')
   const [loaded, setLoaded] = useState(false)
@@ -478,28 +490,28 @@ function ReportSettingsDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={o => { if (!o) onClose() }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Report settings</DialogTitle>
-          <DialogDescription>The header paragraph and footer note printed on every live report card.</DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         {!loaded ? <div className="py-8 flex justify-center"><Loader2 className="h-4 w-4 animate-spin" /></div> : (
           <div className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Header paragraph</label>
+              <label className="text-sm font-medium">{t('header')}</label>
               <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4}
-                placeholder="A short introduction shown at the top of every investor report."
+                placeholder={t('headerPlaceholder')}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Footer note</label>
+              <label className="text-sm font-medium">{t('footer')}</label>
               <textarea value={footer} onChange={e => setFooter(e.target.value)} rows={3}
-                placeholder="Leave blank for the default metric definitions."
+                placeholder={t('footerPlaceholder')}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
             </div>
           </div>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={save} disabled={saving || !loaded}>{saving ? 'Saving…' : 'Save'}</Button>
+          <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
+          <Button onClick={save} disabled={saving || !loaded}>{saving ? t('saving') : t('save')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -512,6 +524,7 @@ function GroupDialog({ investor, candidates, onClose, onSaved }: {
   onClose: () => void
   onSaved: () => void
 }) {
+  const t = useTranslations('LPs.live.group')
   const [parentId, setParentId] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const options = candidates.filter(c => c.id !== investor.id)
@@ -525,18 +538,18 @@ function GroupDialog({ investor, candidates, onClose, onSaved }: {
     <Dialog open onOpenChange={o => { if (!o) onClose() }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Group &ldquo;{investor.name}&rdquo;</DialogTitle>
-          <DialogDescription>Roll this investor&rsquo;s positions up under another investor on the report.</DialogDescription>
+          <DialogTitle>{t('title', { name: investor.name })}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         <select value={parentId} onChange={e => setParentId(e.target.value)} className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm">
-          <option value="">Choose an investor…</option>
+          <option value="">{t('choose')}</option>
           {options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
         <DialogFooter className="flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={() => save(null)} disabled={saving}>Ungroup</Button>
+          <Button variant="ghost" size="sm" onClick={() => save(null)} disabled={saving}>{t('ungroup')}</Button>
           <span className="flex-1" />
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => save(parentId || null)} disabled={saving || !parentId}>{saving ? 'Saving…' : 'Group'}</Button>
+          <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
+          <Button onClick={() => save(parentId || null)} disabled={saving || !parentId}>{saving ? t('saving') : t('group')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

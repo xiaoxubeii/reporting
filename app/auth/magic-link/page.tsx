@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { OtpCodeForm } from '@/components/auth/otp-code-form'
+import { useLocale, useTranslations } from 'next-intl'
 
 export default function MagicLinkPage() {
   const [email, setEmail] = useState('')
@@ -17,12 +18,14 @@ export default function MagicLinkPage() {
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const t = useTranslations('Auth')
+  const locale = useLocale()
 
   const supabase = createClient()
 
   async function handleSend() {
     if (!email.trim()) {
-      setError('Enter your email address.')
+      setError(t('emailAddressRequired'))
       return
     }
     setError(null)
@@ -32,7 +35,7 @@ export default function MagicLinkPage() {
       email: email.trim().toLowerCase(),
       options: { shouldCreateUser: false },
     })
-    if (error) setError(error.message)
+    if (error) setError(locale === 'en' ? error.message : t('genericError'))
     else setSent(true)
     setLoading(false)
   }
@@ -46,7 +49,7 @@ export default function MagicLinkPage() {
       token: code,
     })
     if (error) {
-      setError(error.message)
+      setError(locale === 'en' ? error.message : t('genericError'))
       setVerifying(false)
     } else {
       // Run server-side post-login side effects, then land the user.
@@ -59,11 +62,11 @@ export default function MagicLinkPage() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Sign in with a one-time code</CardTitle>
+            <CardTitle className="text-lg">{t('magicTitle')}</CardTitle>
             <CardDescription>
               {sent
-                ? 'Enter the 6-digit code we emailed you.'
-                : "We'll email you a 6-digit code that signs you in, no password needed."}
+                ? t('magicSentDescription')
+                : t('magicDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -83,11 +86,11 @@ export default function MagicLinkPage() {
                   </Alert>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('email')}</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t('emailPlaceholder')}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSend()}
@@ -96,14 +99,14 @@ export default function MagicLinkPage() {
                   />
                 </div>
                 <Button className="w-full" onClick={handleSend} disabled={loading}>
-                  {loading ? 'Sending…' : 'Email me a code'}
+                  {loading ? t('sending') : t('emailCode')}
                 </Button>
               </>
             )}
 
             <p className="text-center text-sm text-muted-foreground">
               <Link href="/auth" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                Sign in with password
+                {t('signInPassword')}
               </Link>
             </p>
           </CardContent>

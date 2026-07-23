@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
-import { StyleAnchorsLibrary } from './library'
+import { StyleAnchorsLibrary, type AnchorListItem } from './library'
 
 type Confidence = 'unavailable' | 'preliminary' | 'reliable' | 'robust'
 
@@ -20,18 +21,19 @@ function confidenceFor(count: number): Confidence {
  * fund's anchors client-side and renders the existing library embedded.
  */
 export function StyleAnchorsInline() {
-  const [anchors, setAnchors] = useState<any[] | null>(null)
+  const t = useTranslations('Settings.styleAnchors')
+  const [anchors, setAnchors] = useState<AnchorListItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/firm/style-anchors')
       .then(r => (r.ok ? r.json() : Promise.reject(new Error('failed'))))
       .then(data => setAnchors(Array.isArray(data) ? data : []))
-      .catch(() => setError('Could not load example memos.'))
-  }, [])
+      .catch(() => setError(t('loadError')))
+  }, [t])
 
   if (error) return <div className="text-xs text-destructive">{error}</div>
-  if (anchors === null) return <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> Loading…</div>
+  if (anchors === null) return <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</div>
 
   return <StyleAnchorsLibrary initialAnchors={anchors} initialConfidence={confidenceFor(anchors.length)} embedded />
 }

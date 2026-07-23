@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
+import Image from 'next/image'
 import { MessageCircle, Send, Loader2, CheckCircle2, CircleDot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function ContactPage() {
+  const t = useTranslations('Contact')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
@@ -20,7 +23,7 @@ export default function ContactPage() {
     setError('')
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address')
+      setError(t('form.errors.email'))
       setSending(false)
       return
     }
@@ -33,13 +36,14 @@ export default function ContactPage() {
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to send message')
+        throw new Error('send-failed')
       }
 
       setSent(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error && err.message === 'send-failed'
+        ? t('form.errors.send')
+        : t('form.errors.generic'))
     } finally {
       setSending(false)
     }
@@ -49,13 +53,13 @@ export default function ContactPage() {
     <div className="p-4 pt-6 md:p-8">
       <h1 className="text-2xl font-semibold tracking-tight mb-6 flex items-center gap-3">
         <MessageCircle className="h-6 w-6 text-muted-foreground" />
-        Contact
+        {t('title')}
       </h1>
 
       <div className="max-w-3xl space-y-6 text-sm leading-relaxed">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2 flex items-start gap-4 pt-3">
-            <img
+            <Image
               src="/tdavidson.jpg"
               alt="Taylor Davidson"
               width={80}
@@ -64,15 +68,14 @@ export default function ContactPage() {
             />
             <div>
               <p className="text-muted-foreground">
-                For questions about the platform, setup, support, hosting, or anything else,
-                reach out to Taylor Davidson at{' '}
+                {t('intro.beforeEmail')}{' '}
                 <a
                   href="mailto:hello@hemrock.com"
                   className="text-foreground underline underline-offset-4 hover:text-foreground/80"
                 >
                   hello@hemrock.com
                 </a>
-                {' '}at{' '}
+                {' '}{t('intro.between')}{' '}
                 <a
                   href="tel:+16467700052"
                   className="text-foreground underline underline-offset-4 hover:text-foreground/80"
@@ -91,8 +94,8 @@ export default function ContactPage() {
           >
             <CircleDot className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <p className="text-muted-foreground">
-              For bug reports and feature requests,{' '}
-              <span className="text-foreground underline underline-offset-4">open an issue on GitHub</span>.
+              {t('github.before')}{' '}
+              <span className="text-foreground underline underline-offset-4">{t('github.link')}</span>{t('github.after')}
             </p>
           </a>
         </div>
@@ -100,11 +103,11 @@ export default function ContactPage() {
         {sent ? (
           <div className="rounded-lg border bg-card p-6 flex items-center gap-3 text-sm">
             <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-            <p>Thanks for reaching out! I&apos;ll get back to you soon.</p>
+            <p>{t('success')}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="rounded-lg border bg-card p-5 space-y-4">
-            <h2 className="text-base font-medium">Send a message</h2>
+            <h2 className="text-base font-medium">{t('form.title')}</h2>
             {/* Honeypot */}
             <div className="absolute opacity-0 -z-10" aria-hidden="true">
               <input
@@ -117,7 +120,7 @@ export default function ContactPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="name" className="text-sm text-muted-foreground">Name</label>
+              <label htmlFor="name" className="text-sm text-muted-foreground">{t('form.name.label')}</label>
               <input
                 id="name"
                 type="text"
@@ -125,11 +128,11 @@ export default function ContactPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Your name"
+                placeholder={t('form.name.placeholder')}
               />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-sm text-muted-foreground">Email</label>
+              <label htmlFor="email" className="text-sm text-muted-foreground">{t('form.email.label')}</label>
               <input
                 id="email"
                 type="email"
@@ -137,11 +140,11 @@ export default function ContactPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="you@example.com"
+                placeholder={t('form.email.placeholder')}
               />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="message" className="text-sm text-muted-foreground">Message</label>
+              <label htmlFor="message" className="text-sm text-muted-foreground">{t('form.message.label')}</label>
               <textarea
                 id="message"
                 required
@@ -149,7 +152,7 @@ export default function ContactPage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y min-h-[80px]"
-                placeholder="How can I help?"
+                placeholder={t('form.message.placeholder')}
               />
             </div>
             {error && (
@@ -162,10 +165,10 @@ export default function ContactPage() {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {sending ? 'Sending...' : 'Send Message'}
+                {sending ? t('form.sending') : t('form.submit')}
               </Button>
               <span className="text-sm text-muted-foreground">
-                or email me at{' '}
+                {t('form.orEmail')}{' '}
                 <a href="mailto:hello@hemrock.com" className="text-foreground underline underline-offset-4 hover:text-foreground/80">
                   hello@hemrock.com
                 </a>

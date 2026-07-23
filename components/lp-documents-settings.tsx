@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,13 +15,15 @@ interface Doc {
   lp_document_shares?: { lp_investor_id: string }[]
 }
 
-function fmtDate(d: string | null): string {
+function fmtDate(d: string | null, locale: string): string {
   if (!d) return ''
   const date = new Date(d.length <= 10 ? `${d}T00:00:00` : d)
-  return isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date)
 }
 
 export function LpDocumentsSettings() {
+  const t = useTranslations('LPs.admin.documents')
+  const locale = useLocale()
   const [docs, setDocs] = useState<Doc[]>([])
   const [investors, setInvestors] = useState<Investor[]>([])
   const [vehicles, setVehicles] = useState<string[]>([])
@@ -50,7 +53,7 @@ export function LpDocumentsSettings() {
     ])
       .then(([d, inv, veh]) => {
         setDocs(d.documents ?? [])
-        setInvestors((Array.isArray(inv) ? inv : []).map((i: any) => ({ id: i.id, name: i.name })))
+        setInvestors((Array.isArray(inv) ? inv : []).map((i: Investor) => ({ id: i.id, name: i.name })))
         setVehicles(veh.vehicles ?? [])
       })
       .finally(() => setLoading(false))
@@ -59,12 +62,12 @@ export function LpDocumentsSettings() {
 
   async function upload() {
     if (!file || !title.trim()) return
-    if (scope === 'investor' && selected.size === 0) { setError('Pick at least one investor.'); return }
-    if (scope === 'vehicle' && !vehicle) { setError('Pick an investment vehicle.'); return }
+    if (scope === 'investor' && selected.size === 0) { setError(t('errors.pickInvestor')); return }
+    if (scope === 'vehicle' && !vehicle) { setError(t('errors.pickVehicle')); return }
     setUploading(true); setError(null)
     try {
       const u = await fetch('/api/lps/documents/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file_name: file.name }) })
-      if (!u.ok) throw new Error('Could not start upload')
+      if (!u.ok) throw new Error(t('errors.startUpload'))
       const { storage_path, token } = await u.json()
       const { error: upErr } = await supabase.storage.from('lp-documents').uploadToSignedUrl(storage_path, token, file)
       if (upErr) throw upErr
@@ -78,13 +81,13 @@ export function LpDocumentsSettings() {
           vehicle: scope === 'vehicle' ? vehicle : null,
         }),
       })
-      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? 'Save failed') }
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? t('errors.save')) }
       setTitle(''); setCategory(''); setDocDate(''); setFile(null); setSelected(new Set()); setVehicle(''); setScope('fund')
       const input = document.getElementById('lp-doc-file') as HTMLInputElement | null
       if (input) input.value = ''
       load()
-    } catch (e: any) {
-      setError(e?.message ?? 'Upload failed')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : t('errors.upload'))
     } finally {
       setUploading(false)
     }
@@ -98,43 +101,48 @@ export function LpDocumentsSettings() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
-        Upload files for your LPs (fund financials, statements, …). Choose who sees each file: every LP in this fund, all investors in a specific investment vehicle, or hand-picked investors. They appear in the LP portal&apos;s Documents tab, grouped by category.
+        {t('description')}
       </p>
 
       <div className="rounded-md border p-3 space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
-          <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Document title" className="h-8 text-sm flex-1 min-w-[160px]" />
+          <Input value={title} onChange={e => setTitle(e.target.value)} placeholder={t('titlePlaceholder')} className="h-8 text-sm flex-1 min-w-[160px]" />
           <input id="lp-doc-file" type="file" onChange={e => setFile(e.target.files?.[0] ?? null)} className="text-xs" />
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Input list="lp-doc-categories" value={category} onChange={e => setCategory(e.target.value)} placeholder="Category (e.g. Financials)" className="h-8 text-sm w-44" />
+          <Input list="lp-doc-categories" value={category} onChange={e => setCategory(e.target.value)} placeholder={t('categoryPlaceholder')} className="h-8 text-sm w-44" />
           <datalist id="lp-doc-categories">
             {knownCategories.map(c => <option key={c} value={c} />)}
           </datalist>
-          <Input type="date" value={docDate} onChange={e => setDocDate(e.target.value)} className="h-8 text-sm w-40" title="Effective document date (optional)" />
+          <Input type="date" value={docDate} onChange={e => setDocDate(e.target.value)} className="h-8 text-sm w-40" title={t('dateTitle')} />
           <select value={scope} onChange={e => setScope(e.target.value as 'fund' | 'investor' | 'vehicle')} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
-            <option value="fund">All LPs in this fund</option>
-            <option value="vehicle">All investors in a vehicle</option>
-            <option value="investor">Specific investors</option>
+            <option value="fund">{t('scopes.fund')}</option>
+            <option value="vehicle">{t('scopes.vehicle')}</option>
+            <option value="investor">{t('scopes.investor')}</option>
           </select>
           {scope === 'vehicle' && (
             <select value={vehicle} onChange={e => setVehicle(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-sm max-w-[220px]">
-              <option value="">{vehicles.length ? 'Select a vehicle…' : 'No vehicles found'}</option>
+              <option value="">{vehicles.length ? t('selectVehicle') : t('noVehicles')}</option>
               {vehicles.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           )}
           <Button size="sm" onClick={upload} disabled={uploading || !file || !title.trim()}>
-            {uploading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}Upload
+            {uploading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}{t('upload')}
           </Button>
           {error && <span className="text-xs text-destructive">{error}</span>}
         </div>
         {scope === 'investor' && (
           <div className="rounded-md border divide-y max-h-48 overflow-y-auto">
             {investors.length === 0 ? (
-              <div className="text-xs text-muted-foreground p-2">No investors yet.</div>
+              <div className="text-xs text-muted-foreground p-2">{t('noInvestors')}</div>
             ) : investors.map(i => (
               <label key={i.id} className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/30">
-                <input type="checkbox" checked={selected.has(i.id)} onChange={() => setSelected(prev => { const n = new Set(prev); n.has(i.id) ? n.delete(i.id) : n.add(i.id); return n })} className="h-3.5 w-3.5" />
+                <input type="checkbox" checked={selected.has(i.id)} onChange={() => setSelected(prev => {
+                  const next = new Set(prev)
+                  if (next.has(i.id)) next.delete(i.id)
+                  else next.add(i.id)
+                  return next
+                })} className="h-3.5 w-3.5" />
                 <span className="truncate">{i.name}</span>
               </label>
             ))}
@@ -143,9 +151,9 @@ export function LpDocumentsSettings() {
       </div>
 
       {loading ? (
-        <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> Loading…</div>
+        <div className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</div>
       ) : docs.length === 0 ? (
-        <div className="text-xs text-muted-foreground">No documents uploaded yet.</div>
+        <div className="text-xs text-muted-foreground">{t('empty')}</div>
       ) : (
         <div className="rounded-md border divide-y">
           {docs.map(d => (
@@ -158,17 +166,17 @@ export function LpDocumentsSettings() {
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
                   {d.scope === 'fund'
-                    ? 'All LPs in fund'
+                    ? t('allFund')
                     : d.vehicle
-                      ? `${d.vehicle} · ${d.lp_document_shares?.length ?? 0} investor(s)`
-                      : `${d.lp_document_shares?.length ?? 0} investor(s)`} · {d.file_name}
-                  {(d.doc_date || d.uploaded_at) && ` · ${fmtDate(d.doc_date) || fmtDate(d.uploaded_at)}`}
+                      ? t('vehicleInvestors', { vehicle: d.vehicle, count: d.lp_document_shares?.length ?? 0 })
+                      : t('investors', { count: d.lp_document_shares?.length ?? 0 })} · {d.file_name}
+                  {(d.doc_date || d.uploaded_at) && ` · ${fmtDate(d.doc_date, locale) || fmtDate(d.uploaded_at, locale)}`}
                 </div>
               </div>
               <div className="shrink-0">
                 <LpSendControl kind="document" id={d.id} itemTitle={d.title} />
               </div>
-              <button onClick={() => remove(d.id)} className="text-muted-foreground hover:text-destructive shrink-0" title="Delete">
+              <button onClick={() => remove(d.id)} className="text-muted-foreground hover:text-destructive shrink-0" title={t('delete')}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>

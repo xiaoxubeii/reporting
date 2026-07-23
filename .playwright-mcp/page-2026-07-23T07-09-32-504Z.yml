@@ -1,0 +1,31 @@
+- generic [active] [ref=f16e1]:
+  - generic [ref=f16e3]:
+    - banner [ref=f16e4]:
+      - generic [ref=f16e5]:
+        - button "Open menu" [ref=f16e6] [cursor=pointer]
+        - generic [ref=f16e13]: test@example.com
+      - button [ref=f16e16] [cursor=pointer]
+    - main [ref=f16e18]:
+      - generic [ref=f16e20]:
+        - generic [ref=f16e21]:
+          - heading "Follow sources" [level=1] [ref=f16e22]
+          - paragraph [ref=f16e23]: Discover and follow publications in your personal feed.
+        - paragraph [ref=f16e24]
+      - list [ref=f16e29]:
+        - listitem [ref=f16e30]:
+          - text: Made by
+          - link "Hemrock" [ref=f16e31] [cursor=pointer]:
+            - /url: https://hemrock.com
+        - listitem [ref=f16e34]:
+          - link "View on GitHub" [ref=f16e35] [cursor=pointer]:
+            - /url: https://github.com/tdavidson/reporting
+        - listitem [ref=f16e39]:
+          - link "License" [ref=f16e40] [cursor=pointer]:
+            - /url: /license
+        - listitem [ref=f16e45]:
+          - link "Terms" [ref=f16e46] [cursor=pointer]:
+            - /url: /terms
+        - listitem [ref=f16e47]:
+          - link "Privacy" [ref=f16e48] [cursor=pointer]:
+            - /url: /privacy
+  - region "Notifications alt+T"

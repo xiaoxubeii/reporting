@@ -62,11 +62,14 @@ async function createProviderForType(
     case 'openrouter': {
       const apiKey = await getOpenRouterApiKey(supabase, fundId)
       const config = await getOpenRouterConfig(supabase, fundId)
-      const { validateOllamaUrl } = await import('@/lib/validate-url')
-      const validation = validateOllamaUrl(config.baseUrl)
+      const { validateCustomProviderUrl } = await import('@/lib/validate-url')
+      const validation = await validateCustomProviderUrl(config.baseUrl)
       if (!validation.ok) throw new Error(validation.error)
       return {
-        provider: new OpenAIProvider(apiKey, validation.url),
+        provider: new OpenAIProvider(apiKey, validation.url, {
+          requestParameters: config.requestParameters,
+          rejectRedirects: true,
+        }),
         model: config.model,
         providerType: 'openrouter',
       }

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -13,13 +15,14 @@ import {
 import { Loader2 } from 'lucide-react'
 
 const STATUSES = [
-  { value: 'success', label: 'Success' },
-  { value: 'needs_review', label: 'Review' },
-  { value: 'not_processed', label: 'Skipped' },
-  { value: 'failed', label: 'Failed' },
+  { value: 'success', key: 'success' },
+  { value: 'needs_review', key: 'review' },
+  { value: 'not_processed', key: 'skipped' },
+  { value: 'failed', key: 'failed' },
 ] as const
 
 export function ChangeStatusButton({ emailId, currentStatus }: { emailId: string; currentStatus: string }) {
+  const t = useTranslations('Emails')
   const router = useRouter()
   const [selected, setSelected] = useState(currentStatus)
   const [saving, setSaving] = useState(false)
@@ -39,8 +42,8 @@ export function ChangeStatusButton({ emailId, currentStatus }: { emailId: string
         throw new Error(data.error || 'Failed to update status')
       }
       router.refresh()
-    } catch (err) {
-      console.error(err)
+    } catch {
+      toast.error(t('detail.errors.status'))
     } finally {
       setSaving(false)
     }
@@ -54,7 +57,7 @@ export function ChangeStatusButton({ emailId, currentStatus }: { emailId: string
         </SelectTrigger>
         <SelectContent>
           {STATUSES.map(s => (
-            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+            <SelectItem key={s.value} value={s.value}>{t(`statuses.${s.key}`)}</SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -65,7 +68,7 @@ export function ChangeStatusButton({ emailId, currentStatus }: { emailId: string
           disabled={saving}
           className="h-8"
         >
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('detail.actions.save')}
         </Button>
       )}
     </div>

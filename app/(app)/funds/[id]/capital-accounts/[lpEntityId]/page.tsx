@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { requireAccountingAccess } from '../../../guard'
@@ -9,7 +10,10 @@ import { AnalystToggleButton } from '@/components/analyst-button'
 import { AccountingBody } from '@/components/accounting-chrome'
 import { LpStatementView } from '../../../capital-accounts/[lpEntityId]/view'
 
-export const metadata: Metadata = { title: 'LP capital statement' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Funds.pages.lpStatement')
+  return { title: t('title') }
+}
 
 export default async function LpStatementPage({
   params, searchParams,
@@ -19,11 +23,12 @@ export default async function LpStatementPage({
 }) {
   const { fundId } = await requireAccountingAccess()
   const { vehicle, vehicleId } = await resolveVehicleParam(fundId, params.id)
+  const t = await getTranslations('Funds.pages.lpStatement')
   // Return to wherever the LP was opened from: the LP capital-accounts page marks its links
   // with `?from=lps`; everything else (the Funds capital-accounts table) uses the default.
   const fromLps = searchParams?.from === 'lps'
   const backHref = fromLps ? '/lps/capital' : `/funds/${params.id}/capital-accounts`
-  const backLabel = fromLps ? 'LP capital accounts' : 'Capital accounts'
+  const backLabel = fromLps ? t('lpCapitalAccounts') : t('capitalAccounts')
   return (
     <div className="pt-4 md:pt-8 pb-8 w-full">
       <FundScopeSync vehicle={vehicle} vehicleId={vehicleId} />
@@ -31,7 +36,7 @@ export default async function LpStatementPage({
         <ArrowLeft className="h-3.5 w-3.5" />{backLabel}
       </Link>
       <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">LP capital statement</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <div className="flex items-center gap-2">
           <FundSwitcher />
           <AnalystToggleButton />

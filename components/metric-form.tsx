@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { useCurrency, getCurrencySymbol } from '@/components/currency-context'
+import { useTranslations } from 'next-intl'
 
 interface MetricWithValues {
   id: string
@@ -65,6 +66,7 @@ const CURRENCIES = [
 ]
 
 export function MetricForm({ companyId, metric, endpoints, submitLabel, onSuccess, onCancel }: Props) {
+  const t = useTranslations('SharedForms.metric')
   const isEdit = !!metric
   const fundCurrency = useCurrency()
   const currencySymbol = getCurrencySymbol(fundCurrency).trim()
@@ -89,11 +91,11 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
 
   async function submit() {
     if (!name.trim()) {
-      setError('Name is required.')
+      setError(t('errors.nameRequired'))
       return
     }
     if (!slug.trim()) {
-      setError('Slug is required.')
+      setError(t('errors.slugRequired'))
       return
     }
     setError(null)
@@ -123,10 +125,10 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
+      if (!res.ok) throw new Error(data.error ?? t('errors.generic'))
       onSuccess(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : t('errors.generic'))
     } finally {
       setSaving(false)
     }
@@ -142,19 +144,19 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="metric-name">Name</Label>
+          <Label htmlFor="metric-name">{t('name')}</Label>
           <Input
             id="metric-name"
-            placeholder="Monthly Recurring Revenue"
+            placeholder={t('namePlaceholder')}
             value={name}
             onChange={e => setName(e.target.value)}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="metric-slug">Slug</Label>
+          <Label htmlFor="metric-slug">{t('slug')}</Label>
           <Input
             id="metric-slug"
-            placeholder="monthly_recurring_revenue"
+            placeholder={t('slugPlaceholder')}
             value={slug}
             onChange={e => {
               setSlug(e.target.value)
@@ -166,25 +168,25 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="metric-desc">Description</Label>
+        <Label htmlFor="metric-desc">{t('description')}</Label>
         <Textarea
           id="metric-desc"
-          placeholder="Describe this metric so Claude knows what to look for in emails…"
+          placeholder={t('descriptionPlaceholder')}
           value={description}
           onChange={e => setDescription(e.target.value)}
           rows={3}
         />
         <p className="text-xs text-muted-foreground">
-          This is what Claude uses to identify the metric in emails. Be specific.
+          {t('descriptionHelp')}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="metric-unit">Unit</Label>
+          <Label htmlFor="metric-unit">{t('unit')}</Label>
           <Input
             id="metric-unit"
-            placeholder={`${currencySymbol}, %, #, users, etc.`}
+            placeholder={t('unitPlaceholder', { symbol: currencySymbol })}
             value={unit}
             onChange={e => {
               const v = e.target.value
@@ -203,11 +205,11 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
             }}
           />
           <p className="text-xs text-muted-foreground">
-            Use # or leave empty for plain numbers.
+            {t('unitHelp')}
           </p>
         </div>
         <div className="space-y-2">
-          <Label>Unit position</Label>
+          <Label>{t('unitPosition')}</Label>
           <div className="flex rounded-md border overflow-hidden">
             <button
               type="button"
@@ -219,7 +221,7 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
                   : 'hover:bg-muted text-muted-foreground'
               )}
             >
-              Prefix ({currencySymbol}100)
+              {t('prefix', { example: `${currencySymbol}100` })}
             </button>
             <button
               type="button"
@@ -231,7 +233,7 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
                   : 'hover:bg-muted text-muted-foreground'
               )}
             >
-              Suffix (100%)
+              {t('suffix', { example: '100%' })}
             </button>
           </div>
         </div>
@@ -239,22 +241,22 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label>Value type</Label>
+          <Label>{t('valueType')}</Label>
           <Select value={valueType} onValueChange={(v) => setValueType(v as typeof valueType)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="number">Number</SelectItem>
-              <SelectItem value="currency">Currency</SelectItem>
-              <SelectItem value="percentage">Percentage</SelectItem>
-              <SelectItem value="text">Text</SelectItem>
+              <SelectItem value="number">{t('valueTypes.number')}</SelectItem>
+              <SelectItem value="currency">{t('valueTypes.currency')}</SelectItem>
+              <SelectItem value="percentage">{t('valueTypes.percentage')}</SelectItem>
+              <SelectItem value="text">{t('valueTypes.text')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {valueType === 'currency' && (
           <div className="space-y-2">
-            <Label>Currency</Label>
+            <Label>{t('currency')}</Label>
             <Select value={currency || fundCurrency} onValueChange={setCurrency}>
               <SelectTrigger>
                 <SelectValue />
@@ -266,14 +268,14 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Leave as fund default ({fundCurrency}) or override per metric.
+              {t('currencyHelp', { currency: fundCurrency })}
             </p>
           </div>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="display-order">Display order</Label>
+        <Label htmlFor="display-order">{t('displayOrder')}</Label>
         <Input
           id="display-order"
           type="number"
@@ -285,10 +287,10 @@ export function MetricForm({ companyId, metric, endpoints, submitLabel, onSucces
 
       <div className="flex gap-2 justify-end pt-2">
         <Button variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {t('cancel')}
         </Button>
         <Button onClick={submit} disabled={saving}>
-          {saving ? 'Saving…' : isEdit ? 'Save changes' : (submitLabel ?? 'Add metric')}
+          {saving ? t('saving') : isEdit ? t('saveChanges') : (submitLabel ?? t('addMetric'))}
         </Button>
       </div>
     </div>

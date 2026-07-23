@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - 'combobox "Language: English" [ref=e4] [cursor=pointer]'
+      - combobox [ref=e12]
+    - generic [ref=e14]:
+      - link [ref=e16] [cursor=pointer]:
+        - /url: /
+        - heading "Portfolio Reporting" [level=1] [ref=e22]
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]: Sign in with your account
+          - generic [ref=e26]: Sign in with a password or a one-time code.
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - text: Email
+            - textbox "Email" [ref=e29]:
+              - /placeholder: you@example.com
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: Password
+              - link "Forgot password?" [ref=e33] [cursor=pointer]:
+                - /url: /auth/forgot-password
+            - textbox "Password" [ref=e34]
+          - button "Sign in" [ref=e35] [cursor=pointer]
+          - generic [ref=e36]: or
+          - link [ref=e38] [cursor=pointer]:
+            - /url: /auth/magic-link
+            - button "Sign in with a one-time code" [ref=e39]
+          - paragraph [ref=e40]:
+            - text: Don't have an account?
+            - link "Create an account" [ref=e41] [cursor=pointer]:
+              - /url: /auth/signup
+      - paragraph [ref=e42]:
+        - link "← Back to home" [ref=e43] [cursor=pointer]:
+          - /url: /
+      - paragraph [ref=e44]:
+        - link "License" [ref=e45] [cursor=pointer]:
+          - /url: /license
+  - region "Notifications alt+T"

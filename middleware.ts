@@ -6,6 +6,15 @@ import { hasAccess, resolveAccessContext } from '@/lib/access/effective'
 import { DOMAIN_META } from '@/lib/access/domains'
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Expert invitations use a fragment credential handled by the isolated page
+  // and token APIs. Bypass session initialization entirely so this public flow
+  // never reads, refreshes, or writes Supabase authentication cookies.
+  if (pathname === '/expert-response' || pathname.startsWith('/api/public/expert-response/')) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -31,9 +40,9 @@ export async function middleware(request: NextRequest) {
   // Do not add logic between createServerClient and getUser().
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
   const isAuthRoute = pathname.startsWith('/auth')
   const isApiRoute = pathname.startsWith('/api')
+  const isLocalePreferenceRoute = pathname === '/api/locale'
 
   // Marketing site routes require both env vars to be set
   const marketingEnabled =
@@ -48,7 +57,7 @@ export async function middleware(request: NextRequest) {
   // in Settings and shares the resulting link with founders. The page itself
   // 404s if the token doesn't resolve or `deal_intake_enabled` is false on the
   // fund, so the URL alone isn't enough to abuse the endpoint.
-  const isPublicTokenRoute = pathname.startsWith('/submit/')
+  const isPublicTokenRoute = pathname.startsWith('/submit/') || pathname === '/expert-response'
 
   const isSetupRoute = pathname === '/setup' && process.env.ENABLE_SETUP_PAGE === 'true'
   const isPortalRoute = pathname.startsWith('/portal')
@@ -85,7 +94,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Enforce MFA: redirect to verify page if user has enrolled TOTP but hasn't completed AAL2
-  if (user && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isOAuthDiscovery) {
+  if (user && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isOAuthDiscovery && !isLocalePreferenceRoute) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
       if (isApiRoute) {

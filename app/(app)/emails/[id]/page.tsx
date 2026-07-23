@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import type { InboundEmail } from '@/lib/types/database'
 
-export const metadata: Metadata = { title: 'Email' }
 import { ChevronLeft } from 'lucide-react'
 import { ReprocessButton } from './reprocess-button'
 import { RerouteButton } from './reroute-button'
@@ -46,26 +46,23 @@ type ReviewRow = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
-  pending: { label: 'Pending', className: 'bg-slate-100 text-slate-700 border-slate-200' },
-  processing: { label: 'Processing', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-  success: { label: 'Success', className: 'bg-green-100 text-green-800 border-green-200' },
-  not_processed: { label: 'Skipped', className: 'bg-gray-100 text-gray-600 border-gray-200' },
-  failed: { label: 'Failed', className: 'bg-red-100 text-red-800 border-red-200' },
+type StatusMessageKey = 'pending' | 'processing' | 'success' | 'skipped' | 'failed' | 'review'
+type ConfidenceMessageKey = 'high' | 'medium' | 'low'
+
+const STATUS_VARIANTS: Record<string, { key: StatusMessageKey; className: string }> = {
+  pending: { key: 'pending', className: 'bg-slate-100 text-slate-700 border-slate-200' },
+  processing: { key: 'processing', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  success: { key: 'success', className: 'bg-green-100 text-green-800 border-green-200' },
+  not_processed: { key: 'skipped', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  failed: { key: 'failed', className: 'bg-red-100 text-red-800 border-red-200' },
   needs_review: {
-    label: 'Review',
+    key: 'review',
     className: 'bg-amber-100 text-amber-800 border-amber-200',
   },
 }
 
-function fmt(dateStr: string) {
-  return new Date(dateStr).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function isConfidenceMessageKey(value: string): value is ConfidenceMessageKey {
+  return value === 'high' || value === 'medium' || value === 'low'
 }
 
 function formatValue(mv: MetricRow, metric: MetricDef | null): string {
@@ -78,7 +75,18 @@ function formatValue(mv: MetricRow, metric: MetricDef | null): string {
 // Page (server component)
 // ---------------------------------------------------------------------------
 
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Emails.detail.metadata')
+  return { title: t('title'), description: t('description') }
+}
+
 export default async function EmailDetailPage({ params }: { params: { id: string } }) {
+  const t = await getTranslations('Emails')
+  const locale = await getLocale()
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+  const numberFormatter = new Intl.NumberFormat(locale)
   const supabase = createClient()
 
   // Fetch email row (no join — avoids TS inference issues with hand-written DB types)
@@ -92,7 +100,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
 
   if (error || !emailData) notFound()
 
-  const email = emailData as unknown as InboundEmail
+  const email = emailData as unknown as InboundEmail & { routed_to: string | null }
 
   // Parallel fetches
   const [companyResult, metricValuesResult, reviewsResult] = await Promise.all([
@@ -144,10 +152,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
     payload?.Attachments as Array<{ Name: string; ContentType: string; ContentLength: number }>
   ) ?? []
 
-  const sv = STATUS_VARIANTS[email.processing_status ?? ''] ?? {
-    label: email.processing_status ?? 'unknown',
-    className: '',
-  }
+  const sv = STATUS_VARIANTS[email.processing_status ?? '']
 
   return (
     <div className="p-4 md:p-8 max-w-4xl space-y-6">
@@ -157,29 +162,29 @@ export default async function EmailDetailPage({ params }: { params: { id: string
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="h-4 w-4" />
-        Email Log
+        {t('detail.back')}
       </Link>
 
       {/* Header */}
       <div className="space-y-1">
         <div className="flex items-start gap-3 flex-wrap">
           <h1 className="text-xl font-semibold leading-tight flex-1">
-            {email.subject ?? <span className="italic text-muted-foreground">(no subject)</span>}
+            {email.subject ?? <span className="italic text-muted-foreground">{t('noSubject')}</span>}
           </h1>
           <span
-            className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium shrink-0 ${sv.className}`}
+            className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium shrink-0 ${sv?.className ?? ''}`}
           >
-            {sv.label}
+            {sv ? t(`statuses.${sv.key}`) : (email.processing_status ?? t('statuses.unknown'))}
           </span>
         </div>
         <div className="text-sm text-muted-foreground space-y-0.5">
           <p>
-            From <span className="font-medium text-foreground">{email.from_address}</span>
+            {t.rich('detail.from', { address: () => <span className="font-medium text-foreground">{email.from_address}</span> })}
           </p>
-          <p>{fmt(email.received_at ?? '')}</p>
+          <p>{dateFormatter.format(new Date(email.received_at ?? ''))}</p>
           {company && (
             <p>
-              Company: <span className="font-medium text-foreground">{company.name}</span>
+              {t.rich('detail.company', { company: () => <span className="font-medium text-foreground">{company.name}</span> })}
             </p>
           )}
         </div>
@@ -190,7 +195,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
         const isWarning = email.processing_status === 'success' || email.processing_status === 'needs_review' || email.processing_status === 'not_processed'
         return (
           <div className={`rounded-lg border p-4 text-sm ${isWarning ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
-            <p className="font-medium mb-1">{isWarning ? 'Warning' : 'Processing error'}</p>
+            <p className="font-medium mb-1">{isWarning ? t('detail.warning') : t('detail.processingError')}</p>
             <p className="text-xs break-all">{email.processing_error}</p>
           </div>
         )
@@ -199,22 +204,22 @@ export default async function EmailDetailPage({ params }: { params: { id: string
       {/* Metrics written */}
       {metricValues.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold mb-2">Metrics Written ({metricValues.length})</h2>
+          <h2 className="text-sm font-semibold mb-2">{t('detail.metricsWritten', { count: metricValues.length })}</h2>
           <div className="rounded-lg border overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">
-                    Metric
+                    {t('detail.table.metric')}
                   </th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">
-                    Period
+                    {t('detail.table.period')}
                   </th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">
-                    Value
+                    {t('detail.table.value')}
                   </th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">
-                    Confidence
+                    {t('detail.table.confidence')}
                   </th>
                 </tr>
               </thead>
@@ -227,7 +232,12 @@ export default async function EmailDetailPage({ params }: { params: { id: string
                       <td className="px-4 py-2.5 text-muted-foreground">{mv.period_label}</td>
                       <td className="px-4 py-2.5 font-mono">{formatValue(mv, metric)}</td>
                       <td className="px-4 py-2.5">
-                        <ConfidenceBadge confidence={mv.confidence} />
+                        <ConfidenceBadge
+                          confidence={mv.confidence}
+                          label={isConfidenceMessageKey(mv.confidence)
+                            ? t(`confidence.${mv.confidence}`)
+                            : mv.confidence}
+                        />
                       </td>
                     </tr>
                   )
@@ -244,7 +254,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
       {/* Attachments */}
       {attachments.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold mb-2">Attachments ({attachments.length})</h2>
+          <h2 className="text-sm font-semibold mb-2">{t('detail.attachments', { count: attachments.length })}</h2>
           <div className="space-y-1.5">
             {attachments.map((att, i) => (
               <div
@@ -254,7 +264,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
                 <span className="font-medium">{att.Name}</span>
                 <span className="text-muted-foreground text-xs">{att.ContentType}</span>
                 <span className="ml-auto text-muted-foreground text-xs tabular-nums">
-                  {Math.round(att.ContentLength / 1024)} KB
+                  {t('detail.fileSizeKb', { value: numberFormatter.format(Math.round(att.ContentLength / 1024)) })}
                 </span>
               </div>
             ))}
@@ -265,7 +275,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
       {/* Email body */}
       {textBody && (
         <section>
-          <h2 className="text-sm font-semibold mb-2">Email Body</h2>
+          <h2 className="text-sm font-semibold mb-2">{t('detail.emailBody')}</h2>
           <pre className="text-xs bg-muted rounded-lg p-4 whitespace-pre-wrap break-words font-mono max-h-96 overflow-auto border">
             {textBody}
           </pre>
@@ -275,7 +285,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
       {/* Claude response */}
       {email.claude_response && (
         <section>
-          <CollapsibleJson label="Claude's Response" data={email.claude_response} />
+          <CollapsibleJson label={t('detail.aiResponse')} data={email.claude_response} />
         </section>
       )}
 
@@ -283,9 +293,9 @@ export default async function EmailDetailPage({ params }: { params: { id: string
       <section className="pt-2 border-t space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <p className="text-sm font-medium">Change status</p>
+            <p className="text-sm font-medium">{t('detail.changeStatus.title')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Manually update the processing status of this email.
+              {t('detail.changeStatus.description')}
             </p>
           </div>
           <ChangeStatusButton emailId={email.id} currentStatus={email.processing_status ?? 'pending'} />
@@ -293,9 +303,9 @@ export default async function EmailDetailPage({ params }: { params: { id: string
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <p className="text-sm font-medium">Upload document</p>
+            <p className="text-sm font-medium">{t('detail.upload.title')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              If the report was linked rather than attached, upload it here so it can be processed with the email.
+              {t('detail.upload.description')}
             </p>
           </div>
           <UploadDocumentButton emailId={email.id} />
@@ -304,9 +314,9 @@ export default async function EmailDetailPage({ params }: { params: { id: string
         {hasFileStorage && (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <p className="text-sm font-medium">Save to file storage</p>
+              <p className="text-sm font-medium">{t('detail.storage.title')}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Saves the email body and attachments to your connected file storage provider.
+                {t('detail.storage.description')}
               </p>
             </div>
             <SaveToDriveButton emailId={email.id} />
@@ -315,14 +325,13 @@ export default async function EmailDetailPage({ params }: { params: { id: string
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <p className="text-sm font-medium">Process email</p>
+            <p className="text-sm font-medium">{t('detail.process.title')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Runs the full pipeline on the stored payload. Existing reviews and metric
-              values from this email will be replaced.
+              {t('detail.process.description')}
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <RerouteButton emailId={email.id} currentTarget={(email as any).routed_to ?? null} />
+            <RerouteButton emailId={email.id} currentTarget={email.routed_to ?? null} />
             <ReprocessButton emailId={email.id} />
           </div>
         </div>
@@ -331,7 +340,7 @@ export default async function EmailDetailPage({ params }: { params: { id: string
   )
 }
 
-function ConfidenceBadge({ confidence }: { confidence: string }) {
+function ConfidenceBadge({ confidence, label }: { confidence: string; label: string }) {
   const styles: Record<string, string> = {
     high: 'bg-green-100 text-green-800 border-green-200',
     medium: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -341,7 +350,7 @@ function ConfidenceBadge({ confidence }: { confidence: string }) {
     <span
       className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${styles[confidence] ?? ''}`}
     >
-      {confidence}
+      {label}
     </span>
   )
 }

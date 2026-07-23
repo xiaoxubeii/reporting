@@ -3,8 +3,12 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DealDetail } from './deal-detail'
+import { getTranslations } from 'next-intl/server'
 
-export const metadata: Metadata = { title: 'Deal' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('DealDetail')
+  return { title: t('metadata.title') }
+}
 
 export default async function DealPage({ params }: { params: { id: string } }) {
   const supabase = createClient()

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, Plus, Trash2, Link as LinkIcon, Loader2, Pencil } from 'lucide-react'
 import { ComplianceNav } from '../compliance-nav'
@@ -19,6 +20,7 @@ interface ComplianceLink {
 }
 
 export default function ComplianceLinksPage() {
+  const t = useTranslations('Compliance.links')
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<ComplianceItem[]>([])
   const [links, setLinks] = useState<ComplianceLink[]>([])
@@ -41,7 +43,8 @@ export default function ComplianceLinksPage() {
       fetch('/api/compliance/links').then(r => r.json()),
     ])
       .then(([d, linksData]) => {
-        setItems((d.items ?? []).map((i: any) => ({ id: i.id, short_name: i.short_name })))
+        const complianceItems: ComplianceItem[] = Array.isArray(d.items) ? d.items : []
+        setItems(complianceItems.map(i => ({ id: i.id, short_name: i.short_name })))
         setLinks(Array.isArray(linksData) ? linksData : [])
         setLoading(false)
       })
@@ -125,14 +128,14 @@ export default function ComplianceLinksPage() {
     <div className="p-4 md:py-8 md:pl-8 md:pr-4 max-w-3xl">
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Compliance</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <Button size="sm" variant="outline" className="text-muted-foreground" onClick={() => setShowForm(!showForm)}>
             <Plus className="h-4 w-4 mr-1" />
-            Add link
+            {t('addLink')}
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Save links to filing portals, regulatory accounts, and reference documents.
+          {t('description')}
         </p>
         <div className="pt-2">
           <ComplianceNav active="links" />
@@ -143,10 +146,10 @@ export default function ComplianceLinksPage() {
         <form onSubmit={handleSubmit} className="rounded-lg border p-4 mb-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t('form.title')}</label>
               <input
                 type="text"
-                placeholder="e.g. IARD Account"
+                placeholder={t('form.titlePlaceholder')}
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-sm rounded border bg-background"
@@ -154,7 +157,7 @@ export default function ComplianceLinksPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">URL</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t('form.url')}</label>
               <input
                 type="url"
                 placeholder="https://..."
@@ -167,37 +170,37 @@ export default function ComplianceLinksPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t('form.description')}</label>
               <input
                 type="text"
-                placeholder="Optional"
+                placeholder={t('form.optional')}
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-sm rounded border bg-background"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Related compliance item</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">{t('form.relatedItem')}</label>
               <select
                 value={itemId}
                 onChange={e => setItemId(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-sm rounded border bg-background"
               >
-                <option value="">None</option>
+                <option value="">{t('form.none')}</option>
                 {items.map(item => (
                   <option key={item.id} value={item.id}>{item.short_name}</option>
                 ))}
-                <option value="other">Other</option>
+                <option value="other">{t('form.other')}</option>
               </select>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button type="submit" size="sm" disabled={saving || !title.trim() || !url.trim()}>
               {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Save
+              {t('form.save')}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>
-              Cancel
+              {t('form.cancel')}
             </Button>
           </div>
         </form>
@@ -214,7 +217,7 @@ export default function ComplianceLinksPage() {
                     value={editTitle}
                     onChange={e => setEditTitle(e.target.value)}
                     className="w-full px-2 py-1 text-sm rounded border bg-background"
-                    placeholder="Title"
+                    placeholder={t('form.title')}
                   />
                   <input
                     type="url"
@@ -230,18 +233,18 @@ export default function ComplianceLinksPage() {
                     value={editDescription}
                     onChange={e => setEditDescription(e.target.value)}
                     className="w-full px-2 py-1 text-sm rounded border bg-background"
-                    placeholder="Description (optional)"
+                    placeholder={t('form.descriptionOptional')}
                   />
                   <select
                     value={editItemId}
                     onChange={e => setEditItemId(e.target.value)}
                     className="w-full px-2 py-1 text-sm rounded border bg-background"
                   >
-                    <option value="">None</option>
+                    <option value="">{t('form.none')}</option>
                     {items.map(item => (
                       <option key={item.id} value={item.id}>{item.short_name}</option>
                     ))}
-                    <option value="other">Other</option>
+                    <option value="other">{t('form.other')}</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
@@ -251,10 +254,10 @@ export default function ComplianceLinksPage() {
                     onClick={() => handleEditSave(link.id)}
                   >
                     {editSaving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Save
+                    {t('form.save')}
                   </Button>
                   <Button size="sm" variant="outline" className="text-muted-foreground" onClick={cancelEdit}>
-                    Cancel
+                    {t('form.cancel')}
                   </Button>
                 </div>
               </div>
@@ -282,12 +285,14 @@ export default function ComplianceLinksPage() {
                 <button
                   onClick={() => startEdit(link)}
                   className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  aria-label={t('editLink')}
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => handleDelete(link.id)}
                   className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  aria-label={t('deleteLink')}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -298,11 +303,11 @@ export default function ComplianceLinksPage() {
       ) : !showForm ? (
         <div className="rounded-lg border p-8 text-center">
           <LinkIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">No links saved yet.</p>
-          <p className="text-xs text-muted-foreground mt-1">Add links to filing portals, accounts, or reference documents.</p>
+          <p className="text-sm text-muted-foreground">{t('empty.title')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('empty.description')}</p>
           <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowForm(true)}>
             <Plus className="h-3 w-3 mr-1" />
-            Add your first link
+            {t('empty.action')}
           </Button>
         </div>
       ) : null}

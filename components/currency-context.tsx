@@ -23,7 +23,7 @@ function noNegZero(v: number): number {
 }
 
 /** Abbreviated currency format: $1.2M, €500K, ¥1,000 */
-export function formatCurrency(value: number, currency: string): string {
+export function formatCurrency(value: number, currency: string, locale = 'en-US'): string {
   const v = noNegZero(value)
   const symbol = getCurrencySymbol(currency)
   if (Math.abs(v) >= 1_000_000) {
@@ -32,18 +32,17 @@ export function formatCurrency(value: number, currency: string): string {
   if (Math.abs(v) >= 1_000) {
     return `${symbol}${(v / 1_000).toFixed(0)}K`
   }
-  return v.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 0 })
+  return v.toLocaleString(locale, { style: 'currency', currency, maximumFractionDigits: 0 })
 }
 
 /** Full-precision currency format: $1,234,567 */
-export function formatCurrencyFull(value: number, currency: string): string {
-  return noNegZero(value).toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 0 })
+export function formatCurrencyFull(value: number, currency: string, locale = 'en-US'): string {
+  return noNegZero(value).toLocaleString(locale, { style: 'currency', currency, maximumFractionDigits: 0 })
 }
 
 /** Full-precision currency with cents, always two decimals: $12.50, $1,234.00 */
-export function formatCurrencyPrice(value: number, currency: string): string {
+export function formatCurrencyPrice(value: number, currency: string, locale = 'en-US'): string {
   // Only normalize -0 → 0 here; keep real sub-dollar amounts (cents matter).
   const v = Object.is(value, -0) ? 0 : value
-  return v.toLocaleString('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return v.toLocaleString(locale, { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-

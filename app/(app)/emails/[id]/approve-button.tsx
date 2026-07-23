@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Check, Loader2 } from 'lucide-react'
 
 export function ApproveButton({ emailId }: { emailId: string }) {
+  const t = useTranslations('Emails.detail')
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -24,8 +27,8 @@ export function ApproveButton({ emailId }: { emailId: string }) {
       }
       setDone(true)
       setTimeout(() => router.refresh(), 1500)
-    } catch (err) {
-      console.error(err)
+    } catch {
+      toast.error(t('errors.approve'))
     } finally {
       setLoading(false)
     }
@@ -44,7 +47,7 @@ export function ApproveButton({ emailId }: { emailId: string }) {
       ) : (
         <Check className="h-3.5 w-3.5" />
       )}
-      {done ? 'Approved' : 'Approve'}
+      {done ? t('actions.approved') : t('actions.approve')}
     </Button>
   )
 }

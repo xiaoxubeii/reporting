@@ -1,0 +1,16 @@
+- generic:
+  - generic:
+    - combobox [expanded]
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - heading [level=1]: 设置检查清单
+        - button:
+          - generic: 刷新
+      - generic: 获取设置状态失败
+  - region "Notifications alt+T"
+  - alert
+  - listbox [ref=f4e22]:
+    - option "English" [ref=f4e23]
+    - option "简体中文" [active] [selected] [ref=f4e26]

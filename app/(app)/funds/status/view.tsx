@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Loader2, Check, AlertTriangle, Ban, Info, ChevronRight, SlidersHorizontal, Lock, Plus, X } from 'lucide-react'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useLedgerFetch, useFundSeg } from '@/components/accounting-vehicle'
 import { CapitalSourceCard } from '../capital-accounts/capital-source-card'
 import { AccountingSetup } from '../setup'
@@ -13,6 +14,7 @@ import { useCanRead } from '@/components/access-context'
 import { AllocationTermsView } from '../allocation-terms/view'
 import { CollapsibleSection } from '@/components/collapsible-section'
 import { Button } from '@/components/ui/button'
+import { formatDate, formatMoney, formatNumber } from '../format'
 
 interface Issue { level: 'blocker' | 'warning' | 'info'; title: string; detail: string; href?: string; action?: string }
 interface Status {
@@ -40,8 +42,10 @@ const LEVEL = {
 }
 
 export function StatusView() {
+  const t = useTranslations('Funds.status')
+  const locale = useLocale()
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
   const lf = useLedgerFetch()
   const fundSeg = useFundSeg()
   // The status issues carry bare /funds/<page> hrefs (built server-side, where the URL's
@@ -55,6 +59,33 @@ export function StatusView() {
   const [s, setS] = useState<Status | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const localizeIssue = (issue: Issue): Issue => {
+    if (locale !== 'zh-CN') return issue
+    const actionKeys: Record<string, string> = {
+      'Seed the chart': 'seedChart', 'Choose a path': 'choosePath', 'Open the statements': 'openStatements',
+      'Categorize and post': 'categorizePost', 'Review the journal': 'reviewJournal', 'Bootstrap investments': 'bootstrapInvestments',
+      'Open the schedule': 'openSchedule', 'Close the period': 'closePeriod', 'Open the journal': 'openJournal',
+      'Set commitments': 'setCommitments', 'Add partners': 'addPartners',
+    }
+    const action = issue.action && actionKeys[issue.action] ? t(`issueCatalog.actions.${actionKeys[issue.action]}` as never) : issue.action
+    const exact: Record<string, { title: string; detail: string }> = {
+      'Chart of accounts not seeded': { title: t('issueCatalog.chart.title'), detail: t('issueCatalog.chart.detail') },
+      'Onboarding path not chosen': { title: t('issueCatalog.path.title'), detail: t('issueCatalog.path.detail') },
+      'Investments are not on the ledger': { title: t('issueCatalog.investments.title'), detail: t('issueCatalog.investments.detail') },
+      'Schedule of investments does not tie to the ledger': { title: t('issueCatalog.schedule.title'), detail: t('issueCatalog.schedule.detail') },
+      "Partners' capital doesn't tie to the sum of the partners": { title: t('issueCatalog.capital.title'), detail: t('issueCatalog.capital.detail') },
+      'No partner has a commitment': { title: t('issueCatalog.noCommitment.title'), detail: t('issueCatalog.noCommitment.detail') },
+      'No partners yet': { title: t('issueCatalog.noPartners.title'), detail: t('issueCatalog.noPartners.detail') },
+    }
+    if (exact[issue.title]) return { ...issue, ...exact[issue.title], action }
+    if (/bank transactions? not posted$/.test(issue.title)) return { ...issue, title: t('issueCatalog.bank.title'), detail: t('issueCatalog.bank.detail'), action }
+    if (/journal entr(?:y is|ies are) still in draft$/.test(issue.title)) return { ...issue, title: t('issueCatalog.drafts.title'), detail: t('issueCatalog.drafts.detail'), action }
+    if (/investments? (?:does|do) not tie to the ledger$/.test(issue.title)) return { ...issue, title: t('issueCatalog.positionTie.title'), detail: t('issueCatalog.positionTie.detail'), action }
+    if (/of net income not allocated$/.test(issue.title)) return { ...issue, title: t('issueCatalog.unallocated.title'), detail: t('issueCatalog.unallocated.detail'), action }
+    if (issue.title === 'Balance sheet does not balance') return { ...issue, title: t('issueCatalog.balance.title'), detail: t('issueCatalog.balance.detail'), action }
+    return { ...issue, action }
+  }
+
   useEffect(() => {
     setLoading(true)
     lf('/api/accounting/status')
@@ -63,8 +94,8 @@ export function StatusView() {
       .finally(() => setLoading(false))
   }, [lf])
 
-  if (loading) return <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
-  if (!s) return <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">Could not load status for this vehicle.</div>
+  if (loading) return <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
+  if (!s) return <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">{t('loadError')}</div>
 
   // LP-only tracking: the whole ledger apparatus — trial balance, bank, partners, net assets,
   // onboarding, the seed-the-chart prompts, the close, allocation terms, and the entry-drafting
@@ -80,10 +111,9 @@ export function StatusView() {
         >
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">LP capital tracking</p>
+            <p className="text-sm font-medium">{t('tracking.title')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              This vehicle tracks limited-partner capital only. Maintain its positions — commitment,
-              paid-in, distributions, NAV — on the LP capital tracking page.
+              {t('tracking.description')}
             </p>
           </div>
         </Link>
@@ -93,8 +123,7 @@ export function StatusView() {
             here: seed the chart and book opening balances first, then flip with the switch above. */}
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            To move this vehicle to <strong>Fund Accounting</strong>, seed its chart of accounts and
-            book opening balances below, then use <strong>Switch to Fund Accounting</strong> above.
+            {t.rich('tracking.switchHelp', { strong: chunks => <strong>{chunks}</strong> })}
           </p>
           <AccountingSetup alwaysShow />
         </div>
@@ -104,27 +133,27 @@ export function StatusView() {
 
   // The close gets its own summary card below, so it isn't duplicated up here.
   const cards: { label: string; value: string; hint?: string }[] = [
-    { label: 'Net assets', value: fmt(s.ledger.netAssets), hint: `${s.ledger.entryCount} entries` },
-    { label: 'Partners', value: String(s.setup.partnerCount), hint: `${s.setup.partnersWithCommitment} with a commitment` },
+    { label: t('cards.netAssets'), value: fmt(s.ledger.netAssets), hint: t('cards.entries', { count: s.ledger.entryCount }) },
+    { label: t('cards.partners'), value: formatNumber(s.setup.partnerCount, locale), hint: t('cards.withCommitment', { count: s.setup.partnersWithCommitment }) },
     {
-      label: 'Bank',
-      value: s.bank.needsAttention > 0 ? `${s.bank.needsAttention} to post` : 'All posted',
-      hint: `${s.bank.total} transactions`,
+      label: t('cards.bank'),
+      value: s.bank.needsAttention > 0 ? t('cards.toPost', { count: s.bank.needsAttention }) : t('cards.allPosted'),
+      hint: t('cards.transactions', { count: s.bank.total }),
     },
     {
-      label: 'Trial balance',
-      value: s.ledger.trialBalanced ? 'Balanced' : 'Out',
-      hint: s.ledger.draftCount > 0 ? `${s.ledger.draftCount} draft entries` : 'all entries posted',
+      label: t('cards.trialBalance'),
+      value: t(s.ledger.trialBalanced ? 'cards.balanced' : 'cards.out'),
+      hint: s.ledger.draftCount > 0 ? t('cards.drafts', { count: s.ledger.draftCount }) : t('cards.allEntriesPosted'),
     },
   ]
 
   const unallocated = Math.abs(s.close.unallocatedEarnings) > 0.004
   const closeSummary = s.close.lastClosedEnd
-    ? `Closed through ${s.close.lastClosedLabel ?? s.close.lastClosedEnd} (${s.close.lastClosedEnd}).`
-    : 'No period has been closed yet.'
+    ? t('close.closedThrough', { label: s.close.lastClosedLabel ?? s.close.lastClosedEnd, date: formatDate(s.close.lastClosedEnd, locale) })
+    : t('close.none')
   const closeNext = s.close.nextStart
-    ? `The next close starts ${s.close.nextStart}.`
-    : 'Nothing left to close.'
+    ? t('close.next', { date: formatDate(s.close.nextStart, locale) })
+    : t('close.complete')
 
   return (
     <div className="space-y-6">
@@ -144,8 +173,7 @@ export function StatusView() {
       ) : (
         <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm text-muted-foreground">
           <Check className="h-4 w-4 text-green-600" />
-          Onboarded — {s.setup.historyMode === 'full_history' ? 'rebuilt from full history' : 'started from a cutover balance'},
-          {' '}{s.setup.accountCount} accounts, {s.setup.partnerCount} partners.
+          {t(s.setup.historyMode === 'full_history' ? 'onboarded.fullHistory' : 'onboarded.cutover', { accounts: s.setup.accountCount, partners: s.setup.partnerCount })}
         </div>
       )}
 
@@ -160,15 +188,16 @@ export function StatusView() {
       </div>
 
       <div>
-        <p className="text-sm font-medium mb-2">Needs attention</p>
+        <p className="text-sm font-medium mb-2">{t('issues.title')}</p>
         {s.issues.length === 0 ? (
           <div className="flex items-center gap-2 rounded-lg border border-green-500/40 bg-green-500/5 px-3 py-2 text-sm text-green-700 dark:text-green-400">
             <Check className="h-4 w-4" />
-            Nothing outstanding. The books balance, everything is posted, and the close is up to date.
+            {t('issues.empty')}
           </div>
         ) : (
           <div className="space-y-2">
-            {s.issues.map((i, idx) => {
+            {s.issues.map((rawIssue, idx) => {
+              const i = localizeIssue(rawIssue)
               const L = LEVEL[i.level] ?? LEVEL.info
               return (
                 <div key={idx} className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${L.box}`}>
@@ -179,7 +208,7 @@ export function StatusView() {
                   </div>
                   {i.href && (
                     <Link href={fundHref(i.href)} className="shrink-0 rounded border border-input px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
-                      {i.action ?? 'Open'}
+                      {i.action ?? t('issues.open')}
                     </Link>
                   )}
                 </div>
@@ -198,14 +227,14 @@ export function StatusView() {
       >
         <Lock className={`h-4 w-4 shrink-0 ${unallocated ? 'text-amber-600' : 'text-muted-foreground'}`} />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Period close</p>
+          <p className="text-sm font-medium">{t('close.title')}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {closeSummary} {closeNext}
             {unallocated && (
               <>
                 {' '}
                 <span className="text-amber-600">
-                  {fmt(s.close.unallocatedEarnings)} of net income is not yet allocated to partners.
+                  {t('close.unallocated', { amount: fmt(s.close.unallocatedEarnings) })}
                 </span>
               </>
             )}
@@ -217,20 +246,20 @@ export function StatusView() {
       {/* Settings — configuration that used to live on the separate Allocation terms page, now
           folded in here as collapsible sections so it's all on one surface but hideable. */}
       <div className="pt-2 space-y-2">
-        <p className="text-sm font-medium flex items-center gap-1.5"><SlidersHorizontal className="h-4 w-4 text-muted-foreground" />Settings</p>
+        <p className="text-sm font-medium flex items-center gap-1.5"><SlidersHorizontal className="h-4 w-4 text-muted-foreground" />{t('settings.title')}</p>
 
         {/* Carry rate, preferred return, catch-up, and the GP entity that receives it — the
             gp_economics domain, not plain accounting. Someone who runs the close does not
             thereby get to see (or set) the partners' carry terms. */}
         {canReadGpEconomics && (
-          <CollapsibleSection title="Carried interest" subtitle="The carry the close accrues, and who receives it">
+          <CollapsibleSection title={t('settings.carryTitle')} subtitle={t('settings.carrySubtitle')}>
             <CarryTerms />
           </CollapsibleSection>
         )}
 
         <CollapsibleSection
-          title="Allocation & partners"
-          subtitle={`Splitting on ${s.close.basis === 'capital_balance' ? 'capital-account balance' : 'committed capital'} · who bears fees, expenses, and carry · commitment history`}
+          title={t('settings.allocationTitle')}
+          subtitle={t('settings.allocationSubtitle', { basis: t(s.close.basis === 'capital_balance' ? 'settings.capitalBalance' : 'settings.committedCapital') })}
         >
           <AllocationTermsView />
         </CollapsibleSection>
@@ -253,6 +282,7 @@ interface GpLinksData {
 
 /** "General partner(s)" — the GP/associate entities linked to this vehicle via vehicle_gp_links. */
 function GeneralPartnersCard() {
+  const t = useTranslations('Funds.status.generalPartners')
   const lf = useLedgerFetch()
   const [data, setData] = useState<GpLinksData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -266,12 +296,12 @@ function GeneralPartnersCard() {
     lf('/api/accounting/vehicle-gp-links')
       .then(async r => {
         const d = await r.json().catch(() => ({}))
-        if (!r.ok) { setError(d.error ?? 'Could not load GP links'); return }
+        if (!r.ok) { setError(d.error ?? t('loadError')); return }
         setError(null)
         setData(d)
       })
       .finally(() => setLoading(false))
-  }, [lf])
+  }, [lf, t])
   useEffect(() => { load() }, [load])
 
   async function addLink() {
@@ -285,7 +315,7 @@ function GeneralPartnersCard() {
     })
     const d = await res.json().catch(() => ({}))
     setBusy(null)
-    if (!res.ok) { setError(d.error ?? 'Could not add GP'); return }
+    if (!res.ok) { setError(d.error ?? t('addError')); return }
     setAddGpId(''); setAddPartnerId('')
     load()
   }
@@ -299,14 +329,14 @@ function GeneralPartnersCard() {
       body: JSON.stringify({ id }),
     })
     setBusy(null)
-    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? 'Could not remove GP'); return }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? t('removeError')); return }
     load()
   }
 
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground text-xs border rounded-lg px-3 py-2">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />Loading general partner(s)…
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />{t('loading')}
       </div>
     )
   }
@@ -317,24 +347,24 @@ function GeneralPartnersCard() {
 
   return (
     <div className="border rounded-lg p-3 space-y-2">
-      <p className="text-sm font-medium">General partner(s)</p>
+      <p className="text-sm font-medium">{t('title')}</p>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
 
       {data.links.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No general partner linked to this vehicle yet.</p>
+        <p className="text-xs text-muted-foreground">{t('empty')}</p>
       ) : (
         <ul className="space-y-1">
           {data.links.map(l => (
             <li key={l.id} className="flex items-center gap-2 text-sm">
               <span className="min-w-0 flex-1 truncate">
                 {l.gpName}
-                {l.lpName && <span className="ml-1.5 text-xs text-muted-foreground">as {l.lpName}</span>}
+                {l.lpName && <span className="ml-1.5 text-xs text-muted-foreground">{t('asPartner', { name: l.lpName })}</span>}
               </span>
               <button
                 onClick={() => removeLink(l.id)}
                 disabled={busy === l.id}
-                title="Remove"
+                title={t('remove')}
                 className="shrink-0 text-muted-foreground hover:text-red-600"
               >
                 {busy === l.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
@@ -345,22 +375,22 @@ function GeneralPartnersCard() {
       )}
 
       {data.candidates.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No GP/associate entities in this fund yet.</p>
+        <p className="text-xs text-muted-foreground">{t('noCandidates')}</p>
       ) : addableCandidates.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Every GP/associate entity in this fund is already linked.</p>
+        <p className="text-xs text-muted-foreground">{t('allLinked')}</p>
       ) : (
         <div className="flex flex-wrap items-end gap-2 pt-1">
-          <label className="text-xs text-muted-foreground">GP entity
+          <label className="text-xs text-muted-foreground">{t('entity')}
             <select
               value={addGpId}
               onChange={e => setAddGpId(e.target.value)}
               className="mt-1 h-9 px-2 rounded-md border border-input bg-background text-sm block min-w-[160px]"
             >
-              <option value="">Choose…</option>
+              <option value="">{t('choose')}</option>
               {addableCandidates.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <label className="text-xs text-muted-foreground">As partner (optional)
+          <label className="text-xs text-muted-foreground">{t('partnerOptional')}
             <select
               value={addPartnerId}
               onChange={e => setAddPartnerId(e.target.value)}
@@ -371,7 +401,7 @@ function GeneralPartnersCard() {
             </select>
           </label>
           <Button size="sm" onClick={addLink} disabled={!addGpId || busy !== null}>
-            {busy === 'add' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} Add
+            {busy === 'add' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} {t('add')}
           </Button>
         </div>
       )}

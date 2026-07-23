@@ -1,10 +1,12 @@
 'use client'
 
 import { Fragment, useCallback, useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Lock, Unlock, AlertTriangle, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useLedgerFetch } from '@/components/accounting-vehicle'
+import { formatDate, formatMoney } from '../format'
 
 interface Period { id: string; period_start: string; period_end: string; label: string | null; status: string; closed_at: string | null }
 interface CloseEntryLine { accountCode: string; accountName: string; lpName: string | null; amount: number }
@@ -43,21 +45,23 @@ interface Preview {
 const iso = (d: Date) => d.toISOString().slice(0, 10)
 
 /** Common close-through dates. Any date works; these just save typing. */
-function quickEnds(): { key: string; label: string; end: string }[] {
+function quickEnds(): { key: 'lastMonth' | 'lastQuarter' | 'priorYear'; end: string }[] {
   const now = new Date()
   const y = now.getUTCFullYear()
   const m = now.getUTCMonth()
   const q = Math.floor(m / 3)
   return [
-    { key: 'last_month', label: 'End of last month', end: iso(new Date(Date.UTC(y, m, 0))) },
-    { key: 'last_quarter', label: 'End of last quarter', end: iso(new Date(Date.UTC(y, q * 3, 0))) },
-    { key: 'prior_year', label: 'End of prior year', end: `${y - 1}-12-31` },
+    { key: 'lastMonth', end: iso(new Date(Date.UTC(y, m, 0))) },
+    { key: 'lastQuarter', end: iso(new Date(Date.UTC(y, q * 3, 0))) },
+    { key: 'priorYear', end: `${y - 1}-12-31` },
   ]
 }
 
 export function PeriodsView() {
+  const locale = useLocale()
+  const t = useTranslations('Funds.periods')
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
   const [periods, setPeriods] = useState<Period[]>([])
   const [loading, setLoading] = useState(true)
   const [endDate, setEndDate] = useState(quickEnds()[0].end)
@@ -86,7 +90,7 @@ export function PeriodsView() {
     setBusy(true); setError(null); setPreview(null)
     const { ok, data } = await post({ action: 'preview', endDate: through })
     setBusy(false)
-    if (!ok) { setError(data.error ?? 'Could not preview'); return }
+    if (!ok) { setError(data.error ?? t('previewError')); return }
     setPreview(data)
   }
   const runPreview = () => previewThrough(endDate)
@@ -95,7 +99,7 @@ export function PeriodsView() {
     setBusy(true); setError(null)
     const { ok, data } = await post({ action: 'close', endDate })
     setBusy(false)
-    if (!ok) { setError(data.error ?? 'Could not close'); return }
+    if (!ok) { setError(data.error ?? t('closeError')); return }
     setPreview(null)
     load()
   }
@@ -116,16 +120,16 @@ export function PeriodsView() {
     setBusy(true); setError(null)
     const { ok, data } = await post({ action: 'reopen', id })
     setBusy(false)
-    if (!ok) { setError(data.error ?? 'Could not reopen'); return }
+    if (!ok) { setError(data.error ?? t('reopenError')); return }
     load()
   }
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="border rounded-lg p-4 space-y-3">
-        <p className="text-sm font-medium">Close through a date</p>
+        <p className="text-sm font-medium">{t('title')}</p>
         <p className="text-xs text-muted-foreground">
-          You pick the end date and each month is closed in order. Preview the allocations per period, review and reopen if you need to make adjustments.
+          {t('description')}
         </p>
 
         <div className="flex flex-wrap gap-1.5">
@@ -135,13 +139,13 @@ export function PeriodsView() {
               onClick={() => { setEndDate(q.end); setPreview(null) }}
               className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${q.end === endDate ? 'border-foreground/30 bg-accent font-medium' : 'border-border text-muted-foreground hover:text-foreground'}`}
             >
-              {q.label}
+              {t(`quick.${q.key}`)}
             </button>
           ))}
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs text-muted-foreground">Close through
+          <label className="text-xs text-muted-foreground">{t('closeThrough')}
             <input
               type="date"
               value={endDate}
@@ -150,7 +154,7 @@ export function PeriodsView() {
             />
           </label>
           <Button size="sm" variant="outline" onClick={runPreview} disabled={busy || !endDate}>
-            {busy && !preview && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Preview close
+            {busy && !preview && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}{t('preview')}
           </Button>
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
@@ -161,12 +165,15 @@ export function PeriodsView() {
         <div className="border rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b bg-muted/30">
             <p className="text-sm font-medium">
-              Closing {preview.start} → {preview.end} will allocate {fmt(preview.totalNetIncome)} of net income
-              across {preview.months.length} month{preview.months.length === 1 ? '' : 's'}
+              {t('previewSummary', {
+                start: formatDate(preview.start, locale),
+                end: formatDate(preview.end, locale),
+                amount: fmt(preview.totalNetIncome),
+                count: preview.months.length,
+              })}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Split pro-rata by {preview.basis === 'capital_balance' ? 'capital-account balance' : 'commitment'} as of each month end.
-              Nothing is posted until you confirm.
+              {t('basisHelp', { basis: preview.basis === 'capital_balance' ? t('capitalBalance') : t('commitment') })}
             </p>
           </div>
 
@@ -188,8 +195,8 @@ export function PeriodsView() {
             <div key={m.periodStart} className="border-b last:border-b-0">
               <div className="px-4 py-2 flex items-center justify-between bg-muted/20">
                 <span className="text-sm font-medium">
-                  {m.periodStart} → {m.periodEnd}
-                  {m.categories.length === 0 && <span className="ml-2 text-xs font-normal text-muted-foreground">no activity</span>}
+                  {formatDate(m.periodStart, locale)} → {formatDate(m.periodEnd, locale)}
+                  {m.categories.length === 0 && <span className="ml-2 text-xs font-normal text-muted-foreground">{t('noActivity')}</span>}
                 </span>
                 <span className="font-mono text-sm">{fmt(m.netIncome)}</span>
               </div>
@@ -201,7 +208,7 @@ export function PeriodsView() {
                     <span className="font-mono text-xs">{fmt(cat.capitalEffect)}</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {cat.accounts.map(a => `${a.code} ${a.name}`).join(', ')} · {cat.lines.filter(l => l.amount !== 0).length} partners
+                    {cat.accounts.map(a => `${a.code} ${a.name}`).join(', ')} · {t('partnerCount', { count: cat.lines.filter(l => l.amount !== 0).length })}
                   </p>
                 </div>
               ))}
@@ -210,28 +217,28 @@ export function PeriodsView() {
 
           <div className="px-4 py-3 flex items-center gap-2 border-t bg-muted/30">
             <Button size="sm" onClick={confirmClose} disabled={busy || preview.readiness.blockers.length > 0}>
-              {busy && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}<Lock className="h-3.5 w-3.5 mr-1" />Close &amp; lock
+              {busy && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}<Lock className="h-3.5 w-3.5 mr-1" />{t('closeAndLock')}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setPreview(null)} disabled={busy}>Cancel</Button>
+            <Button size="sm" variant="outline" onClick={() => setPreview(null)} disabled={busy}>{t('cancel')}</Button>
             {preview.readiness.blockers.length > 0 && (
-              <span className="text-xs text-muted-foreground">Resolve the items above before closing.</span>
+              <span className="text-xs text-muted-foreground">{t('resolveBlockers')}</span>
             )}
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
+        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
       ) : periods.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No periods closed yet.</p>
+        <p className="text-sm text-muted-foreground">{t('empty')}</p>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left px-3 py-2 font-medium">Period</th>
-                <th className="text-left px-3 py-2 font-medium">Label</th>
-                <th className="text-left px-3 py-2 font-medium">Status</th>
+                <th className="text-left px-3 py-2 font-medium">{t('period')}</th>
+                <th className="text-left px-3 py-2 font-medium">{t('label')}</th>
+                <th className="text-left px-3 py-2 font-medium">{t('statusTitle')}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -252,13 +259,13 @@ export function PeriodsView() {
                           {isClosed
                             ? <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`} />
                             : <span className="w-3.5 shrink-0" />}
-                          {p.period_start} → {p.period_end}
+                          {formatDate(p.period_start, locale)} → {formatDate(p.period_end, locale)}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">{p.label ?? '—'}</td>
                       <td className="px-3 py-2">
                         <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded inline-flex items-center gap-1 ${isClosed ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-muted text-muted-foreground'}`}>
-                          {isClosed ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}{p.status}
+                          {isClosed ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}{isClosed ? t('status.closed') : t('status.open')}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right">
@@ -266,10 +273,10 @@ export function PeriodsView() {
                           <button
                             onClick={e => { e.stopPropagation(); reopen(p.id) }}
                             disabled={busy}
-                            title="Void this period's allocation entries and unlock it. Periods reopen newest-first."
+                            title={t('reopenHelp')}
                             className="text-xs text-muted-foreground hover:underline disabled:opacity-50"
                           >
-                            Reopen &amp; reverse
+                            {t('reopen')}
                           </button>
                         ) : (
                           // Closing runs THROUGH a date, so this previews everything from the
@@ -278,10 +285,10 @@ export function PeriodsView() {
                           <button
                             onClick={e => { e.stopPropagation(); setEndDate(p.period_end); setPreview(null); previewThrough(p.period_end) }}
                             disabled={busy}
-                            title={`Preview closing through ${p.period_end}`}
+                            title={t('previewThrough', { date: formatDate(p.period_end, locale) })}
                             className="text-xs text-muted-foreground hover:underline disabled:opacity-50"
                           >
-                            Preview close
+                            {t('preview')}
                           </button>
                         )}
                       </td>
@@ -291,17 +298,17 @@ export function PeriodsView() {
                       <tr className="border-b last:border-b-0 bg-muted/10">
                         <td colSpan={4} className="px-3 py-2.5">
                           {entries === undefined || entries === 'loading' ? (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Loading transactions…</div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('loadingTransactions')}</div>
                           ) : entries.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">No allocation transactions were posted for this period (nothing to allocate).</p>
+                            <p className="text-xs text-muted-foreground">{t('noTransactions')}</p>
                           ) : (
                             <div className="space-y-2">
-                              <p className="text-[11px] text-muted-foreground">The transactions this close posted — the same allocation the preview showed, read back from the ledger.</p>
+                              <p className="text-[11px] text-muted-foreground">{t('transactionsHelp')}</p>
                               {entries.map(en => (
                                 <div key={en.id} className="rounded border bg-background overflow-hidden">
                                   <div className="flex items-center justify-between px-2.5 py-1.5 border-b bg-muted/30">
-                                    <span className="text-xs font-medium">{en.memo ?? en.sourceType ?? 'Transaction'}</span>
-                                    <span className="text-[11px] text-muted-foreground font-mono">{en.entryDate}</span>
+                                    <span className="text-xs font-medium">{en.memo ?? en.sourceType ?? t('transaction')}</span>
+                                    <span className="text-[11px] text-muted-foreground font-mono">{formatDate(en.entryDate, locale)}</span>
                                   </div>
                                   <table className="w-full text-xs">
                                     <tbody>

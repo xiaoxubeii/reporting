@@ -5,8 +5,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { MemoEditor } from './memo-editor'
 import { buildSourceLabels } from '@/lib/memo-agent/render/source-labels'
+import { getTranslations } from 'next-intl/server'
 
-export const metadata: Metadata = { title: 'Memo draft' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Diligence.metadata')
+  return { title: t('memoDraft') }
+}
 
 export default async function DraftPage({ params }: { params: { id: string; draftId: string } }) {
   const supabase = createClient()

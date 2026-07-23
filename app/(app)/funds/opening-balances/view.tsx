@@ -2,16 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Check, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useCurrency, formatCurrencyPrice } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useLedgerFetch, useFundSeg } from '@/components/accounting-vehicle'
+import { formatMoney } from '../format'
 
 interface Entity { lpEntityId: string; name: string; commitment: number }
 
 export function OpeningBalancesView() {
+  const locale = useLocale()
+  const t = useTranslations('Funds.openingBalances')
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyPrice(v, currency)
+  const fmt = (v: number) => formatMoney(v, currency, locale)
   const fundSeg = useFundSeg()
   const [entities, setEntities] = useState<Entity[]>([])
   const [amounts, setAmounts] = useState<Record<string, string>>({})
@@ -52,19 +56,19 @@ export function OpeningBalancesView() {
     })
     const data = await res.json()
     if (res.ok) setDone({ lpCount: data.lpCount, total: data.total })
-    else setError(data.error ?? 'Failed to import')
+    else setError(data.error ?? t('importFailed'))
     setSaving(false)
   }
 
   if (loading) {
-    return <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
+    return <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
   }
 
   if (done) {
     return (
       <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
         <Check className="h-4 w-4" />
-        Booked opening balances for {done.lpCount} LP(s), total {fmt(done.total)}. View them in Capital accounts.
+        {t('booked', { count: done.lpCount, total: fmt(done.total) })}
       </div>
     )
   }
@@ -72,7 +76,7 @@ export function OpeningBalancesView() {
   if (entities.length === 0) {
     return (
       <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
-        No LP entities found. Add investors and entities first (LPs section).
+        {t('noEntities')}
       </div>
     )
   }
@@ -85,19 +89,19 @@ export function OpeningBalancesView() {
     return (
       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm space-y-2">
         <p className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="h-4 w-4" />This vehicle doesn&rsquo;t need opening balances.
+          <AlertTriangle className="h-4 w-4" />{t('notNeeded')}
         </p>
         <p className="text-muted-foreground">
-          It&rsquo;s set to <strong>full history</strong> — the ledger is reconstructed from inception, so opening
-          balances come from the history itself. Booking them here would credit every partner&rsquo;s capital a
-          second time and double-count the fund&rsquo;s contributed capital.
+          {t.rich('fullHistoryHelp', { strong: chunks => <strong>{chunks}</strong> })}
         </p>
         <p className="text-muted-foreground">
-          Continue on the <Link href="/funds" className="underline underline-offset-2 hover:text-foreground">Accounting</Link> page, or{' '}
-          <Link href={fundSeg ? `/funds/${fundSeg}/bank` : '/funds'} className="underline underline-offset-2 hover:text-foreground">import the bank history</Link>.
+          {t.rich('continueHelp', {
+            accounting: chunks => <Link href="/funds" className="underline underline-offset-2 hover:text-foreground">{chunks}</Link>,
+            bank: chunks => <Link href={fundSeg ? `/funds/${fundSeg}/bank` : '/funds'} className="underline underline-offset-2 hover:text-foreground">{chunks}</Link>,
+          })}
         </p>
         <button onClick={() => setOverride(true)} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
-          I know what I&rsquo;m doing — enter them anyway
+          {t('override')}
         </button>
       </div>
     )
@@ -106,7 +110,7 @@ export function OpeningBalancesView() {
   return (
     <div className="space-y-4 max-w-2xl">
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Cutover date</label>
+        <label className="text-xs text-muted-foreground mb-1 block">{t('cutoverDate')}</label>
         <input type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} className="border rounded px-2 py-1.5 text-sm" />
       </div>
 
@@ -114,9 +118,9 @@ export function OpeningBalancesView() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left px-3 py-2 font-medium">LP entity</th>
-              <th className="text-right px-3 py-2 font-medium">Commitment</th>
-              <th className="text-right px-3 py-2 font-medium">Opening capital</th>
+              <th className="text-left px-3 py-2 font-medium">{t('lpEntity')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('commitment')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('openingCapital')}</th>
             </tr>
           </thead>
           <tbody>
@@ -139,7 +143,7 @@ export function OpeningBalancesView() {
           </tbody>
           <tfoot>
             <tr className="border-t bg-muted/30 font-semibold">
-              <td className="px-3 py-2" colSpan={2}>Total opening NAV</td>
+              <td className="px-3 py-2" colSpan={2}>{t('totalOpeningNav')}</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(total)}</td>
             </tr>
           </tfoot>
@@ -150,7 +154,7 @@ export function OpeningBalancesView() {
 
       <Button onClick={submit} disabled={saving || !entryDate || total === 0}>
         {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        Book opening balances
+        {t('book')}
       </Button>
     </div>
   )

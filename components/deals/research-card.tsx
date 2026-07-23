@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Loader2, Globe, ExternalLink, AlertTriangle, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useFormatter, useTranslations } from 'next-intl'
 
 /**
  * External research on an inbound deal — the founder's track record, whether the
@@ -46,6 +47,8 @@ export function DealResearchCard({
   researchedAt: string | null
   onQueued: () => void
 }) {
+  const t = useTranslations('DealDetail.research')
+  const format = useFormatter()
   const [queueing, setQueueing] = useState(false)
   const [queueError, setQueueError] = useState<string | null>(null)
 
@@ -56,12 +59,12 @@ export function DealResearchCard({
       const res = await fetch(`/api/deals/${dealId}/research`, { method: 'POST' })
       const body = await res.json()
       if (!res.ok) {
-        setQueueError(body.error ?? 'Could not queue research.')
+        setQueueError(body.error ?? t('queueFailed'))
         return
       }
       onQueued()
     } catch {
-      setQueueError('Could not queue research.')
+      setQueueError(t('queueFailed'))
     } finally {
       setQueueing(false)
     }
@@ -74,14 +77,14 @@ export function DealResearchCard({
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="text-base flex items-center gap-2">
           <Globe className="h-4 w-4" />
-          External research
+          {t('title')}
         </CardTitle>
         {!inFlight && (
           <Button variant="outline" size="sm" onClick={requestResearch} disabled={queueing}>
             {queueing
               ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
               : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-            {status === 'done' ? 'Re-run' : 'Research this deal'}
+            {status === 'done' ? t('rerun') : t('run')}
           </Button>
         )}
       </CardHeader>
@@ -90,8 +93,7 @@ export function DealResearchCard({
         {inFlight && (
           <p className="text-muted-foreground flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Researching the founder and company on the web — this runs in the background and
-            usually lands within ten minutes.
+            {t('running')}
           </p>
         )}
 
@@ -99,20 +101,20 @@ export function DealResearchCard({
           <p className="text-muted-foreground">
             {error
               ? error
-              : 'Not researched — this deal did not clear the fund\'s thesis-fit bar for automatic research. Run it manually if you think it deserves a look.'}
+              : t('skipped')}
           </p>
         )}
 
         {status === 'failed' && !inFlight && (
           <p className="text-destructive flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>Research failed: {error ?? 'unknown error'}</span>
+            <span>{t('failed', { error: error ?? t('unknownError') })}</span>
           </p>
         )}
 
         {!status && !inFlight && (
           <p className="text-muted-foreground">
-            No external research has been run on this deal.
+            {t('notRun')}
           </p>
         )}
 
@@ -128,7 +130,7 @@ export function DealResearchCard({
             {summary && <p className="whitespace-pre-wrap">{summary}</p>}
 
             {findings?.red_flags && findings.red_flags.length > 0 && (
-              <Section title="Red flags" tone="danger">
+              <Section title={t('sections.redFlags')} tone="danger">
                 <ul className="list-disc pl-5 space-y-0.5">
                   {findings.red_flags.map((f, i) => <li key={i}>{f}</li>)}
                 </ul>
@@ -136,30 +138,30 @@ export function DealResearchCard({
             )}
 
             {findings?.founder_background && (
-              <Section title="Founder background">
+              <Section title={t('sections.founderBackground')}>
                 <p className="whitespace-pre-wrap">{findings.founder_background}</p>
                 {findings.prior_companies && findings.prior_companies.length > 0 && (
                   <p className="mt-1 text-muted-foreground">
-                    Previously: {findings.prior_companies.join(', ')}
+                    {t('previously', { companies: findings.prior_companies.join(', ') })}
                   </p>
                 )}
               </Section>
             )}
 
             {findings?.traction_corroboration && (
-              <Section title="Traction — corroborated?">
+              <Section title={t('sections.traction')}>
                 <p className="whitespace-pre-wrap">{findings.traction_corroboration}</p>
               </Section>
             )}
 
             {findings?.market_context && (
-              <Section title="Market context">
+              <Section title={t('sections.marketContext')}>
                 <p className="whitespace-pre-wrap">{findings.market_context}</p>
               </Section>
             )}
 
             {findings?.open_questions && findings.open_questions.length > 0 && (
-              <Section title="Questions for a first call">
+              <Section title={t('sections.questions')}>
                 <ul className="list-disc pl-5 space-y-0.5">
                   {findings.open_questions.map((q, i) => <li key={i}>{q}</li>)}
                 </ul>
@@ -167,7 +169,7 @@ export function DealResearchCard({
             )}
 
             {sources && sources.length > 0 && (
-              <Section title="Sources">
+              <Section title={t('sections.sources')}>
                 <ul className="space-y-0.5">
                   {sources.map((s, i) => (
                     <li key={i}>
@@ -188,7 +190,7 @@ export function DealResearchCard({
 
             {researchedAt && (
               <p className="text-xs text-muted-foreground pt-1">
-                Researched {new Date(researchedAt).toLocaleString()}
+                {t('researchedAt', { date: format.dateTime(new Date(researchedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
               </p>
             )}
           </>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,14 +56,14 @@ interface MetricInfo {
 // Constants
 // ---------------------------------------------------------------------------
 
-const ISSUE_LABELS: Record<string, string> = {
-  new_company_detected: 'New Company',
-  low_confidence: 'Low Confidence',
-  ambiguous_period: 'Ambiguous Period',
-  metric_not_found: 'Metric Not Found',
-  company_not_identified: 'Unidentified Company',
-  duplicate_period: 'Duplicate Period',
-}
+const ISSUE_KEYS = {
+  new_company_detected: 'newCompany',
+  low_confidence: 'lowConfidence',
+  ambiguous_period: 'ambiguousPeriod',
+  metric_not_found: 'metricNotFound',
+  company_not_identified: 'unidentifiedCompany',
+  duplicate_period: 'duplicatePeriod',
+} as const
 
 const STATUS_COLORS: Record<string, string> = {
   new_company_detected: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -86,7 +87,11 @@ export function EmailReviewModal({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslations('Review.modal')
+  const locale = useLocale()
+  const dateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' })
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [emailInfo, setEmailInfo] = useState<EmailInfo | null>(null)
   const [metrics, setMetrics] = useState<MetricInfo[]>([])
   const [reviewData, setReviewData] = useState<ReviewData | null>(null)
@@ -125,6 +130,7 @@ export function EmailReviewModal({
   const loadAll = useCallback(async () => {
     if (!emailId) return
     setLoading(true)
+    setLoadError(false)
     try {
       // Fetch email info, reviews, and companies list in parallel
       const [emailRes, reviewsRes, companiesRes] = await Promise.all([
@@ -146,7 +152,7 @@ export function EmailReviewModal({
           (companiesData as { id: string; name: string; status: string }[])
             .filter(c => c.status === 'active')
             .map(c => ({ id: c.id, name: c.name }))
-            .sort((a, b) => a.name.localeCompare(b.name))
+            .sort((a, b) => a.name.localeCompare(b.name, locale))
         )
       }
 
@@ -175,10 +181,11 @@ export function EmailReviewModal({
       setEmailInfo(null)
       setReviewData(null)
       setMetrics([])
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
-  }, [emailId])
+  }, [emailId, locale])
 
   async function loadMetrics(companyId: string) {
     try {
@@ -206,6 +213,7 @@ export function EmailReviewModal({
       setReprocessSuccess(false)
       setUploading(false)
       setUploadedFiles([])
+      setLoadError(false)
     } else {
       setEmailInfo(null)
       setReviewData(null)
@@ -321,8 +329,8 @@ export function EmailReviewModal({
 
       // Load metrics for the assigned company
       await loadMetrics(company.id)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error assigning company')
+    } catch {
+      toast.error(t('errors.assignCompany'))
     } finally {
       setAssigningCompany(false)
     }
@@ -343,8 +351,8 @@ export function EmailReviewModal({
       }
       setApproveSuccess(true)
       setTimeout(() => onOpenChange(false), 1500)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error approving email')
+    } catch {
+      toast.error(t('errors.approve'))
     } finally {
       setApprovingAll(false)
     }
@@ -369,8 +377,8 @@ export function EmailReviewModal({
       setTimeout(() => {
         onOpenChange(false)
       }, 2500)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error reprocessing email')
+    } catch {
+      toast.error(t('errors.reprocess'))
     } finally {
       setReprocessing(false)
     }
@@ -398,8 +406,8 @@ export function EmailReviewModal({
         throw new Error(d.error ?? 'Upload failed')
       }
       setUploadedFiles(prev => [...prev, file.name])
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error uploading file')
+    } catch {
+      toast.error(t('errors.upload'))
     } finally {
       setUploading(false)
     }
@@ -434,8 +442,8 @@ export function EmailReviewModal({
             }
           : prev
       )
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error resolving item')
+    } catch {
+      toast.error(t('errors.resolve'))
     } finally {
       setResolving(prev => ({ ...prev, [item.id]: false }))
       setEditingId(null)
@@ -455,13 +463,19 @@ export function EmailReviewModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Review</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
 
         {loading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
+        )}
+
+        {!loading && loadError && (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            {t('errors.load')}
+          </p>
         )}
 
         {!loading && emailInfo && (
@@ -472,12 +486,12 @@ export function EmailReviewModal({
                 <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0 space-y-1 flex-1">
                   <p className="text-sm font-medium leading-snug">
-                    {emailInfo.subject || '(no subject)'}
+                    {emailInfo.subject || t('noSubject')}
                   </p>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                    <span>From: {emailInfo.from_address}</span>
+                    <span>{t('from', { address: emailInfo.from_address })}</span>
                     {emailInfo.received_at && (
-                      <span>{new Date(emailInfo.received_at).toLocaleDateString()}</span>
+                      <span>{dateFormatter.format(new Date(emailInfo.received_at))}</span>
                     )}
                   </div>
                   {emailInfo.body_text && (
@@ -487,7 +501,7 @@ export function EmailReviewModal({
                         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                       >
                         {showEmailBody ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        {showEmailBody ? 'Hide email body' : 'Show email body'}
+                        {showEmailBody ? t('email.hideBody') : t('email.showBody')}
                       </button>
                       {showEmailBody && (
                         <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap break-all max-h-60 overflow-y-auto overflow-x-hidden bg-background rounded border p-3 leading-relaxed w-0 min-w-full">
@@ -504,9 +518,9 @@ export function EmailReviewModal({
             {items.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-medium">Review Items</h3>
+                  <h3 className="text-sm font-medium">{t('reviewItems.title')}</h3>
                   <span className="text-xs text-muted-foreground">
-                    {items.length} pending
+                    {t('reviewItems.pending', { count: items.length })}
                   </span>
                 </div>
 
@@ -540,7 +554,7 @@ export function EmailReviewModal({
                     <Building2 className="h-3 w-3 text-slate-400" />
                   )}
                 </div>
-                <h3 className="text-sm font-medium">Company</h3>
+                <h3 className="text-sm font-medium">{t('company.title')}</h3>
                 {hasCompany && (
                   <span className="text-sm text-muted-foreground">{emailInfo.company!.name}</span>
                 )}
@@ -549,7 +563,7 @@ export function EmailReviewModal({
               {!hasCompany && !showCompanyForm && (
                 <div className="ml-7 space-y-3">
                   <p className="text-xs text-muted-foreground">
-                    No company assigned. Select an existing company or create a new one.
+                    {t('company.unassigned')}
                   </p>
 
                   {/* Select existing company */}
@@ -559,7 +573,7 @@ export function EmailReviewModal({
                       onChange={e => setSelectedCompanyId(e.target.value)}
                       className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex-1"
                     >
-                      <option value="">Select a company…</option>
+                      <option value="">{t('company.select')}</option>
                       {companies.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -575,14 +589,14 @@ export function EmailReviewModal({
                       ) : (
                         <Check className="h-3.5 w-3.5" />
                       )}
-                      Assign
+                      {t('company.assign')}
                     </Button>
                   </div>
 
                   {/* Or create new */}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="h-px flex-1 bg-border" />
-                    <span>or</span>
+                    <span>{t('company.or')}</span>
                     <div className="h-px flex-1 bg-border" />
                   </div>
 
@@ -593,7 +607,7 @@ export function EmailReviewModal({
                     className="gap-1.5"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Create New Company
+                    {t('company.create')}
                   </Button>
                 </div>
               )}
@@ -620,10 +634,10 @@ export function EmailReviewModal({
                       <BarChart3 className="h-3 w-3 text-slate-400" />
                     )}
                   </div>
-                  <h3 className="text-sm font-medium">Metrics</h3>
+                  <h3 className="text-sm font-medium">{t('metrics.title')}</h3>
                   {hasMetrics && (
                     <span className="text-sm text-muted-foreground">
-                      {metrics.length} configured
+                      {t('metrics.configured', { count: metrics.length })}
                     </span>
                   )}
                 </div>
@@ -648,13 +662,13 @@ export function EmailReviewModal({
                   <div className="ml-7 rounded-lg border bg-muted/30 p-4">
                     {!hasMetrics && (
                       <p className="text-xs text-muted-foreground mb-3">
-                        No metrics configured. Add at least one so Claude knows what to extract.
+                        {t('metrics.none')}
                       </p>
                     )}
                     {metricsAdded > 0 && (
                       <p className="text-xs text-emerald-600 flex items-center gap-1 mb-3">
                         <Check className="h-3 w-3" />
-                        {metricsAdded} metric{metricsAdded !== 1 ? 's' : ''} added
+                        {t('metrics.added', { count: metricsAdded })}
                       </p>
                     )}
                     <MetricForm
@@ -675,7 +689,7 @@ export function EmailReviewModal({
                       className="gap-1.5"
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      Add Metric
+                      {t('metrics.add')}
                     </Button>
                   </div>
                 )}
@@ -693,12 +707,12 @@ export function EmailReviewModal({
                       <Upload className="h-3 w-3 text-slate-400" />
                     )}
                   </div>
-                  <h3 className="text-sm font-medium">Upload Document</h3>
+                  <h3 className="text-sm font-medium">{t('upload.title')}</h3>
                 </div>
 
                 <div className="ml-7">
                   <p className="text-xs text-muted-foreground mb-3">
-                    If the report was linked rather than attached, upload it here so it can be processed.
+                    {t('upload.description')}
                   </p>
 
                   {uploadedFiles.length > 0 && (
@@ -738,7 +752,7 @@ export function EmailReviewModal({
                       ) : (
                         <Upload className="h-3.5 w-3.5" />
                       )}
-                      {uploading ? 'Uploading…' : 'Choose File'}
+                      {uploading ? t('upload.uploading') : t('upload.chooseFile')}
                     </Button>
                   </label>
                 </div>
@@ -751,18 +765,18 @@ export function EmailReviewModal({
                 <div className={`flex items-center justify-center h-5 w-5 rounded-full ${approveSuccess ? 'bg-green-100' : 'bg-slate-100'}`}>
                   <Check className={`h-3 w-3 ${approveSuccess ? 'text-green-600' : 'text-slate-400'}`} />
                 </div>
-                <h3 className="text-sm font-medium">Approve</h3>
+                <h3 className="text-sm font-medium">{t('approve.title')}</h3>
               </div>
               <div className="ml-7">
                 {approveSuccess ? (
                   <p className="text-sm text-emerald-600 flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5" />
-                    Approved. Modal will close shortly.
+                    {t('approve.success')}
                   </p>
                 ) : (
                   <>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Accept all outstanding reviews and mark this email as successfully processed without reprocessing.
+                      {t('approve.description')}
                     </p>
                     <Button
                       size="sm"
@@ -776,7 +790,7 @@ export function EmailReviewModal({
                       ) : (
                         <Check className="h-3.5 w-3.5" />
                       )}
-                      {approvingAll ? 'Approving…' : 'Approve'}
+                      {approvingAll ? t('approve.approving') : t('approve.action')}
                     </Button>
                   </>
                 )}
@@ -794,19 +808,19 @@ export function EmailReviewModal({
                       <RefreshCw className="h-3 w-3 text-slate-400" />
                     )}
                   </div>
-                  <h3 className="text-sm font-medium">Process Email</h3>
+                  <h3 className="text-sm font-medium">{t('process.title')}</h3>
                 </div>
 
                 <div className="ml-7">
                   {reprocessSuccess ? (
                     <p className="text-sm text-emerald-600 flex items-center gap-1.5">
                       <Check className="h-3.5 w-3.5" />
-                      Processing started. Modal will close shortly.
+                      {t('process.success')}
                     </p>
                   ) : (
                     <>
                       <p className="text-xs text-muted-foreground mb-3">
-                        Run the email through the AI pipeline to extract metric values.
+                        {t('process.description')}
                       </p>
                       <Button
                         size="sm"
@@ -819,7 +833,7 @@ export function EmailReviewModal({
                         ) : (
                           <RefreshCw className="h-3.5 w-3.5" />
                         )}
-                        {reprocessing ? 'Processing…' : 'Process Email'}
+                        {reprocessing ? t('process.processing') : t('process.action')}
                       </Button>
                     </>
                   )}
@@ -860,10 +874,12 @@ function ReviewCard({
   onCancelEdit: () => void
   onSubmitEdit: () => void
 }) {
+  const t = useTranslations('Review.modal')
   const hasValue = !!item.extracted_value
   const isNewCompany = item.issue_type === 'new_company_detected'
   const isUnidentified = item.issue_type === 'company_not_identified'
   const isMetricNotFound = item.issue_type === 'metric_not_found'
+  const translatedIssueKey = ISSUE_KEYS[item.issue_type as keyof typeof ISSUE_KEYS]
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -872,7 +888,9 @@ function ReviewCard({
         <span
           className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[item.issue_type] ?? ''}`}
         >
-          {ISSUE_LABELS[item.issue_type] ?? item.issue_type}
+          {translatedIssueKey
+            ? t(`issues.${translatedIssueKey}`)
+            : item.issue_type}
         </span>
         {item.company && (
           <span className="text-sm font-medium">{item.company.name}</span>
@@ -888,7 +906,7 @@ function ReviewCard({
       {/* Extracted value */}
       {hasValue && !editing && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground uppercase tracking-wide">Value</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wide">{t('value')}</span>
           <span className="font-mono text-sm bg-muted px-2 py-0.5 rounded">
             {item.extracted_value}
             {item.metric?.unit ? ` ${item.metric.unit}` : ''}
@@ -911,10 +929,10 @@ function ReviewCard({
           />
           <Button size="sm" onClick={onSubmitEdit} disabled={resolving || !editValue.trim()}>
             <Check className="h-3.5 w-3.5 mr-1" />
-            Save
+            {t('actions.save')}
           </Button>
           <Button size="sm" variant="ghost" onClick={onCancelEdit}>
-            Cancel
+            {t('actions.cancel')}
           </Button>
         </div>
       )}
@@ -933,14 +951,14 @@ function ReviewCard({
           {isNewCompany || isUnidentified ? (
             <Button size="sm" variant="outline" onClick={onReject} disabled={resolving} className="gap-1.5">
               <X className="h-3.5 w-3.5" />
-              Dismiss
+              {t('actions.dismiss')}
             </Button>
           ) : (
             <>
               {!isMetricNotFound && hasValue && (
                 <Button size="sm" onClick={onAccept} disabled={resolving} className="gap-1.5">
                   <Check className="h-3.5 w-3.5" />
-                  Accept
+                  {t('actions.accept')}
                 </Button>
               )}
               <Button
@@ -951,7 +969,7 @@ function ReviewCard({
                 className="gap-1.5"
               >
                 <X className="h-3.5 w-3.5" />
-                {isMetricNotFound ? 'Dismiss' : 'Reject'}
+                {isMetricNotFound ? t('actions.dismiss') : t('actions.reject')}
               </Button>
               {hasValue && (
                 <Button
@@ -962,7 +980,7 @@ function ReviewCard({
                   className="gap-1.5"
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                  Edit &amp; Accept
+                  {t('actions.editAccept')}
                 </Button>
               )}
             </>

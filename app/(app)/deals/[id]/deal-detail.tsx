@@ -12,6 +12,7 @@ import { AnalystPanel } from '@/components/analyst-panel'
 import { useAnalystContext } from '@/components/analyst-context'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { DealResearchCard } from '@/components/deals/research-card'
+import { useFormatter, useTranslations } from 'next-intl'
 
 type DealStatus = 'new' | 'reviewing' | 'advancing' | 'met' | 'diligence' | 'invested' | 'passed'
 
@@ -66,17 +67,32 @@ interface EmailRow {
   routing_reasoning: string | null
 }
 
-const FIT_BADGE: Record<string, { label: string; cls: string }> = {
-  strong: { label: 'Strong fit', cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
-  moderate: { label: 'Moderate fit', cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
-  weak: { label: 'Weak fit', cls: 'bg-muted text-muted-foreground' },
-  out_of_thesis: { label: 'Out of thesis', cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
-  spam: { label: 'Spam', cls: 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 line-through' },
+const FIT_BADGE: Record<string, { cls: string }> = {
+  strong: { cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
+  moderate: { cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+  weak: { cls: 'bg-muted text-muted-foreground' },
+  out_of_thesis: { cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
+  spam: { cls: 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 line-through' },
 }
 
 const STATUS_OPTIONS: DealStatus[] = ['new', 'reviewing', 'advancing', 'met', 'diligence', 'invested', 'passed']
 
+function useDealDetailLabels(): Record<string, string> {
+  const t = useTranslations('DealDetail.labels')
+  return {
+    new: t('new'), reviewing: t('reviewing'), advancing: t('advancing'), met: t('met'),
+    diligence: t('diligence'), invested: t('invested'), passed: t('passed'),
+    strong: t('strongFit'), moderate: t('moderateFit'), weak: t('weakFit'), out_of_thesis: t('outOfThesis'), spam: t('spam'),
+    referral: t('referral'), cold: t('cold'), warm_intro: t('warmIntro'), accelerator: t('accelerator'),
+    demo_day: t('demoDay'), event: t('event'), other: t('other'), heartbeat: t('heartbeat'),
+    reporting: t('reporting'), interactions: t('interactions'), audit: t('audit'),
+  }
+}
+
 export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; email: EmailRow | null; priorDeal: { id: string; company_name: string | null; created_at: string | null } | null }) {
+  const t = useTranslations('DealDetail')
+  const format = useFormatter()
+  const labels = useDealDetailLabels()
   const router = useRouter()
   const { setDealId } = useAnalystContext()
   const [deal, setDeal] = useState(initial)
@@ -97,7 +113,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
     // is the stage that has a memo workspace behind it. Once promoted, picking
     // it again is a no-op nav (the existing record opens via the side button).
     if (status === 'diligence' && !deal.promoted_diligence_id) {
-      if (!confirm('Move this deal to Diligence? A diligence record will be created and pre-filled from this deal.')) return
+      if (!confirm(t('confirmPromote'))) return
       setStatusBusy(true)
       const res = await fetch(`/api/deals/${deal.id}/promote-to-diligence`, { method: 'POST' })
       setStatusBusy(false)
@@ -111,7 +127,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
           setDeal(d => ({ ...d, status: 'diligence', promoted_diligence_id: body.diligence_id }))
           router.push(`/diligence/${body.diligence_id}`)
         } else {
-          alert(body.error ?? 'Failed to promote')
+          alert(body.error ?? t('errors.promote'))
         }
       }
       return
@@ -140,7 +156,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
   }
 
   async function reroute(label: 'reporting' | 'interactions' | 'audit') {
-    if (!confirm(`Reroute this email to ${label}? The deal record will be removed.`)) return
+    if (!confirm(t('confirmReroute', { destination: labels[label] }))) return
     setRerouting(true)
     const res = await fetch(`/api/emails/${deal.email_id}/reroute`, {
       method: 'POST',
@@ -151,7 +167,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
     if (res.ok) {
       router.push('/deals')
     } else {
-      alert('Reroute failed')
+      alert(t('errors.reroute'))
     }
   }
 
@@ -164,7 +180,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
       body: JSON.stringify({ email: deal.referrer_email, name: deal.referrer_name ?? null }),
     })
     setAddingReferrer(false)
-    if (res.ok) alert('Added to Known Referrers')
+    if (res.ok) alert(t('referrerAdded'))
   }
 
   const payload = email?.raw_payload as { TextBody?: string; HtmlBody?: string; Attachments?: Array<{ Name: string; ContentType: string; ContentLength: number }> } | undefined
@@ -180,17 +196,24 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
   const websiteHref = deal.company_url ? ensureHttps(deal.company_url) : null
   const websiteLabel = deal.company_url ?? deal.company_domain ?? null
 
+  const formatDealDate = (value: string | null | undefined) => {
+    if (!value) return null
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    return format.dateTime(date, { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' })
+  }
+
   return (
     <PortfolioNotesProvider pageContext="deals">
     <div className="p-4 md:py-8 md:pl-8 md:pr-4 flex flex-col lg:flex-row gap-6 items-start">
     <div className="flex-1 min-w-0 max-w-4xl">
       <Link href="/deals" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to deals
+        <ArrowLeft className="h-3.5 w-3.5" /> {t('backToDeals')}
       </Link>
 
       {/* Header row: title left, notes + analyst right (mirrors interactions). */}
       <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{deal.company_name ?? 'Unknown company'}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{deal.company_name ?? t('unknownCompany')}</h1>
         <div className="flex items-center gap-2">
           <PortfolioNotesButton />
           <AnalystToggleButton />
@@ -202,7 +225,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
       <div className="flex items-center gap-2 flex-wrap mb-6">
         {deal.thesis_fit_score && (
           <span className={`inline-flex items-center h-8 px-3 rounded-md text-xs font-medium ${FIT_BADGE[deal.thesis_fit_score].cls}`}>
-            {FIT_BADGE[deal.thesis_fit_score].label}
+            {labels[deal.thesis_fit_score]}
           </span>
         )}
         <StatusDropdown value={deal.status} onPick={updateStatus} disabled={statusBusy} />
@@ -210,7 +233,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
         {deal.promoted_diligence_id && (
           <Button asChild variant="outline" size="sm">
             <Link href={`/diligence/${deal.promoted_diligence_id}`}>
-              <ArrowRight className="h-3.5 w-3.5 mr-1" /> Open Diligence
+              <ArrowRight className="h-3.5 w-3.5 mr-1" /> {t('openDiligence')}
             </Link>
           </Button>
         )}
@@ -219,9 +242,11 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
       {priorDeal && (
         <Card className="mb-4 border-amber-200 bg-amber-50/50 dark:bg-amber-900/10">
           <CardContent className="py-3 text-sm">
-            <span className="font-medium">Prior pitch</span> from this founder/company on{' '}
-            {priorDeal.created_at ? new Date(priorDeal.created_at).toLocaleDateString() : 'unknown date'}.{' '}
-            <Link href={`/deals/${priorDeal.id}`} className="underline">View prior deal →</Link>
+            {t.rich('priorPitch', {
+              date: formatDealDate(priorDeal.created_at) ?? t('unknownDate'),
+              strong: chunks => <span className="font-medium">{chunks}</span>,
+            })}{' '}
+            <Link href={`/deals/${priorDeal.id}`} className="underline">{t('viewPriorDeal')}</Link>
           </CardContent>
         </Card>
       )}
@@ -231,32 +256,32 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
       <div className="grid gap-4 md:grid-cols-2 mb-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Details</CardTitle>
+            <CardTitle className="text-base">{t('details.title')}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-1">
-            <Row k="Founder" v={founderValue} />
+            <Row k={t('details.founder')} v={founderValue} />
             <Row
-              k="Website"
+              k={t('details.website')}
               v={websiteLabel}
               href={websiteHref ?? undefined}
             />
             <Row
-              k="Received"
-              v={email?.received_at ? new Date(email.received_at).toLocaleDateString() : null}
+              k={t('details.received')}
+              v={formatDealDate(email?.received_at)}
             />
-            <Row k="Stage" v={deal.stage} />
-            <Row k="Industry" v={deal.industry} />
-            <Row k="Raise" v={deal.raise_amount} />
-            <Row k="Intro source" v={deal.intro_source ? labelFor(deal.intro_source) : null} />
+            <Row k={t('details.stage')} v={deal.stage} />
+            <Row k={t('details.industry')} v={deal.industry} />
+            <Row k={t('details.raise')} v={deal.raise_amount} />
+            <Row k={t('details.introSource')} v={deal.intro_source ? labels[deal.intro_source] : null} />
             {deal.referrer_name && (
               <Row
-                k="Referrer"
+                k={t('details.referrer')}
                 v={deal.referrer_email ? `${deal.referrer_name} (${deal.referrer_email})` : deal.referrer_name}
               />
             )}
             {(deal.co_founders ?? []).length > 0 && (
               <Row
-                k="Co-founders"
+                k={t('details.coFounders')}
                 v={(deal.co_founders ?? [])
                   .map(cf => cf.role ? `${cf.name} (${cf.role})` : cf.name)
                   .join(', ')}
@@ -265,7 +290,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
             {deal.referrer_email && (
               <div className="pt-2">
                 <Button variant="outline" size="sm" onClick={addReferrer} disabled={addingReferrer}>
-                  <UserPlus className="h-3.5 w-3.5 mr-1" /> Add to Known Referrers
+                  <UserPlus className="h-3.5 w-3.5 mr-1" /> {t('addKnownReferrer')}
                 </Button>
               </div>
             )}
@@ -274,24 +299,24 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Summary</CardTitle>
+            <CardTitle className="text-base">{t('summary.title')}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm whitespace-pre-wrap">
-            {deal.company_summary || <span className="text-muted-foreground italic">No summary generated.</span>}
+            {deal.company_summary || <span className="text-muted-foreground italic">{t('summary.empty')}</span>}
           </CardContent>
         </Card>
       </div>
 
       <Card className="mb-4">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Thesis fit</CardTitle>
+          <CardTitle className="text-base">{t('thesis.title')}</CardTitle>
           <Button variant="outline" size="sm" onClick={regenerate} disabled={regenerating}>
             {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-            Regenerate
+            {t('thesis.regenerate')}
           </Button>
         </CardHeader>
         <CardContent className="text-sm whitespace-pre-wrap">
-          {deal.thesis_fit_analysis || <span className="text-muted-foreground italic">No analysis yet.</span>}
+          {deal.thesis_fit_analysis || <span className="text-muted-foreground italic">{t('thesis.empty')}</span>}
         </CardContent>
       </Card>
 
@@ -310,23 +335,23 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Source email</CardTitle>
+          <CardTitle className="text-base">{t('sourceEmail.title')}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm space-y-2">
           <div className="text-xs text-muted-foreground">
-            From: {email?.from_address ?? '—'} · Subject: {email?.subject ?? '—'}
+            {t('sourceEmail.from')}: {email?.from_address ?? '—'} · {t('sourceEmail.subject')}: {email?.subject ?? '—'}
           </div>
           <div className="whitespace-pre-wrap rounded border bg-muted/30 p-3 max-h-72 overflow-y-auto">
-            {bodyText || <span className="italic text-muted-foreground">No text body.</span>}
+            {bodyText || <span className="italic text-muted-foreground">{t('sourceEmail.noBody')}</span>}
           </div>
           {attachments.length > 0 && (
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Attachments</div>
+              <div className="text-xs text-muted-foreground mb-1">{t('sourceEmail.attachments')}</div>
               <ul className="text-xs space-y-1">
                 {attachments.map((a, i) => (
                   <li key={i}>
                     <Link href={`/api/emails/${deal.email_id}/attachment/${i}`} className="hover:underline">
-                      {a.Name} <span className="text-muted-foreground">({a.ContentType}, {(a.ContentLength / 1024).toFixed(0)}KB)</span>
+                      {a.Name} <span className="text-muted-foreground">({a.ContentType}, {format.number(a.ContentLength / 1024, { maximumFractionDigits: 0 })} KB)</span>
                     </Link>
                   </li>
                 ))}
@@ -335,7 +360,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
           )}
           {email?.routing_reasoning && (
             <div className="text-xs text-muted-foreground border-t pt-2">
-              Classifier: {email.routing_label} @ {email.routing_confidence?.toFixed(2)}, {email.routing_reasoning}
+              {t('sourceEmail.classifier')}: {email.routing_label} @ {email.routing_confidence == null ? '—' : format.number(email.routing_confidence, { maximumFractionDigits: 2 })}, {email.routing_reasoning}
             </div>
           )}
         </CardContent>
@@ -349,13 +374,14 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
 }
 
 function StatusDropdown({ value, onPick, disabled }: { value: DealStatus; onPick: (s: DealStatus) => void; disabled?: boolean }) {
+  const labels = useDealDetailLabels()
   const [open, setOpen] = useState(false)
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" disabled={disabled}>
           {disabled ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-          {labelFor(value)}
+          {labels[value]}
           <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-60" />
         </Button>
       </PopoverTrigger>
@@ -366,7 +392,7 @@ function StatusDropdown({ value, onPick, disabled }: { value: DealStatus; onPick
             onClick={() => { setOpen(false); onPick(s) }}
             className={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted ${s === value ? 'bg-muted font-medium' : ''}`}
           >
-            {labelFor(s)}
+            {labels[s]}
           </button>
         ))}
       </PopoverContent>
@@ -375,31 +401,29 @@ function StatusDropdown({ value, onPick, disabled }: { value: DealStatus; onPick
 }
 
 function RerouteDropdown({ onPick, disabled }: { onPick: (label: 'reporting' | 'interactions' | 'audit') => void; disabled: boolean }) {
+  const t = useTranslations('DealDetail.reroute')
+  const labels = useDealDetailLabels()
   const [open, setOpen] = useState(false)
-  const targets: Array<{ value: 'reporting' | 'interactions' | 'audit'; label: string }> = [
-    { value: 'reporting', label: 'Reporting (metrics)' },
-    { value: 'interactions', label: 'Interactions (CRM)' },
-    { value: 'audit', label: 'Audit (drop)' },
-  ]
+  const targets: Array<'reporting' | 'interactions' | 'audit'> = ['reporting', 'interactions', 'audit']
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" disabled={disabled}>
-          Reroute
+          {t('button')}
           <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-60" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-1">
         <div className="text-[11px] text-muted-foreground px-2 py-1.5">
-          If this isn&apos;t a deal, send the email through a different pipeline. The deal record will be removed.
+          {t('description')}
         </div>
-        {targets.map(t => (
+        {targets.map(target => (
           <button
-            key={t.value}
-            onClick={() => { setOpen(false); onPick(t.value) }}
+            key={target}
+            onClick={() => { setOpen(false); onPick(target) }}
             className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted"
           >
-            {t.label}
+            {labels[target]}
           </button>
         ))}
       </PopoverContent>
@@ -424,10 +448,6 @@ function Row({ k, v, href }: { k: string; v: string | null; href?: string }) {
       </span>
     </div>
   )
-}
-
-function labelFor(slug: string): string {
-  return slug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function ensureHttps(url: string): string {

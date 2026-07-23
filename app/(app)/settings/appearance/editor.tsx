@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, Check, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ACCENT_PRESETS, FONT_OPTIONS, RADIUS_OPTIONS, themeCssVars, hexToHsl, hslToHex, type FundTheme } from '@/lib/theme'
@@ -9,6 +10,7 @@ import { ACCENT_PRESETS, FONT_OPTIONS, RADIUS_OPTIONS, themeCssVars, hexToHsl, h
 // <style> override into <head>) and saves the fund-wide theme. The default is
 // neutral gray + system font; everything here is an opt-in override.
 export function AppearanceEditor() {
+  const t = useTranslations('Settings.appearance')
   const [accent, setAccent] = useState<string | null>(null)
   const [font, setFont] = useState<string>('system')
   const [radius, setRadius] = useState<number | null>(null)
@@ -53,29 +55,29 @@ export function AppearanceEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ theme: draft }),
       })
-      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? 'Save failed') }
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error ?? t('saveFailed')) }
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
+      setError(e instanceof Error ? e.message : t('saveFailed'))
     } finally {
       setSaving(false)
     }
   }
   function reset() { setAccent(null); setFont('system'); setRadius(null) }
 
-  if (!loaded) return <div className="text-sm text-muted-foreground"><Loader2 className="h-4 w-4 inline animate-spin mr-2" />Loading…</div>
+  if (!loaded) return <div className="text-sm text-muted-foreground"><Loader2 className="h-4 w-4 inline animate-spin mr-2" />{t('loading')}</div>
 
   return (
     <div className="space-y-5">
       {error && <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">{error}</div>}
       <p className="text-xs text-muted-foreground max-w-xl">
-        Changes preview live across the app. Save to apply for everyone in your fund. The default is neutral gray with the system font; everything here is optional.
+        {t('description')}
       </p>
 
       <div>
-        <div className="text-xs font-medium mb-2">Accent color</div>
+        <div className="text-xs font-medium mb-2">{t('accentColor')}</div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setAccent(null)} className={`h-8 px-3 rounded-md border text-xs ${accent === null ? 'border-foreground bg-muted font-medium' : 'hover:bg-muted/50'}`}>Default</button>
+          <button type="button" onClick={() => setAccent(null)} className={`h-8 px-3 rounded-md border text-xs ${accent === null ? 'border-foreground bg-muted font-medium' : 'hover:bg-muted/50'}`}>{t('default')}</button>
           {ACCENT_PRESETS.filter(p => p.key !== 'neutral').map(p => (
             <button
               key={p.key}
@@ -93,29 +95,29 @@ export function AppearanceEditor() {
           <div className={`flex items-center gap-1.5 rounded-md border pl-1.5 pr-2 h-8 ${isCustom ? 'border-foreground bg-muted' : ''}`}>
             <input
               type="color"
-              aria-label="Custom accent color"
-              title="Custom brand color"
+              aria-label={t('customAccent')}
+              title={t('customBrandColor')}
               value={accent ? (hslToHex(accent) ?? '#4f46e5') : '#4f46e5'}
               onChange={e => { const h = hexToHsl(e.target.value); if (h) setAccent(h) }}
               className="h-5 w-5 rounded cursor-pointer bg-transparent border-0 p-0"
             />
-            <span className="text-xs text-muted-foreground">Custom</span>
+            <span className="text-xs text-muted-foreground">{t('custom')}</span>
           </div>
         </div>
-        {isCustom && <p className="text-[10px] text-muted-foreground mt-1.5">Custom <span className="font-mono">{hslToHex(accent!)}</span>. Button-text contrast is set automatically.</p>}
+        {isCustom && <p className="text-[10px] text-muted-foreground mt-1.5">{t('customColorHelp', { color: hslToHex(accent!) ?? '' })}</p>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 max-w-xl">
         <div>
-          <div className="text-xs font-medium mb-1">UI font</div>
+          <div className="text-xs font-medium mb-1">{t('uiFont')}</div>
           <select value={font} onChange={e => setFont(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
             {FONT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
         </div>
         <div>
-          <div className="text-xs font-medium mb-1">Corner radius</div>
+          <div className="text-xs font-medium mb-1">{t('cornerRadius')}</div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setRadius(null)} className={`h-9 px-3 rounded-md border text-xs ${radius === null ? 'border-foreground bg-muted font-medium' : 'hover:bg-muted/50'}`}>Default</button>
+            <button type="button" onClick={() => setRadius(null)} className={`h-9 px-3 rounded-md border text-xs ${radius === null ? 'border-foreground bg-muted font-medium' : 'hover:bg-muted/50'}`}>{t('default')}</button>
             {RADIUS_OPTIONS.map(o => (
               <button key={o.key} type="button" onClick={() => setRadius(o.rem)} className={`h-9 px-3 rounded-md border text-xs ${radius === o.rem ? 'border-foreground bg-muted font-medium' : 'hover:bg-muted/50'}`}>{o.label}</button>
             ))}
@@ -124,19 +126,22 @@ export function AppearanceEditor() {
       </div>
 
       <div className="rounded-lg border p-4 space-y-3 max-w-xl">
-        <div className="text-xs font-medium text-muted-foreground">Preview</div>
+        <div className="text-xs font-medium text-muted-foreground">{t('preview')}</div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button size="sm">Primary action</Button>
-          <Button size="sm" variant="outline">Secondary</Button>
-          <span className="text-sm">Body text with a <a href="#" onClick={e => e.preventDefault()} className="text-primary underline">link</a> and <span className="font-mono tabular-nums">$1,234.56</span>.</span>
+          <Button size="sm">{t('primaryAction')}</Button>
+          <Button size="sm" variant="outline">{t('secondaryAction')}</Button>
+          <span className="text-sm">{t.rich('previewBody', {
+            link: chunks => <a href="#" onClick={e => e.preventDefault()} className="text-primary underline">{chunks}</a>,
+            amount: chunks => <span className="font-mono tabular-nums">{chunks}</span>,
+          })}</span>
         </div>
       </div>
 
       <div className="flex justify-end gap-2 max-w-xl">
-        <Button variant="ghost" size="sm" onClick={reset}>Reset to default</Button>
+        <Button variant="ghost" size="sm" onClick={reset}>{t('reset')}</Button>
         <Button size="sm" onClick={save} disabled={saving}>
           {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-          {saved ? 'Saved' : 'Save appearance'}
+          {saved ? t('saved') : t('save')}
         </Button>
       </div>
     </div>

@@ -6,6 +6,7 @@
 // think in 20%. The conversion happens at this boundary and nowhere else.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Check, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +36,8 @@ const frac = (percent: string) => {
 }
 
 export function CarryTerms() {
+  const t = useTranslations('Funds.carryTerms')
+  const locale = useLocale()
   const lf = useLedgerFetch()
 
   const [kind, setKind] = useState<Kind>('none')
@@ -96,7 +99,7 @@ export function CarryTerms() {
       }),
     })
     const d = await res.json().catch(() => ({}))
-    if (!res.ok) { setBusy(false); setError(d.error ?? 'Could not save'); return }
+    if (!res.ok) { setBusy(false); setError(d.error ?? t('saveError')); return }
     // Reload from the server so the form shows exactly what PERSISTED — no more "save, navigate
     // away, and the old value reappears". If a field didn't take, you see it immediately.
     const reread = await lf('/api/accounting/waterfall-terms')
@@ -108,7 +111,7 @@ export function CarryTerms() {
 
   if (loading) {
     return <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin" />Loading carry terms…
+      <Loader2 className="h-4 w-4 animate-spin" />{t('loading')}
     </div>
   }
 
@@ -142,18 +145,13 @@ export function CarryTerms() {
     <div className="space-y-3">
       {vehicleName && <p className="text-xs text-muted-foreground">{vehicleName}</p>}
       <p className="text-xs text-muted-foreground max-w-3xl">
-        The close accrues carry on <strong>unrealized</strong> gains, as if the fund liquidated at
-        that period&rsquo;s NAV. Without it every LP&rsquo;s reported NAV overstates what they would
-        actually receive by the GP&rsquo;s share of the gain. It reverses on its own if NAV falls.
+        {t.rich('description', { strong: chunks => <strong>{chunks}</strong> })}
       </p>
 
       <div className="flex flex-wrap gap-1.5 pt-1">
         {([
-          ['none', 'No carry'],
-          ['straight', 'Straight split'],
-          ['american', 'American (deal-by-deal)'],
-          ['european', 'European (pref + catch-up)'],
-        ] as [Kind, string][]).map(([k, label]) => (
+          'none', 'straight', 'american', 'european',
+        ] as Kind[]).map(k => (
           <button
             key={k}
             onClick={() => setKind(k)}
@@ -161,45 +159,40 @@ export function CarryTerms() {
               kind === k ? 'border-foreground/30 bg-accent font-medium' : 'border-border text-muted-foreground hover:text-foreground'
             }`}
           >
-            {label}
+            {t(`kinds.${k}`)}
           </button>
         ))}
       </div>
 
       {kind === 'none' && (
         <p className="text-xs text-muted-foreground">
-          Nothing is accrued. This is the default &mdash; accruing carry nobody agreed to is worse
-          than accruing none.
+          {t('noneHelp')}
         </p>
       )}
 
       {kind === 'american' && (
         <p className="text-xs text-muted-foreground max-w-3xl">
-          Deal-by-deal: the GP is paid carry as individual deals realize, before the whole fund is
-          made whole — with a clawback that pulls back any carry later deals prove was overpaid.
-          <strong> Total carry is the same as European; only the timing differs.</strong> The
-          accrued mark here is the whole-fund figure (the ultimate entitlement); the earlier
-          deal-by-deal <em>distribution</em> of realized carry is handled at payout, not in the accrual.
+          {t.rich('americanHelp', { strong: chunks => <strong>{chunks}</strong>, em: chunks => <em>{chunks}</em> })}
         </p>
       )}
 
       {carryOn && (
         <div className="space-y-3 pt-1">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Field label="Carry" hint="GP's share of profit">
+            <Field label={t('fields.carry')} hint={t('fields.carryHint')}>
               <Suffix suffix="%">
-                <Input value={carry} onChange={e => setCarry(e.target.value)} placeholder="e.g. 20" />
+                <Input value={carry} onChange={e => setCarry(e.target.value)} placeholder={t('fields.carryPlaceholder')} />
               </Suffix>
             </Field>
 
             {hasHurdle && (
               <>
-                <Field label="Preferred return" hint="Annual hurdle (0 = none)">
+                <Field label={t('fields.pref')} hint={t('fields.prefHint')}>
                   <Suffix suffix="%">
                     <Input value={pref} onChange={e => setPref(e.target.value)} />
                   </Suffix>
                 </Field>
-                <Field label="Catch-up" hint="100% = full catch-up (0 = none)">
+                <Field label={t('fields.catchup')} hint={t('fields.catchupHint')}>
                   <Suffix suffix="%">
                     <Input value={catchup} onChange={e => setCatchup(e.target.value)} />
                   </Suffix>
@@ -209,7 +202,7 @@ export function CarryTerms() {
 
           </div>
 
-          <Field label="Carry accrues to" hint="Which partner(s) receive it, and their share">
+          <Field label={t('fields.recipients')} hint={t('fields.recipientsHint')}>
             <div className="space-y-1.5">
               {candidates.map(c => {
                 const r = recipients.find(x => x.lpEntityId === c.lpEntityId)
@@ -222,7 +215,7 @@ export function CarryTerms() {
                         checked={checked}
                         onChange={() => toggleRecipient(c.lpEntityId)}
                       />
-                      {c.name}{c.partnerClass === 'gp' ? ' (GP)' : ''}
+                      {c.name}{c.partnerClass === 'gp' ? ` (${t('gp')})` : ''}
                     </label>
                     {checked && (
                       <div className="w-20">
@@ -239,7 +232,7 @@ export function CarryTerms() {
                 )
               })}
               <p className={`text-xs ${Math.abs(totalPct - 100) > 0.01 && recipients.length > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                Total: {totalPct}%
+                {t('total', { value: new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(totalPct) })}
               </p>
             </div>
           </Field>
@@ -247,7 +240,7 @@ export function CarryTerms() {
           {hasHurdle && (
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input type="checkbox" checked={compounds} onChange={e => setCompounds(e.target.checked)} />
-              The preferred return compounds annually
+              {t('compounds')}
             </label>
           )}
 
@@ -256,7 +249,7 @@ export function CarryTerms() {
           {carryMissing && (
             <p className="text-xs text-amber-600 flex items-center gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Carry is 0% — nothing will accrue. Enter the GP&rsquo;s share (e.g. 20).
+              {t('carryMissing')}
             </p>
           )}
 
@@ -266,14 +259,12 @@ export function CarryTerms() {
           {recipientsInvalid && (
             <p className="text-xs text-amber-600 flex items-center gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Recipient shares must total 100%.
+              {t('recipientsInvalid')}
             </p>
           )}
 
           <p className="text-xs text-muted-foreground">
-            Each partner&rsquo;s <strong>carry points</strong> can differ from their capital: set a
-            weight override on the <em>Carried interest</em> column below. A partner may hold carry
-            points with no commitment at all.
+            {t.rich('pointsHelp', { strong: chunks => <strong>{chunks}</strong>, em: chunks => <em>{chunks}</em> })}
           </p>
         </div>
       )}
@@ -283,9 +274,9 @@ export function CarryTerms() {
       <div className="flex items-center gap-2 pt-1">
         <Button size="sm" variant="outline" className="text-muted-foreground" onClick={save} disabled={busy || recipientsInvalid}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
-          Save carry terms
+          {t('save')}
         </Button>
-        {saved && <span className="text-xs text-emerald-600">Saved</span>}
+        {saved && <span className="text-xs text-emerald-600">{t('saved')}</span>}
       </div>
     </div>
   )

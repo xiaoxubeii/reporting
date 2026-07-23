@@ -10,6 +10,10 @@ import {
   type ExtractMetricsResult,
 } from '@/lib/claude/extractMetrics'
 import { getFeatureProvider } from '@/lib/ai/feature-provider'
+import {
+  parseCustomAIProviderRequestParameters,
+  type CustomAIProviderRequestParameters,
+} from '@/lib/ai/custom-provider'
 import { decryptApiKey, decrypt } from '@/lib/crypto'
 import { getAccessToken as getGoogleAccessToken, findOrCreateFolder as findOrCreateGoogleFolder, uploadFile as uploadGoogleFile } from '@/lib/google/drive'
 import { getGoogleCredentials } from '@/lib/google/credentials'
@@ -512,22 +516,36 @@ export async function getOpenRouterApiKey(supabase: Supabase, fundId: string): P
     .single()
 
   if (error || !data?.openrouter_api_key_encrypted || !data?.encryption_key_encrypted) {
-    throw new Error(`OpenRouter API key not configured for fund ${fundId}`)
+    throw new Error(`Custom OpenAI-compatible API key not configured for fund ${fundId}`)
   }
 
   return decryptApiKey(data.openrouter_api_key_encrypted, data.encryption_key_encrypted)
 }
 
-export async function getOpenRouterConfig(supabase: Supabase, fundId: string): Promise<{ baseUrl: string; model: string }> {
-  const { data } = await (supabase as any)
+export async function getOpenRouterConfig(supabase: Supabase, fundId: string): Promise<{
+  baseUrl: string
+  model: string
+  requestParameters: CustomAIProviderRequestParameters
+}> {
+  const { data, error } = await (supabase as any)
     .from('fund_settings')
-    .select('openrouter_base_url, openrouter_model')
+    .select('openrouter_base_url, openrouter_model, openrouter_request_parameters')
     .eq('fund_id', fundId)
     .single()
+
+  if (error) throw new Error(`Failed to load Custom OpenAI-compatible configuration: ${error.message}`)
+
+  const requestParameters = parseCustomAIProviderRequestParameters(
+    data?.openrouter_request_parameters ?? undefined,
+  )
+  if (!requestParameters.ok) {
+    throw new Error(`Invalid Custom OpenAI-compatible request parameters: ${requestParameters.error}`)
+  }
 
   return {
     baseUrl: data?.openrouter_base_url || 'https://openrouter.ai/api/v1',
     model: data?.openrouter_model || 'openai/gpt-4o-mini',
+    requestParameters: requestParameters.value,
   }
 }
 

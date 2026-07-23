@@ -9,6 +9,7 @@ import { useAnalystContext } from '@/components/analyst-context'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 import Link from 'next/link'
 import { MobileDrawerPanel } from '@/components/mobile-drawer-panel'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface Note {
   id: string
@@ -31,6 +32,11 @@ interface Note {
 interface CompanyOption {
   id: string
   name: string
+}
+
+interface CompanyApiRecord extends CompanyOption {
+  portfolio_group?: string | string[] | null
+  portfolioGroup?: string | string[] | null
 }
 
 interface PortfolioNotesContextValue {
@@ -68,6 +74,7 @@ export function PortfolioNotesProvider({ children, pageContext }: { children: Re
 }
 
 export function PortfolioNotesButton() {
+  const t = useTranslations('PortfolioNotes')
   const ctx = useContext(PortfolioNotesContext)
   const fv = useFeatureVisibility()
   if (!ctx) return null
@@ -86,7 +93,7 @@ export function PortfolioNotesButton() {
           <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
         )}
       </span>
-      Notes
+      {t('button')}
       {notesAdminOnly && <Lock className="h-3 w-3 text-amber-500" />}
       {!open && unreadCount > 0 && (
         <span className="text-[10px] font-medium bg-blue-500 text-white rounded-full px-1 min-w-[16px] text-center">
@@ -107,22 +114,9 @@ export function PortfolioNotesPanel() {
   )
 }
 
-function formatRelativeTime(dateStr: string) {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHr = Math.floor(diffMs / 3600000)
-  const diffDay = Math.floor(diffMs / 86400000)
-
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  if (diffHr < 24) return `${diffHr}h ago`
-  if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
 function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?: string }) {
+  const t = useTranslations('PortfolioNotes')
+  const format = useFormatter()
   const { fundName } = useAnalystContext()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(false)
@@ -138,6 +132,20 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<MentionTextareaRef | null>(null)
 
+  function formatRelativeTime(dateStr: string) {
+    const date = new Date(dateStr)
+    const diffMs = Date.now() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60_000)
+    const diffHr = Math.floor(diffMs / 3_600_000)
+    const diffDay = Math.floor(diffMs / 86_400_000)
+
+    if (diffMin < 1) return t('time.justNow')
+    if (diffMin < 60) return t('time.minutesAgo', { count: diffMin })
+    if (diffHr < 24) return t('time.hoursAgo', { count: diffHr })
+    if (diffDay < 7) return t('time.daysAgo', { count: diffDay })
+    return format.dateTime(date, { month: 'short', day: 'numeric' })
+  }
+
   useEffect(() => {
     fetch('/api/notes/members').then(r => r.json()).then(data => {
       if (Array.isArray(data)) setMembers(data)
@@ -145,10 +153,11 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
 
     fetch('/api/companies').then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
-        setCompanies(data.map((c: any) => ({ id: c.id, name: c.name })))
+        const companyRows = data as CompanyApiRecord[]
+        setCompanies(companyRows.map(c => ({ id: c.id, name: c.name })))
         // Extract distinct portfolio groups
         const allGroups = new Set<string>()
-        for (const c of data) {
+        for (const c of companyRows) {
           const pg = c.portfolio_group ?? c.portfolioGroup
           if (Array.isArray(pg)) {
             for (const g of pg) if (g) allGroups.add(g)
@@ -213,8 +222,10 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
     if (!content.trim() || posting) return
     setPosting(true)
     try {
-      const body: any = { content: content.trim() }
-      if (pageContext) body.pageContext = pageContext
+      const body = {
+        content: content.trim(),
+        ...(pageContext ? { pageContext } : {}),
+      }
       const res = await fetch('/api/dashboard/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -281,18 +292,18 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
     <div className="flex flex-col h-full">
     <div className="max-h-[80vh] lg:max-h-[calc(100vh-6rem)] rounded-lg border bg-card flex flex-col flex-1">
       <div className="px-4 py-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-muted-foreground">Team Notes</h2>
-        <button onClick={toggle} className="hidden lg:block">
+        <h2 className="text-sm font-medium text-muted-foreground">{t('title')}</h2>
+        <button onClick={toggle} className="hidden lg:block" title={t('close')} aria-label={t('close')}>
           <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
         </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-3 space-y-3">
         {loading && (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">{t('loading')}</p>
         )}
         {!loading && notes.length === 0 && (
-          <p className="text-sm text-muted-foreground">No notes yet.</p>
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
         )}
         {notes.map(note => (
           <div key={note.id} className={`group ${note.pinnedAt ? 'border-l-2 border-foreground/20 pl-2' : ''}`}>
@@ -310,10 +321,10 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
                 {formatRelativeTime(note.createdAt)}
               </span>
               {note.edited && (
-                <span className="text-[10px] text-muted-foreground italic">edited</span>
+                <span className="text-[10px] text-muted-foreground italic">{t('edited')}</span>
               )}
               <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-auto flex items-center gap-1">
-                <button onClick={() => handlePin(note.id, !note.pinnedAt)} title={note.pinnedAt ? 'Unpin' : 'Pin'}>
+                <button onClick={() => handlePin(note.id, !note.pinnedAt)} title={note.pinnedAt ? t('unpin') : t('pin')} aria-label={note.pinnedAt ? t('unpin') : t('pin')}>
                   {note.pinnedAt ? (
                     <PinOff className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   ) : (
@@ -321,12 +332,12 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
                   )}
                 </button>
                 {currentUserId && note.userId === currentUserId && (
-                  <button onClick={() => startEditing(note)}>
+                  <button onClick={() => startEditing(note)} title={t('edit')} aria-label={t('edit')}>
                     <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 )}
                 {currentUserId && (note.userId === currentUserId || isAdmin) && (
-                  <button onClick={() => handleDelete(note.id)}>
+                  <button onClick={() => handleDelete(note.id)} title={t('delete')} aria-label={t('delete')}>
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                   </button>
                 )}
@@ -361,10 +372,10 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
                   autoFocus
                 />
                 <div className="flex flex-col gap-1 self-end">
-                  <button onClick={() => handleEdit(note.id)}>
+                  <button onClick={() => handleEdit(note.id)} title={t('saveEdit')} aria-label={t('saveEdit')}>
                     <Check className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
                   </button>
-                  <button onClick={() => { setEditingId(null); setEditContent('') }}>
+                  <button onClick={() => { setEditingId(null); setEditContent('') }} title={t('cancelEdit')} aria-label={t('cancelEdit')}>
                     <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
                   </button>
                 </div>
@@ -391,7 +402,7 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
                 handlePost()
               }
             }}
-            placeholder="Write a note... (@ to tag people, companies, or groups)"
+            placeholder={t('placeholder')}
             rows={2}
             className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
@@ -399,6 +410,8 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
             onClick={handlePost}
             disabled={!content.trim() || posting}
             className="shrink-0 self-end px-2.5 py-2"
+            title={t('send')}
+            aria-label={t('send')}
           >
             <Send className="h-3.5 w-3.5" />
           </Button>
@@ -406,7 +419,7 @@ function NotesPanel({ toggle, pageContext }: { toggle: () => void; pageContext?:
       </div>
     </div>
     <p className="text-[10px] text-muted-foreground/60 text-center mt-3 px-4 shrink-0">
-      All chat history is saved by {fundName}.
+      {t('historySaved', { fundName })}
     </p>
     </div>
   )

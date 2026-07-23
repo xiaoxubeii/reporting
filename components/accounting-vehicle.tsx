@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { ChevronsUpDown } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 /** One selectable vehicle: its name (the portfolio_group the ledger keys on) and its
  *  stable registry id. `id` is null for legacy vehicles that exist only as a name. */
@@ -124,6 +125,7 @@ export function useLedgerFetch() {
  * Hidden when there's nothing to switch to (one vehicle or none).
  */
 export function FundSwitcher() {
+  const t = useTranslations('Funds.shared')
   const pathname = usePathname()
   const router = useRouter()
   const { group, setVehicle } = useVehicle()
@@ -154,7 +156,7 @@ export function FundSwitcher() {
       <select
         value={group ?? ''}
         onChange={onChange}
-        aria-label="Jump to fund"
+        aria-label={t('jumpToFund')}
         className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors max-w-[16rem] truncate"
       >
         {vehicles.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}

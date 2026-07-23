@@ -4,8 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { InboxView } from './inbox-view'
+import { getTranslations } from 'next-intl/server'
 
-export const metadata: Metadata = { title: 'Memo Inbox' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Diligence.metadata')
+  return { title: t('inbox') }
+}
 
 export default async function InboxPage() {
   const supabase = createClient()

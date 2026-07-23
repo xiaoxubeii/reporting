@@ -10,6 +10,8 @@ import type { Metric } from '@/lib/types/database'
 import { MetricChart } from './metric-chart'
 import { AddDataPointDialog } from './add-data-point-dialog'
 import { CompanyDefaultMetricsDialog, type DefaultMetricStatus } from './default-metrics-dialog'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
+import { formatPeriodLabel } from '@/lib/i18n/format-period-label'
 
 interface MetricValueRow {
   id: string
@@ -37,6 +39,9 @@ interface Props {
 }
 
 export function CompanyCharts({ companyId, companyName, metrics }: Props) {
+  const t = useTranslations('CompanyDetail.metrics')
+  const format = useFormatter()
+  const locale = useLocale()
   const router = useRouter()
   const [valuesByMetric, setValuesByMetric] = useState<Record<string, MetricValueRow[]>>({})
   const [loading, setLoading] = useState(true)
@@ -91,7 +96,10 @@ export function CompanyCharts({ companyId, companyName, metrics }: Props) {
 
   const exportCsv = () => {
     const rows: string[][] = [
-      ['Company', 'Metric', 'Period', 'Value', 'Unit', 'Confidence', 'Source', 'Date Entered'],
+      [
+        t('csv.company'), t('csv.metric'), t('csv.period'), t('csv.value'),
+        t('csv.unit'), t('csv.confidence'), t('csv.source'), t('csv.dateEntered'),
+      ],
     ]
     for (const m of metrics) {
       const values = valuesByMetric[m.id] ?? []
@@ -99,17 +107,17 @@ export function CompanyCharts({ companyId, companyName, metrics }: Props) {
         const value = v.value_number !== null ? String(v.value_number) : (v.value_text ?? '')
         const unit = m.unit ?? ''
         const source = v.is_manually_entered
-          ? 'Manual'
-          : (v.inbound_emails?.subject ?? 'Email')
+          ? t('csv.manual')
+          : (v.inbound_emails?.subject ?? t('csv.email'))
         rows.push([
           companyName,
           m.name,
-          v.period_label,
+          formatPeriodLabel(v, locale),
           value,
           unit,
           v.confidence,
           source,
-          v.created_at ? new Date(v.created_at).toLocaleDateString() : '',
+          v.created_at ? format.dateTime(new Date(v.created_at), { dateStyle: 'short' }) : '',
         ])
       }
     }
@@ -128,7 +136,7 @@ export function CompanyCharts({ companyId, companyName, metrics }: Props) {
     <Dialog open={addMetricOpen} onOpenChange={setAddMetricOpen}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add Metric</DialogTitle>
+          <DialogTitle>{t('addTitle')}</DialogTitle>
         </DialogHeader>
         <MetricForm
           companyId={companyId}
@@ -147,16 +155,16 @@ export function CompanyCharts({ companyId, companyName, metrics }: Props) {
       <>
         <div className="rounded-lg border border-dashed p-12 text-center space-y-3">
           <p className="text-muted-foreground">
-            No metrics configured yet. Add metrics to this company to start tracking data.
+            {t('empty')}
           </p>
           <div className="flex items-center justify-center gap-2">
             <Button size="sm" onClick={() => setAddMetricOpen(true)}>
               <Plus className="h-4 w-4 mr-1.5" />
-              Add metric
+              {t('add')}
             </Button>
             {fundHasDefaults && (
               <Button size="sm" variant="outline" onClick={() => setDefaultsOpen(true)}>
-                Use fund defaults{availableDefaults > 0 ? ` (${availableDefaults})` : ''}
+                {t('useFundDefaults', { count: availableDefaults })}
               </Button>
             )}
           </div>
@@ -194,7 +202,7 @@ export function CompanyCharts({ companyId, companyName, metrics }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold tracking-tight">Metrics</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{t('title')}</h2>
         <div className="flex items-center gap-3">
           {hasData && (
             <button
@@ -202,17 +210,17 @@ export function CompanyCharts({ companyId, companyName, metrics }: Props) {
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
               <Download className="h-3.5 w-3.5" />
-              Export CSV
+              {t('exportCsv')}
             </button>
           )}
           {fundHasDefaults && (
             <Button size="sm" variant="ghost" onClick={() => setDefaultsOpen(true)} className="text-muted-foreground">
-              Fund defaults{availableDefaults > 0 ? ` (${availableDefaults})` : ''}
+              {t('fundDefaults', { count: availableDefaults })}
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={() => setAddMetricOpen(true)} className="text-muted-foreground">
             <Plus className="h-4 w-4 mr-1.5" />
-            Add metric
+            {t('add')}
           </Button>
         </div>
       </div>
@@ -249,6 +257,7 @@ function MetricChartCard({
   onRefresh: () => void
   onDelete: (id: string) => void
 }) {
+  const t = useTranslations('CompanyDetail.metrics')
   const router = useRouter()
   const [addOpen, setAddOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -282,7 +291,7 @@ function MetricChartCard({
             onClick={() => setAddOpen(true)}
             className="text-[11px] text-primary hover:underline"
           >
-            + Add
+            {t('addShort')}
           </button>
           <button
             onClick={() => setEditOpen(true)}
@@ -302,7 +311,10 @@ function MetricChartCard({
       {confirmStep >= 1 ? (
         <div className="h-[180px] flex flex-col items-center justify-center rounded border border-dashed border-destructive/30 bg-destructive/5 gap-3 px-4">
           <p className="text-sm text-center">
-            Delete <strong>{metric.name}</strong> and all its data? This cannot be undone.
+            {t.rich('deleteConfirm', {
+              name: metric.name,
+              strong: chunks => <strong>{chunks}</strong>,
+            })}
           </p>
           <div className="flex items-center gap-3">
             <Button
@@ -314,21 +326,21 @@ function MetricChartCard({
               {confirmStep === 2 ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
               ) : null}
-              Delete
+              {t('delete')}
             </Button>
             <button
               onClick={() => setConfirmStep(0)}
               className="text-xs text-muted-foreground hover:text-foreground"
               disabled={confirmStep === 2}
             >
-              Cancel
+              {t('cancel')}
             </button>
           </div>
         </div>
       ) : values.length === 0 ? (
         <div className="h-[180px] flex items-center justify-center rounded border border-dashed">
           <p className="text-xs text-muted-foreground text-center px-3">
-            No data yet. Add data points manually or process a report.
+            {t('noData')}
           </p>
         </div>
       ) : (
@@ -351,7 +363,7 @@ function MetricChartCard({
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Metric</DialogTitle>
+            <DialogTitle>{t('editTitle')}</DialogTitle>
           </DialogHeader>
           <MetricForm
             companyId={companyId}

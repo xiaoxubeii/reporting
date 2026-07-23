@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { useLpPortalEnabled } from '@/components/feature-visibility-context'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -13,16 +14,6 @@ type SendResult = { sent: number; primaryRecipients: number; ccRecipients: numbe
 type Recipient = { to: string; name: string | null; cc: string[]; investorCount: number }
 type PreviewData = { subject: string; itemTitle: string; fromName: string; html: string; attachment: boolean; recipients: Recipient[] }
 
-const DELIVERY_OPTIONS: { value: Delivery; label: string; hint: string }[] = [
-  { value: 'link', label: 'Secure portal link', hint: 'LPs sign in to view and download.' },
-  { value: 'attachment', label: 'PDF attachment', hint: 'Attach the file directly to the email.' },
-  { value: 'both', label: 'Both', hint: 'Include the portal link and attach the PDF.' },
-]
-
-const KIND_LABEL: Record<'snapshot' | 'letter' | 'document', string> = {
-  snapshot: 'statement', letter: 'letter', document: 'document',
-}
-
 /**
  * A "Send to LPs" button + modal for emailing an already-shared item to selected LPs.
  *
@@ -34,6 +25,7 @@ const KIND_LABEL: Record<'snapshot' | 'letter' | 'document', string> = {
 export function LpSendControl({ kind, id, itemTitle }: {
   kind: 'snapshot' | 'letter' | 'document'; id: string; itemTitle?: string
 }) {
+  const t = useTranslations('LPs.admin.send')
   const lpPortalEnabled = useLpPortalEnabled()
   const [open, setOpen] = useState(false)
   const [stage, setStage] = useState<'compose' | 'review' | 'result'>('compose')
@@ -52,7 +44,12 @@ export function LpSendControl({ kind, id, itemTitle }: {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SendResult | null>(null)
 
-  const kindLabel = KIND_LABEL[kind]
+  const kindLabel = t(`kinds.${kind}`)
+  const deliveryOptions: { value: Delivery; label: string; hint: string }[] = [
+    { value: 'link', label: t('delivery.link.label'), hint: t('delivery.link.hint') },
+    { value: 'attachment', label: t('delivery.attachment.label'), hint: t('delivery.attachment.hint') },
+    { value: 'both', label: t('delivery.both.label'), hint: t('delivery.both.hint') },
+  ]
 
   useEffect(() => {
     if (!open) return
@@ -60,7 +57,7 @@ export function LpSendControl({ kind, id, itemTitle }: {
     fetch(`/api/lps/send?kind=${kind}&id=${encodeURIComponent(id)}`)
       .then(r => (r.ok ? r.json() : { investors: [], portalEnabled: null }))
       .then(data => {
-        const invs = (Array.isArray(data.investors) ? data.investors : []).map((i: any) => ({ id: i.id, name: i.name }))
+        const invs = (Array.isArray(data.investors) ? data.investors : []).map((i: Investor) => ({ id: i.id, name: i.name }))
         setEligible(invs)
         setSelected(new Set(invs.map((i: Investor) => i.id))) // default: everyone who can see it
         setPortalEnabled(data.portalEnabled ?? null)
@@ -87,15 +84,15 @@ export function LpSendControl({ kind, id, itemTitle }: {
         body: JSON.stringify({ ...body(), preview: true }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(data.error || 'Could not prepare the preview.'); return }
+      if (!res.ok) { setError(data.error || t('errors.preview')); return }
       if (!data.recipients || data.recipients.length === 0) {
-        setError('None of the selected LPs have a portal account to email yet. Invite them from Settings → LP access.')
+        setError(t('errors.noAccounts'))
         return
       }
       setPreview(data as PreviewData)
       setStage('review')
     } catch {
-      setError('Could not prepare the preview.')
+      setError(t('errors.preview'))
     } finally {
       setPreviewing(false)
     }
@@ -109,11 +106,11 @@ export function LpSendControl({ kind, id, itemTitle }: {
         body: JSON.stringify(body()),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(data.error || 'Could not send.'); return }
+      if (!res.ok) { setError(data.error || t('errors.send')); return }
       setResult(data as SendResult)
       setStage('result')
     } catch {
-      setError('Could not send.')
+      setError(t('errors.send'))
     } finally {
       setSending(false)
     }
@@ -135,18 +132,18 @@ export function LpSendControl({ kind, id, itemTitle }: {
     <>
       <Button variant="outline" size="sm" className="text-muted-foreground" onClick={() => { reset(); setOpen(true) }}>
         <Send className="h-4 w-4 mr-1" />
-        Send to LPs
+        {t('button')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {stage === 'review' ? 'Review before sending' : stage === 'result' ? 'Sent' : 'Send to LPs'}
+              {stage === 'review' ? t('reviewTitle') : stage === 'result' ? t('sentTitle') : t('title')}
             </DialogTitle>
             <DialogDescription>
               {stage === 'review'
-                ? 'This is exactly what will be emailed, and to whom. Nothing has been sent yet.'
-                : `Email this ${kindLabel} to selected LPs. Authorized users on each LP's account are Cc'd automatically.`}
+                ? t('reviewDescription')
+                : t('description', { kind: kindLabel })}
             </DialogDescription>
           </DialogHeader>
 
@@ -156,16 +153,15 @@ export function LpSendControl({ kind, id, itemTitle }: {
               <div className="flex items-start gap-2 rounded-md border border-emerald-300/50 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 text-sm text-emerald-700 dark:text-emerald-400">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
-                  Sent to {result.sent} LP{result.sent === 1 ? '' : 's'}
-                  {result.ccRecipients > 0 && `, plus ${result.ccRecipients} authorized user${result.ccRecipients === 1 ? '' : 's'}`}.
+                  {t('result.sent', { sent: result.sent, cc: result.ccRecipients })}
                   {result.failures.length > 0 && (
-                    <div className="text-amber-700 dark:text-amber-400 mt-1">{result.failures.length} failed: {result.failures.join(', ')}</div>
+                    <div className="text-amber-700 dark:text-amber-400 mt-1">{t('result.failed', { count: result.failures.length, failures: result.failures.join(', ') })}</div>
                   )}
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={reset}>Send another</Button>
-                <Button size="sm" onClick={() => setOpen(false)}>Done</Button>
+                <Button variant="outline" size="sm" onClick={reset}>{t('sendAnother')}</Button>
+                <Button size="sm" onClick={() => setOpen(false)}>{t('done')}</Button>
               </div>
             </div>
 
@@ -175,19 +171,19 @@ export function LpSendControl({ kind, id, itemTitle }: {
               {/* Recipients — the actual addresses */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" /> Recipients — {totalTo} To{totalCc > 0 ? `, ${totalCc} Cc` : ''}
+                  <Users className="h-3.5 w-3.5" /> {t('reviewRecipients', { to: totalTo, cc: totalCc })}
                 </label>
                 <div className="rounded-md border divide-y max-h-[26vh] overflow-y-auto text-sm">
                   {preview.recipients.map((r, i) => (
                     <div key={i} className="px-3 py-2 min-w-0">
                       <div className="flex items-baseline gap-2 min-w-0">
-                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0 w-6">To</span>
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0 w-6">{t('to')}</span>
                         <span className="font-mono text-xs truncate">{r.to}</span>
                         {r.name && <span className="text-xs text-muted-foreground truncate">({r.name})</span>}
                       </div>
                       {r.cc.map((c, j) => (
                         <div key={j} className="flex items-baseline gap-2 min-w-0 mt-0.5">
-                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0 w-6">Cc</span>
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0 w-6">{t('cc')}</span>
                           <span className="font-mono text-xs truncate text-muted-foreground">{c}</span>
                         </div>
                       ))}
@@ -198,15 +194,15 @@ export function LpSendControl({ kind, id, itemTitle }: {
 
               {/* The email itself */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Email</label>
+                <label className="text-xs font-medium text-muted-foreground">{t('email')}</label>
                 <div className="rounded-md border overflow-hidden">
                   <div className="px-3 py-2 border-b bg-muted/40 text-xs space-y-0.5">
-                    <div><span className="text-muted-foreground">Subject:</span> <span className="font-medium">{preview.subject}</span></div>
+                    <div><span className="text-muted-foreground">{t('subject')}:</span> <span className="font-medium">{preview.subject}</span></div>
                     {preview.attachment && (
-                      <div className="flex items-center gap-1 text-muted-foreground"><Paperclip className="h-3 w-3" /> PDF attached</div>
+                      <div className="flex items-center gap-1 text-muted-foreground"><Paperclip className="h-3 w-3" /> {t('pdfAttached')}</div>
                     )}
                   </div>
-                  <iframe title="Email preview" srcDoc={preview.html} className="w-full h-64 bg-white" sandbox="" />
+                  <iframe title={t('emailPreview')} srcDoc={preview.html} className="w-full h-64 bg-white" sandbox="" />
                 </div>
               </div>
 
@@ -214,11 +210,11 @@ export function LpSendControl({ kind, id, itemTitle }: {
 
               <div className="flex items-center justify-between gap-2">
                 <Button variant="ghost" size="sm" onClick={() => { setStage('compose'); setError(null) }} disabled={sending}>
-                  <ArrowLeft className="h-4 w-4 mr-1" /> Edit
+                  <ArrowLeft className="h-4 w-4 mr-1" /> {t('edit')}
                 </Button>
                 <Button size="sm" onClick={send} disabled={sending}>
                   {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
-                  Send to {totalTo} LP{totalTo === 1 ? '' : 's'}
+                  {t('sendToCount', { count: totalTo })}
                 </Button>
               </div>
             </div>
@@ -228,25 +224,24 @@ export function LpSendControl({ kind, id, itemTitle }: {
             <div className="space-y-4 min-w-0">
               {portalEnabled === false && delivery !== 'attachment' && (
                 <div className="text-xs rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-2.5 py-2">
-                  The LP portal is off, so portal links won&apos;t work. Enable it in{' '}
-                  <a href="/settings" className="underline">Settings → LP Portal</a>, or send as a PDF attachment.
+                  {t.rich('portalOff', { settings: chunks => <a href="/settings" className="underline">{chunks}</a> })}
                 </div>
               )}
 
               {loading ? (
-                <div className="text-xs text-muted-foreground py-4"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> Loading…</div>
+                <div className="text-xs text-muted-foreground py-4"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</div>
               ) : eligible.length === 0 ? (
                 <div className="text-xs text-muted-foreground py-4">
-                  This {kindLabel} isn&apos;t shared with any LPs yet.{kind === 'document' ? ' Share it from the upload form above.' : ' Use “Share with LPs” first.'}
+                  {t(kind === 'document' ? 'emptyDocument' : 'emptyShared', { kind: kindLabel })}
                 </div>
               ) : (
                 <>
                   {/* Recipients */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-muted-foreground">Recipients ({selected.size} of {eligible.length})</label>
+                      <label className="text-xs font-medium text-muted-foreground">{t('recipients', { selected: selected.size, total: eligible.length })}</label>
                       <button onClick={() => setSelected(allSelected ? new Set() : new Set(eligible.map(i => i.id)))} className="text-[11px] text-primary hover:underline">
-                        {allSelected ? 'Deselect all' : 'Select all'}
+                        {allSelected ? t('deselectAll') : t('selectAll')}
                       </button>
                     </div>
                     <div className="rounded-md border divide-y max-h-[28vh] overflow-y-auto min-w-0">
@@ -257,14 +252,14 @@ export function LpSendControl({ kind, id, itemTitle }: {
                         </label>
                       ))}
                     </div>
-                    <p className="text-[11px] text-muted-foreground">You&apos;ll see the exact email addresses on the next step, before anything sends.</p>
+                    <p className="text-[11px] text-muted-foreground">{t('addressesHint')}</p>
                   </div>
 
                   {/* Delivery */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Delivery</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('deliveryTitle')}</label>
                     <div className="grid grid-cols-3 gap-2">
-                      {DELIVERY_OPTIONS.map(opt => (
+                      {deliveryOptions.map(opt => (
                         <button
                           key={opt.value}
                           onClick={() => setDelivery(opt.value)}
@@ -277,26 +272,26 @@ export function LpSendControl({ kind, id, itemTitle }: {
                         </button>
                       ))}
                     </div>
-                    <p className="text-[11px] text-muted-foreground">{DELIVERY_OPTIONS.find(o => o.value === delivery)?.hint}</p>
+                    <p className="text-[11px] text-muted-foreground">{deliveryOptions.find(o => o.value === delivery)?.hint}</p>
                   </div>
 
                   {/* Subject + message */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Subject</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('subject')}</label>
                     <input
                       value={subject}
                       onChange={e => setSubject(e.target.value)}
-                      placeholder={itemTitle ? `${itemTitle}` : 'Optional — a default is used if blank'}
+                      placeholder={itemTitle ?? t('subjectPlaceholder')}
                       className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Message</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('message')}</label>
                     <textarea
                       value={message}
                       onChange={e => setMessage(e.target.value)}
                       rows={4}
-                      placeholder="Write a short note to your LPs…"
+                      placeholder={t('messagePlaceholder')}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
                     />
                   </div>
@@ -304,10 +299,10 @@ export function LpSendControl({ kind, id, itemTitle }: {
                   {error && <div className="text-xs rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-2 text-destructive">{error}</div>}
 
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={previewing}>Cancel</Button>
+                    <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={previewing}>{t('cancel')}</Button>
                     <Button size="sm" onClick={goReview} disabled={previewing || selected.size === 0}>
                       {previewing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                      Review {selected.size} recipient{selected.size === 1 ? '' : 's'}
+                      {t('reviewCount', { count: selected.size })}
                     </Button>
                   </div>
                 </>

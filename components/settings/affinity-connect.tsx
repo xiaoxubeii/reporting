@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +25,7 @@ interface Status {
 }
 
 export function AffinityConnect() {
+  const t = useTranslations('Settings.affinity')
   const [status, setStatus] = useState<Status | null>(null)
   const [apiKey, setApiKey] = useState('')
   const [saving, setSaving] = useState(false)
@@ -73,7 +75,7 @@ export function AffinityConnect() {
       })
       const body = await res.json()
       if (!res.ok) {
-        setError(body.error ?? 'Could not connect')
+        setError(body.error ?? t('connectFailed'))
         return
       }
       setStatus({
@@ -85,7 +87,7 @@ export function AffinityConnect() {
       })
       setApiKey('')
     } catch {
-      setError('Could not reach Affinity.')
+      setError(t('unreachable'))
     } finally {
       setSaving(false)
     }
@@ -107,14 +109,10 @@ export function AffinityConnect() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Connect your Affinity account to pull company notes and attached files into diligence
-          data rooms, and to let the diligence assistant answer questions about your relationship
-          history.
+          {t('description')}
         </p>
         <p className="text-xs text-muted-foreground">
-          Affinity issues one key per person, scoped to what you can see. Yours is stored encrypted
-          and is never shown again after you save it. Notes you import go into the shared data room
-          for the whole fund.
+          {t('keyHelp')}
         </p>
 
         {status.connected ? (
@@ -122,7 +120,7 @@ export function AffinityConnect() {
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <span>
-                Connected as {status.affinity_user_name ?? status.affinity_user_email ?? 'your Affinity account'}
+                {t('connectedAs', { account: status.affinity_user_name ?? status.affinity_user_email ?? t('yourAccount') })}
                 {status.affinity_user_name && status.affinity_user_email && (
                   <span className="text-muted-foreground"> ({status.affinity_user_email})</span>
                 )}
@@ -132,7 +130,7 @@ export function AffinityConnect() {
             {status.last_error && (
               <div className="flex items-start gap-2 text-sm text-amber-600">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{status.last_error} Re-enter your key below to reconnect.</span>
+                <span>{status.last_error} {t('reconnectHelp')}</span>
               </div>
             )}
 
@@ -141,14 +139,14 @@ export function AffinityConnect() {
                 type="password"
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
-                placeholder="Replace with a new key…"
+                placeholder={t('replaceKey')}
                 autoComplete="off"
               />
               <Button onClick={connect} disabled={saving || !apiKey.trim()}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update'}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('update')}
               </Button>
               <Button variant="outline" onClick={disconnect} disabled={saving}>
-                Disconnect
+                {t('disconnect')}
               </Button>
             </div>
           </>
@@ -159,11 +157,11 @@ export function AffinityConnect() {
               value={apiKey}
               onChange={e => setApiKey(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && apiKey.trim()) connect() }}
-              placeholder="Affinity API key"
+              placeholder={t('apiKey')}
               autoComplete="off"
             />
             <Button onClick={connect} disabled={saving || !apiKey.trim()}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('connect')}
             </Button>
           </div>
         )}
@@ -171,30 +169,18 @@ export function AffinityConnect() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <p className="text-xs text-muted-foreground">
-          Generate a key in Affinity under Settings → API. Requires the “Generate an API key”
-          permission from your Affinity admin.
+          {t('generateKeyHelp')}
         </p>
 
         {/* How the sync actually behaves. It was doing all of this already and saying none
             of it, so nobody could tell whether they had to press anything. */}
         {status.connected && (
           <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
-            <p className="text-xs font-medium">How the sync works</p>
+            <p className="text-xs font-medium">{t('sync.title')}</p>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc ml-4">
-              <li>
-                <strong>Link a deal once</strong> to an Affinity organization on the deal&rsquo;s
-                Diligence page. Nothing syncs until you do — the app will not guess which CRM
-                record a deal is.
-              </li>
-              <li>
-                <strong>Then it pulls automatically, hourly</strong>, for every active deal:
-                new notes and attached files land in that deal&rsquo;s data room. Passed and won
-                deals stop syncing.
-              </li>
-              <li>
-                <strong>&ldquo;Import now&rdquo;</strong> on the deal forces an immediate pull if you
-                don&rsquo;t want to wait for the hour.
-              </li>
+              <li>{t.rich('sync.link', { strong: chunks => <strong>{chunks}</strong> })}</li>
+              <li>{t.rich('sync.hourly', { strong: chunks => <strong>{chunks}</strong> })}</li>
+              <li>{t.rich('sync.now', { strong: chunks => <strong>{chunks}</strong> })}</li>
             </ul>
           </div>
         )}
@@ -211,12 +197,9 @@ export function AffinityConnect() {
               className="mt-1 h-3.5 w-3.5"
             />
             <span>
-              Let the assistant query Affinity live
+              {t('assistant.enable')}
               <span className="block text-xs text-muted-foreground">
-                Uses Affinity&rsquo;s hosted MCP server rather than the three built-in REST tools, so
-                the assistant can reach lists, fields and relationship data instead of just notes and
-                files. Fund-wide — but each person still authenticates with their own key, so nobody
-                sees a CRM record they couldn&rsquo;t open in Affinity themselves.
+                {t('assistant.help')}
               </span>
             </span>
             {savingMcp && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, createContext, useContext, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -30,6 +31,7 @@ export function useConfirm(): ConfirmFn {
 }
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('Common')
   const [open, setOpen] = useState(false)
   const [options, setOptions] = useState<ConfirmOptions>({
     description: '',
@@ -62,18 +64,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       <Dialog open={open} onOpenChange={(o) => { if (!o) handleCancel() }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{options.title ?? 'Confirm'}</DialogTitle>
+            <DialogTitle>{options.title ?? t('confirm')}</DialogTitle>
             <DialogDescription>{options.description}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={handleCancel}>
-              {options.cancelLabel ?? 'Cancel'}
+              {options.cancelLabel ?? t('cancel')}
             </Button>
             <Button
               variant={options.variant ?? 'default'}
               onClick={handleConfirm}
             >
-              {options.confirmLabel ?? 'Confirm'}
+              {options.confirmLabel ?? t('confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

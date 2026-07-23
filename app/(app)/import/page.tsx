@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -43,7 +44,7 @@ interface FileMatch {
   companyName: string | null
   confidence: string
   status: 'pending' | 'uploading' | 'done' | 'error'
-  error?: string
+  error?: ImportUiError
   textOnly?: boolean
 }
 
@@ -52,23 +53,36 @@ interface Company {
   name: string
 }
 
+type ImportUiError =
+  | string
+  | { code: 'importFailed' | 'unexpected' | 'autoMatchingFailed' | 'fileTooLarge' | 'registrationFailed' | 'uploadFailed' | 'allUploadsFailed' }
+  | { code: 'serverProcessingError'; status: number }
+  | { code: 'serverResponseError'; status: number; detail: string }
+
+class CatalogImportError extends Error {
+  constructor(readonly uiError: ImportUiError) {
+    super('Localized import error')
+  }
+}
+
 const ACCEPTED_DOC_TYPES = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.jpg,.jpeg,.png'
 const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
 const TEXT_ONLY_THRESHOLD = 10 * 1024 * 1024 // 10 MB, files above this get text-only extraction
 
 export default function ImportPage() {
+  const t = useTranslations('Import')
   const fv = useFeatureVisibility()
   const [text, setText] = useState('')
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ImportUiError | null>(null)
 
   // Document upload state
   const [docFiles, setDocFiles] = useState<FileMatch[]>([])
   const [matching, setMatching] = useState(false)
   const [uploadingAll, setUploadingAll] = useState(false)
-  const [docError, setDocError] = useState<string | null>(null)
-  const [docSuccess, setDocSuccess] = useState<string | null>(null)
+  const [docError, setDocError] = useState<ImportUiError | null>(null)
+  const [docSuccess, setDocSuccess] = useState<{ successCount: number; errorCount: number } | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
   const [fundId, setFundId] = useState<string | null>(null)
   const docInputRef = useRef<HTMLInputElement>(null)
@@ -77,13 +91,38 @@ export default function ImportPage() {
   const [investmentText, setInvestmentText] = useState('')
   const [investmentImporting, setInvestmentImporting] = useState(false)
   const [investmentResult, setInvestmentResult] = useState<InvestmentImportResult | null>(null)
-  const [investmentError, setInvestmentError] = useState<string | null>(null)
+  const [investmentError, setInvestmentError] = useState<ImportUiError | null>(null)
 
   // Fund cash flow import state
   const [cashFlowText, setCashFlowText] = useState('')
   const [cashFlowImporting, setCashFlowImporting] = useState(false)
   const [cashFlowResult, setCashFlowResult] = useState<CashFlowImportResult | null>(null)
-  const [cashFlowError, setCashFlowError] = useState<string | null>(null)
+  const [cashFlowError, setCashFlowError] = useState<ImportUiError | null>(null)
+
+  function renderUiError(message: ImportUiError): string {
+    if (typeof message === 'string') return message
+
+    switch (message.code) {
+      case 'importFailed':
+        return t('errors.importFailed')
+      case 'unexpected':
+        return t('errors.unexpected')
+      case 'autoMatchingFailed':
+        return t('errors.autoMatchingFailed')
+      case 'fileTooLarge':
+        return t('errors.fileTooLarge')
+      case 'registrationFailed':
+        return t('errors.registrationFailed')
+      case 'uploadFailed':
+        return t('errors.uploadFailed')
+      case 'allUploadsFailed':
+        return t('errors.allUploadsFailed')
+      case 'serverProcessingError':
+        return t('errors.serverProcessingError', { status: message.status })
+      case 'serverResponseError':
+        return t('errors.serverResponseError', { status: message.status, detail: message.detail })
+    }
+  }
 
   // Load companies for the dropdown and get fund_id
   useEffect(() => {
@@ -130,13 +169,13 @@ export default function ImportPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error ?? 'Import failed')
+        setError(typeof data.error === 'string' ? data.error : { code: 'importFailed' })
         return
       }
 
       setResult(data)
     } catch {
-      setError('Something went wrong')
+      setError({ code: 'unexpected' })
     } finally {
       setImporting(false)
     }
@@ -187,10 +226,10 @@ export default function ImportPage() {
         }))
       } else {
         const data = await res.json()
-        setDocError(data.error ?? 'Auto-matching failed')
+        setDocError(typeof data.error === 'string' ? data.error : { code: 'autoMatchingFailed' })
       }
     } catch {
-      setDocError('Auto-matching failed')
+      setDocError({ code: 'autoMatchingFailed' })
     } finally {
       setMatching(false)
     }
@@ -227,7 +266,7 @@ export default function ImportPage() {
 
       try {
         if (fileMatch.file.size > MAX_FILE_SIZE) {
-          throw new Error('File exceeds 50 MB limit')
+          throw new CatalogImportError({ code: 'fileTooLarge' })
         }
         const isOversized = fileMatch.file.size > TEXT_ONLY_THRESHOLD
         const storagePath = `${fundId}/${fileMatch.companyId}/${crypto.randomUUID()}-${fileMatch.filename}`
@@ -238,7 +277,7 @@ export default function ImportPage() {
           .from('company-documents')
           .upload(storagePath, fileMatch.file)
 
-        if (uploadError) throw new Error(uploadError.message)
+        if (uploadError) throw new CatalogImportError(uploadError.message)
 
         // Register via API
         const res = await fetch(`/api/companies/${fileMatch.companyId}/documents`, {
@@ -254,14 +293,14 @@ export default function ImportPage() {
         })
 
         if (!res.ok) {
-          let errorMsg = 'Registration failed'
+          let errorMessage: ImportUiError = { code: 'registrationFailed' }
           try {
             const data = await res.json()
-            errorMsg = data.error ?? errorMsg
+            if (typeof data.error === 'string') errorMessage = data.error
           } catch {
-            errorMsg = `Server error (${res.status}). The file may be too large to process.`
+            errorMessage = { code: 'serverProcessingError', status: res.status }
           }
-          throw new Error(errorMsg)
+          throw new CatalogImportError(errorMessage)
         }
 
         let result: { textOnly?: boolean } = {}
@@ -278,7 +317,9 @@ export default function ImportPage() {
         ))
         successCount++
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Upload failed'
+        const message: ImportUiError = err instanceof CatalogImportError
+          ? err.uiError
+          : { code: 'uploadFailed' }
         setDocFiles(prev => prev.map(f =>
           f.filename === fileMatch.filename ? { ...f, status: 'error', error: message } : f
         ))
@@ -288,10 +329,10 @@ export default function ImportPage() {
 
     setUploadingAll(false)
     if (successCount > 0) {
-      setDocSuccess(`${successCount} document${successCount > 1 ? 's' : ''} uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`)
+      setDocSuccess({ successCount, errorCount })
     }
     if (errorCount > 0 && successCount === 0) {
-      setDocError('All uploads failed')
+      setDocError({ code: 'allUploadsFailed' })
     }
   }
 
@@ -310,13 +351,13 @@ export default function ImportPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        setInvestmentError(data.error ?? 'Import failed')
+        setInvestmentError(typeof data.error === 'string' ? data.error : { code: 'importFailed' })
         return
       }
 
       setInvestmentResult(data)
     } catch {
-      setInvestmentError('Something went wrong')
+      setInvestmentError({ code: 'unexpected' })
     } finally {
       setInvestmentImporting(false)
     }
@@ -335,24 +376,24 @@ export default function ImportPage() {
         body: JSON.stringify({ text: cashFlowText }),
       })
 
-      let data: any
+      let data: CashFlowImportResult & { error?: string }
       const contentType = res.headers.get('content-type') ?? ''
       if (contentType.includes('application/json')) {
         data = await res.json()
       } else {
         const text = await res.text()
-        setCashFlowError(`Server error (${res.status}): ${text.slice(0, 200)}`)
+        setCashFlowError({ code: 'serverResponseError', status: res.status, detail: text.slice(0, 200) })
         return
       }
 
       if (!res.ok) {
-        setCashFlowError(data.error ?? 'Import failed')
+        setCashFlowError(typeof data.error === 'string' ? data.error : { code: 'importFailed' })
         return
       }
 
       setCashFlowResult(data)
-    } catch (err) {
-      setCashFlowError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
+      setCashFlowError({ code: 'unexpected' })
     } finally {
       setCashFlowImporting(false)
     }
@@ -365,32 +406,36 @@ export default function ImportPage() {
     <div className="p-4 md:p-8">
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.imports === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}Import</h1>
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.imports === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
           <AnalystToggleButton />
         </div>
-        <p className="text-sm text-muted-foreground">Upload documents and spreadsheets to populate your portfolio</p>
+        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
       <div className="flex-1 min-w-0 max-w-3xl w-full">
       {/* Document Upload Section */}
       <div>
-        <h2 className="text-xl font-semibold tracking-tight mb-2">Document Upload</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-2">{t('document.title')}</h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Upload documents (strategy decks, board materials, reports) and auto-match them to portfolio companies. These provide additional context for the AI analyst.
+          {t('document.description')}
         </p>
 
         {docError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{docError}</AlertDescription>
+            <AlertDescription>{renderUiError(docError)}</AlertDescription>
           </Alert>
         )}
 
         {docSuccess && (
           <Alert className="mb-4">
             <CheckCircle2 className="h-4 w-4" />
-            <AlertDescription>{docSuccess}</AlertDescription>
+            <AlertDescription>
+              {docSuccess.errorCount > 0
+                ? t('document.uploadSuccessWithFailures', docSuccess)
+                : t('document.uploadSuccess', docSuccess)}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -410,15 +455,15 @@ export default function ImportPage() {
               disabled={matching || uploadingAll}
             >
               <Upload className="h-4 w-4 mr-2" />
-              Select Files
+              {t('document.selectFiles')}
             </Button>
-            <p className="text-xs text-muted-foreground mt-1.5">Max 20 MB per file. Files over 10 MB will have text extracted only.</p>
+            <p className="text-xs text-muted-foreground mt-1.5">{t('document.sizeHint')}</p>
           </div>
 
           {matching && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Matching filenames to companies...
+              {t('document.matching')}
             </div>
           )}
 
@@ -428,9 +473,9 @@ export default function ImportPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="text-left px-3 py-2 font-medium">Filename</th>
-                      <th className="text-left px-3 py-2 font-medium">Matched Company</th>
-                      <th className="text-left px-3 py-2 font-medium w-20">Status</th>
+                      <th className="text-left px-3 py-2 font-medium">{t('document.filename')}</th>
+                      <th className="text-left px-3 py-2 font-medium">{t('document.matchedCompany')}</th>
+                      <th className="text-left px-3 py-2 font-medium w-20">{t('document.status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -448,11 +493,11 @@ export default function ImportPage() {
                             onValueChange={(val) => updateFileCompany(f.filename, val)}
                           >
                             <SelectTrigger className="h-8 text-xs w-48">
-                              <SelectValue placeholder="Select company..." />
+                              <SelectValue placeholder={t('document.selectCompany')} />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="unmatched">
-                                <span className="text-muted-foreground">No match</span>
+                                <span className="text-muted-foreground">{t('document.noMatch')}</span>
                               </SelectItem>
                               {companies.map(c => (
                                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -462,22 +507,28 @@ export default function ImportPage() {
                         </td>
                         <td className="px-3 py-2">
                           {f.status === 'pending' && f.companyId && (
-                            <span className="text-xs text-muted-foreground">Ready</span>
+                            <span className="text-xs text-muted-foreground">{t('document.ready')}</span>
                           )}
                           {f.status === 'pending' && !f.companyId && (
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                           {f.status === 'uploading' && (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden="true" />
+                              <span className="sr-only">{t('document.uploadingStatus')}</span>
+                            </>
                           )}
                           {f.status === 'done' && !f.textOnly && (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                            <>
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" aria-hidden="true" />
+                              <span className="sr-only">{t('document.uploadedStatus')}</span>
+                            </>
                           )}
                           {f.status === 'done' && f.textOnly && (
-                            <span className="text-xs text-amber-600" title="File exceeded 10 MB, only extracted text was stored (no native PDF/image)">Text only</span>
+                            <span className="text-xs text-amber-600" title={t('document.textOnlyTitle')}>{t('document.textOnly')}</span>
                           )}
                           {f.status === 'error' && (
-                            <span className="text-xs text-destructive" title={f.error}>Failed</span>
+                            <span className="text-xs text-destructive" title={f.error ? renderUiError(f.error) : undefined}>{t('document.failed')}</span>
                           )}
                         </td>
                       </tr>
@@ -488,14 +539,16 @@ export default function ImportPage() {
 
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
-                  {matchedCount} matched{unmatchedCount > 0 ? `, ${unmatchedCount} unmatched` : ''}
+                  {unmatchedCount > 0
+                    ? t('document.matchedWithUnmatched', { matched: matchedCount, unmatched: unmatchedCount })
+                    : t('document.matchedOnly', { matched: matchedCount })}
                 </p>
                 <Button
                   onClick={handleUploadAll}
                   disabled={uploadingAll || matchedCount === 0}
                 >
                   {uploadingAll && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {uploadingAll ? 'Uploading...' : `Upload ${matchedCount} File${matchedCount !== 1 ? 's' : ''}`}
+                  {uploadingAll ? t('document.uploading') : t('document.uploadFiles', { count: matchedCount })}
                 </Button>
               </div>
             </>
@@ -505,15 +558,15 @@ export default function ImportPage() {
 
       {/* Paste Data Section */}
       <div className="mt-12 pt-8 border-t">
-        <h2 className="text-xl font-semibold tracking-tight mb-2">Paste Company Metrics</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-2">{t('metrics.title')}</h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Paste CSV or spreadsheet data from Google Sheets. Claude will parse it to create companies, metrics, and historical values.
+          {t('metrics.description')}
         </p>
 
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{renderUiError(error)}</AlertDescription>
           </Alert>
         )}
 
@@ -522,18 +575,18 @@ export default function ImportPage() {
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
               <div className="space-y-1">
-                <p className="font-medium">Import complete</p>
+                <p className="font-medium">{t('common.importComplete')}</p>
                 <ul className="text-sm space-y-0.5">
-                  <li>{result.companiesCreated} companies created{result.companiesMatched > 0 ? `, ${result.companiesMatched} matched existing` : ''}</li>
-                  <li>{result.metricsCreated} metrics created{result.metricsMatched > 0 ? `, ${result.metricsMatched} matched existing` : ''}</li>
-                  <li>{result.metricValuesCreated} metric values imported{result.metricValuesSkipped > 0 ? `, ${result.metricValuesSkipped} skipped (already exist)` : ''}</li>
+                  <li>{t('metrics.companiesCreated', { count: result.companiesCreated })}{result.companiesMatched > 0 ? `, ${t('metrics.matchedExisting', { count: result.companiesMatched })}` : ''}</li>
+                  <li>{t('metrics.metricsCreated', { count: result.metricsCreated })}{result.metricsMatched > 0 ? `, ${t('metrics.matchedExisting', { count: result.metricsMatched })}` : ''}</li>
+                  <li>{t('metrics.metricValuesImported', { count: result.metricValuesCreated })}{result.metricValuesSkipped > 0 ? `, ${t('metrics.metricValuesSkipped', { count: result.metricValuesSkipped })}` : ''}</li>
                   {result.sendersCreated > 0 && (
-                    <li>{result.sendersCreated} authorized senders added</li>
+                    <li>{t('metrics.sendersAdded', { count: result.sendersCreated })}</li>
                   )}
                 </ul>
                 {result.errors.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-sm font-medium text-destructive">Issues:</p>
+                    <p className="text-sm font-medium text-destructive">{t('common.issues')}</p>
                     <ul className="text-sm text-destructive space-y-0.5">
                       {result.errors.map((e, i) => <li key={i}>{e}</li>)}
                     </ul>
@@ -546,7 +599,7 @@ export default function ImportPage() {
 
         <div className="space-y-4">
           <Textarea
-            placeholder={`Paste your spreadsheet data here...\n\nExample:\nCompany, Fund, Sector, Stage, Email, MRR Q1 2025, MRR Q2 2025\nAcme Corp, Fund I, SaaS, Series A, cfo@acme.com, 50000, 65000\nBeta Inc, Fund II, Fintech, Seed, founder@beta.io, 12000, 15000`}
+            placeholder={t('metrics.placeholder')}
             value={text}
             onChange={e => setText(e.target.value)}
             rows={16}
@@ -555,11 +608,11 @@ export default function ImportPage() {
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Supports CSV, tab-separated, or any tabular text format.
+              {t('metrics.hint')}
             </p>
             <Button onClick={handleImport} disabled={importing || !text.trim()}>
               {importing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {importing ? 'Importing...' : 'Import'}
+              {importing ? t('common.importing') : t('metrics.importButton')}
             </Button>
           </div>
         </div>
@@ -567,15 +620,15 @@ export default function ImportPage() {
 
       {/* Investment Data Section */}
       <div className="mt-12 pt-8 border-t">
-        <h2 className="text-xl font-semibold tracking-tight mb-2">Paste Investment Data</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-2">{t('investments.title')}</h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Paste investment transaction data (rounds, proceeds, valuations). AI will parse and match to existing portfolio companies.
+          {t('investments.description')}
         </p>
 
         {investmentError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{investmentError}</AlertDescription>
+            <AlertDescription>{renderUiError(investmentError)}</AlertDescription>
           </Alert>
         )}
 
@@ -584,25 +637,25 @@ export default function ImportPage() {
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
               <div className="space-y-1">
-                <p className="font-medium">Import complete</p>
+                <p className="font-medium">{t('common.importComplete')}</p>
                 <ul className="text-sm space-y-0.5">
                   {investmentResult.investmentsCreated > 0 && (
-                    <li>{investmentResult.investmentsCreated} investment transaction{investmentResult.investmentsCreated !== 1 ? 's' : ''} created</li>
+                    <li>{t('investments.transactionsCreated', { count: investmentResult.investmentsCreated })}</li>
                   )}
                   {investmentResult.proceedsCreated > 0 && (
-                    <li>{investmentResult.proceedsCreated} proceeds transaction{investmentResult.proceedsCreated !== 1 ? 's' : ''} created</li>
+                    <li>{t('investments.proceedsCreated', { count: investmentResult.proceedsCreated })}</li>
                   )}
                   {investmentResult.unrealizedCreated > 0 && (
-                    <li>{investmentResult.unrealizedCreated} unrealized change{investmentResult.unrealizedCreated !== 1 ? 's' : ''} created</li>
+                    <li>{t('investments.unrealizedCreated', { count: investmentResult.unrealizedCreated })}</li>
                   )}
-                  <li>{investmentResult.companiesMatched} compan{investmentResult.companiesMatched !== 1 ? 'ies' : 'y'} matched</li>
+                  <li>{t('investments.companiesMatched', { count: investmentResult.companiesMatched })}</li>
                   {investmentResult.companiesCreated > 0 && (
-                    <li>{investmentResult.companiesCreated} compan{investmentResult.companiesCreated !== 1 ? 'ies' : 'y'} created</li>
+                    <li>{t('investments.companiesCreated', { count: investmentResult.companiesCreated })}</li>
                   )}
                 </ul>
                 {investmentResult.errors.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-sm font-medium text-destructive">Issues:</p>
+                    <p className="text-sm font-medium text-destructive">{t('common.issues')}</p>
                     <ul className="text-sm text-destructive space-y-0.5">
                       {investmentResult.errors.map((e, i) => <li key={i}>{e}</li>)}
                     </ul>
@@ -615,7 +668,7 @@ export default function ImportPage() {
 
         <div className="space-y-4">
           <Textarea
-            placeholder={`Paste investment data here...\n\nExample:\nCompany, Round, Date, Amount Invested, Shares, Price/Share\nAcme Corp, Series A, 2024-03-15, 500000, 50000, 10.00\nBeta Inc, Seed, 2023-11-01, 250000, 100000, 2.50`}
+            placeholder={t('investments.placeholder')}
             value={investmentText}
             onChange={e => setInvestmentText(e.target.value)}
             rows={12}
@@ -624,11 +677,11 @@ export default function ImportPage() {
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Supports CSV, tab-separated, or free-form text. New companies will be created automatically.
+              {t('investments.hint')}
             </p>
             <Button onClick={handleInvestmentImport} disabled={investmentImporting || !investmentText.trim()}>
               {investmentImporting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {investmentImporting ? 'Importing...' : 'Import Investments'}
+              {investmentImporting ? t('common.importing') : t('investments.importButton')}
             </Button>
           </div>
         </div>
@@ -636,15 +689,15 @@ export default function ImportPage() {
 
       {/* Fund Cash Flows Section */}
       <div className="mt-12 pt-8 border-t">
-        <h2 className="text-xl font-semibold tracking-tight mb-2">Paste Fund Cash Flows</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-2">{t('cashFlows.title')}</h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Paste fund-level cash flow data (commitments, capital calls, distributions) per portfolio group. AI will parse any format.
+          {t('cashFlows.description')}
         </p>
 
         {cashFlowError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{cashFlowError}</AlertDescription>
+            <AlertDescription>{renderUiError(cashFlowError)}</AlertDescription>
           </Alert>
         )}
 
@@ -653,11 +706,11 @@ export default function ImportPage() {
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
               <div className="space-y-1">
-                <p className="font-medium">Import complete</p>
-                <p className="text-sm">{cashFlowResult.created} cash flow{cashFlowResult.created !== 1 ? 's' : ''} created</p>
+                <p className="font-medium">{t('common.importComplete')}</p>
+                <p className="text-sm">{t('cashFlows.created', { count: cashFlowResult.created })}</p>
                 {cashFlowResult.errors.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-sm font-medium text-destructive">Issues:</p>
+                    <p className="text-sm font-medium text-destructive">{t('common.issues')}</p>
                     <ul className="text-sm text-destructive space-y-0.5">
                       {cashFlowResult.errors.map((e, i) => <li key={i}>{e}</li>)}
                     </ul>
@@ -670,7 +723,7 @@ export default function ImportPage() {
 
         <div className="space-y-4">
           <Textarea
-            placeholder={`Paste fund cash flow data here...\n\nExample:\nFund I, Jan 15 2024, commitment, $10,000,000, Initial commitment\nFund I, Mar 1 2024, capital call, 2500000, First call\nFund I, Jun 15 2025, distribution, $500K, Q2 distribution\n\nOr any format, capital call notices, distribution memos, spreadsheet data, etc.`}
+            placeholder={t('cashFlows.placeholder')}
             value={cashFlowText}
             onChange={e => setCashFlowText(e.target.value)}
             rows={12}
@@ -679,11 +732,11 @@ export default function ImportPage() {
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Supports CSV, tab-separated, or free-form text. AI parses dates, amounts, and flow types automatically.
+              {t('cashFlows.hint')}
             </p>
             <Button onClick={handleCashFlowImport} disabled={cashFlowImporting || !cashFlowText.trim()}>
               {cashFlowImporting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {cashFlowImporting ? 'Importing...' : 'Import Cash Flows'}
+              {cashFlowImporting ? t('common.importing') : t('cashFlows.importButton')}
             </Button>
           </div>
         </div>

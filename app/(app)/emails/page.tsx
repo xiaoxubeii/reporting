@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -44,37 +46,30 @@ interface EmailsData {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
-  pending: { label: 'Pending', className: 'bg-slate-100 text-slate-700 border-slate-200' },
-  processing: { label: 'Processing', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-  success: { label: 'Success', className: 'bg-green-100 text-green-800 border-green-200' },
-  not_processed: { label: 'Skipped', className: 'bg-gray-100 text-gray-600 border-gray-200' },
-  failed: { label: 'Failed', className: 'bg-red-100 text-red-800 border-red-200' },
+type StatusMessageKey = 'pending' | 'processing' | 'success' | 'skipped' | 'failed' | 'review'
+
+const STATUS_VARIANTS: Record<string, { key: StatusMessageKey; className: string }> = {
+  pending: { key: 'pending', className: 'bg-slate-100 text-slate-700 border-slate-200' },
+  processing: { key: 'processing', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  success: { key: 'success', className: 'bg-green-100 text-green-800 border-green-200' },
+  not_processed: { key: 'skipped', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  failed: { key: 'failed', className: 'bg-red-100 text-red-800 border-red-200' },
   needs_review: {
-    label: 'Review',
+    key: 'review',
     className: 'bg-amber-100 text-amber-800 border-amber-200',
   },
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const v = STATUS_VARIANTS[status] ?? { label: status, className: '' }
+  const t = useTranslations('Emails.statuses')
+  const v = STATUS_VARIANTS[status]
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${v.className}`}
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${v?.className ?? ''}`}
     >
-      {v.label}
+      {v ? t(v.key) : status}
     </span>
   )
-}
-
-function fmt(dateStr: string) {
-  return new Date(dateStr).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function getPageNumbers(current: number, total: number): (number | '...')[] {
@@ -94,6 +89,11 @@ function getPageNumbers(current: number, total: number): (number | '...')[] {
 // ---------------------------------------------------------------------------
 
 export default function EmailsPage() {
+  const t = useTranslations('Emails')
+  const locale = useLocale()
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
   const router = useRouter()
   const [data, setData] = useState<EmailsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -114,9 +114,9 @@ export default function EmailsPage() {
   useEffect(() => {
     fetch('/api/companies').then(r => r.ok ? r.json() : []).then(data => {
       const list = (Array.isArray(data) ? data : data?.items ?? data?.companies ?? []) as { id: string; name: string }[]
-      setCompanies(list.sort((a, b) => a.name.localeCompare(b.name)))
+      setCompanies([...list].sort((a, b) => a.name.localeCompare(b.name, locale)))
     }).catch(() => {})
-  }, [])
+  }, [locale])
 
   // Filters
   const [status, setStatus] = useState('')
@@ -163,17 +163,17 @@ export default function EmailsPage() {
 
       try {
         const res = await fetch(`/api/emails?${params}`, { signal: controller.signal })
-        if (!res.ok) throw new Error('Failed to load emails')
+        if (!res.ok) throw new Error('load-failed')
         setData(await res.json())
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          setError(err instanceof Error ? err.message : 'Error loading data')
+          setError(t('errors.load'))
         }
       } finally {
         setLoading(false)
       }
     },
-    [status, companyFilter, dateRange, page, pageSize]
+    [status, companyFilter, dateRange, page, pageSize, t]
   )
 
   useEffect(() => {
@@ -190,9 +190,10 @@ export default function EmailsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'dismiss_all' }),
       })
-      if (res.ok) load(page)
+      if (!res.ok) throw new Error('dismiss-failed')
+      load(page)
     } catch {
-      // ignore
+      toast.error(t('errors.dismissReviews'))
     } finally {
       setDismissing(prev => ({ ...prev, [emailId]: false }))
     }
@@ -202,35 +203,35 @@ export default function EmailsPage() {
     <div className="p-4 md:py-8 md:pl-8 md:pr-4 w-full">
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Inbound</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <div className="flex items-center gap-2">
             <div className="lg:hidden">
               <FiltersSheet activeCount={[status, companyFilter, dateRange].filter(Boolean).length}>
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Status</label>
+                  <label className="block text-xs text-muted-foreground mb-1">{t('filters.status')}</label>
                   <Select value={status || 'all'} onValueChange={v => { setStatus(v === 'all' ? '' : v); setPage(1) }}>
                     <SelectTrigger className="h-8 w-full text-sm">
-                      <SelectValue placeholder="All statuses" />
+                      <SelectValue placeholder={t('filters.allStatuses')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All statuses</SelectItem>
-                      <SelectItem value="success">Success</SelectItem>
-                      <SelectItem value="needs_review">Review</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="not_processed">Skipped</SelectItem>
+                      <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
+                      <SelectItem value="success">{t('statuses.success')}</SelectItem>
+                      <SelectItem value="needs_review">{t('statuses.review')}</SelectItem>
+                      <SelectItem value="failed">{t('statuses.failed')}</SelectItem>
+                      <SelectItem value="processing">{t('statuses.processing')}</SelectItem>
+                      <SelectItem value="pending">{t('statuses.pending')}</SelectItem>
+                      <SelectItem value="not_processed">{t('statuses.skipped')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Company</label>
+                  <label className="block text-xs text-muted-foreground mb-1">{t('filters.company')}</label>
                   <Select value={companyFilter || 'all'} onValueChange={v => { setCompanyFilter(v === 'all' ? '' : v); setPage(1) }}>
                     <SelectTrigger className="h-8 w-full text-sm">
-                      <SelectValue placeholder="All companies" />
+                      <SelectValue placeholder={t('filters.allCompanies')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All companies</SelectItem>
+                      <SelectItem value="all">{t('filters.allCompanies')}</SelectItem>
                       {companies.map(c => (
                         <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                       ))}
@@ -238,38 +239,38 @@ export default function EmailsPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Date range</label>
+                  <label className="block text-xs text-muted-foreground mb-1">{t('filters.dateRange')}</label>
                   <Select value={dateRange || 'all'} onValueChange={v => { setDateRange(v === 'all' ? '' : v); setPage(1) }}>
                     <SelectTrigger className="h-8 w-full text-sm">
-                      <SelectValue placeholder="All time" />
+                      <SelectValue placeholder={t('filters.allTime')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All time</SelectItem>
-                      <SelectItem value="7d">Last 7 days</SelectItem>
-                      <SelectItem value="30d">Last 30 days</SelectItem>
-                      <SelectItem value="90d">Last 90 days</SelectItem>
-                      <SelectItem value="6m">Last 6 months</SelectItem>
-                      <SelectItem value="12m">Last 12 months</SelectItem>
-              <SelectItem value="this_year">This year</SelectItem>
-              <SelectItem value="last_year">Last year</SelectItem>
+                      <SelectItem value="all">{t('filters.allTime')}</SelectItem>
+                      <SelectItem value="7d">{t('filters.last7Days')}</SelectItem>
+                      <SelectItem value="30d">{t('filters.last30Days')}</SelectItem>
+                      <SelectItem value="90d">{t('filters.last90Days')}</SelectItem>
+                      <SelectItem value="6m">{t('filters.last6Months')}</SelectItem>
+                      <SelectItem value="12m">{t('filters.last12Months')}</SelectItem>
+              <SelectItem value="this_year">{t('filters.thisYear')}</SelectItem>
+              <SelectItem value="last_year">{t('filters.lastYear')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 {(status || companyFilter || dateRange) && (
                   <Button size="sm" variant="ghost" className="h-8" onClick={() => { setStatus(''); setCompanyFilter(''); setDateRange(''); setPage(1) }}>
-                    Clear filters
+                    {t('filters.clearFilters')}
                   </Button>
                 )}
               </FiltersSheet>
             </div>
             <Button variant="outline" size="sm" onClick={() => load(page)} disabled={loading} className="text-muted-foreground">
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('actions.refresh')}
             </Button>
             <AnalystToggleButton />
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Emails with metrics and updates on portfolio companies</p>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -277,30 +278,30 @@ export default function EmailsPage() {
       {/* Desktop inline filters + inbound address */}
       <div className="hidden lg:flex flex-wrap items-end gap-3 mb-5">
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Status</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t('filters.status')}</label>
           <Select value={status || 'all'} onValueChange={v => { setStatus(v === 'all' ? '' : v); setPage(1) }}>
             <SelectTrigger className="h-8 w-40 text-sm">
-              <SelectValue placeholder="All statuses" />
+              <SelectValue placeholder={t('filters.allStatuses')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="success">Success</SelectItem>
-              <SelectItem value="needs_review">Review</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="processing">Processing</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="not_processed">Skipped</SelectItem>
+              <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
+              <SelectItem value="success">{t('statuses.success')}</SelectItem>
+              <SelectItem value="needs_review">{t('statuses.review')}</SelectItem>
+              <SelectItem value="failed">{t('statuses.failed')}</SelectItem>
+              <SelectItem value="processing">{t('statuses.processing')}</SelectItem>
+              <SelectItem value="pending">{t('statuses.pending')}</SelectItem>
+              <SelectItem value="not_processed">{t('statuses.skipped')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Company</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t('filters.company')}</label>
           <Select value={companyFilter || 'all'} onValueChange={v => { setCompanyFilter(v === 'all' ? '' : v); setPage(1) }}>
             <SelectTrigger className="h-8 w-48 text-sm">
-              <SelectValue placeholder="All companies" />
+              <SelectValue placeholder={t('filters.allCompanies')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All companies</SelectItem>
+              <SelectItem value="all">{t('filters.allCompanies')}</SelectItem>
               {companies.map(c => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
@@ -308,32 +309,32 @@ export default function EmailsPage() {
           </Select>
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">Date range</label>
+          <label className="block text-xs text-muted-foreground mb-1">{t('filters.dateRange')}</label>
           <Select value={dateRange || 'all'} onValueChange={v => { setDateRange(v === 'all' ? '' : v); setPage(1) }}>
             <SelectTrigger className="h-8 w-36 text-sm">
-              <SelectValue placeholder="All time" />
+              <SelectValue placeholder={t('filters.allTime')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All time</SelectItem>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="6m">Last 6 months</SelectItem>
-              <SelectItem value="12m">Last 12 months</SelectItem>
-              <SelectItem value="this_year">This year</SelectItem>
-              <SelectItem value="last_year">Last year</SelectItem>
+              <SelectItem value="all">{t('filters.allTime')}</SelectItem>
+              <SelectItem value="7d">{t('filters.last7Days')}</SelectItem>
+              <SelectItem value="30d">{t('filters.last30Days')}</SelectItem>
+              <SelectItem value="90d">{t('filters.last90Days')}</SelectItem>
+              <SelectItem value="6m">{t('filters.last6Months')}</SelectItem>
+              <SelectItem value="12m">{t('filters.last12Months')}</SelectItem>
+              <SelectItem value="this_year">{t('filters.thisYear')}</SelectItem>
+              <SelectItem value="last_year">{t('filters.lastYear')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {(status || companyFilter || dateRange) && (
           <Button size="sm" variant="ghost" className="h-8" onClick={() => { setStatus(''); setCompanyFilter(''); setDateRange(''); setPage(1) }}>
-            Clear
+            {t('filters.clear')}
           </Button>
         )}
         {inboundAddress && (
           <div className="ml-auto flex items-end gap-1.5">
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Send emails to</label>
+              <label className="block text-xs text-muted-foreground mb-1">{t('inboundAddress')}</label>
               <Input
                 type="text"
                 readOnly
@@ -349,7 +350,8 @@ export default function EmailsPage() {
                 setTimeout(() => setCopied(false), 2000)
               }}
               className="h-8 px-2 text-muted-foreground hover:text-foreground transition-colors"
-              title="Copy to clipboard"
+              title={t('actions.copy')}
+              aria-label={t('actions.copy')}
             >
               {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </button>
@@ -373,7 +375,8 @@ export default function EmailsPage() {
               setTimeout(() => setCopied(false), 2000)
             }}
             className="h-8 px-2 text-muted-foreground hover:text-foreground transition-colors"
-            title="Copy to clipboard"
+            title={t('actions.copy')}
+            aria-label={t('actions.copy')}
           >
             {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
           </button>
@@ -393,21 +396,21 @@ export default function EmailsPage() {
           <thead className="bg-muted/50 border-b">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell w-40">
-                Received
+                {t('table.received')}
               </th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground">From</th>
-              <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Subject</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('table.from')}</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">{t('table.subject')}</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground w-36">
-                Company
+                {t('table.company')}
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground w-32">
-                Status
+                {t('table.status')}
               </th>
               <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell w-20">
-                Metrics
+                {t('table.metrics')}
               </th>
               <th className="px-4 py-3 w-10">
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{t('table.actions')}</span>
               </th>
             </tr>
           </thead>
@@ -415,14 +418,14 @@ export default function EmailsPage() {
             {loading && !data && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
-                  Loading…
+                  {t('loading')}
                 </td>
               </tr>
             )}
             {!loading && data?.items.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
-                  No emails found.
+                  {t('empty')}
                 </td>
               </tr>
             )}
@@ -433,11 +436,11 @@ export default function EmailsPage() {
                 onClick={() => router.push(`/emails/${email.id}`)}
               >
                 <td className="px-4 py-3 text-muted-foreground whitespace-nowrap hidden sm:table-cell">
-                  {fmt(email.received_at)}
+                  {dateFormatter.format(new Date(email.received_at))}
                 </td>
                 <td className="px-4 py-3 max-w-[180px] truncate">{email.from_address}</td>
                 <td className="px-4 py-3 max-w-[240px] truncate text-muted-foreground hidden md:table-cell">
-                  {email.subject ?? <span className="italic">(no subject)</span>}
+                  {email.subject ?? <span className="italic">{t('noSubject')}</span>}
                 </td>
                 <td className="px-4 py-3">
                   {(() => {
@@ -452,7 +455,7 @@ export default function EmailsPage() {
                             setReviewModalEmailId(email.id)
                           }}
                         >
-                          {email.company ? `${email.company.name} · Setup` : 'Unknown'}
+                          {email.company ? t('companySetup', { company: email.company.name }) : t('unknownCompany')}
                         </button>
                       )
                     }
@@ -465,7 +468,7 @@ export default function EmailsPage() {
                             setReviewModalEmailId(email.id)
                           }}
                         >
-                          Unknown
+                          {t('unknownCompany')}
                         </button>
                       )
                     }
@@ -483,6 +486,7 @@ export default function EmailsPage() {
                     <button
                       className="text-muted-foreground hover:text-destructive disabled:opacity-50 p-1"
                       disabled={!!dismissing[email.id]}
+                      aria-label={t('actions.dismissReviews')}
                       onClick={(e) => {
                         e.stopPropagation()
                         dismissReviews(email.id)
@@ -507,10 +511,10 @@ export default function EmailsPage() {
         <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <p className="text-sm text-muted-foreground whitespace-nowrap">
-              {data.total} email{data.total !== 1 ? 's' : ''}
+              {t('emailCount', { count: data.total })}
             </p>
             <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">Show</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">{t('show')}</label>
               <Select
                 value={String(pageSize)}
                 onValueChange={v => { setPageSize(Number(v)); setPage(1) }}
@@ -535,6 +539,7 @@ export default function EmailsPage() {
                 className="h-8 w-8 p-0"
                 disabled={page <= 1}
                 onClick={() => setPage(p => p - 1)}
+                aria-label={t('actions.previousPage')}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -559,6 +564,7 @@ export default function EmailsPage() {
                 className="h-8 w-8 p-0"
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => p + 1)}
+                aria-label={t('actions.nextPage')}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

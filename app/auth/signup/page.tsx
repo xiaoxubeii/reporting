@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { createClient } from '@/lib/supabase/client'
 import { OtpCodeForm } from '@/components/auth/otp-code-form'
+import { useLocale, useTranslations } from 'next-intl'
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
@@ -21,6 +22,8 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [isHemrock, setIsHemrock] = useState(false)
+  const t = useTranslations('Auth')
+  const locale = useLocale()
 
   async function handleVerify(code: string) {
     setError(null)
@@ -32,7 +35,7 @@ export default function SignUpPage() {
       token: code,
     })
     if (error) {
-      setError(error.message)
+      setError(locale === 'en' ? error.message : t('genericError'))
       setVerifying(false)
     } else {
       window.location.href = '/auth/post-login?method=signup&next=/'
@@ -52,15 +55,15 @@ export default function SignUpPage() {
 
   async function signUp() {
     if (!email.trim()) {
-      setError('Email is required.')
+      setError(t('emailRequired'))
       return
     }
     if (!password || password.length < 8) {
-      setError('Password must be at least 8 characters.')
+      setError(t('passwordMinimumError'))
       return
     }
     if (!acceptedLicense) {
-      setError('You must accept the license agreement to create an account.')
+      setError(t('licenseRequired'))
       return
     }
     setError(null)
@@ -81,7 +84,7 @@ export default function SignUpPage() {
       })
     } catch (err) {
       console.error('[signup] whitelist request failed to send:', err)
-      setError('Couldn’t reach the server. Check your connection and try again.')
+      setError(t('serverUnavailable'))
       setLoading(false)
       return
     }
@@ -93,7 +96,7 @@ export default function SignUpPage() {
       whitelistData = await whitelistRes.json()
     } catch (err) {
       console.error(`[signup] whitelist response was not JSON (HTTP ${whitelistRes.status}):`, err)
-      setError(`Signup check failed, the server returned an unexpected response (HTTP ${whitelistRes.status}). Please try again in a moment.`)
+      setError(t('signupUnexpectedResponse', { status: whitelistRes.status }))
       setLoading(false)
       return
     }
@@ -103,7 +106,7 @@ export default function SignUpPage() {
       if (whitelistData.error === 'not_whitelisted') {
         setError('not_whitelisted')
       } else {
-        setError(whitelistData.error || 'Unable to create account.')
+        setError(whitelistData.error && locale === 'en' ? whitelistData.error : t('unableCreateAccount'))
       }
       setLoading(false)
       return
@@ -131,8 +134,8 @@ export default function SignUpPage() {
       console.error('[signup] supabase.auth.signUp threw:', err)
       setError(
         err instanceof Error
-          ? `Account creation failed: ${err.message}`
-          : 'Account creation failed unexpectedly. Please try again.'
+          ? (locale === 'en' ? t('accountCreationFailed', { message: err.message }) : t('accountCreationUnexpected'))
+          : t('accountCreationUnexpected')
       )
       setLoading(false)
       return
@@ -142,9 +145,9 @@ export default function SignUpPage() {
       console.error('[signup] signUp returned an error:', signUpError)
       const msg = signUpError.message ?? ''
       if (msg.includes('already') || msg.includes('registered')) {
-        setError('Unable to create account. The email may already be registered.')
+        setError(t('emailMayExist'))
       } else {
-        setError(msg || 'Unable to create account.')
+        setError(msg && locale === 'en' ? msg : t('unableCreateAccount'))
       }
     } else {
       // Email confirmation sent as a 6-digit code — move to the verify step.
@@ -157,15 +160,15 @@ export default function SignUpPage() {
     <AuthShell
       above={isHemrock && (
         <div className="rounded-lg border bg-card p-4 text-sm text-center">
-          <p>👋 Want to try it out first? <a href="/demo" className="text-primary underline underline-offset-4 hover:text-primary/80 font-medium">Launch the demo</a></p>
+          <p>{t('tryFirst')} <a href="/demo" className="text-primary underline underline-offset-4 hover:text-primary/80 font-medium">{t('launchDemo')}</a></p>
         </div>
       )}
     >
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Create an account</CardTitle>
-            <CardDescription>Enter your email and a password to get started.</CardDescription>
+            <CardTitle className="text-lg">{t('signupTitle')}</CardTitle>
+            <CardDescription>{t('signupDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {sent ? (
@@ -186,11 +189,11 @@ export default function SignUpPage() {
             {error === 'not_whitelisted' && (
               <Alert className="!border-amber-500/50 !bg-amber-50 dark:!bg-amber-950/30 !text-amber-900 dark:!text-amber-200">
                 <AlertDescription className="text-sm space-y-2">
-                  <p>This email is not authorized for the hosted platform.</p>
+                  <p>{t('hostedUnauthorized')}</p>
                   <p>
-                    This software is available to download and install on your own servers, subject to the{' '}
-                    <a href="/license" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4 hover:text-primary/80">license</a>.
-                    If you are interested in the hosted solution, contact{' '}
+                    {t('selfHostNoticeBefore')}{' '}
+                    <a href="/license" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4 hover:text-primary/80">{t('license')}</a>.{' '}
+                    {t('selfHostNoticeAfter')}{' '}
                     <a href="https://www.hemrock.com/contact" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4 hover:text-primary/80">Taylor</a>.
                   </p>
                 </AlertDescription>
@@ -203,11 +206,11 @@ export default function SignUpPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('emailPlaceholder')}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && signUp()}
@@ -216,7 +219,7 @@ export default function SignUpPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -224,7 +227,7 @@ export default function SignUpPage() {
                 onChange={e => setPassword(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && signUp()}
                 autoComplete="new-password"
-                placeholder="At least 8 characters"
+                placeholder={t('passwordMinimumPlaceholder')}
               />
             </div>
 
@@ -237,19 +240,19 @@ export default function SignUpPage() {
                 className="mt-1 h-4 w-4 rounded border-input accent-primary"
               />
               <label htmlFor="accept-license" className="text-xs text-muted-foreground leading-relaxed">
-                I agree to the{' '}
+                {t('agreePrefix')}{' '}
                 <a href="/license" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                  License Agreement
+                  {t('licenseAgreement')}
                 </a>
                 {isHemrock && (
                   <>
                     ,{' '}
                     <a href="https://www.hemrock.com/terms" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                      Terms of Service
+                      {t('termsOfService')}
                     </a>
-                    , and{' '}
+                    , {t('and')}{' '}
                     <a href="https://www.hemrock.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                      Privacy Policy
+                      {t('privacyPolicy')}
                     </a>
                   </>
                 )}
@@ -258,15 +261,15 @@ export default function SignUpPage() {
             </div>
 
             <Button className="w-full" onClick={signUp} disabled={loading || !acceptedLicense}>
-              {loading ? 'Creating account…' : 'Create account'}
+              {loading ? t('creatingAccount') : t('createAccountAction')}
             </Button>
               </>
             )}
 
             <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
+              {t('alreadyAccount')}{' '}
               <Link href="/auth" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                Sign in
+                {t('signIn')}
               </Link>
             </p>
           </CardContent>

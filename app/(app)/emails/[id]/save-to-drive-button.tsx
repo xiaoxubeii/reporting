@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { HardDrive, Check, AlertCircle } from 'lucide-react'
 import { Loader2 } from 'lucide-react'
 
 export function SaveToDriveButton({ emailId }: { emailId: string }) {
+  const t = useTranslations('Emails.detail')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<'success' | 'error' | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -25,10 +27,10 @@ export function SaveToDriveButton({ emailId }: { emailId: string }) {
       try {
         data = JSON.parse(text)
       } catch {
-        throw new Error(`Server error (${res.status})`)
+        throw new Error(t('errors.server', { status: res.status }))
       }
-      if (!res.ok) throw new Error(data.error ?? 'Failed to save')
-      if (data.failed > 0) throw new Error(data.errors?.[0] ?? 'Failed to save')
+      if (!res.ok) throw new Error(t('errors.save'))
+      if (data.failed > 0) throw new Error(t('errors.save'))
       if (data.errors?.length > 0) {
         setResult('success')
         setErrorMsg(data.errors.join('; '))
@@ -37,7 +39,7 @@ export function SaveToDriveButton({ emailId }: { emailId: string }) {
       }
     } catch (err) {
       setResult('error')
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to save')
+      setErrorMsg(err instanceof Error ? err.message : t('errors.save'))
     } finally {
       setLoading(false)
     }
@@ -59,7 +61,7 @@ export function SaveToDriveButton({ emailId }: { emailId: string }) {
         ) : (
           <HardDrive className="h-4 w-4" />
         )}
-        {result === 'success' ? 'Saved' : 'Save to storage'}
+        {result === 'success' ? t('storage.saved') : t('storage.save')}
       </Button>
       {result === 'error' && errorMsg && (
         <span className="text-xs text-destructive flex items-center gap-1">

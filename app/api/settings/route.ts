@@ -11,7 +11,14 @@ import { dbError } from '@/lib/api-error'
 import { logActivity } from '@/lib/activity'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
 import { forgetFundCurrency } from '@/lib/accounting/currency'
-import { validateOllamaUrl } from '@/lib/validate-url'
+import { validateCustomProviderUrl, validateOllamaUrl } from '@/lib/validate-url'
+import {
+  getCustomAIProviderInputError,
+  getCustomAIProviderValidationError,
+  isCustomAIProviderConfigured,
+  parseCustomAIProviderRequestParameters,
+  type CustomAIProviderRequestParameters,
+} from '@/lib/ai/custom-provider'
 import type { FeatureKey, FeatureVisibility, FeatureVisibilityMap } from '@/lib/types/features'
 
 // GET — returns fund settings (safe fields only)
@@ -32,7 +39,7 @@ export async function GET() {
 
   const [{ data: fund }, { data: settings }, { data: senders }] = await Promise.all([
     admin.from('funds').select('id, name, logo_url, address').eq('id', membership.fund_id).single(),
-    (admin as any).from('fund_settings').select('postmark_inbound_address, postmark_webhook_token, postmark_webhook_token_encrypted, encryption_key_encrypted, retain_resolved_reviews, resolved_reviews_ttl_days, claude_api_key_encrypted, claude_model, ai_summary_prompt, google_refresh_token_encrypted, google_drive_folder_id, google_drive_folder_name, google_client_id, google_client_secret_encrypted, outbound_email_provider, asks_email_provider, approval_email_subject, approval_email_body, system_email_from_name, system_email_from_address, resend_api_key_encrypted, postmark_server_token_encrypted, inbound_email_provider, mailgun_inbound_domain, mailgun_signing_key_encrypted, mailgun_api_key_encrypted, mailgun_sending_domain, file_storage_provider, dropbox_app_key, dropbox_app_secret_encrypted, dropbox_refresh_token_encrypted, dropbox_folder_path, openai_api_key_encrypted, openai_model, default_ai_provider, gemini_api_key_encrypted, gemini_model, ollama_base_url, ollama_model, openrouter_api_key_encrypted, openrouter_model, openrouter_base_url, analytics_fathom_site_id, analytics_ga_measurement_id, currency, disable_user_tracking, feature_visibility, deal_thesis, deal_screening_prompt, deal_intake_enabled, deal_submission_token, routing_confidence_threshold, routing_model, lp_portal_enabled').eq('fund_id', membership.fund_id).single(),
+    (admin as any).from('fund_settings').select('postmark_inbound_address, postmark_webhook_token, postmark_webhook_token_encrypted, encryption_key_encrypted, retain_resolved_reviews, resolved_reviews_ttl_days, claude_api_key_encrypted, claude_model, ai_summary_prompt, google_refresh_token_encrypted, google_drive_folder_id, google_drive_folder_name, google_client_id, google_client_secret_encrypted, outbound_email_provider, asks_email_provider, approval_email_subject, approval_email_body, system_email_from_name, system_email_from_address, resend_api_key_encrypted, postmark_server_token_encrypted, inbound_email_provider, mailgun_inbound_domain, mailgun_signing_key_encrypted, mailgun_api_key_encrypted, mailgun_sending_domain, file_storage_provider, dropbox_app_key, dropbox_app_secret_encrypted, dropbox_refresh_token_encrypted, dropbox_folder_path, openai_api_key_encrypted, openai_model, default_ai_provider, gemini_api_key_encrypted, gemini_model, ollama_base_url, ollama_model, openrouter_api_key_encrypted, openrouter_model, openrouter_base_url, openrouter_request_parameters, analytics_fathom_site_id, analytics_ga_measurement_id, currency, disable_user_tracking, feature_visibility, deal_thesis, deal_screening_prompt, deal_intake_enabled, deal_submission_token, routing_confidence_threshold, routing_model, lp_portal_enabled').eq('fund_id', membership.fund_id).single(),
     admin.from('authorized_senders').select('id, email, label, created_at').eq('fund_id', membership.fund_id).order('email'),
   ])
 
@@ -112,6 +119,10 @@ export async function GET() {
     }
   } catch { /* migration not applied — the source is simply not offered */ }
 
+  const storedRequestParameters = parseCustomAIProviderRequestParameters(
+    settings?.openrouter_request_parameters ?? undefined,
+  )
+
   return NextResponse.json({
     fundId: fund?.id,
     fundName: fund?.name,
@@ -131,6 +142,14 @@ export async function GET() {
     hasOpenRouterKey: !!settings?.openrouter_api_key_encrypted,
     openrouterModel: settings?.openrouter_model ?? '',
     openrouterBaseUrl: settings?.openrouter_base_url ?? '',
+    openrouterRequestParameters: membership.role === 'admin' && storedRequestParameters.ok
+      ? storedRequestParameters.value
+      : {},
+    customAIProviderConfigured: isCustomAIProviderConfigured({
+      hasApiKey: !!settings?.openrouter_api_key_encrypted,
+      baseUrl: settings?.openrouter_base_url,
+      model: settings?.openrouter_model,
+    }),
     retainResolvedReviews: settings?.retain_resolved_reviews ?? true,
     resolvedReviewsTtlDays: settings?.resolved_reviews_ttl_days ?? null,
     senders: senders ?? [],
@@ -201,7 +220,7 @@ export async function PATCH(req: NextRequest) {
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 404 })
 
   const body = await req.json()
-  const { fundName, fundLogo, fundAddress, postmarkInboundAddress, claudeApiKey, claudeModel, retainResolvedReviews, resolvedReviewsTtlDays, googleClientId, googleClientSecret, aiSummaryPrompt, displayName, outboundEmailProvider, asksEmailProvider, approvalEmailSubject, approvalEmailBody, systemEmailFromName, systemEmailFromAddress, resendApiKey, postmarkServerToken, inboundEmailProvider, mailgunInboundDomain, mailgunSigningKey, mailgunApiKey, mailgunSendingDomain, fileStorageProvider, dropboxAppKey, dropboxAppSecret, openaiApiKey, openaiModel, defaultAIProvider, geminiApiKey, geminiModel, ollamaBaseUrl, ollamaModel, openrouterApiKey, openrouterModel, openrouterBaseUrl, analyticsFathomSiteId, analyticsGaMeasurementId, analyticsCustomHeadScript, currency, disableUserTracking, featureVisibility, dealThesis, dealScreeningPrompt, dealIntakeEnabled, routingConfidenceThreshold, routingModel, lpPortalEnabled, affinityMcpEnabled, agentApiEnabled } = body
+  const { fundName, fundLogo, fundAddress, postmarkInboundAddress, claudeApiKey, claudeModel, retainResolvedReviews, resolvedReviewsTtlDays, googleClientId, googleClientSecret, aiSummaryPrompt, displayName, outboundEmailProvider, asksEmailProvider, approvalEmailSubject, approvalEmailBody, systemEmailFromName, systemEmailFromAddress, resendApiKey, postmarkServerToken, inboundEmailProvider, mailgunInboundDomain, mailgunSigningKey, mailgunApiKey, mailgunSendingDomain, fileStorageProvider, dropboxAppKey, dropboxAppSecret, openaiApiKey, openaiModel, defaultAIProvider, geminiApiKey, geminiModel, ollamaBaseUrl, ollamaModel, openrouterApiKey, openrouterModel, openrouterBaseUrl, openrouterRequestParameters, analyticsFathomSiteId, analyticsGaMeasurementId, analyticsCustomHeadScript, currency, disableUserTracking, featureVisibility, dealThesis, dealScreeningPrompt, dealIntakeEnabled, routingConfidenceThreshold, routingModel, lpPortalEnabled, affinityMcpEnabled, agentApiEnabled } = body
 
   // Update display name on fund_members (any user can do this)
   if (displayName !== undefined) {
@@ -222,6 +241,7 @@ export async function PATCH(req: NextRequest) {
     geminiApiKey !== undefined || geminiModel !== undefined ||
     ollamaBaseUrl !== undefined || ollamaModel !== undefined ||
     openrouterApiKey !== undefined || openrouterModel !== undefined || openrouterBaseUrl !== undefined ||
+    openrouterRequestParameters !== undefined ||
     analyticsFathomSiteId !== undefined || analyticsGaMeasurementId !== undefined ||
     analyticsCustomHeadScript !== undefined || currency !== undefined ||
     disableUserTracking !== undefined || featureVisibility !== undefined ||
@@ -232,6 +252,59 @@ export async function PATCH(req: NextRequest) {
 
   if (hasAdminFields && membership.role !== 'admin') {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+  }
+
+  const touchesCustomAIProvider = openrouterApiKey !== undefined ||
+    openrouterModel !== undefined || openrouterBaseUrl !== undefined ||
+    openrouterRequestParameters !== undefined
+
+  let parsedRequestParameters: CustomAIProviderRequestParameters | undefined
+
+  if (touchesCustomAIProvider || defaultAIProvider === 'openrouter') {
+    const inputError = getCustomAIProviderInputError({
+      apiKey: openrouterApiKey,
+      baseUrl: openrouterBaseUrl,
+      model: openrouterModel,
+      requestParameters: openrouterRequestParameters,
+    })
+    if (inputError) return NextResponse.json({ error: inputError }, { status: 400 })
+
+    if (openrouterRequestParameters !== undefined) {
+      const result = parseCustomAIProviderRequestParameters(openrouterRequestParameters)
+      if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
+      parsedRequestParameters = result.value
+    }
+
+    const customConfigResult = await admin
+      .from('fund_settings')
+      .select('openrouter_api_key_encrypted, openrouter_model, openrouter_base_url')
+      .eq('fund_id', membership.fund_id)
+      .single()
+    const { data: currentCustomConfig, error: customConfigError } = customConfigResult as unknown as {
+      data: {
+        openrouter_api_key_encrypted: string | null
+        openrouter_model: string | null
+        openrouter_base_url: string | null
+      } | null
+      error: { message: string } | null
+    }
+
+    if (customConfigError) return dbError(customConfigError, 'settings')
+
+    const customConfig = {
+      hasApiKey: !!openrouterApiKey?.trim() || !!currentCustomConfig?.openrouter_api_key_encrypted,
+      baseUrl: openrouterBaseUrl !== undefined
+        ? openrouterBaseUrl?.trim()
+        : currentCustomConfig?.openrouter_base_url,
+      model: openrouterModel !== undefined
+        ? openrouterModel?.trim()
+        : currentCustomConfig?.openrouter_model,
+    }
+    const validationError = getCustomAIProviderValidationError(customConfig)
+
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 })
+    }
   }
 
   // Update fund name
@@ -552,7 +625,8 @@ export async function PATCH(req: NextRequest) {
     settingsUpdates.ollama_model = ollamaModel.trim() || 'llama3.2'
   }
 
-  // Update OpenRouter (OpenAI-compatible) settings — key uses envelope encryption.
+  // Internal storage keeps the historical OpenRouter names for backward compatibility;
+  // the user-facing capability is one generic OpenAI-compatible provider.
   if (openrouterApiKey !== undefined && openrouterApiKey.trim()) {
     const kek = process.env.ENCRYPTION_KEY
     if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
@@ -577,12 +651,15 @@ export async function PATCH(req: NextRequest) {
   if (openrouterBaseUrl !== undefined) {
     const trimmed = openrouterBaseUrl?.trim() || null
     if (trimmed) {
-      const validation = validateOllamaUrl(trimmed)
+      const validation = await validateCustomProviderUrl(trimmed)
       if (!validation.ok) {
         return NextResponse.json({ error: validation.error }, { status: 400 })
       }
     }
     settingsUpdates.openrouter_base_url = trimmed
+  }
+  if (parsedRequestParameters !== undefined) {
+    settingsUpdates.openrouter_request_parameters = parsedRequestParameters
   }
 
   // Update default AI provider

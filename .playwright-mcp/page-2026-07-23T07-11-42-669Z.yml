@@ -1,0 +1,45 @@
+- generic [active] [ref=f18e1]:
+  - generic [ref=f18e3]:
+    - banner [ref=f18e4]:
+      - generic [ref=f18e5]:
+        - button "Open menu" [ref=f18e6] [cursor=pointer]
+        - generic [ref=f18e13]: test@example.com
+      - button [ref=f18e16] [cursor=pointer]
+    - main [ref=f18e18]:
+      - generic [ref=f18e20]:
+        - generic [ref=f18e21]:
+          - generic [ref=f18e22]:
+            - heading "Today" [level=1] [ref=f18e23]
+            - paragraph [ref=f18e24]: Curated healthcare and investment intelligence.
+          - button "Refresh curated articles" [ref=f18e25] [cursor=pointer]
+        - navigation "Today view" [ref=f18e26]:
+          - link "Me" [ref=f18e27] [cursor=pointer]:
+            - /url: /feeds
+          - link "Explore" [ref=f18e28] [cursor=pointer]:
+            - /url: /feeds?view=explore
+        - generic [ref=f18e29]:
+          - generic "Explore categories" [ref=f18e30]:
+            - button "All" [pressed] [ref=f18e31] [cursor=pointer]
+          - generic [ref=f18e32]:
+            - generic [ref=f18e33]: Search curated articles
+            - textbox "Search curated articles" [ref=f18e34]
+        - paragraph [ref=f18e35]
+        - generic "Loading articles" [ref=f18e37]
+      - list [ref=f18e75]:
+        - listitem [ref=f18e76]:
+          - text: Made by
+          - link "Hemrock" [ref=f18e77] [cursor=pointer]:
+            - /url: https://hemrock.com
+        - listitem [ref=f18e80]:
+          - link "View on GitHub" [ref=f18e81] [cursor=pointer]:
+            - /url: https://github.com/tdavidson/reporting
+        - listitem [ref=f18e85]:
+          - link "License" [ref=f18e86] [cursor=pointer]:
+            - /url: /license
+        - listitem [ref=f18e91]:
+          - link "Terms" [ref=f18e92] [cursor=pointer]:
+            - /url: /terms
+        - listitem [ref=f18e93]:
+          - link "Privacy" [ref=f18e94] [cursor=pointer]:
+            - /url: /privacy
+  - region "Notifications alt+T"

@@ -1,0 +1,78 @@
+[    6882ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[    7035ms] [ERROR] Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked. @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/@vercel/analytics/dist/next/index.mjs:136
+[    7035ms] [ERROR] Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked. @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/@vercel/speed-insights/dist/next/index.mjs:126
+[    7041ms] [LOG] [Vercel Web Analytics] Failed to load script from https://va.vercel-scripts.com/v1/script.debug.js. Please check if any ad blockers are enabled and try again. @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/@vercel/analytics/dist/next/index.mjs:131
+[    7041ms] [LOG] [Vercel Speed Insights] Failed to load script from https://va.vercel-scripts.com/v1/speed-insights/script.debug.js. Please check if any content blockers are enabled and try again. @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/@vercel/speed-insights/dist/next/index.mjs:124
+[    7118ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3100/api/accounting/vehicle-index:0
+[    7214ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3100/api/accounting/vehicle-index:0
+[   10732ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://1712507217.rsc.cdn77.org/wp-content/uploads/2019/07/Medical-Records-Archive.jpg:0
+[   10732ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://1712507217.rsc.cdn77.org/wp-content/uploads/2018/07/digital-biomarkers.jpg:0
+[   11979ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://cdn.medicalfuturist.com/wp-content/uploads/2023/11/tmf_article_392_nanobots-768x432.png:0
+[   11979ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://cdn.medicalfuturist.com/wp-content/uploads/2022/06/IBM-Quantum-computer-creative-commons-768x512.jpg:0
+[   11982ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://cdn.medicalfuturist.com/wp-content/uploads/2022/02/Top-AI-companies-768x432.png:0
+[   11984ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://cdn.medicalfuturist.com/wp-content/uploads/2018/01/img_9503.jpg:0
+[   12405ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://cdn.medicalfuturist.com/wp-content/uploads/2023/04/tmf_article_357-768x432.png:0
+[   12410ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://cdn.medicalfuturist.com/wp-content/uploads/2021/09/tmf_article_291_A-02-768x432.png:0
+[   12486ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ https://cdn.medicalfuturist.com/wp-content/uploads/2026/06/IMG_20260602_135239_385-768x768.jpg:0
+[   58589ms] [ERROR] `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/app-index.js:32
+[   58590ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/@radix-ui/react-dialog/dist/index.mjs:467
+[   58591ms] [ERROR] `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/app-index.js:32
+[   58592ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/@radix-ui/react-dialog/dist/index.mjs:467
+[  270157ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  270631ms] [LOG] [Fast Refresh] done in 475ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  270905ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  271151ms] [LOG] [Fast Refresh] done in 247ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  271373ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3100/feeds:0
+[  511142ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  511430ms] [LOG] [Fast Refresh] done in 288ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 3331296ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:8000/auth/v1/token?grant_type=refresh_token:0
+[ 5594014ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 5594354ms] [LOG] [Fast Refresh] done in 340ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 5633998ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 5634384ms] [LOG] [Fast Refresh] done in 386ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 5667598ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 5667840ms] [LOG] [Fast Refresh] done in 242ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 5824878ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 5825164ms] [LOG] [Fast Refresh] done in 286ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 5896850ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 5897165ms] [LOG] [Fast Refresh] done in 314ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 5944259ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 5944507ms] [LOG] [Fast Refresh] done in 249ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 6063936ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6064333ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6064352ms] [LOG] [Fast Refresh] done in 19ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 6238877ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6239691ms] [LOG] [Fast Refresh] done in 813ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 6314446ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6314746ms] [LOG] [Fast Refresh] done in 300ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 6330543ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6331510ms] [LOG] [Fast Refresh] done in 968ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 6386104ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6386558ms] [LOG] [Fast Refresh] done in 455ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 6450465ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6450955ms] [LOG] [Fast Refresh] done in 490ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 6529710ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 6530258ms] [LOG] [Fast Refresh] done in 547ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 7018130ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 7018686ms] [LOG] [Fast Refresh] done in 556ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 7018747ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 7019658ms] [LOG] [Fast Refresh] done in 912ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 7020216ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 7020519ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3100/auth?next=%2Ffeeds:0
+[ 7020615ms] [LOG] [Fast Refresh] done in 399ms @ webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 7021060ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3100/_next/static/css/app/layout.css?v=1784787767223:0
+[ 7021063ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3100/auth?next=%2Ffeeds:0
+[ 7021102ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3100/_next/static/chunks/main-app.js?v=1784787767223:0
+[ 7021103ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3100/_next/static/chunks/app/auth/page.js:0
+[ 7021103ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3100/_next/static/chunks/app-pages-internals.js:0
+[ 7021112ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3100/_next/static/chunks/app/not-found.js:0
+[ 7024140ms] [WARNING] The resource http://localhost:3100/_next/static/media/313510e2713fb214-s.p.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3100/auth?next=%2Ffeeds:0
+[ 7024140ms] [WARNING] The resource http://localhost:3100/_next/static/media/636a5ac981f94f8b-s.p.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3100/auth?next=%2Ffeeds:0

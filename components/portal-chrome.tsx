@@ -3,15 +3,19 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { AppFooter } from '@/components/app-footer'
 import { LogOut } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { LanguageSwitcher } from '@/components/language-switcher'
+import type englishMessages from '@/messages/en.json'
 
-const TABS: { href: string; label: string; match?: string[] }[] = [
-  { href: '/portal/overview', label: 'Overview' },
+type PortalChromeKey = keyof typeof englishMessages.PortalChrome
+
+const TABS: { href: string; labelKey: PortalChromeKey; match?: string[] }[] = [
+  { href: '/portal/overview', labelKey: 'overview' },
   // "Library" is the combined reports + letters + documents page at /portal/snapshots.
-  { href: '/portal/snapshots', label: 'Library', match: ['/portal/snapshots', '/portal/letters', '/portal/documents'] },
-  { href: '/portal/settings', label: 'Settings' },
-  { href: '/portal/contact', label: 'Contact' },
+  { href: '/portal/snapshots', labelKey: 'library', match: ['/portal/snapshots', '/portal/letters', '/portal/documents'] },
+  { href: '/portal/settings', labelKey: 'settings' },
+  { href: '/portal/contact', labelKey: 'contact' },
 ]
 
 /**
@@ -21,6 +25,7 @@ const TABS: { href: string; label: string; match?: string[] }[] = [
  */
 export function PortalChrome({ fundName, logoUrl, userEmail, children }: { fundName: string; logoUrl: string | null; userEmail: string; children: React.ReactNode }) {
   const pathname = usePathname()
+  const translate = useTranslations('PortalChrome')
 
   if (pathname === '/portal/welcome') {
     return <>{children}</>
@@ -40,24 +45,25 @@ export function PortalChrome({ fundName, logoUrl, userEmail, children }: { fundN
             </Link>
             <div className="flex items-center gap-3">
               {userEmail && <span className="text-xs text-muted-foreground truncate hidden sm:block max-w-[200px]">{userEmail}</span>}
+              <LanguageSwitcher compact />
               <form action="/api/auth/logout" method="POST">
                 <Button type="submit" variant="outline" size="sm" className="text-muted-foreground gap-2">
                   <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Sign out</span>
+                  <span className="hidden sm:inline">{translate('signOut')}</span>
                 </Button>
               </form>
             </div>
           </div>
           <nav className="flex items-center gap-4 -mb-px pt-2 overflow-x-auto">
-            {TABS.map(t => {
-              const active = (t.match ?? [t.href]).some(m => pathname === m || pathname.startsWith(m + '/'))
+            {TABS.map(tab => {
+              const active = (tab.match ?? [tab.href]).some(m => pathname === m || pathname.startsWith(m + '/'))
               return (
                 <Link
-                  key={t.href}
-                  href={t.href}
+                  key={tab.href}
+                  href={tab.href}
                   className={`text-sm py-2 border-b-2 whitespace-nowrap ${active ? 'border-foreground text-foreground font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 >
-                  {t.label}
+                  {translate(tab.labelKey)}
                 </Link>
               )
             })}
@@ -65,9 +71,6 @@ export function PortalChrome({ fundName, logoUrl, userEmail, children }: { fundN
         </div>
       </header>
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-6">{children}</main>
-      <div className="w-full max-w-5xl mx-auto">
-        <AppFooter />
-      </div>
     </div>
   )
 }

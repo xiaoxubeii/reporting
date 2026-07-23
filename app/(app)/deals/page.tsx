@@ -4,8 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DealsContent } from './deals-content'
 import { DEFAULT_STATUSES } from '@/lib/deals/statuses'
+import { getTranslations } from 'next-intl/server'
 
-export const metadata: Metadata = { title: 'Deals' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Deals')
+  return { title: t('metadata.title') }
+}
 
 export default async function DealsPage() {
   const supabase = createClient()

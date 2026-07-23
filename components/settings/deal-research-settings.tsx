@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Section } from '@/components/settings/section'
@@ -20,13 +21,8 @@ import { Section } from '@/components/settings/section'
 
 type MinFit = 'strong' | 'moderate' | 'weak'
 
-const FIT_LABELS: Record<MinFit, string> = {
-  strong: 'Strong fit only — the most selective, cheapest option',
-  moderate: 'Moderate and strong fit (recommended)',
-  weak: 'Weak fit and above — researches almost everything that isn\'t spam',
-}
-
 export function DealResearchSettings() {
+  const t = useTranslations('Settings.dealResearch')
   const [enabled, setEnabled] = useState(false)
   const [minFit, setMinFit] = useState<MinFit>('moderate')
   const [loading, setLoading] = useState(true)
@@ -59,13 +55,13 @@ export function DealResearchSettings() {
       })
       const body = await res.json()
       if (!res.ok) {
-        setError(body.error ?? 'Could not save')
+        setError(body.error ?? t('saveFailed'))
         return
       }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
-      setError('Could not save')
+      setError(t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -74,12 +70,10 @@ export function DealResearchSettings() {
   if (loading) return null
 
   return (
-    <Section title="External deal research">
+    <Section title={t('title')}>
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          After an inbound deal is scored against your thesis, research the founder and company on
-          the web: prior companies, whether their traction claims show up anywhere outside the deck,
-          the competitive picture, and anything that contradicts the pitch.
+          {t('description')}
         </p>
 
         <label className="flex items-center gap-2 text-sm">
@@ -88,11 +82,11 @@ export function DealResearchSettings() {
             checked={enabled}
             onChange={e => setEnabled(e.target.checked)}
           />
-          Research qualifying inbound deals automatically
+          {t('enable')}
         </label>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium">Only research deals scoring at least</label>
+          <label className="text-sm font-medium">{t('minimumFit')}</label>
           <select
             className="w-full rounded-md border bg-background px-3 py-2 text-sm disabled:opacity-50"
             value={minFit}
@@ -100,26 +94,23 @@ export function DealResearchSettings() {
             onChange={e => setMinFit(e.target.value as MinFit)}
           >
             {(['strong', 'moderate', 'weak'] as MinFit[]).map(f => (
-              <option key={f} value={f}>{FIT_LABELS[f]}</option>
+              <option key={f} value={f}>{t(`fit.${f}`)}</option>
             ))}
           </select>
           <p className="text-xs text-muted-foreground">
-            Each research run costs a handful of web searches on top of tokens. Most of an inbound
-            VC mailbox is noise, so the bar keeps that spend on deals you might actually take.
-            You can always run research by hand on an individual deal, whatever it scored.
+            {t('costHelp')}
           </p>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Requires Anthropic as the deal-analysis provider — web search is not available on the
-          other providers, and researching without it would mean answering from stale training data.
+          {t('providerHelp')}
         </p>
 
         <div className="flex items-center gap-2">
           <Button onClick={save} disabled={saving} size="sm">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}
           </Button>
-          {saved && <span className="text-xs text-green-600">Saved</span>}
+          {saved && <span className="text-xs text-green-600">{t('saved')}</span>}
           {error && <span className="text-xs text-destructive">{error}</span>}
         </div>
       </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { LpAccessSettings } from '@/components/lp-access-settings'
 import { LpDocumentsSettings } from '@/components/lp-documents-settings'
 import { LpMessagesSection } from '@/components/lp-messages-section'
@@ -19,21 +20,22 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 export function LpPortalDashboard() {
+  const t = useTranslations('LPs.admin.portal')
   return (
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
       <div className="flex items-start justify-between gap-4 mb-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <AnalystToggleButton />
       </div>
       <p className="text-sm text-muted-foreground mb-8">
-        Manage everything your investors see in their portal.
+        {t('description')}
       </p>
 
       <div className="space-y-10">
-        <Section title="Access" description="Invite LPs and their authorized users, in bulk from a pasted sheet, or one at a time. Investors are matched by name; new ones are created.">
+        <Section title={t('accessTitle')} description={t('accessDescription')}>
           <LpAccessSettings />
         </Section>
-        <Section title="Documents">
+        <Section title={t('documentsTitle')}>
           <LpDocumentsSettings />
         </Section>
         <LpMessagesSection />

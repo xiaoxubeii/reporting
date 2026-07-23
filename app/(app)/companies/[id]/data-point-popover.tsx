@@ -6,6 +6,7 @@ import type { Metric } from '@/lib/types/database'
 import type { MetricValueRow } from './company-charts'
 import { Pencil, Trash2, X } from 'lucide-react'
 import { useConfirm } from '@/components/confirm-dialog'
+import { useFormatter, useTranslations } from 'next-intl'
 
 interface Props {
   dataPoint: MetricValueRow
@@ -16,10 +17,10 @@ interface Props {
   formatValue: (val: number | null) => string
 }
 
-const CONFIDENCE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  high: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'High' },
-  medium: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Medium' },
-  low: { bg: 'bg-red-100', text: 'text-red-700', label: 'Low' },
+const CONFIDENCE_STYLES: Record<string, { bg: string; text: string }> = {
+  high: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  medium: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  low: { bg: 'bg-red-100', text: 'text-red-700' },
 }
 
 export function DataPointPopover({
@@ -30,6 +31,8 @@ export function DataPointPopover({
   onRefresh,
   formatValue,
 }: Props) {
+  const t = useTranslations('CompanyDetail.dataPoint')
+  const format = useFormatter()
   const ref = useRef<HTMLDivElement>(null)
   const confirm = useConfirm()
   const [editing, setEditing] = useState(false)
@@ -67,7 +70,7 @@ export function DataPointPopover({
 
     const pMonth = editMonth ? parseInt(editMonth) : null
     const periodLabel = pMonth
-      ? `${new Date(2000, pMonth - 1).toLocaleString('en', { month: 'short' })} ${pYear}`
+      ? `${pYear}-${String(pMonth).padStart(2, '0')}`
       : `FY ${pYear}`
 
     const body: Record<string, unknown> = {
@@ -94,9 +97,9 @@ export function DataPointPopover({
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: 'Delete data point',
-      description: 'Delete this data point? This cannot be undone.',
-      confirmLabel: 'Delete',
+      title: t('deleteTitle'),
+      description: t('deleteDescription'),
+      confirmLabel: t('delete'),
       variant: 'destructive',
     })
     if (!ok) return
@@ -114,6 +117,13 @@ export function DataPointPopover({
   // Position the popover near the click, but keep it on-screen
   const top = Math.min(position.y - 20, window.innerHeight - 400)
   const left = Math.min(position.x + 12, window.innerWidth - 300)
+  const displayPeriod = dataPoint.period_month
+    ? format.dateTime(new Date(Date.UTC(dataPoint.period_year, dataPoint.period_month - 1, 1)), {
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+    : t('fiscalYear', { year: dataPoint.period_year })
 
   return (
     <div
@@ -122,7 +132,7 @@ export function DataPointPopover({
       style={{ top, left }}
     >
       <div className="flex items-center justify-between px-3 pt-3 pb-1">
-        <span className="text-xs text-muted-foreground">{dataPoint.period_label}</span>
+        <span className="text-xs text-muted-foreground">{displayPeriod}</span>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
           <X className="h-3.5 w-3.5" />
         </button>
@@ -133,7 +143,7 @@ export function DataPointPopover({
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] text-muted-foreground">Year</label>
+                <label className="text-[10px] text-muted-foreground">{t('year')}</label>
                 <input
                   type="number"
                   value={editYear}
@@ -142,16 +152,16 @@ export function DataPointPopover({
                 />
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground">Month</label>
+                <label className="text-[10px] text-muted-foreground">{t('month')}</label>
                 <select
                   value={editMonth}
                   onChange={(e) => setEditMonth(e.target.value)}
                   className="w-full rounded border bg-background px-2 py-1 text-sm h-[30px]"
                 >
-                  <option value="">— (annual)</option>
+                  <option value="">{t('annual')}</option>
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={i + 1} value={String(i + 1)}>
-                      {new Date(2000, i).toLocaleString('en', { month: 'long' })}
+                      {format.dateTime(new Date(2000, i), { month: 'long' })}
                     </option>
                   ))}
                 </select>
@@ -175,7 +185,7 @@ export function DataPointPopover({
                 disabled={saving}
                 className="text-xs text-primary hover:underline disabled:opacity-50"
               >
-                {saving ? '...' : 'Save'}
+                {saving ? '…' : t('save')}
               </button>
             </div>
           </div>
@@ -185,22 +195,22 @@ export function DataPointPopover({
 
         <div className="flex items-center gap-2">
           <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${confStyle.bg} ${confStyle.text}`}>
-            {confStyle.label} confidence
+            {t('confidence', { level: t(`confidenceLevels.${dataPoint.confidence}`) })}
           </span>
           {dataPoint.is_manually_entered && (
-            <span className="text-[10px] text-muted-foreground">Manual entry</span>
+            <span className="text-[10px] text-muted-foreground">{t('manualEntry')}</span>
           )}
         </div>
 
         {dataPoint.inbound_emails && (
           <div className="text-xs">
-            <span className="text-muted-foreground">Source: </span>
+            <span className="text-muted-foreground">{t('source')}: </span>
             <Link
               href={`/emails/${dataPoint.inbound_emails.id}`}
               className="text-primary hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
-              {dataPoint.inbound_emails.subject ?? 'Email'}
+              {dataPoint.inbound_emails.subject ?? t('email')}
             </Link>
           </div>
         )}
@@ -215,7 +225,7 @@ export function DataPointPopover({
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <Pencil className="h-3 w-3" />
-            Edit
+            {t('edit')}
           </button>
           <button
             onClick={handleDelete}
@@ -223,7 +233,7 @@ export function DataPointPopover({
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive disabled:opacity-50"
           >
             <Trash2 className="h-3 w-3" />
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? t('deleting') : t('delete')}
           </button>
         </div>
       </div>

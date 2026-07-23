@@ -958,6 +958,7 @@ export type Database = {
           ollama_model: string
           openai_api_key_encrypted: string | null
           openai_model: string
+          openrouter_request_parameters: Json
           outbound_email_provider: string | null
           postmark_inbound_address: string | null
           postmark_server_token_encrypted: string | null
@@ -1019,6 +1020,7 @@ export type Database = {
           ollama_model?: string
           openai_api_key_encrypted?: string | null
           openai_model?: string
+          openrouter_request_parameters?: Json
           outbound_email_provider?: string | null
           postmark_inbound_address?: string | null
           postmark_server_token_encrypted?: string | null
@@ -1080,6 +1082,7 @@ export type Database = {
           ollama_model?: string
           openai_api_key_encrypted?: string | null
           openai_model?: string
+          openrouter_request_parameters?: Json
           outbound_email_provider?: string | null
           postmark_inbound_address?: string | null
           postmark_server_token_encrypted?: string | null
@@ -1215,6 +1218,7 @@ export type Database = {
           parse_notes: string | null
           drive_file_id: string | null
           drive_source_url: string | null
+          source_kind: string | null
           uploaded_by: string | null
           uploaded_at: string
         }
@@ -1232,6 +1236,7 @@ export type Database = {
           parse_notes?: string | null
           drive_file_id?: string | null
           drive_source_url?: string | null
+          source_kind?: string | null
           uploaded_by?: string | null
           uploaded_at?: string
         }
@@ -1249,8 +1254,102 @@ export type Database = {
           parse_notes?: string | null
           drive_file_id?: string | null
           drive_source_url?: string | null
+          source_kind?: string | null
           uploaded_by?: string | null
           uploaded_at?: string
+        }
+        Relationships: []
+      }
+      diligence_expert_requests: {
+        Row: {
+          id: string
+          fund_id: string
+          deal_id: string
+          created_by: string | null
+          source_kind: string
+          source_ref: Json
+          question: string
+          expert_profile: string
+          context_snapshot: string
+          expert_id: string | null
+          selection_method: string | null
+          expert_name: string | null
+          expert_email: string | null
+          expert_snapshot: Json | null
+          token_hash: string | null
+          expires_at: string | null
+          invited_at: string | null
+          email_provider_accepted_at: string | null
+          email_message_id: string | null
+          email_error_code: string | null
+          email_error_message: string | null
+          response_markdown: string | null
+          submitted_at: string | null
+          document_id: string | null
+          materialization_error: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          fund_id: string
+          deal_id: string
+          created_by?: string | null
+          source_kind: string
+          source_ref: Json
+          question: string
+          expert_profile: string
+          context_snapshot: string
+          expert_id?: string | null
+          selection_method?: string | null
+          expert_name?: string | null
+          expert_email?: string | null
+          expert_snapshot?: Json | null
+          token_hash?: string | null
+          expires_at?: string | null
+          invited_at?: string | null
+          email_provider_accepted_at?: string | null
+          email_message_id?: string | null
+          email_error_code?: string | null
+          email_error_message?: string | null
+          response_markdown?: string | null
+          submitted_at?: string | null
+          document_id?: string | null
+          materialization_error?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          fund_id?: string
+          deal_id?: string
+          created_by?: string | null
+          source_kind?: string
+          source_ref?: Json
+          question?: string
+          expert_profile?: string
+          context_snapshot?: string
+          expert_id?: string | null
+          selection_method?: string | null
+          expert_name?: string | null
+          expert_email?: string | null
+          expert_snapshot?: Json | null
+          token_hash?: string | null
+          expires_at?: string | null
+          invited_at?: string | null
+          email_provider_accepted_at?: string | null
+          email_message_id?: string | null
+          email_error_code?: string | null
+          email_error_message?: string | null
+          response_markdown?: string | null
+          submitted_at?: string | null
+          document_id?: string | null
+          materialization_error?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1568,6 +1667,57 @@ export type Database = {
           extracted_at?: string | null
           uploaded_by?: string | null
           uploaded_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      experts: {
+        Row: {
+          id: string
+          scope: string
+          fund_id: string | null
+          name: string
+          email: string
+          title: string | null
+          organization: string | null
+          profile_text: string
+          status: string
+          embedding: string | null
+          embedding_model: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          scope: string
+          fund_id?: string | null
+          name: string
+          email: string
+          title?: string | null
+          organization?: string | null
+          profile_text: string
+          status?: string
+          embedding?: string | null
+          embedding_model?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          scope?: string
+          fund_id?: string | null
+          name?: string
+          email?: string
+          title?: string | null
+          organization?: string | null
+          profile_text?: string
+          status?: string
+          embedding?: string | null
+          embedding_model?: string | null
+          created_by?: string | null
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
@@ -2817,6 +2967,16 @@ export type Database = {
     }
     Functions: {
       count_unread_notes: { Args: { p_user_id: string }; Returns: number }
+      enqueue_ingest_if_deal_idle: {
+        Args: {
+          p_fund_id: string
+          p_deal_id: string
+          p_document_ids: string[]
+          p_enqueued_by?: string | null
+          p_dedupe_key?: string | null
+        }
+        Returns: Json
+      }
       get_my_fund_ids: { Args: never; Returns: string[] }
       hook_before_user_created: { Args: { event: Json }; Returns: Json }
       is_fund_admin: { Args: { check_fund_id: string }; Returns: boolean }
@@ -2828,6 +2988,18 @@ export type Database = {
         }[]
       }
       is_fund_writer: { Args: { check_fund_id: string }; Returns: boolean }
+      match_experts: {
+        Args: { p_fund_id: string; p_query_embedding: string; p_match_count?: number }
+        Returns: {
+          id: string
+          scope: string
+          name: string
+          title: string | null
+          organization: string | null
+          profile_text: string
+          similarity: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

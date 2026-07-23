@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AnalystToggleButton } from '@/components/analyst-button'
@@ -19,20 +20,18 @@ interface PendingActionRow {
   created_via: string | null
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  update_company_metric: 'Metric update',
-  record_investment: 'Investment',
-  issue_capital_call: 'Capital call',
-}
+const KNOWN_ACTIONS = ['update_company_metric', 'record_investment', 'issue_capital_call'] as const
 
-function formatVal(v: unknown): string {
+function formatVal(v: unknown, locale: string): string {
   if (v == null) return '—'
-  if (typeof v === 'number') return v.toLocaleString()
+  if (typeof v === 'number') return new Intl.NumberFormat(locale).format(v)
   if (typeof v === 'object') return JSON.stringify(v)
   return String(v)
 }
 
 export default function PendingActionsPage() {
+  const t = useTranslations('PendingActions')
+  const locale = useLocale()
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<PendingActionRow[]>([])
   const [busy, setBusy] = useState<Record<string, boolean>>({})
@@ -42,7 +41,7 @@ export default function PendingActionsPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/pending-actions')
-      if (!res.ok) throw new Error('Failed to load')
+      if (!res.ok) throw new Error('load_failed')
       setRows(await res.json())
     } catch {
       setRows([])
@@ -62,13 +61,13 @@ export default function PendingActionsPage() {
       const res = await fetch(`/api/pending-actions/${row.id}/${kind}`, { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.ok === false) {
-        setError(data.error ?? `Could not ${kind}`)
+        setError(data.error ?? t(`errors.${kind}`))
         return
       }
       // Optimistically drop the row — it left the pending queue.
       setRows(prev => prev.filter(r => r.id !== row.id))
     } catch {
-      setError('Network error. Please try again.')
+      setError(t('errors.network'))
     } finally {
       setBusy(prev => ({ ...prev, [row.id]: false }))
     }
@@ -78,10 +77,9 @@ export default function PendingActionsPage() {
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pending Actions</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Changes the Analyst drafted, waiting on your approval. Nothing here has taken effect —
-            approving runs the same write the direct tools do.
+            {t('description')}
           </p>
         </div>
         <AnalystToggleButton />
@@ -97,7 +95,7 @@ export default function PendingActionsPage() {
 
           {!loading && rows.length === 0 && (
             <div className="rounded-lg border border-dashed p-12 text-center">
-              <p className="text-muted-foreground">Nothing pending. Drafts you stage in the Analyst show up here.</p>
+              <p className="text-muted-foreground">{t('empty')}</p>
             </div>
           )}
 
@@ -112,11 +110,13 @@ export default function PendingActionsPage() {
                   <div key={row.id} className="rounded-lg border bg-card p-4 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
-                        {ACTION_LABELS[row.action_type] ?? row.action_type}
+                        {KNOWN_ACTIONS.includes(row.action_type as (typeof KNOWN_ACTIONS)[number])
+                          ? t(`actions.${row.action_type as (typeof KNOWN_ACTIONS)[number]}`)
+                          : row.action_type}
                       </span>
                       <span className="text-sm font-medium">{row.preview.summary}</span>
                       <span className="ml-auto text-xs text-muted-foreground">
-                        {row.created_via ?? 'analyst'} · {new Date(row.created_at).toLocaleDateString()}
+                        {row.created_via ?? t('analyst')} · {new Intl.DateTimeFormat(locale).format(new Date(row.created_at))}
                       </span>
                     </div>
 
@@ -125,7 +125,7 @@ export default function PendingActionsPage() {
                         {scalars.map(([k, v]) => (
                           <div key={k} className="contents">
                             <dt className="text-muted-foreground">{k}</dt>
-                            <dd className="font-mono">{formatVal(v)}</dd>
+                            <dd className="font-mono">{formatVal(v, locale)}</dd>
                           </div>
                         ))}
                       </dl>
@@ -136,14 +136,14 @@ export default function PendingActionsPage() {
                         <thead>
                           <tr className="text-muted-foreground">
                             <th className="text-left font-medium py-0.5">LP</th>
-                            <th className="text-right font-medium py-0.5">Amount</th>
+                            <th className="text-right font-medium py-0.5">{t('amount')}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {perLp.map((r, i) => (
                             <tr key={i} className="border-t">
                               <td className="py-0.5">{r.lp}</td>
-                              <td className="py-0.5 text-right font-mono">{formatVal(r.amount)}</td>
+                              <td className="py-0.5 text-right font-mono">{formatVal(r.amount, locale)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -152,10 +152,10 @@ export default function PendingActionsPage() {
 
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => act(row, 'approve')} disabled={busy[row.id]}>
-                        {busy[row.id] ? 'Working…' : 'Approve'}
+                        {busy[row.id] ? t('working') : t('approve')}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => act(row, 'reject')} disabled={busy[row.id]}>
-                        Reject
+                        {t('reject')}
                       </Button>
                     </div>
                   </div>

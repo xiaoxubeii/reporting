@@ -1,4 +1,7 @@
 import { withBotId } from 'botid/next/config'
+import createNextIntlPlugin from 'next-intl/plugin'
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 export function supabaseConnectSources(rawUrl) {
   if (!rawUrl) return []
@@ -108,4 +111,4 @@ const nextConfig = {
     ]
   },
 }
-export default withBotId(nextConfig)
+export default withBotId(withNextIntl(nextConfig))

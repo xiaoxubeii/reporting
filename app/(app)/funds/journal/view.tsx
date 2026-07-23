@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +11,7 @@ import type { Account, AccountType } from '@/lib/accounting/types'
 import { PeriodPicker } from '@/components/accounting/period-picker'
 import type { PeriodPreset } from '@/lib/accounting/statement-period'
 import { EntryModal } from '../entry-modal'
+import { formatDate, formatNumber } from '../format'
 
 interface Posting { id: string; account_id: string; account_code: string | null; account_name: string | null; account_type: string | null; amount: number; currency: string | null; lp_entity_id: string | null }
 interface Entry {
@@ -27,6 +29,8 @@ const actionBtn = 'shrink-0 rounded border border-input px-2 py-1 font-sans text
 const PAGE = 50
 
 export function JournalView() {
+  const locale = useLocale()
+  const t = useTranslations('Funds.journal')
   const lf = useLedgerFetch()
 
   const [entries, setEntries] = useState<Entry[]>([])
@@ -62,15 +66,15 @@ export function JournalView() {
     lf(`/api/accounting/journal?${qs}`)
       .then(r => (r.ok ? r.json() : { entries: [], total: 0 }))
       .then(d => { setEntries(Array.isArray(d.entries) ? d.entries : []); setTotal(d.total ?? 0) })
-      .catch(() => setError('Could not load entries'))
+      .catch(() => setError(t('loadError')))
       .finally(() => setLoading(false))
-  }, [lf, preset, start, end, debounced, status, page])
+  }, [lf, preset, start, end, debounced, status, page, t])
   useEffect(() => { loadPage() }, [loadPage])
 
   // Post every draft entry for this vehicle, one page at a time (the endpoint caps a
   // single call at 500 rows and returns `remaining` so we know whether to loop).
   const postAllDrafts = useCallback(() => {
-    if (!window.confirm('Post all draft entries for this vehicle to the ledger? This cannot be bulk-undone.')) return
+    if (!window.confirm(t('postAllConfirm'))) return
     setPosting(true)
     setPostMsg(null)
     let totalPosted = 0
@@ -91,12 +95,12 @@ export function JournalView() {
     }
     step(null, 0).finally(() => {
       setPostMsg(failed
-        ? 'Could not post draft entries.'
-        : `Posted ${totalPosted} entries.${skipIds.size ? ` ${skipIds.size} skipped (closed period or out of balance).` : ''}`)
+        ? t('postAllError')
+        : t('postAllResult', { posted: totalPosted, skipped: skipIds.size }))
       setPosting(false)
       loadPage()
     })
-  }, [lf, loadPage])
+  }, [lf, loadPage, t])
 
   return (
     <div className="space-y-4">
@@ -105,12 +109,12 @@ export function JournalView() {
           the rest of the row around. Pagination lives BELOW the table (see footer). */}
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={() => setEditing({ entryId: null })}>
-          <Plus className="h-4 w-4 mr-1" />New entry
+          <Plus className="h-4 w-4 mr-1" />{t('newEntry')}
         </Button>
         <Input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search memo, source, date, account, or amount…"
+          placeholder={t('searchPlaceholder')}
           className="h-9 max-w-xs"
         />
         <select
@@ -118,13 +122,13 @@ export function JournalView() {
           onChange={e => { setStatus(e.target.value as 'all' | 'draft' | 'posted'); setPage(0) }}
           className="h-9 rounded-md border border-input bg-background px-2 text-sm"
         >
-          <option value="all">All entries</option>
-          <option value="draft">Draft</option>
-          <option value="posted">Posted</option>
+          <option value="all">{t('allEntries')}</option>
+          <option value="draft">{t('status.draft')}</option>
+          <option value="posted">{t('status.posted')}</option>
         </select>
         <Button size="sm" variant="outline" disabled={posting} onClick={postAllDrafts}>
           {posting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-          Post all drafts
+          {t('postAll')}
         </Button>
         {postMsg && <span className="text-xs text-muted-foreground">{postMsg}</span>}
         {error && <span className="text-xs text-amber-600">{error}</span>}
@@ -138,15 +142,15 @@ export function JournalView() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>
+        <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
       ) : entries.length === 0 ? (
         <div className="border border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
-          {debounced ? 'No entries match your search in this period.' : 'No journal entries in this period. Widen the range, create one above, or import bank transactions.'}
+          {debounced ? t('noSearchResults') : t('empty')}
         </div>
       ) : (
         <div className="border rounded-lg divide-y font-mono text-xs">
           {entries.map(e => {
-            const narration = (e.memo || e.source_type || 'Entry').replace(/"/g, "'")
+            const narration = (e.memo || e.source_type || t('entry')).replace(/"/g, "'")
             // Readable status marker instead of a cryptic */!/# flag.
             const statusCls = e.status === 'posted'
               ? 'bg-green-500/15 text-green-600'
@@ -163,12 +167,12 @@ export function JournalView() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 leading-relaxed">
                     <div className="whitespace-pre-wrap break-words">
-                      <span className="text-muted-foreground">{e.entry_date}</span>{' '}
-                      <span className={`mr-1 rounded px-1 py-0.5 align-middle font-sans text-[9px] font-medium uppercase tracking-wide ${statusCls}`}>{e.status}</span>{' '}
+                      <span className="text-muted-foreground">{formatDate(e.entry_date, locale)}</span>{' '}
+                      <span className={`mr-1 rounded px-1 py-0.5 align-middle font-sans text-[9px] font-medium uppercase tracking-wide ${statusCls}`}>{t(`status.${e.status === 'posted' ? 'posted' : e.status === 'void' ? 'void' : 'draft'}`)}</span>{' '}
                       <span>&quot;{narration}&quot;</span>
                     </div>
                     {e.source_type && (
-                      <div className="text-muted-foreground/70">{'  '}source: &quot;{e.source_type}&quot;</div>
+                      <div className="text-muted-foreground/70">{'  '}{t('source')}: &quot;{e.source_type}&quot;</div>
                     )}
                     {/* Aligned by layout, not by padding the name to the longest account
                         in the chart — the per-LP capital accounts are long enough to push
@@ -182,7 +186,7 @@ export function JournalView() {
                         <div key={p.id} className="flex items-baseline gap-3 pl-4">
                           <span className="min-w-0 flex-1 break-all">{name}</span>
                           <span className={`shrink-0 text-right tabular-nums ${amt < 0 ? 'text-muted-foreground' : ''}`}>
-                            {amt.toFixed(2)}
+                            {formatNumber(amt, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="w-8 shrink-0 text-muted-foreground">{p.currency ?? 'USD'}</span>
                         </div>
@@ -195,10 +199,10 @@ export function JournalView() {
                   {clickable && (
                     <button
                       onClick={ev => { ev.stopPropagation(); setEditing({ entryId: e.id, readOnly: e.status === 'posted' }) }}
-                      title={e.status === 'posted' ? 'See the entry — unpost from there to edit it' : 'Edit this draft'}
+                      title={e.status === 'posted' ? t('viewEditHelp') : t('editDraftHelp')}
                       className={actionBtn}
                     >
-                      {e.status === 'posted' ? 'View / edit' : 'Edit'}
+                      {e.status === 'posted' ? t('viewEdit') : t('edit')}
                     </button>
                   )}
                 </div>
@@ -212,9 +216,9 @@ export function JournalView() {
           the From/To inputs to the toolbar above. */}
       {total > 0 && (
         <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
-          <span>Showing {page * PAGE + 1}–{Math.min((page + 1) * PAGE, total)} of {total}</span>
-          <Button size="sm" variant="outline" disabled={page === 0 || loading} onClick={() => setPage(p => Math.max(0, p - 1))}>Prev</Button>
-          <Button size="sm" variant="outline" disabled={(page + 1) * PAGE >= total || loading} onClick={() => setPage(p => p + 1)}>Next</Button>
+          <span>{t('showing', { from: page * PAGE + 1, to: Math.min((page + 1) * PAGE, total), total })}</span>
+          <Button size="sm" variant="outline" disabled={page === 0 || loading} onClick={() => setPage(p => Math.max(0, p - 1))}>{t('previous')}</Button>
+          <Button size="sm" variant="outline" disabled={(page + 1) * PAGE >= total || loading} onClick={() => setPage(p => p + 1)}>{t('next')}</Button>
         </div>
       )}
 

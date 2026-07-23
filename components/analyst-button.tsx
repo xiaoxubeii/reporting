@@ -1,10 +1,12 @@
 'use client'
 
 import { Sparkles } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { useAnalystContext } from '@/components/analyst-context'
 
 export function AnalystToggleButton() {
+  const t = useTranslations('Analyst')
   const { open, toggleOpen, hasAIKey } = useAnalystContext()
 
   if (!hasAIKey) return null
@@ -17,7 +19,7 @@ export function AnalystToggleButton() {
       onClick={toggleOpen}
     >
       <Sparkles className="h-3.5 w-3.5" />
-      Analyst
+      {t('title')}
     </Button>
   )
 }

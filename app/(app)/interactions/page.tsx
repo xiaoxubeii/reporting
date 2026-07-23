@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
-import { InteractionsContent } from './interactions-content'
+import { InteractionsContent, type Interaction } from './interactions-content'
 
-export const metadata: Metadata = { title: 'Interactions' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Interactions.metadata')
+  return { title: t('title') }
+}
 
 export default async function InteractionsPage() {
   const supabase = createClient()
@@ -29,7 +33,12 @@ export default async function InteractionsPage() {
     .limit(100)
 
   // Batch-load company names
-  const companyIds = Array.from(new Set((interactions ?? []).map((i: any) => i.company_id).filter(Boolean))) as string[]
+  const interactionRows = (interactions ?? []) as Omit<Interaction, 'company_name'>[]
+  const companyIds = Array.from(new Set(
+    interactionRows
+      .map(interaction => interaction.company_id)
+      .filter((companyId): companyId is string => Boolean(companyId)),
+  ))
   const companyNameMap: Record<string, string> = {}
   if (companyIds.length > 0) {
     const { data: companies } = await admin
@@ -41,9 +50,9 @@ export default async function InteractionsPage() {
     }
   }
 
-  const enriched = (interactions ?? []).map((i: any) => ({
-    ...i,
-    company_name: i.company_id ? companyNameMap[i.company_id] ?? null : null,
+  const enriched: Interaction[] = interactionRows.map(interaction => ({
+    ...interaction,
+    company_name: interaction.company_id ? companyNameMap[interaction.company_id] ?? null : null,
   }))
 
   return <InteractionsContent interactions={enriched} />

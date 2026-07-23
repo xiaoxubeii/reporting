@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, Landmark, ClipboardList, ArrowRight, Search, X } from 'lucide-react'
-import { useCurrency, formatCurrency, formatCurrencyFull } from '@/components/currency-context'
+import { useCurrency } from '@/components/currency-context'
 import { useVehicle, useFundSeg } from '@/components/accounting-vehicle'
 import { Card, CardContent } from '@/components/ui/card'
 import { SortTh, nextSort, compareVals, type SortState } from '@/components/sortable-th'
+import { formatCompactMoney, formatMoney, formatNumber, formatPercent } from './format'
 
 // The fund overview: performance per vehicle, DERIVED FROM THE LEDGER.
 //
@@ -42,17 +44,18 @@ interface Vehicle {
 
 type Lens = 'lp' | 'fund'
 
-const moic = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)}x`)
-const irrPct = (v: number | null) => {
+const moic = (v: number | null, locale: string) => (v == null ? '—' : `${formatNumber(v, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`)
+const irrPct = (v: number | null, locale: string) => {
   if (v == null) return '—'
-  const p = v * 100
-  return `${(Object.is(p, -0) ? 0 : p).toFixed(1)}%`
+  return formatPercent(v, locale)
 }
 
 export function FundOverview() {
+  const locale = useLocale()
+  const t = useTranslations('Funds.overview')
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrency(v, currency)
-  const fmtFull = (v: number) => formatCurrencyFull(v, currency)
+  const fmt = (v: number) => formatCompactMoney(v, currency, locale)
+  const fmtFull = (v: number) => formatMoney(v, currency, locale, 0)
   const router = useRouter()
   const { setVehicle } = useVehicle()
   const fundSeg = useFundSeg()
@@ -88,7 +91,7 @@ export function FundOverview() {
   if (loading) {
     return (
       <div className="rounded-lg border p-6 flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Deriving fund performance from the ledger…
+        <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
       </div>
     )
   }
@@ -140,11 +143,11 @@ export function FundOverview() {
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
-              type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search vehicles…"
+              type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('searchPlaceholder')}
               className="h-8 w-48 pl-8 pr-8 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <button onClick={() => setSearch('')} aria-label={t('clearSearch')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
@@ -152,12 +155,12 @@ export function FundOverview() {
           <select
             value={sourceFilter}
             onChange={e => setSourceFilter(e.target.value as 'all' | 'ledger' | 'events')}
-            aria-label="Filter by accounting source"
+            aria-label={t('sourceFilter')}
             className="h-8 px-2 rounded-md border border-input bg-background text-sm text-muted-foreground"
           >
-            <option value="all">All vehicles</option>
-            <option value="ledger">Fund Accounting</option>
-            <option value="events">LP tracking</option>
+            <option value="all">{t('allVehicles')}</option>
+            <option value="ledger">{t('fundAccounting')}</option>
+            <option value="events">{t('lpTracking')}</option>
           </select>
 
           {/* Net to LP is the honest default: what an LP would actually receive, now exact rather
@@ -171,7 +174,7 @@ export function FundOverview() {
                   onClick={() => setLens(l)}
                   className={`px-2 py-1 rounded ${lens === l ? 'bg-muted font-medium' : 'text-muted-foreground'}`}
                 >
-                  {l === 'lp' ? 'Net to LP' : 'Whole fund'}
+                  {l === 'lp' ? t('netToLp') : t('wholeFund')}
                 </button>
               ))}
             </div>
@@ -180,7 +183,7 @@ export function FundOverview() {
 
         {/* Label to the LEFT of the input, on one line. */}
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          As of
+          {t('asOf')}
           <input
             type="date"
             value={asOf}
@@ -192,34 +195,34 @@ export function FundOverview() {
 
       {/* Metric boxes — same Card treatment as an LP snapshot, so the two pages read as one. */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <MetricBox label="Committed" value={fmt(totals.committed)} />
-        <MetricBox label="Called" value={fmt(totals.paidIn)} />
-        <MetricBox label="Distributed" value={fmt(totals.distributions)} />
-        <MetricBox label="NAV" value={fmt(totals.nav)} />
-        <MetricBox label="TVPI" value={moic(tTvpi)} />
-        <MetricBox label="DPI" value={moic(tDpi)} />
+        <MetricBox label={t('metrics.committed')} value={fmt(totals.committed)} />
+        <MetricBox label={t('metrics.called')} value={fmt(totals.paidIn)} />
+        <MetricBox label={t('metrics.distributed')} value={fmt(totals.distributions)} />
+        <MetricBox label={t('metrics.nav')} value={fmt(totals.nav)} />
+        <MetricBox label={t('metrics.tvpi')} value={moic(tTvpi, locale)} />
+        <MetricBox label={t('metrics.dpi')} value={moic(tDpi, locale)} />
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground bg-muted/40">
             <tr>
-              <SortTh label="Vehicle" sortKey="vehicle" sort={sort} onSort={onSort} />
-              <SortTh label="Vintage" sortKey="vintageYear" sort={sort} onSort={onSort} />
-              <SortTh label="Committed" sortKey="committed" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="Called" sortKey="paidIn" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="Not called" sortKey="uncalled" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="Distributed" sortKey="distributions" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="NAV" sortKey="nav" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="DPI" sortKey="dpi" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="RVPI" sortKey="rvpi" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="TVPI" sortKey="tvpi" sort={sort} onSort={onSort} align="right" />
-              <SortTh label="IRR" sortKey="irr" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('columns.vehicle')} sortKey="vehicle" sort={sort} onSort={onSort} />
+              <SortTh label={t('columns.vintage')} sortKey="vintageYear" sort={sort} onSort={onSort} />
+              <SortTh label={t('metrics.committed')} sortKey="committed" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('metrics.called')} sortKey="paidIn" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('columns.notCalled')} sortKey="uncalled" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('metrics.distributed')} sortKey="distributions" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('metrics.nav')} sortKey="nav" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('metrics.dpi')} sortKey="dpi" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('columns.rvpi')} sortKey="rvpi" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('metrics.tvpi')} sortKey="tvpi" sort={sort} onSort={onSort} align="right" />
+              <SortTh label={t('columns.irr')} sortKey="irr" sort={sort} onSort={onSort} align="right" />
             </tr>
           </thead>
           <tbody>
             {sorted.length === 0 && (
-              <tr><td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">No vehicles match your filters.</td></tr>
+              <tr><td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">{t('noMatches')}</td></tr>
             )}
             {sorted.map(v => {
               const x = m(v)
@@ -230,16 +233,16 @@ export function FundOverview() {
                       {v.vehicle}
                     </button>
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground tabular-nums">{v.vintageYear ?? '—'}</td>
+                  <td className="px-3 py-2 text-muted-foreground tabular-nums">{v.vintageYear == null ? '—' : formatNumber(v.vintageYear, locale, { useGrouping: false })}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmtFull(x.committed)}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmtFull(x.paidIn)}</td>
                   <td className="px-3 py-2 text-right font-mono text-muted-foreground">{fmtFull(x.uncalled)}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmtFull(x.distributions)}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmtFull(x.nav)}</td>
-                  <td className="px-3 py-2 text-right font-mono">{moic(x.dpi)}</td>
-                  <td className="px-3 py-2 text-right font-mono">{moic(x.rvpi)}</td>
-                  <td className="px-3 py-2 text-right font-mono font-medium">{moic(x.tvpi)}</td>
-                  <td className="px-3 py-2 text-right font-mono">{irrPct(x.irr)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{moic(x.dpi, locale)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{moic(x.rvpi, locale)}</td>
+                  <td className="px-3 py-2 text-right font-mono font-medium">{moic(x.tvpi, locale)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{irrPct(x.irr, locale)}</td>
                 </tr>
               )
             })}
@@ -248,17 +251,14 @@ export function FundOverview() {
       </div>
 
       <p className="text-xs text-muted-foreground max-w-3xl">
-        Every figure is derived from the capital accounts.{' '}
         {effectiveLens === 'lp' ? (
-          <>
-            <strong>Net to LP</strong> is the LP-class partners&rsquo; own accounts, so the GP&rsquo;s carry
-            {totals.carry !== 0 && <> ({fmtFull(totals.carry)} accrued)</>} is already deducted.
-          </>
+          t.rich('lpHelp', {
+            strong: chunks => <strong>{chunks}</strong>,
+            carry: totals.carry !== 0 ? fmtFull(totals.carry) : t('noCarry'),
+          })
         ) : (
-          <><strong>Whole fund</strong> is every partner, GP included.</>
-        )}{' '}
-        Capital is recognised when it is called, so called capital may be
-        unfunded.
+          t.rich('fundHelp', { strong: chunks => <strong>{chunks}</strong> })
+        )}
       </p>
     </div>
   )
@@ -283,14 +283,14 @@ function MetricBox({ label, value }: { label: string; value: string }) {
  * accounts and feed this overview identically.
  */
 function OnboardingEmptyState() {
+  const t = useTranslations('Funds.overview.empty')
   const fundSeg = useFundSeg()
   return (
     <div className="rounded-lg border p-6 max-w-2xl space-y-5">
       <div className="space-y-1">
-        <h2 className="text-sm font-medium">No fund capital recorded yet</h2>
+        <h2 className="text-sm font-medium">{t('title')}</h2>
         <p className="text-sm text-muted-foreground">
-          This overview is derived from the capital accounts, so it fills in once a vehicle has capital against it.
-          There are two ways to get there — pick per vehicle, and both feed this page the same way.
+          {t('description')}
         </p>
       </div>
 
@@ -298,48 +298,45 @@ function OnboardingEmptyState() {
         <div className="rounded-md border p-3 space-y-1.5">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm font-medium">Capital tracking</p>
+            <p className="text-sm font-medium">{t('trackingTitle')}</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            No double-entry books. Record what moved each LP&rsquo;s capital — contributions, distributions, marks — and
-            the roll-forward, statements and LP report all follow. The quickest way to start, and enough for an SPV or a
-            fund whose admin sends a quarterly statement.
+            {t('trackingHelp')}
           </p>
         </div>
         <div className="rounded-md border p-3 space-y-1.5">
           <div className="flex items-center gap-2">
             <Landmark className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm font-medium">Full ledger</p>
+            <p className="text-sm font-medium">{t('ledgerTitle')}</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            Double-entry books: a chart of accounts, journal entries, capital calls against a receivable, period closes
-            that accrue carry, and financial statements. More to set up, and the complete record.
+            {t('ledgerHelp')}
           </p>
         </div>
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">Two ways in:</p>
+        <p className="text-xs text-muted-foreground">{t('waysIn')}</p>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/settings"
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent transition-colors"
           >
-            Add a vehicle
+            {t('addVehicle')}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <Link
             href={fundSeg ? `/funds/${fundSeg}/capital-accounts` : '/funds'}
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent transition-colors"
           >
-            Add LPs &amp; capital
+            {t('addCapital')}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <Link
             href={fundSeg ? `/funds/${fundSeg}/opening-balances` : '/funds'}
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent transition-colors"
           >
-            Import an existing snapshot
+            {t('importSnapshot')}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { Loader2, ClipboardPaste, Trash2, Pencil, Check, X, BookOpen, ListTree, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,8 +32,8 @@ interface Position {
   irr: number | null
 }
 
-const moicX = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)}x`)
-const pctX = (v: number | null) => (v == null ? '—' : `${(v * 100).toFixed(1)}%`)
+const moicX = (v: number | null, locale: string) => (v == null ? '—' : `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)}x`)
+const pctX = (v: number | null, locale: string) => (v == null ? '—' : new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v))
 const ratio = (n: number, d: number): number | null => (d > 0 ? n / d : null)
 
 /** Client-side IRR for one entity from its dated positions, terminal NAV at the latest date. */
@@ -54,8 +55,10 @@ function deriveIrr(sortedAsc: Position[], terminalDate: string): number | null {
 }
 
 export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
+  const t = useTranslations('LPs.capital')
+  const locale = useLocale()
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrencyFull(v, currency)
+  const fmt = (v: number) => formatCurrencyFull(v, currency, locale)
   const confirm = useConfirm()
 
   const [vehicles, setVehicles] = useState<string[]>([])
@@ -106,7 +109,7 @@ export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
     <div className="space-y-4">
       {/* Vehicle bar — above the title, matching the Funds sub-pages. */}
       <div className="text-sm flex flex-wrap items-center gap-2">
-        <span className="text-muted-foreground">Vehicle</span>
+        <span className="text-muted-foreground">{t('vehicle')}</span>
         {vehicles.length <= 1 ? (
           <span className="font-medium">{group || '—'}</span>
         ) : (
@@ -121,16 +124,16 @@ export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
         {acct && (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground ml-1">
             {acct.source === 'ledger' ? <BookOpen className="h-3.5 w-3.5" /> : <ListTree className="h-3.5 w-3.5" />}
-            {acct.source === 'ledger' ? 'Fund Accounting' : 'LP only tracking'}
+            {acct.source === 'ledger' ? t('sources.ledger') : t('sources.tracking')}
           </span>
         )}
       </div>
 
       {/* Title */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">LP capital accounts</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Per-vehicle LP capital — from <strong>Fund Accounting</strong> where you keep books, or <strong>LP only tracking</strong> (pasted positions) where you don&rsquo;t.
+          {t.rich('description', { ledger: chunks => <strong>{chunks}</strong>, tracking: chunks => <strong>{chunks}</strong> })}
         </p>
       </div>
 
@@ -141,7 +144,7 @@ export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
         <div className="relative max-w-xs w-full sm:w-64">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
-            type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search LPs…"
+            type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search')}
             className="w-full pl-8 pr-8 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {search && (
@@ -153,31 +156,31 @@ export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
 
         {isTracking && dates.length > 0 && (
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">As of</label>
+            <label className="text-xs text-muted-foreground">{t('asOf')}</label>
             <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="h-9 w-40" />
-            {selectedDate && <Button size="sm" variant="ghost" onClick={() => setSelectedDate('')}>Latest</Button>}
+            {selectedDate && <Button size="sm" variant="ghost" onClick={() => setSelectedDate('')}>{t('latest')}</Button>}
             {selectedDate && resolvedDate && resolvedDate !== selectedDate && (
-              <span className="text-xs text-muted-foreground">showing {resolvedDate}</span>
+              <span className="text-xs text-muted-foreground">{t('showing', { date: resolvedDate })}</span>
             )}
           </div>
         )}
         {!isTracking && (
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">As of</label>
+            <label className="text-xs text-muted-foreground">{t('asOf')}</label>
             <Input type="date" value={ledgerAsOf} onChange={e => setLedgerAsOf(e.target.value)} className="h-9 w-40" />
-            {ledgerAsOf && <Button size="sm" variant="ghost" onClick={() => setLedgerAsOf('')}>Latest</Button>}
+            {ledgerAsOf && <Button size="sm" variant="ghost" onClick={() => setLedgerAsOf('')}>{t('latest')}</Button>}
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}</div>
       ) : !isTracking ? (
         /* Ledger vehicle — the statement comes from posted entries; edit it in the Funds section. */
         <>
           <LedgerTable rows={acct?.rows ?? []} search={search} fmt={fmt} />
           <p className="text-xs text-muted-foreground">
-            This vehicle is on the ledger — its capital accounts come from posted entries. Edit them in the Funds section.
+            {t('ledgerHint')}
           </p>
         </>
       ) : (
@@ -201,7 +204,7 @@ export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
               activeDate={resolvedDate}
               onSelect={d => setSelectedDate(d)}
               onDelete={isAdmin ? async (d) => {
-                const ok = await confirm({ title: `Delete the ${d} positions?`, description: 'Removes every LP position stored for this date on this vehicle.', confirmLabel: 'Delete', variant: 'destructive' })
+                const ok = await confirm({ title: t('deleteConfirm.title', { date: d }), description: t('deleteConfirm.description'), confirmLabel: t('deleteConfirm.confirm'), variant: 'destructive' })
                 if (!ok) return
                 await fetch(`/api/accounting/positions?group=${encodeURIComponent(group)}&asOfDate=${d}`, { method: 'DELETE' })
                 load()
@@ -212,7 +215,7 @@ export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
 
           {/* Import — its own box. */}
           {isAdmin ? <ImportBox group={group} onImported={load} /> : (
-            <p className="text-xs text-muted-foreground">Capital tracking is admin-edited.</p>
+            <p className="text-xs text-muted-foreground">{t('adminOnly')}</p>
           )}
         </>
       )}
@@ -225,6 +228,8 @@ export function LpCapitalView({ isAdmin }: { isAdmin: boolean }) {
 // ---------------------------------------------------------------------------
 
 function LedgerTable({ rows, search, fmt }: { rows: AcctRow[]; search: string; fmt: (v: number) => string }) {
+  const t = useTranslations('LPs.capital')
+  const locale = useLocale()
   const q = search.trim().toLowerCase()
   const shown = q ? rows.filter(r => r.name.toLowerCase().includes(q)) : rows
   return (
@@ -232,15 +237,15 @@ function LedgerTable({ rows, search, fmt }: { rows: AcctRow[]; search: string; f
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground bg-muted/40">
           <tr>
-            <th className="text-left px-3 py-2 font-medium">LP</th>
-            <th className="text-right px-3 py-2 font-medium">Committed</th>
-            <th className="text-right px-3 py-2 font-medium">Called</th>
-            <th className="text-right px-3 py-2 font-medium">Distributions</th>
-            <th className="text-right px-3 py-2 font-medium">NAV</th>
-            <th className="text-right px-3 py-2 font-medium">% Funded</th>
-            <th className="text-right px-3 py-2 font-medium">DPI</th>
-            <th className="text-right px-3 py-2 font-medium">RVPI</th>
-            <th className="text-right px-3 py-2 font-medium">TVPI</th>
+            <th className="text-left px-3 py-2 font-medium">{t('columns.lp')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.committed')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.called')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.distributions')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.nav')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.funded')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.dpi')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.rvpi')}</th>
+            <th className="text-right px-3 py-2 font-medium">{t('columns.tvpi')}</th>
           </tr>
         </thead>
         <tbody>
@@ -254,16 +259,16 @@ function LedgerTable({ rows, search, fmt }: { rows: AcctRow[]; search: string; f
                 <td className="px-3 py-1.5 text-right font-mono">{fmt(r.called)}</td>
                 <td className="px-3 py-1.5 text-right font-mono">{fmt(-dist)}</td>
                 <td className="px-3 py-1.5 text-right font-mono font-medium">{fmt(nav)}</td>
-                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{pctX(ratio(r.called, r.commitment))}</td>
-                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(-dist, r.called))}</td>
-                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(nav, r.called))}</td>
-                <td className="px-3 py-1.5 text-right font-mono">{moicX(ratio(-dist + nav, r.called))}</td>
+                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{pctX(ratio(r.called, r.commitment), locale)}</td>
+                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(-dist, r.called), locale)}</td>
+                <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(nav, r.called), locale)}</td>
+                <td className="px-3 py-1.5 text-right font-mono">{moicX(ratio(-dist + nav, r.called), locale)}</td>
               </tr>
             )
           })}
           {shown.length === 0 && (
             <tr><td colSpan={9} className="px-3 py-8 text-center text-muted-foreground text-sm">
-              {q ? 'No LPs match your search.' : 'This ledger has no capital postings yet.'}
+              {q ? t('empty.search') : t('empty.ledger')}
             </td></tr>
           )}
         </tbody>
@@ -287,6 +292,8 @@ function PositionsTable({
   onSaved: () => void
   fmt: (v: number) => string
 }) {
+  const t = useTranslations('LPs.capital')
+  const locale = useLocale()
   // Positions for the shown date, and each entity's full history (ascending) for IRR.
   const byEntityAsc = useMemo(() => {
     const m = new Map<string, Position[]>()
@@ -346,7 +353,7 @@ function PositionsTable({
     return (
       <div className="overflow-x-auto rounded-lg border">
         <div className="px-3 py-8 text-center text-muted-foreground text-sm">
-          No positions {date ? `as of ${date}` : 'yet'}. Import a statement below to get started.
+          {date ? t('empty.positionsDate', { date }) : t('empty.positions')}
         </div>
       </div>
     )
@@ -357,16 +364,16 @@ function PositionsTable({
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground bg-muted/40">
           <tr>
-            <SortTh label="LP" sortKey="name" sort={sort} onSort={onSort} align="left" />
-            <SortTh label="Committed" sortKey="commitment" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="Called" sortKey="called" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="Distributions" sortKey="distributions" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="NAV" sortKey="nav" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="% Funded" sortKey="pctFunded" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="DPI" sortKey="dpi" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="RVPI" sortKey="rvpi" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="TVPI" sortKey="tvpi" sort={sort} onSort={onSort} align="right" />
-            <SortTh label="IRR" sortKey="irr" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.lp')} sortKey="name" sort={sort} onSort={onSort} align="left" />
+            <SortTh label={t('columns.committed')} sortKey="commitment" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.called')} sortKey="called" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.distributions')} sortKey="distributions" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.nav')} sortKey="nav" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.funded')} sortKey="pctFunded" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.dpi')} sortKey="dpi" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.rvpi')} sortKey="rvpi" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.tvpi')} sortKey="tvpi" sort={sort} onSort={onSort} align="right" />
+            <SortTh label={t('columns.irr')} sortKey="irr" sort={sort} onSort={onSort} align="right" />
             {editable && <th className="px-3 py-2" />}
           </tr>
         </thead>
@@ -377,15 +384,15 @@ function PositionsTable({
         </tbody>
         <tfoot>
           <tr className="border-t bg-muted/30 font-semibold">
-            <td className="px-3 py-2">Total</td>
+            <td className="px-3 py-2">{t('total')}</td>
             <td className="px-3 py-2 text-right font-mono">{fmt(totals.commitment)}</td>
             <td className="px-3 py-2 text-right font-mono">{fmt(totals.called)}</td>
             <td className="px-3 py-2 text-right font-mono">{fmt(totals.dist)}</td>
             <td className="px-3 py-2 text-right font-mono">{fmt(totals.nav)}</td>
-            <td className="px-3 py-2 text-right font-mono text-muted-foreground">{pctX(ratio(totals.called, totals.commitment))}</td>
-            <td className="px-3 py-2 text-right font-mono text-muted-foreground">{moicX(ratio(totals.dist, totals.called))}</td>
-            <td className="px-3 py-2 text-right font-mono text-muted-foreground">{moicX(ratio(totals.nav, totals.called))}</td>
-            <td className="px-3 py-2 text-right font-mono">{moicX(ratio(totals.dist + totals.nav, totals.called))}</td>
+            <td className="px-3 py-2 text-right font-mono text-muted-foreground">{pctX(ratio(totals.called, totals.commitment), locale)}</td>
+            <td className="px-3 py-2 text-right font-mono text-muted-foreground">{moicX(ratio(totals.dist, totals.called), locale)}</td>
+            <td className="px-3 py-2 text-right font-mono text-muted-foreground">{moicX(ratio(totals.nav, totals.called), locale)}</td>
+            <td className="px-3 py-2 text-right font-mono">{moicX(ratio(totals.dist + totals.nav, totals.called), locale)}</td>
             <td className="px-3 py-2 text-right font-mono text-muted-foreground">—</td>
             {editable && <td />}
           </tr>
@@ -405,6 +412,8 @@ function PositionRow({
   onSaved: () => void
   fmt: (v: number) => string
 }) {
+  const t = useTranslations('LPs.capital')
+  const locale = useLocale()
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({
@@ -444,7 +453,7 @@ function PositionRow({
           <span className="flex items-center gap-2">
             <button onClick={openLp} className="text-left hover:underline hover:text-foreground truncate max-w-[220px]" title={pos.name}>{pos.name}</button>
             {editable && (
-              <button onClick={() => setEditing(true)} title="Edit" className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground shrink-0"><Pencil className="h-3.5 w-3.5" /></button>
+              <button onClick={() => setEditing(true)} title={t('edit')} className="text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground shrink-0"><Pencil className="h-3.5 w-3.5" /></button>
             )}
           </span>
         </td>
@@ -452,11 +461,11 @@ function PositionRow({
         <td className="px-3 py-1.5 text-right font-mono">{cell(pos.calledCapital)}</td>
         <td className="px-3 py-1.5 text-right font-mono">{cell(pos.distributions)}</td>
         <td className="px-3 py-1.5 text-right font-mono">{cell(pos.nav)}</td>
-        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{pctX(ratio(called, pos.commitment ?? 0))}</td>
-        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(dist, called))}</td>
-        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(nav, called))}</td>
-        <td className="px-3 py-1.5 text-right font-mono">{moicX(ratio(dist + nav, called))}</td>
-        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{pctX(irr)}</td>
+        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{pctX(ratio(called, pos.commitment ?? 0), locale)}</td>
+        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(dist, called), locale)}</td>
+        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{moicX(ratio(nav, called), locale)}</td>
+        <td className="px-3 py-1.5 text-right font-mono">{moicX(ratio(dist + nav, called), locale)}</td>
+        <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{pctX(irr, locale)}</td>
         {editable && <td />}
       </tr>
     )
@@ -472,8 +481,8 @@ function PositionRow({
         <span className="flex items-center gap-2">
           <span className="truncate max-w-[200px]" title={pos.name}>{pos.name}</span>
           <span className="flex items-center gap-1 shrink-0">
-            <button onClick={save} disabled={saving} title="Save" className="text-green-600 hover:text-green-700">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin inline" /> : <Check className="h-3.5 w-3.5 inline" />}</button>
-            <button onClick={() => setEditing(false)} title="Cancel" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5 inline" /></button>
+            <button onClick={save} disabled={saving} title={t('save')} className="text-green-600 hover:text-green-700">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin inline" /> : <Check className="h-3.5 w-3.5 inline" />}</button>
+            <button onClick={() => setEditing(false)} title={t('cancel')} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5 inline" /></button>
           </span>
         </span>
       </td>
@@ -482,7 +491,7 @@ function PositionRow({
       <td className="px-3 py-1.5">{inp('distributions')}</td>
       <td className="px-3 py-1.5">{inp('nav')}</td>
       <td colSpan={3} />
-      <td className="px-3 py-1.5 text-right text-[11px] text-muted-foreground">derived</td>
+      <td className="px-3 py-1.5 text-right text-[11px] text-muted-foreground">{t('derived')}</td>
       <td className="px-3 py-1.5">{inp('irr', 'w-20')}</td>
       <td />
     </tr>
@@ -503,34 +512,38 @@ function HistoryTable({
   onDelete?: (d: string) => void
   fmt: (v: number) => string
 }) {
+  const t = useTranslations('LPs.capital')
+  const locale = useLocale()
   const byDate = useMemo(() => {
     const m = new Map<string, { lps: number; commitment: number; called: number; distributions: number; nav: number }>()
     for (const d of dates) m.set(d, { lps: 0, commitment: 0, called: 0, distributions: 0, nav: 0 })
     for (const p of positions) {
       const agg = m.get(p.asOfDate)
       if (!agg) continue
-      agg.lps += 1
-      agg.commitment += p.commitment ?? 0
-      agg.called += p.calledCapital ?? 0
-      agg.distributions += p.distributions ?? 0
-      agg.nav += p.nav ?? 0
+      m.set(p.asOfDate, {
+        lps: agg.lps + 1,
+        commitment: agg.commitment + (p.commitment ?? 0),
+        called: agg.called + (p.calledCapital ?? 0),
+        distributions: agg.distributions + (p.distributions ?? 0),
+        nav: agg.nav + (p.nav ?? 0),
+      })
     }
     return m
   }, [positions, dates])
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm font-medium">History</h2>
+      <h2 className="text-sm font-medium">{t('history.title')}</h2>
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground bg-muted/40">
             <tr>
-              <th className="text-left px-3 py-2 font-medium">As of</th>
-              <th className="text-right px-3 py-2 font-medium">LPs</th>
-              <th className="text-right px-3 py-2 font-medium">Committed</th>
-              <th className="text-right px-3 py-2 font-medium">Called</th>
-              <th className="text-right px-3 py-2 font-medium">Distributions</th>
-              <th className="text-right px-3 py-2 font-medium">NAV</th>
+              <th className="text-left px-3 py-2 font-medium">{t('asOf')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('history.lps')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('columns.committed')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('columns.called')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('columns.distributions')}</th>
+              <th className="text-right px-3 py-2 font-medium">{t('columns.nav')}</th>
               {onDelete && <th className="px-3 py-2" />}
             </tr>
           </thead>
@@ -539,8 +552,8 @@ function HistoryTable({
               const a = byDate.get(d)!
               return (
                 <tr key={d} className={`border-t group cursor-pointer hover:bg-muted/20 ${d === activeDate ? 'bg-muted/30' : ''}`} onClick={() => onSelect(d)}>
-                  <td className="px-3 py-1.5 font-medium">{d}{d === activeDate && <span className="ml-2 text-[10px] text-muted-foreground">shown above</span>}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{a.lps}</td>
+                  <td className="px-3 py-1.5 font-medium">{d}{d === activeDate && <span className="ml-2 text-[10px] text-muted-foreground">{t('history.shown')}</span>}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">{new Intl.NumberFormat(locale).format(a.lps)}</td>
                   <td className="px-3 py-1.5 text-right font-mono">{fmt(a.commitment)}</td>
                   <td className="px-3 py-1.5 text-right font-mono">{fmt(a.called)}</td>
                   <td className="px-3 py-1.5 text-right font-mono">{fmt(a.distributions)}</td>
@@ -549,10 +562,10 @@ function HistoryTable({
                     <td className="px-3 py-1.5 text-right" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => onDelete(d)}
-                        title={`Delete the entire ${d} set`}
+                        title={t('history.deleteTitle', { date: d })}
                         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 focus:opacity-100"
                       >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete set
+                        <Trash2 className="h-3.5 w-3.5" /> {t('history.delete')}
                       </button>
                     </td>
                   )}
@@ -571,6 +584,7 @@ function HistoryTable({
 // ---------------------------------------------------------------------------
 
 function ImportBox({ group, onImported }: { group: string; onImported: () => void }) {
+  const t = useTranslations('LPs.capital.import')
   const [asOfDate, setAsOfDate] = useState('')
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -584,8 +598,8 @@ function ImportBox({ group, onImported }: { group: string; onImported: () => voi
     })
     const d = await res.json()
     setBusy(false)
-    if (!res.ok) { setMsg(d.error ?? 'Import failed'); return }
-    setMsg(`Imported ${d.written} positions as of ${d.asOfDate}.`)
+    if (!res.ok) { setMsg(d.error ?? t('failed')); return }
+    setMsg(t('result', { count: d.written, date: d.asOfDate }))
     setText('')
     onImported()
   }
@@ -594,27 +608,25 @@ function ImportBox({ group, onImported }: { group: string; onImported: () => voi
     <div className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center gap-2">
         <ClipboardPaste className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-medium">Import</h2>
+        <h2 className="text-sm font-medium">{t('title')}</h2>
       </div>
       <p className="text-xs text-muted-foreground">
-        Paste a statement — the AI maps the columns (commitment, called/paid-in, distributions, NAV, and IRR if present).
-        Each import is the cumulative position as of a date; re-importing a date replaces it. The table above and the
-        roll-forward are derived from the dates you keep.
+        {t('description')}
       </p>
       <label className="text-xs text-muted-foreground flex items-center gap-2">
-        As of
+        {t('asOf')}
         <Input type="date" value={asOfDate} onChange={e => setAsOfDate(e.target.value)} className="h-9 w-40" />
       </label>
       <textarea
         value={text}
         onChange={e => setText(e.target.value)}
         rows={8}
-        placeholder="Paste spreadsheet rows (with headers): investor, commitment, called/paid-in, distributions, NAV, IRR…"
+        placeholder={t('placeholder')}
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
       />
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={doImport} disabled={busy || !asOfDate || !text.trim()}>
-          {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null} Import
+          {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null} {t('button')}
         </Button>
         {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
       </div>

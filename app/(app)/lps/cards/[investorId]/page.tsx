@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Loader2, ArrowLeft, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LpReportCard, REPORT_CARD_PRINT_CSS, type ReportCardRow, type ReportCardTotals } from '@/components/lp-report-card'
@@ -31,6 +32,7 @@ function totalsOf(rows: ReportCardRow[]): ReportCardTotals {
 }
 
 export default function LiveCardPage() {
+  const t = useTranslations('LPs.cards')
   const params = useParams()
   const investorId = String(params.investorId)
   const [data, setData] = useState<Payload | null>(null)
@@ -49,18 +51,18 @@ export default function LiveCardPage() {
       <style>{REPORT_CARD_PRINT_CSS}</style>
       <div className="flex items-center gap-3 mb-6 no-print">
         <Button variant="outline" size="sm" className="text-muted-foreground" asChild>
-          <Link href="/lps"><ArrowLeft className="h-4 w-4 mr-1" /> Back</Link>
+          <Link href="/lps"><ArrowLeft className="h-4 w-4 mr-1" /> {t('back')}</Link>
         </Button>
         <span className="flex-1" />
         <Button size="sm" onClick={() => window.print()} disabled={!investor}>
-          <Printer className="h-4 w-4 mr-1" /> Save PDF
+          <Printer className="h-4 w-4 mr-1" /> {t('savePdf')}
         </Button>
       </div>
 
       {loading ? (
-        <div className="flex items-center py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Building card…</div>
+        <div className="flex items-center py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('buildingSingle')}</div>
       ) : !investor || !data ? (
-        <p className="text-sm text-muted-foreground">Investor not found in the live report.</p>
+        <p className="text-sm text-muted-foreground">{t('notFound')}</p>
       ) : (
         <LpReportCard
           fundName={data.fund.name}

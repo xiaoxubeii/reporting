@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 const tabs = [
-  { key: 'calendar', label: 'Calendar' },
-  { key: 'items', label: 'All Items' },
-  { key: 'setup', label: 'Fund Profile' },
-  { key: 'links', label: 'Filing Links' },
+  { key: 'calendar' },
+  { key: 'items' },
+  { key: 'setup' },
+  { key: 'links' },
 ] as const
 
 export type ComplianceTab = (typeof tabs)[number]['key']
@@ -18,6 +19,8 @@ export function ComplianceNav({
   active: ComplianceTab
   onSelect?: (tab: ComplianceTab) => void
 }) {
+  const t = useTranslations('Compliance.nav')
+
   return (
     <div className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
       {tabs.map(tab => {
@@ -32,7 +35,7 @@ export function ComplianceNav({
         if (tab.key === 'links') {
           return (
             <Link key={tab.key} href="/compliance/links" className={className}>
-              {tab.label}
+              {t(tab.key)}
             </Link>
           )
         }
@@ -45,7 +48,7 @@ export function ComplianceNav({
               onClick={() => onSelect(tab.key)}
               className={className}
             >
-              {tab.label}
+              {t(tab.key)}
             </button>
           )
         }
@@ -57,7 +60,7 @@ export function ComplianceNav({
             href={`/compliance?view=${tab.key}`}
             className={className}
           >
-            {tab.label}
+            {t(tab.key)}
           </Link>
         )
       })}

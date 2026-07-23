@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, ArrowRight, Loader2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -45,14 +46,16 @@ interface Preview {
   }
 }
 
-function fmt(value: number, currency: string): string {
+function fmt(value: number, currency: string, locale: string): string {
   const sym = getCurrencySymbol(currency)
-  if (Math.abs(value) >= 1_000_000) return `${sym}${(value / 1_000_000).toFixed(1)}M`
-  if (Math.abs(value) >= 1_000) return `${sym}${(value / 1_000).toFixed(0)}K`
-  return `${sym}${value.toLocaleString()}`
+  if (Math.abs(value) >= 1_000_000) return `${sym}${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value / 1_000_000)}M`
+  if (Math.abs(value) >= 1_000) return `${sym}${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value / 1_000)}K`
+  return `${sym}${new Intl.NumberFormat(locale).format(value)}`
 }
 
 export default function NewLetterPage() {
+  const t = useTranslations('Letters.new')
+  const locale = useLocale()
   const fv = useFeatureVisibility()
   const router = useRouter()
   const [step, setStep] = useState(1)
@@ -88,7 +91,7 @@ export default function NewLetterPage() {
         }
         const sorted = Array.from(allGroups).sort()
         setGroups(sorted)
-        if (sorted.length > 0 && !portfolioGroup) setPortfolioGroup(sorted[0])
+        if (sorted.length > 0) setPortfolioGroup(current => current || sorted[0])
       }
     })
   }, [])
@@ -146,10 +149,10 @@ export default function NewLetterPage() {
     <div className="p-4 md:py-8 md:pl-8 md:pr-4 max-w-3xl">
       <div className="mb-6 space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-          {fv.lp_letters === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}New Letter
+          {fv.lp_letters === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Step {step} of 2, {step === 1 ? 'Select period' : 'Review & generate'}
+          {t('step', { step, label: step === 1 ? t('selectPeriod') : t('reviewGenerate') })}
         </p>
       </div>
 
@@ -157,7 +160,7 @@ export default function NewLetterPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Year</Label>
+              <Label>{t('year')}</Label>
               <Select value={year} onValueChange={setYear}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -168,7 +171,7 @@ export default function NewLetterPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Quarter</Label>
+              <Label>{t('quarter')}</Label>
               <Select value={quarter} onValueChange={setQuarter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -183,15 +186,15 @@ export default function NewLetterPage() {
           {quarter === '4' && (
             <div className="flex items-center gap-3">
               <Switch checked={isYearEnd} onCheckedChange={setIsYearEnd} />
-              <Label>Include year-end summary</Label>
+              <Label>{t('yearEnd')}</Label>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label>Portfolio Group (Vehicle)</Label>
+            <Label>{t('portfolioGroup')}</Label>
             {groups.length > 0 ? (
               <Select value={portfolioGroup} onValueChange={setPortfolioGroup}>
-                <SelectTrigger><SelectValue placeholder="Select portfolio group" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('selectGroup')} /></SelectTrigger>
                 <SelectContent>
                   {groups.map(g => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
@@ -200,14 +203,14 @@ export default function NewLetterPage() {
               </Select>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No portfolio groups found. Assign companies to portfolio groups in their investment settings.
+                {t('noGroups')}
               </p>
             )}
           </div>
 
           {templates.length > 0 && (
             <div className="space-y-2">
-              <Label>Template</Label>
+              <Label>{t('template')}</Label>
               <Select value={templateId || templates[0]?.id} onValueChange={setTemplateId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -220,21 +223,21 @@ export default function NewLetterPage() {
           )}
 
           <div className="space-y-2">
-            <Label>Custom instructions (optional)</Label>
+            <Label>{t('customInstructions')}</Label>
             <Textarea
-              placeholder="E.g., emphasize growth metrics this quarter, mention the new hire at CompanyX..."
+              placeholder={t('customPlaceholder')}
               value={customPrompt}
               onChange={e => setCustomPrompt(e.target.value)}
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Additional instructions appended to the generation prompt for all company narratives.
+              {t('customHint')}
             </p>
           </div>
 
           <Button onClick={loadPreview} disabled={!portfolioGroup || loadingPreview}>
             {loadingPreview ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-            Review data
+            {t('reviewData')}
             <ArrowRight className="h-4 w-4 ml-1.5" />
           </Button>
         </div>
@@ -246,25 +249,25 @@ export default function NewLetterPage() {
             <h2 className="font-medium text-sm mb-2">{preview.fundName}, {preview.periodLabel}</h2>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground text-xs">Capital Deployed</p>
-                <p className="font-medium">{fmt(preview.totals.totalInvested, preview.fundCurrency)}</p>
+                <p className="text-muted-foreground text-xs">{t('summary.capitalDeployed')}</p>
+                <p className="font-medium">{fmt(preview.totals.totalInvested, preview.fundCurrency, locale)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs">Total FMV</p>
-                <p className="font-medium">{fmt(preview.totals.totalFmv, preview.fundCurrency)}</p>
+                <p className="text-muted-foreground text-xs">{t('summary.totalFmv')}</p>
+                <p className="font-medium">{fmt(preview.totals.totalFmv, preview.fundCurrency, locale)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs">Portfolio MOIC</p>
-                <p className="font-medium">{preview.totals.portfolioMoic ? `${preview.totals.portfolioMoic.toFixed(2)}x` : 'N/A'}</p>
+                <p className="text-muted-foreground text-xs">{t('summary.moic')}</p>
+                <p className="font-medium">{preview.totals.portfolioMoic ? `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(preview.totals.portfolioMoic)}x` : t('notAvailable')}</p>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {preview.totals.activeCount} active, {preview.totals.exitedCount} exited, {preview.totals.writtenOffCount} written off
+              {t('summary.statusCounts', { active: preview.totals.activeCount, exited: preview.totals.exitedCount, writtenOff: preview.totals.writtenOffCount })}
             </p>
           </div>
 
           <div>
-            <h3 className="font-medium text-sm mb-3">Companies ({preview.companies.length})</h3>
+            <h3 className="font-medium text-sm mb-3">{t('companies', { count: preview.companies.length })}</h3>
             <div className="space-y-2">
               {preview.companies.map(c => (
                 <div key={c.investment.companyId} className="rounded-lg border p-3">
@@ -272,14 +275,14 @@ export default function NewLetterPage() {
                     <div>
                       <p className="text-sm font-medium">{c.investment.companyName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {c.investment.stage ?? 'N/A'} | {c.investment.status} | {fmt(c.investment.totalInvested, preview.fundCurrency)} invested
-                        {c.investment.moic ? ` | ${c.investment.moic.toFixed(2)}x` : ''}
+                        {c.investment.stage ?? t('notAvailable')} | {t('status', { status: c.investment.status })} | {t('invested', { value: fmt(c.investment.totalInvested, preview.fundCurrency, locale) })}
+                        {c.investment.moic ? ` | ${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(c.investment.moic)}x` : ''}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{c.metrics.length} metrics</p>
+                      <p className="text-xs text-muted-foreground">{t('metrics', { count: c.metrics.length })}</p>
                       <p className="text-xs text-muted-foreground">
-                        {c.metrics.filter(m => m.currentValue !== null).length} with data
+                        {t('metricsWithData', { count: c.metrics.filter(m => m.currentValue !== null).length })}
                       </p>
                     </div>
                   </div>
@@ -291,7 +294,7 @@ export default function NewLetterPage() {
                         </span>
                       ))}
                       {c.metrics.length > 4 && (
-                        <span className="text-[10px] text-muted-foreground">+{c.metrics.length - 4} more</span>
+                        <span className="text-[10px] text-muted-foreground">{t('more', { count: c.metrics.length - 4 })}</span>
                       )}
                     </div>
                   )}
@@ -303,16 +306,16 @@ export default function NewLetterPage() {
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setStep(1)}>
               <ArrowLeft className="h-4 w-4 mr-1.5" />
-              Back
+              {t('back')}
             </Button>
             <Button onClick={createAndGenerate} disabled={creating}>
               {creating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                  Generating...
+                  {t('generating')}
                 </>
               ) : (
-                'Generate LP Letter'
+                t('generate')
               )}
             </Button>
           </div>
@@ -320,7 +323,7 @@ export default function NewLetterPage() {
           {creating && (
             <div className="rounded-lg border bg-muted/30 p-4">
               <p className="text-sm text-muted-foreground">
-                Generating narratives for {preview.companies.length} companies. This may take a minute...
+                {t('generatingHint', { count: preview.companies.length })}
               </p>
             </div>
           )}

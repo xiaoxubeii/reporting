@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { ArrowDownAZ, ArrowUpZA, ArrowDown, ArrowUp, LayoutGrid, Table2, CalendarDays } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DashboardTable } from './dashboard-table'
 import { useCurrency, getCurrencySymbol } from '@/components/currency-context'
@@ -39,37 +39,37 @@ interface Company {
 
 interface Props {
   companies: Company[]
-  allGroups: string[]
 }
 
 type SortMode = 'alpha' | 'investDate' | null
 
-function formatMetricValue(v: number | null, metric: ActiveMetric, fundCurrency: string): string {
+function formatMetricValue(v: number | null, metric: ActiveMetric, fundCurrency: string, locale: string): string {
   if (v === null) return '\u2014'
   const metricCurrency = metric.currency ?? fundCurrency
   const effectiveUnit = metric.unit ?? (metric.value_type === 'currency' ? getCurrencySymbol(metricCurrency) : null)
   const effectivePos = metric.unit ? metric.unit_position : 'prefix'
   let str: string
-  if (Math.abs(v) >= 1_000_000) str = `${(v / 1_000_000).toFixed(1)}M`
-  else if (Math.abs(v) >= 1_000) str = `${(v / 1_000).toFixed(0)}K`
-  else str = v.toLocaleString()
+  if (Math.abs(v) >= 1_000) str = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(v)
+  else str = v.toLocaleString(locale)
   if (effectiveUnit && effectivePos === 'prefix') return `${effectiveUnit}${str}`
   if (metric.value_type === 'percentage') return `${str}%`
   if (effectiveUnit && effectivePos === 'suffix') return `${str} ${effectiveUnit}`
   return str
 }
 
-function formatCurrency(v: number): string {
+function formatCurrency(v: number, currency: string, locale: string): string {
   const neg = v < 0
   const abs = Math.abs(v)
+  const symbol = getCurrencySymbol(currency)
   let str: string
-  if (abs >= 1_000_000) str = `$${(abs / 1_000_000).toFixed(1)}M`
-  else if (abs >= 1_000) str = `$${(abs / 1_000).toFixed(0)}K`
-  else str = `$${abs.toLocaleString()}`
+  if (abs >= 1_000) str = `${symbol}${new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(abs)}`
+  else str = `${symbol}${abs.toLocaleString(locale)}`
   return neg ? `-${str}` : str
 }
 
-export function DashboardCompanies({ companies, allGroups }: Props) {
+export function DashboardCompanies({ companies }: Props) {
+  const t = useTranslations('Dashboard')
+  const locale = useLocale()
   const [view, setView] = useState<'cards' | 'table'>('cards')
   const [statusFilter, setStatusFilter] = useState<string>('active')
   const [sortMode, setSortMode] = useState<SortMode>('investDate')
@@ -87,7 +87,7 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
   function sortCompanies(list: Company[]) {
     if (sortMode === 'alpha') {
       return [...list].sort((a, b) =>
-        alphaSortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+        alphaSortAsc ? a.name.localeCompare(b.name, locale) : b.name.localeCompare(a.name, locale)
       )
     }
     if (sortMode === 'investDate') {
@@ -104,7 +104,7 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const sortedFiltered = useMemo(() => sortCompanies(filtered), [filtered, sortMode, alphaSortAsc, investDateSortAsc])
+  const sortedFiltered = useMemo(() => sortCompanies(filtered), [filtered, sortMode, alphaSortAsc, investDateSortAsc, locale])
 
   return (
     <div>
@@ -112,16 +112,17 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
       {filtered.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap mb-4">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Status</label>
+            <label htmlFor="dashboard-status-filter" className="block text-xs text-muted-foreground mb-1">{t('filters.status')}</label>
             <select
+              id="dashboard-status-filter"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
               className="text-xs px-2 py-1 rounded-md border border-border bg-background"
             >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="exited">Exited</option>
-            <option value="written-off">Written Off</option>
+            <option value="">{t('filters.allStatuses')}</option>
+            <option value="active">{t('filters.active')}</option>
+            <option value="exited">{t('filters.exited')}</option>
+            <option value="written-off">{t('filters.writtenOff')}</option>
             </select>
           </div>
           <div className="ml-auto flex items-center gap-1">
@@ -136,6 +137,7 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
                   setSortMode('alpha')
                 }
               }}
+              aria-label={alphaSortAsc ? t('sorting.alphabeticalAscending') : t('sorting.alphabeticalDescending')}
             >
               {alphaSortAsc ? (
                 <ArrowDownAZ className="h-3.5 w-3.5" />
@@ -154,6 +156,7 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
                   setSortMode('investDate')
                 }
               }}
+              aria-label={investDateSortAsc ? t('sorting.investmentDateAscending') : t('sorting.investmentDateDescending')}
             >
               <CalendarDays className="h-3.5 w-3.5" />
               {investDateSortAsc ? (
@@ -162,10 +165,10 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
                 <ArrowDown className="h-3 w-3" />
               )}
             </Button>
-            <Button variant={view === 'cards' ? 'secondary' : 'ghost'} size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setView('cards')}>
+            <Button variant={view === 'cards' ? 'secondary' : 'ghost'} size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setView('cards')} aria-label={t('view.cards')} aria-pressed={view === 'cards'}>
               <LayoutGrid className="h-3.5 w-3.5" />
             </Button>
-            <Button variant={view === 'table' ? 'secondary' : 'ghost'} size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setView('table')}>
+            <Button variant={view === 'table' ? 'secondary' : 'ghost'} size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => setView('table')} aria-label={t('view.table')} aria-pressed={view === 'table'}>
               <Table2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -174,7 +177,7 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
 
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">
-          <p className="text-muted-foreground">No companies match the selected filters.</p>
+          <p className="text-muted-foreground">{t('empty.noCompanies')}</p>
         </div>
       ) : view === 'table' ? (
         <DashboardTable
@@ -189,6 +192,8 @@ export function DashboardCompanies({ companies, allGroups }: Props) {
 }
 
 function CompanyGrid({ companies }: { companies: Company[] }) {
+  const t = useTranslations('Dashboard')
+  const locale = useLocale()
   const fundCurrency = useCurrency()
   // Cache of fetched metric values: { [metricId]: number | null }
   const [metricValues, setMetricValues] = useState<Record<string, number | null>>({})
@@ -274,26 +279,26 @@ function CompanyGrid({ companies }: { companies: Company[] }) {
               ) : c.activeMetrics.length === 0 ? (
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div className="min-w-0">
-                    <div className="text-[10px] text-muted-foreground truncate mb-0.5">No metrics</div>
-                    <div className="text-xl font-semibold">New</div>
+                    <div className="text-[10px] text-muted-foreground truncate mb-0.5">{t('cards.noMetrics')}</div>
+                    <div className="text-xl font-semibold">{t('cards.new')}</div>
                   </div>
                 </div>
               ) : (
                 <ActiveMetricDisplay
-                  company={c}
                   metrics={getSelectedMetrics(c)}
                   metricValues={metricValues}
                   loadingMetrics={loadingMetrics}
                   fundCurrency={fundCurrency}
+                  locale={locale}
                 />
               )}
               {c.lastReportAt ? (
                 <div className="text-[10px] text-muted-foreground mt-2">
-                  Last reported: {c.lastReportAt}
+                  {t('cards.lastReported', { date: c.lastReportAt })}
                 </div>
               ) : c.firstInvestmentDate ? (
                 <div className="text-[10px] text-muted-foreground mt-2">
-                  Invested: {new Date(c.firstInvestmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {t('cards.invested', { date: new Date(`${c.firstInvestmentDate}T00:00:00Z`).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) })}
                 </div>
               ) : null}
           </Link>
@@ -303,12 +308,12 @@ function CompanyGrid({ companies }: { companies: Company[] }) {
   )
 }
 
-function ActiveMetricDisplay({ company, metrics, metricValues, loadingMetrics, fundCurrency }: {
-  company: Company
+function ActiveMetricDisplay({ metrics, metricValues, loadingMetrics, fundCurrency, locale }: {
   metrics: [ActiveMetric | null, ActiveMetric | null]
   metricValues: Record<string, number | null>
   loadingMetrics: Set<string>
   fundCurrency: string
+  locale: string
 }) {
   const [m1, m2] = metrics
 
@@ -325,7 +330,7 @@ function ActiveMetricDisplay({ company, metrics, metricValues, loadingMetrics, f
               {isLoading ? (
                 <span className="text-muted-foreground text-sm">...</span>
               ) : (
-                formatMetricValue(value, metric, fundCurrency)
+                formatMetricValue(value, metric, fundCurrency, locale)
               )}
             </div>
           </div>
@@ -336,6 +341,9 @@ function ActiveMetricDisplay({ company, metrics, metricValues, loadingMetrics, f
 }
 
 function ExitedMetricDisplay({ company }: { company: Company }) {
+  const t = useTranslations('Dashboard')
+  const locale = useLocale()
+  const fundCurrency = useCurrency()
   const { totalInvested, totalRealized, unrealizedValue, moic } = company
   const netGain = totalInvested != null && totalRealized != null && unrealizedValue != null
     ? (totalRealized + unrealizedValue) - totalInvested
@@ -344,13 +352,13 @@ function ExitedMetricDisplay({ company }: { company: Company }) {
   return (
     <div className="grid grid-cols-2 gap-3 mt-3">
       <div className="min-w-0">
-        <div className="text-[10px] text-muted-foreground truncate mb-0.5">Net Gain</div>
+        <div className="text-[10px] text-muted-foreground truncate mb-0.5">{t('cards.netGain')}</div>
         <div className={`text-xl font-semibold tabular-nums truncate ${netGain != null && netGain < 0 ? 'text-red-500' : ''}`}>
-          {netGain != null ? formatCurrency(netGain) : '\u2014'}
+          {netGain != null ? formatCurrency(netGain, fundCurrency, locale) : '\u2014'}
         </div>
       </div>
       <div className="min-w-0">
-        <div className="text-[10px] text-muted-foreground truncate mb-0.5">Gross MOIC</div>
+        <div className="text-[10px] text-muted-foreground truncate mb-0.5">{t('cards.grossMoic')}</div>
         <div className="text-xl font-semibold tabular-nums truncate">
           {moic != null ? `${moic.toFixed(2)}x` : '\u2014'}
         </div>
@@ -358,4 +366,3 @@ function ExitedMetricDisplay({ company }: { company: Company }) {
     </div>
   )
 }
-

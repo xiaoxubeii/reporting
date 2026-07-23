@@ -1,19 +1,24 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { requireAccountingAccess } from '../../guard'
 import { resolveVehicleParam } from '../resolve'
 import { FundSubpageChrome } from '@/components/fund-subpage-chrome'
 import { PeriodsView } from '../../periods/view'
 
-export const metadata: Metadata = { title: 'Period close' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Funds.pages.periods')
+  return { title: t('title') }
+}
 
 export default async function PeriodsPage({ params }: { params: { id: string } }) {
   const { fundId } = await requireAccountingAccess()
   const { vehicle, vehicleId } = await resolveVehicleParam(fundId, params.id)
+  const t = await getTranslations('Funds.pages.periods')
   return (
     <div className="pt-4 md:pt-8 pb-8 w-full">
       <FundSubpageChrome
-        title="Period close"
-        description="Allocate income and expenses to each partner and close the period"
+        title={t('title')}
+        description={t('description')}
         vehicle={vehicle}
         vehicleId={vehicleId}
       >

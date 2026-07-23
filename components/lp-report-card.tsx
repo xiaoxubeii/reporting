@@ -8,6 +8,7 @@
 // system font — which is why these read better than the headless-Chrome PDFs.
 
 import { useCurrency, formatCurrency, formatCurrencyFull } from '@/components/currency-context'
+import { useLocale, useTranslations } from 'next-intl'
 
 export interface ReportCardRow {
   key: string
@@ -58,13 +59,15 @@ export interface ReportCardProps {
   excludedNote?: string[]
 }
 
-const moic = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)}x`)
-const pctOf = (v: number | null) => (v == null ? '—' : `${(v * 100).toFixed(1)}%`)
+const moic = (v: number | null, locale: string) => (v == null ? '—' : `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)}x`)
+const pctOf = (v: number | null, locale: string) => (v == null ? '—' : new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v))
 
 export function LpReportCard(props: ReportCardProps) {
+  const t = useTranslations('LPs.reportCard')
+  const locale = useLocale()
   const currency = useCurrency()
-  const fmt = (v: number) => formatCurrency(v, currency)
-  const fmtFull = (v: number) => formatCurrencyFull(v, currency)
+  const fmt = (v: number) => formatCurrency(v, currency, locale)
+  const fmtFull = (v: number) => formatCurrencyFull(v, currency, locale)
   const { fundName, fundLogo, fundAddress, description, investorName, rows, totals } = props
 
   return (
@@ -90,33 +93,33 @@ export function LpReportCard(props: ReportCardProps) {
         <h1 className="text-xl font-bold tracking-tight mb-3">{investorName}</h1>
 
         {totals.paidInCapital > 0 && (
-          <p className="text-xs leading-relaxed mb-5">
-            You have invested <strong>{fmtFull(totals.paidInCapital)}</strong>
-            {totals.distributions > 0 ? (
-              <>. So far you have received <strong>{fmtFull(totals.distributions)}</strong> back, and your current
-              investments are valued at <strong>{fmtFull(totals.nav)}</strong>.</>
-            ) : (
-              <>, and your current investments are valued at <strong>{fmtFull(totals.nav)}</strong>.</>
-            )}
-          </p>
+          <p className="text-xs leading-relaxed mb-5">{t.rich(
+            totals.distributions > 0 ? 'summaryWithDistributions' : 'summary',
+            {
+              paidIn: fmtFull(totals.paidInCapital),
+              distributions: fmtFull(totals.distributions),
+              nav: fmtFull(totals.nav),
+              strong: chunks => <strong>{chunks}</strong>,
+            },
+          )}</p>
         )}
 
         {rows.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No investments found for this investor.</p>
+          <p className="text-xs text-muted-foreground">{t('empty')}</p>
         ) : (
           <>
-            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Capital Summary</h3>
+            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t('capitalSummary')}</h3>
             <table className="w-full text-xs mb-5" style={{ tableLayout: 'fixed' }}>
               <Cols />
               <thead>
                 <tr className="border-b-2 border-foreground/20">
-                  <th className="text-left pl-1.5 pr-2.5 py-1.5 font-semibold">Entity</th>
-                  <th className="text-left pl-2.5 pr-1.5 py-1.5 font-semibold">Investment</th>
-                  <th className="text-right px-1.5 py-1.5 font-semibold">Commitment</th>
-                  <th className="text-right px-1.5 py-1.5 font-semibold">Paid-in Capital</th>
-                  <th className="text-right px-1.5 py-1.5 font-semibold">Distributions</th>
-                  <th className="text-right px-1.5 py-1.5 font-semibold">Net Asset Balance</th>
-                  <th className="text-right px-1.5 py-1.5 font-semibold">Total Value</th>
+                  <th className="text-left pl-1.5 pr-2.5 py-1.5 font-semibold">{t('columns.entity')}</th>
+                  <th className="text-left pl-2.5 pr-1.5 py-1.5 font-semibold">{t('columns.investment')}</th>
+                  <th className="text-right px-1.5 py-1.5 font-semibold">{t('columns.commitment')}</th>
+                  <th className="text-right px-1.5 py-1.5 font-semibold">{t('columns.paidIn')}</th>
+                  <th className="text-right px-1.5 py-1.5 font-semibold">{t('columns.distributions')}</th>
+                  <th className="text-right px-1.5 py-1.5 font-semibold">{t('columns.nav')}</th>
+                  <th className="text-right px-1.5 py-1.5 font-semibold">{t('columns.totalValue')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -134,7 +137,7 @@ export function LpReportCard(props: ReportCardProps) {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-foreground/20 font-semibold">
-                  <td className="px-1.5 py-1.5" colSpan={2}>Total</td>
+                  <td className="px-1.5 py-1.5" colSpan={2}>{t('total')}</td>
                   <td className="px-1.5 py-1.5 text-right font-mono">{fmt(totals.commitment)}</td>
                   <td className="px-1.5 py-1.5 text-right font-mono">{fmt(totals.paidInCapital)}</td>
                   <td className="px-1.5 py-1.5 text-right font-mono">{fmt(totals.distributions)}</td>
@@ -144,14 +147,14 @@ export function LpReportCard(props: ReportCardProps) {
               </tfoot>
             </table>
 
-            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Performance Metrics</h3>
+            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t('performanceMetrics')}</h3>
             <table className="w-full text-xs mb-5" style={{ tableLayout: 'fixed' }}>
               <Cols />
               <thead>
                 <tr className="border-b-2 border-foreground/20">
-                  <th className="text-left pl-1.5 pr-2.5 py-1.5 font-semibold">Entity</th>
-                  <th className="text-left pl-2.5 pr-1.5 py-1.5 font-semibold">Investment</th>
-                  <th className="text-right px-1.5 py-1.5 font-semibold">% Funded</th>
+                  <th className="text-left pl-1.5 pr-2.5 py-1.5 font-semibold">{t('columns.entity')}</th>
+                  <th className="text-left pl-2.5 pr-1.5 py-1.5 font-semibold">{t('columns.investment')}</th>
+                  <th className="text-right px-1.5 py-1.5 font-semibold">{t('columns.percentFunded')}</th>
                   <th className="text-right px-1.5 py-1.5 font-semibold">DPI</th>
                   <th className="text-right px-1.5 py-1.5 font-semibold">RVPI</th>
                   <th className="text-right px-1.5 py-1.5 font-semibold">TVPI</th>
@@ -163,21 +166,21 @@ export function LpReportCard(props: ReportCardProps) {
                   <tr key={r.key} className="border-b border-foreground/10">
                     <td className="pl-1.5 pr-2.5 py-1.5 max-w-0"><div className="line-clamp-2 break-words">{r.entityName}</div></td>
                     <td className="pl-2.5 pr-1.5 py-1.5">{r.portfolioGroup}</td>
-                    <td className="px-1.5 py-1.5 text-right font-mono">{pctOf(r.pctFunded)}</td>
-                    <td className="px-1.5 py-1.5 text-right font-mono">{moic(r.dpi)}</td>
-                    <td className="px-1.5 py-1.5 text-right font-mono">{moic(r.rvpi)}</td>
-                    <td className="px-1.5 py-1.5 text-right font-mono">{moic(r.tvpi)}</td>
-                    <td className="px-1.5 py-1.5 text-right font-mono">{pctOf(r.irr)}</td>
+                    <td className="px-1.5 py-1.5 text-right font-mono">{pctOf(r.pctFunded, locale)}</td>
+                    <td className="px-1.5 py-1.5 text-right font-mono">{moic(r.dpi, locale)}</td>
+                    <td className="px-1.5 py-1.5 text-right font-mono">{moic(r.rvpi, locale)}</td>
+                    <td className="px-1.5 py-1.5 text-right font-mono">{moic(r.tvpi, locale)}</td>
+                    <td className="px-1.5 py-1.5 text-right font-mono">{pctOf(r.irr, locale)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-foreground/20 font-semibold">
-                  <td className="px-1.5 py-1.5" colSpan={2}>Total</td>
-                  <td className="px-1.5 py-1.5 text-right font-mono">{pctOf(totals.pctFunded)}</td>
-                  <td className="px-1.5 py-1.5 text-right font-mono">{moic(totals.dpi)}</td>
-                  <td className="px-1.5 py-1.5 text-right font-mono">{moic(totals.rvpi)}</td>
-                  <td className="px-1.5 py-1.5 text-right font-mono">{moic(totals.tvpi)}</td>
+                  <td className="px-1.5 py-1.5" colSpan={2}>{t('total')}</td>
+                  <td className="px-1.5 py-1.5 text-right font-mono">{pctOf(totals.pctFunded, locale)}</td>
+                  <td className="px-1.5 py-1.5 text-right font-mono">{moic(totals.dpi, locale)}</td>
+                  <td className="px-1.5 py-1.5 text-right font-mono">{moic(totals.rvpi, locale)}</td>
+                  <td className="px-1.5 py-1.5 text-right font-mono">{moic(totals.tvpi, locale)}</td>
                   <td className="px-1.5 py-1.5"></td>
                 </tr>
               </tfoot>
@@ -192,7 +195,7 @@ export function LpReportCard(props: ReportCardProps) {
               const total = unfunded.reduce((s, r) => s + (r.receivable ?? 0), 0)
               return (
                 <>
-                  <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Called, Not Yet Funded</h3>
+                  <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t('calledNotFunded')}</h3>
                   <table className="w-full text-xs mb-5" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
                       <col style={{ width: '17.5%' }} />
@@ -201,9 +204,9 @@ export function LpReportCard(props: ReportCardProps) {
                     </colgroup>
                     <thead>
                       <tr className="border-b-2 border-foreground/20">
-                        <th className="text-left pl-1.5 pr-2.5 py-1.5 font-semibold">Entity</th>
-                        <th className="text-left pl-2.5 pr-1.5 py-1.5 font-semibold">Investment</th>
-                        <th className="text-right px-1.5 py-1.5 font-semibold">Unfunded (Called)</th>
+                        <th className="text-left pl-1.5 pr-2.5 py-1.5 font-semibold">{t('columns.entity')}</th>
+                        <th className="text-left pl-2.5 pr-1.5 py-1.5 font-semibold">{t('columns.investment')}</th>
+                        <th className="text-right px-1.5 py-1.5 font-semibold">{t('columns.unfundedCalled')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -217,7 +220,7 @@ export function LpReportCard(props: ReportCardProps) {
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-foreground/20 font-semibold">
-                        <td className="px-1.5 py-1.5" colSpan={2}>Total</td>
+                        <td className="px-1.5 py-1.5" colSpan={2}>{t('total')}</td>
                         <td className="px-1.5 py-1.5 text-right font-mono">{fmt(total)}</td>
                       </tr>
                     </tfoot>
@@ -232,21 +235,21 @@ export function LpReportCard(props: ReportCardProps) {
       <div className="report-footer text-[9px] text-muted-foreground mt-8 pt-3 border-t print:mt-0 print:pt-2">
         {props.footerNote ? props.footerNote : (
           <>
-            {props.asOfFormatted && <>As of {props.asOfFormatted}. </>}
-            % Funded = Paid-In Capital / Commitment &bull; DPI = Distributions / Paid-In Capital &bull; RVPI = Net Asset
-            Balance / Paid-In Capital &bull; TVPI = DPI + RVPI &bull; IRR = Internal Rate of Return. All figures are net of
-            expenses, including estimated carried interest.
+            {props.asOfFormatted && <>{t('asOf', { date: props.asOfFormatted })} </>}
+            {t('definitions')}
           </>
         )}
         {/* Per-vehicle data dates — vehicles report irregularly, so state each one. */}
         {props.vehicleDataDates && props.vehicleDataDates.length > 0 && (
           <div className="mt-1">
-            Data last posted: {props.vehicleDataDates.map(v => `${v.vehicle} — ${v.date ?? 'no data'}`).join('; ')}.
+            {t('dataLastPosted', {
+              values: props.vehicleDataDates.map(v => `${v.vehicle} — ${v.date ?? t('noData')}`).join('; '),
+            })}
           </div>
         )}
         {props.excludedNote && props.excludedNote.length > 0 && (
           <div className="mt-1">
-            Note: {props.excludedNote.join(', ')} {props.excludedNote.length === 1 ? 'is' : 'are'} excluded from this report.
+            {t('excluded', { values: props.excludedNote.join(', '), count: props.excludedNote.length })}
           </div>
         )}
       </div>

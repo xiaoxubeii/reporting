@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { NextRequest } from 'next/server'
 
 /**
  * The API boundary.
@@ -16,7 +17,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const getUser = vi.hoisted(() => vi.fn())
 const from = vi.hoisted(() => vi.fn())
 const rpc = vi.hoisted(() => vi.fn())
-const getAuthenticatorAssuranceLevel = vi.hoisted(() => vi.fn(async () => ({ data: null })))
+const getAuthenticatorAssuranceLevel = vi.hoisted(() => vi.fn(
+  async (): Promise<{ data: null | { currentLevel: string; nextLevel: string } }> => ({ data: null }),
+))
 
 vi.mock('@supabase/ssr', () => ({
   createServerClient: () => ({
@@ -54,7 +57,12 @@ function stubRpc() {
     error: null,
   }))
   from.mockImplementation(() => {
-    const chain: any = {
+    type QueryChain = {
+      select: () => QueryChain
+      eq: () => QueryChain
+      maybeSingle: () => Promise<{ data: null; error: null }>
+    }
+    const chain: QueryChain = {
       select: () => chain,
       eq: () => chain,
       maybeSingle: async () => ({ data: null, error: null }),
@@ -69,7 +77,7 @@ const req = (pathname: string, method = 'GET') =>
     cookies: { getAll: () => [], set: () => {} },
     method,
     headers: new Headers(),
-  }) as any
+  }) as unknown as NextRequest
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -139,6 +147,14 @@ describe('middleware API gate — closes routes that never checked role themselv
 })
 
 describe('middleware API gate — what it must not break', () => {
+  it('does not initialize a Supabase session for the isolated expert response flow', async () => {
+    await middleware(req('/expert-response'))
+    await middleware(req('/api/public/expert-response/resolve', 'POST'))
+    expect(getUser).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+    expect(from).not.toHaveBeenCalled()
+  })
+
   it('lets an admin through everywhere that is switched on', async () => {
     role = 'admin'
     features = { accounting: 'admin', gp_economics: 'admin', deals: 'admin' }
@@ -159,6 +175,14 @@ describe('middleware API gate — what it must not break', () => {
   it('leaves credential-authenticated surfaces alone — they gate per tool', async () => {
     expect((await middleware(req('/api/mcp', 'POST'))).status).not.toBe(403)
     expect((await middleware(req('/api/agent', 'POST'))).status).not.toBe(403)
+  })
+
+  it('keeps the locale preference available while MFA verification is pending', async () => {
+    getAuthenticatorAssuranceLevel.mockResolvedValue({
+      data: { currentLevel: 'aal1', nextLevel: 'aal2' },
+    })
+
+    expect((await middleware(req('/api/locale', 'POST'))).status).not.toBe(403)
   })
 
   it('leaves the LP portal to its own identity model', async () => {

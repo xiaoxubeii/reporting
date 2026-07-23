@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveAnchors, getSynthesisConfidence } from '@/lib/memo-agent/style-anchors'
 import { StyleAnchorsLibrary } from './library'
 
-export const metadata: Metadata = { title: 'Example memos' }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Settings.styleAnchors')
+  return { title: t('metadataTitle') }
+}
 
 export default async function StyleAnchorsPage() {
   const supabase = createClient()
@@ -21,7 +25,7 @@ export default async function StyleAnchorsPage() {
   if (!membership) redirect('/dashboard')
   // Diligence settings are open to any fund member, not admin-only.
 
-  const anchors = await getActiveAnchors((membership as any).fund_id, admin)
+  const anchors = await getActiveAnchors(membership.fund_id, admin)
   const confidence = getSynthesisConfidence(anchors.length)
 
   // Strip extracted_text from the initial payload — the UI only needs metadata.
@@ -29,7 +33,7 @@ export default async function StyleAnchorsPage() {
     ...a,
     extracted_text: a.extracted_text ? `${a.extracted_text.slice(0, 200)}…` : null,
     extracted_text_length: a.extracted_text?.length ?? 0,
-  })) as any
+  }))
 
   return <StyleAnchorsLibrary initialAnchors={stripped} initialConfidence={confidence} />
 }

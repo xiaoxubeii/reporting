@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { AuthShell } from '@/components/auth-shell'
+import { useLocale, useTranslations } from 'next-intl'
 
 export default function AuthPage() {
   return (
@@ -27,6 +28,8 @@ function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isHemrock, setIsHemrock] = useState(false)
+  const t = useTranslations('Auth')
+  const locale = useLocale()
 
   useEffect(() => {
     const host = window.location.hostname
@@ -57,7 +60,7 @@ function AuthForm() {
     async function exchangeCode() {
       const { error } = await supabase.auth.exchangeCodeForSession(code!)
       if (error) {
-        setError('Invalid or expired link. Please try again.')
+        setError(t('invalidOrExpiredLink'))
         return
       }
       // Check if this is a recovery session — redirect to set new password
@@ -79,14 +82,14 @@ function AuthForm() {
       }
     }
     exchangeCode()
-  }, [searchParams, supabase, router])
+  }, [searchParams, supabase, router, nextPath, t])
 
   async function signIn() {
     setError(null)
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      setError(error.message)
+      setError(locale === 'en' ? error.message : t('genericError'))
     } else {
       fetch('/api/auth/activity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'password' }) }).catch(() => {})
       // Check if user has a fund — if not, go to onboarding. A pending `next`
@@ -106,24 +109,26 @@ function AuthForm() {
     setLoading(false)
   }
 
+  const visibleUrlError = urlError ? (locale === 'en' ? urlError : t('genericError')) : null
+
   return (
     <AuthShell
       footer={
         <>
           <p className="text-center text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground underline underline-offset-4">
-              ← Back to home
+              {t('backHome')}
             </Link>
           </p>
 
           <p className="text-center text-xs text-muted-foreground">
-            <a href="/license" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-4">License</a>
+            <a href="/license" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-4">{t('license')}</a>
             {isHemrock && (
               <>
                 {' · '}
-                <a href="https://www.hemrock.com/terms" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-4">Terms</a>
+                <a href="https://www.hemrock.com/terms" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-4">{t('terms')}</a>
                 {' · '}
-                <a href="https://www.hemrock.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-4">Privacy</a>
+                <a href="https://www.hemrock.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-4">{t('privacy')}</a>
               </>
             )}
           </p>
@@ -132,29 +137,29 @@ function AuthForm() {
     >
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Sign in with your account</CardTitle>
-            <CardDescription>Sign in with password or a one-time code.</CardDescription>
+            <CardTitle className="text-lg">{t('signInTitle')}</CardTitle>
+            <CardDescription>{t('signInDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {emailConfirmed && (
               <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
                 <AlertDescription className="text-green-800 dark:text-green-200">
-                  Your email has been confirmed. Please sign in to continue.
+                  {t('emailConfirmed')}
                 </AlertDescription>
               </Alert>
             )}
-            {(error || urlError) && (
+            {(error || visibleUrlError) && (
               <Alert variant="destructive">
-                <AlertDescription>{error || urlError}</AlertDescription>
+                <AlertDescription>{error || visibleUrlError}</AlertDescription>
               </Alert>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('emailPlaceholder')}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && signIn()}
@@ -164,9 +169,9 @@ function AuthForm() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('password')}</Label>
                 <Link href="/auth/forgot-password" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-primary">
-                  Forgot password?
+                  {t('forgotPassword')}
                 </Link>
               </div>
               <Input
@@ -180,25 +185,25 @@ function AuthForm() {
             </div>
 
             <Button className="w-full" onClick={signIn} disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign in'}
+              {loading ? t('signingIn') : t('signIn')}
             </Button>
 
             <div className="flex items-center gap-3 pt-1 pb-3">
               <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">or</span>
+              <span className="text-xs text-muted-foreground">{t('or')}</span>
               <Separator className="flex-1" />
             </div>
 
             <Link href="/auth/magic-link">
               <Button variant="outline" className="w-full">
-                Sign in with a one-time code
+                {t('oneTimeCodeSignIn')}
               </Button>
             </Link>
 
             <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{' '}
+              {t('noAccount')}{' '}
               <Link href="/auth/signup" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                Create an account
+                {t('createAccount')}
               </Link>
             </p>
           </CardContent>

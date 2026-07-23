@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,14 +40,14 @@ interface ReviewData {
 // Constants
 // ---------------------------------------------------------------------------
 
-const ISSUE_LABELS: Record<string, string> = {
-  new_company_detected: 'New Company',
-  low_confidence: 'Low Confidence',
-  ambiguous_period: 'Ambiguous Period',
-  metric_not_found: 'Metric Not Found',
-  company_not_identified: 'Unidentified Company',
-  duplicate_period: 'Duplicate Period',
-}
+const ISSUE_KEYS = {
+  new_company_detected: 'newCompany',
+  low_confidence: 'lowConfidence',
+  ambiguous_period: 'ambiguousPeriod',
+  metric_not_found: 'metricNotFound',
+  company_not_identified: 'unidentifiedCompany',
+  duplicate_period: 'duplicatePeriod',
+} as const
 
 const STATUS_COLORS: Record<string, string> = {
   new_company_detected: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -67,6 +68,7 @@ export function ReviewItems({
   emailId: string
   hasReviews?: boolean
 }) {
+  const t = useTranslations('Review.items')
   const [data, setData] = useState<ReviewData | null>(null)
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState<Record<string, boolean>>({})
@@ -82,10 +84,11 @@ export function ReviewItems({
       setData(await res.json())
     } catch {
       setData(null)
+      toast.error(t('errors.load'))
     } finally {
       setLoading(false)
     }
-  }, [emailId])
+  }, [emailId, t])
 
   useEffect(() => {
     load()
@@ -120,8 +123,8 @@ export function ReviewItems({
             }
           : prev
       )
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error resolving item')
+    } catch {
+      toast.error(t('errors.resolve'))
     } finally {
       setResolving(prev => ({ ...prev, [item.id]: false }))
       setEditingId(null)
@@ -148,13 +151,13 @@ export function ReviewItems({
   return (
     <section>
       <h2 className="text-sm font-semibold mb-2">
-        Review Items {loading ? '' : `(${items.length} unresolved)`}
+        {loading ? t('title') : t('titleWithCount', { count: items.length })}
       </h2>
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading reviews…
+          {t('loading')}
         </div>
       )}
 
@@ -167,6 +170,7 @@ export function ReviewItems({
             const isNewCompany = item.issue_type === 'new_company_detected'
             const isUnidentified = item.issue_type === 'company_not_identified'
             const isMetricNotFound = item.issue_type === 'metric_not_found'
+            const translatedIssueKey = ISSUE_KEYS[item.issue_type as keyof typeof ISSUE_KEYS]
 
             return (
               <div key={item.id} className="rounded-lg border bg-card p-4 space-y-3">
@@ -174,13 +178,15 @@ export function ReviewItems({
                   <span
                     className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[item.issue_type] ?? ''}`}
                   >
-                    {ISSUE_LABELS[item.issue_type] ?? item.issue_type}
+                    {translatedIssueKey
+                      ? t(`issues.${translatedIssueKey}`)
+                      : item.issue_type}
                   </span>
                   {item.company && (
                     <span className="text-sm font-medium">{item.company.name}</span>
                   )}
                   {!item.company && (
-                    <span className="text-sm text-muted-foreground italic">Unknown company</span>
+                    <span className="text-sm text-muted-foreground italic">{t('unknownCompany')}</span>
                   )}
                   {item.metric && (
                     <>
@@ -192,7 +198,7 @@ export function ReviewItems({
 
                 {hasValue && !isEditing && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Value</span>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">{t('value')}</span>
                     <span className="font-mono text-sm bg-muted px-2 py-0.5 rounded">
                       {item.extracted_value}
                       {item.metric?.unit ? ` ${item.metric.unit}` : ''}
@@ -214,10 +220,10 @@ export function ReviewItems({
                     />
                     <Button size="sm" onClick={() => resolve(item, 'manually_corrected', editValue)} disabled={isResolving || !editValue.trim()}>
                       <Check className="h-3.5 w-3.5 mr-1" />
-                      Save
+                      {t('actions.save')}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
-                      Cancel
+                      {t('actions.cancel')}
                     </Button>
                   </div>
                 )}
@@ -234,11 +240,11 @@ export function ReviewItems({
                       <>
                         <Button size="sm" onClick={() => setCreateCompanyFor(item)} disabled={isResolving} className="gap-1.5">
                           <Building2 className="h-3.5 w-3.5" />
-                          Create Company
+                          {t('actions.createCompany')}
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => resolve(item, 'rejected')} disabled={isResolving}>
                           <X className="h-3.5 w-3.5 mr-1" />
-                          Dismiss
+                          {t('actions.dismiss')}
                         </Button>
                       </>
                     ) : (
@@ -246,17 +252,17 @@ export function ReviewItems({
                         {!isMetricNotFound && !isUnidentified && hasValue && (
                           <Button size="sm" onClick={() => resolve(item, 'accepted')} disabled={isResolving} className="gap-1.5">
                             <Check className="h-3.5 w-3.5" />
-                            Accept
+                            {t('actions.accept')}
                           </Button>
                         )}
                         <Button size="sm" variant="outline" onClick={() => resolve(item, 'rejected')} disabled={isResolving} className="gap-1.5">
                           <X className="h-3.5 w-3.5" />
-                          {isMetricNotFound || isUnidentified ? 'Dismiss' : 'Reject'}
+                          {isMetricNotFound || isUnidentified ? t('actions.dismiss') : t('actions.reject')}
                         </Button>
                         {hasValue && (
                           <Button size="sm" variant="outline" onClick={() => startEdit(item)} disabled={isResolving} className="gap-1.5">
                             <Pencil className="h-3.5 w-3.5" />
-                            Edit &amp; Accept
+                            {t('actions.editAccept')}
                           </Button>
                         )}
                       </>
@@ -276,7 +282,7 @@ export function ReviewItems({
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create Company</DialogTitle>
+            <DialogTitle>{t('createCompanyTitle')}</DialogTitle>
           </DialogHeader>
           <CompanyForm
             initialName={createCompanyFor?.extracted_value ?? ''}
