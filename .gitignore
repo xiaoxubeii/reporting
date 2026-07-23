@@ -25,6 +25,7 @@ yarn-error.log*
 .env*.local
 .env.local
 .env.production
+.miniflux-secrets/
 
 # google credentials
 credentials.json

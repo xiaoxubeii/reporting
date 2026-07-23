@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, ClipboardCheck, ListChecks, Mail, Upload, Send, Settings, LifeBuoy, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, BarChart3, TrendingUp, Lock, Users, Handshake, ArrowDownCircle, FileText, Briefcase, Crown, ShieldCheck, Lightbulb, Microscope, BookOpen } from 'lucide-react'
+import { Building2, ClipboardCheck, ListChecks, Mail, Upload, Send, Settings, LifeBuoy, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, BarChart3, TrendingUp, Lock, Users, Handshake, ArrowDownCircle, FileText, Briefcase, Crown, ShieldCheck, Lightbulb, Microscope, BookOpen, Rss } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
@@ -82,6 +82,13 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { href: '/settings/email-audit',       label: 'Email audit',       adminOnly: true },
       { href: '/settings/routing-accuracy',  label: 'Routing accuracy',  adminOnly: true },
+    ],
+  },
+  {
+    href: '/feeds', label: 'Feeds', icon: Rss, featureKey: 'feeds',
+    children: [
+      { href: '/feeds', label: 'Today', featureKey: 'feeds', exact: true },
+      { href: '/feeds/sources', label: 'Follow sources', featureKey: 'feeds' },
     ],
   },
   {
@@ -211,6 +218,12 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
           // visible child route is active.
           const visibleChildren = (children ?? []).filter(c => canSee(c, !!isAdmin, access))
           const childActive = visibleChildren.some(c => pathname === c.href || pathname.startsWith(c.href + '/'))
+          // A parent can share its href with a concrete default child (for example,
+          // Feeds -> Today). In that case, the child owns the selected state so the
+          // sidebar never renders two nested active pills for the same page.
+          const parentIsActive = isActive && !visibleChildren.some(c =>
+            c.exact ? pathname === c.href : pathname === c.href || pathname.startsWith(c.href + '/')
+          )
           // Also keep the section open on any page UNDER its own path (e.g. /funds/allocation-terms,
           // a Funds page that isn't a listed child) — it's still this section, just not in the nav.
           const underSection = pathname.startsWith(href + '/')
@@ -225,7 +238,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
                 className={`relative flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
                   collapsed ? 'md:justify-center md:px-0' : ''
                 } ${
-                  isActive
+                  parentIsActive
                     ? 'bg-accent text-foreground font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                 }`}
@@ -365,4 +378,3 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
     </div>
   )
 }
-

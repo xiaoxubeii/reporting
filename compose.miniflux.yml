@@ -1,0 +1,75 @@
+name: reporting-miniflux
+
+services:
+  miniflux:
+    image: docker.io/miniflux/miniflux:2.3.2@sha256:cd353a6af9ce663291f405eddef26fa0d567f486b521c5d34e3fb50e41938b9a
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${MINIFLUX_PORT:-8085}:8080"
+    environment:
+      BASE_URL: "http://127.0.0.1:${MINIFLUX_PORT:-8085}"
+      DATABASE_URL_FILE: /run/secrets/miniflux_database_url
+      FETCHER_ALLOW_PRIVATE_NETWORKS: "0"
+      INTEGRATION_ALLOW_PRIVATE_NETWORKS: "0"
+      LISTEN_ADDR: "0.0.0.0:8080"
+      LOG_DATE_TIME: "1"
+      LOG_FORMAT: json
+      RUN_MIGRATIONS: "1"
+    secrets:
+      - miniflux_database_url
+    networks:
+      - database
+      - egress
+    healthcheck:
+      test: ["CMD", "/usr/bin/miniflux", "-healthcheck", "auto"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  database:
+    image: docker.io/library/postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: miniflux
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      POSTGRES_PASSWORD_FILE: /run/secrets/miniflux_database_password
+      POSTGRES_USER: miniflux
+    secrets:
+      - miniflux_database_password
+    volumes:
+      - miniflux-database:/var/lib/postgresql
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U miniflux -d miniflux"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  database:
+    internal: true
+  egress:
+
+volumes:
+  miniflux-database:
+
+secrets:
+  miniflux_database_password:
+    file: ./.miniflux-secrets/runtime/database_password
+  miniflux_database_url:
+    file: ./.miniflux-secrets/runtime/database_url

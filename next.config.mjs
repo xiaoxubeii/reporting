@@ -1,4 +1,55 @@
 import { withBotId } from 'botid/next/config'
+import { isIP } from 'node:net'
+
+function isSafeCspHostname(hostname) {
+  const unwrapped = hostname.replace(/^\[|\]$/g, '')
+  if (isIP(unwrapped)) return true
+  if (hostname.length > 253) return false
+  return hostname.split('.').every(label => (
+    label.length > 0
+    && label.length <= 63
+    && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label)
+  ))
+}
+
+function isLoopbackHostname(hostname) {
+  const unwrapped = hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  if (unwrapped === 'localhost' || unwrapped === '::1') return true
+  if (isIP(unwrapped) !== 4) return false
+  return unwrapped.split('.')[0] === '127'
+}
+
+function configuredSupabaseOrigin() {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!rawUrl || /[\s*;]/.test(rawUrl)) return null
+
+  try {
+    const url = new URL(rawUrl)
+    if (url.username || url.password || !isSafeCspHostname(url.hostname)) return null
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    if (url.protocol === 'http:' && (
+      process.env.NODE_ENV === 'production'
+      || !isLoopbackHostname(url.hostname)
+    )) return null
+    return url.origin
+  } catch {
+    return null
+  }
+}
+
+function configuredSupabaseConnectSources() {
+  const origin = configuredSupabaseOrigin()
+  if (!origin) return []
+
+  const url = new URL(origin)
+  const websocketProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  return [origin, `${websocketProtocol}//${url.host}`]
+}
+
+function isDevelopmentSupabaseProxyEnabled() {
+  const browserUrl = process.env.NEXT_PUBLIC_SUPABASE_BROWSER_URL?.trim().replace(/\/+$/, '')
+  return process.env.NODE_ENV !== 'production' && browserUrl === '/_supabase'
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -26,7 +77,14 @@ const nextConfig = {
   // that for /api/mcp. Serving only the bare path would leave discovery failing
   // for no visible reason.
   async rewrites() {
+    const supabaseOrigin = isDevelopmentSupabaseProxyEnabled()
+      ? configuredSupabaseOrigin()
+      : null
     return [
+      ...(supabaseOrigin ? [{
+        source: '/_supabase/:path*',
+        destination: `${supabaseOrigin}/:path*`,
+      }] : []),
       {
         source: '/.well-known/oauth-authorization-server',
         destination: '/api/oauth/metadata/authorization-server',
@@ -46,6 +104,7 @@ const nextConfig = {
     ]
   },
   async headers() {
+    const supabaseConnectSources = configuredSupabaseConnectSources().join(' ')
     const securityHeaders = [
       { key: 'X-Frame-Options', value: 'DENY' },
       { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -54,7 +113,7 @@ const nextConfig = {
       { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       {
         key: 'Content-Security-Policy',
-        value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://cdn.usefathom.com https://www.google-analytics.com https://api.github.com https://calendly.com; frame-src https://calendly.com; object-src 'none'; base-uri 'self'",
+        value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' ${supabaseConnectSources} https://cdn.usefathom.com https://www.google-analytics.com https://api.github.com https://calendly.com; frame-src https://calendly.com; object-src 'none'; base-uri 'self'`,
       },
     ]
 
@@ -73,6 +132,7 @@ const nextConfig = {
       },
       // Prevent caching on auth and demo routes
       { source: '/auth/:path*', headers: noCacheHeaders },
+      { source: '/_supabase/auth/v1/:path*', headers: noCacheHeaders },
       { source: '/demo', headers: noCacheHeaders },
       { source: '/api/auth/:path*', headers: noCacheHeaders },
       { source: '/api/demo/:path*', headers: noCacheHeaders },

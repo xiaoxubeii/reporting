@@ -45,20 +45,24 @@ export async function GET() {
     id: string
     email: string
     createdAt: string | null
+    status: string
+    claimedAt: string | null
   }> = []
 
   if (isAdmin) {
     const { data: requests } = await admin
       .from('fund_join_requests')
-      .select('id, email, created_at')
+      .select('id, email, created_at, status, approval_claimed_at')
       .eq('fund_id', fundId)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'provisioning'])
       .order('created_at')
 
     pendingRequests = (requests ?? []).map(r => ({
       id: r.id,
       email: r.email,
       createdAt: r.created_at,
+      status: r.status,
+      claimedAt: r.approval_claimed_at,
     }))
   }
 

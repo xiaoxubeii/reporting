@@ -1,4 +1,4 @@
-export type FeatureKey = 'interactions' | 'investments' | 'notes' | 'lp_letters' | 'imports' | 'asks' | 'lps' | 'lp_tracking' | 'lp_associates' | 'lp_portal' | 'lp_activity' | 'compliance' | 'deals' | 'diligence' | 'accounting' | 'gp_economics'
+export type FeatureKey = 'interactions' | 'investments' | 'notes' | 'lp_letters' | 'imports' | 'asks' | 'lps' | 'lp_tracking' | 'lp_associates' | 'lp_portal' | 'lp_activity' | 'compliance' | 'deals' | 'feeds' | 'diligence' | 'accounting' | 'gp_economics'
 
 export type FeatureVisibility = 'everyone' | 'admin' | 'hidden' | 'off'
 
@@ -26,6 +26,7 @@ export const DEFAULT_FEATURE_VISIBILITY: FeatureVisibilityMap = {
   lp_activity: 'admin',
   compliance: 'admin',
   deals: 'admin',
+  feeds: 'admin',
   diligence: 'off',
   accounting: 'off',
   // Carry terms, carry accrued/paid per partner, per-deal carry, GP ownership. Split out of

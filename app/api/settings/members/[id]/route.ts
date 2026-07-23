@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertWriteAccess } from '@/lib/api-helpers'
 import { sendApprovalEmail } from '@/lib/email'
 import { dbError } from '@/lib/api-error'
+import { automaticMinifluxProvisioningEnabled } from '@/lib/feeds/config'
+import { toFeedApiError } from '@/lib/feeds/errors'
+import { ensureMinifluxConnection } from '@/lib/feeds/provisioning'
+import {
+  approveFundJoinRequest,
+  claimFundJoinRequestApproval,
+  rejectFundJoinRequest,
+  releaseFundJoinRequestApproval,
+} from '@/lib/members/approval'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -35,10 +45,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // Get the join request
   const { data: request } = await admin
     .from('fund_join_requests')
-    .select('id, fund_id, user_id, email, status, funds(name)')
+    .select('id, fund_id, user_id, email, status, approval_claimed_at, funds(name)')
     .eq('id', params.id)
     .eq('fund_id', membership.fund_id)
-    .eq('status', 'pending')
+    .in('status', ['pending', 'provisioning'])
     .single()
 
   if (!request) {
@@ -46,32 +56,58 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   if (action === 'approve') {
-    // Add as fund member
-    const { error: memberError } = await admin
-      .from('fund_members')
-      .insert({
-        fund_id: request.fund_id,
-        user_id: request.user_id,
-        invited_by: user.id,
-        role: 'member',
+    const claimId = randomUUID()
+    try {
+      const claimed = await claimFundJoinRequestApproval(admin, {
+        requestId: request.id,
+        fundId: request.fund_id,
+        reviewedBy: user.id,
+        claimId,
       })
-
-    if (memberError) {
-      return dbError(memberError, 'settings-members')
+      if (!claimed) {
+        return NextResponse.json({ error: 'This approval is already being processed.' }, { status: 409 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Unable to start this approval right now.' }, { status: 500 })
     }
-  }
 
-  // Update the request status
-  const { error: updateError } = await admin
-    .from('fund_join_requests')
-    .update({
-      status: action === 'approve' ? 'approved' : 'rejected',
-      reviewed_by: user.id,
-    })
-    .eq('id', params.id)
-
-  if (updateError) {
-    return dbError(updateError, 'settings-members')
+    if (automaticMinifluxProvisioningEnabled()) {
+      try {
+        await ensureMinifluxConnection(admin, request.user_id)
+      } catch (error) {
+        await releaseFundJoinRequestApproval(admin, { requestId: request.id, claimId }).catch(() => {
+          console.error('[settings-members] unable to release approval claim')
+        })
+        const safe = toFeedApiError(error)
+        return NextResponse.json({ error: safe.safeMessage, code: safe.code }, { status: safe.status })
+      }
+    }
+    try {
+      await approveFundJoinRequest(admin, {
+        requestId: request.id,
+        fundId: request.fund_id,
+        reviewedBy: user.id,
+        claimId,
+      })
+    } catch {
+      await releaseFundJoinRequestApproval(admin, { requestId: request.id, claimId }).catch(() => {
+        console.error('[settings-members] unable to release approval claim')
+      })
+      return NextResponse.json({ error: 'Unable to approve this member right now.' }, { status: 500 })
+    }
+  } else {
+    try {
+      const rejected = await rejectFundJoinRequest(admin, {
+        requestId: request.id,
+        fundId: request.fund_id,
+        reviewedBy: user.id,
+      })
+      if (!rejected) {
+        return NextResponse.json({ error: 'This request is already being processed.' }, { status: 409 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Unable to reject this request right now.' }, { status: 500 })
+    }
   }
 
   // Send approval notification email (fire-and-forget)

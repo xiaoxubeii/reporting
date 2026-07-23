@@ -21,6 +21,7 @@ export const FEATURE_META: Record<FeatureKey, { label: string; description: stri
   lp_activity: { label: 'LP activity log', description: 'The LPs → Activity page — which LPs and authorized users logged in, viewed, or downloaded. Needs the LP portal switched on.', href: '/support#lps' },
   compliance: { label: 'Compliance', description: 'Track regulatory deadlines, filings, and compliance workflows', href: '/support#compliance' },
   deals: { label: 'Deals', description: 'Inbound deal pitches screened against your fund thesis', href: '/support#deals' },
+  feeds: { label: 'Feeds', description: 'Follow trusted publications and read their latest updates in one place', href: '/feeds' },
   diligence: { label: 'Diligence', description: 'Pre-investment record-keeping and AI-assisted memo drafting', href: '/support#diligence' },
   accounting: { label: 'Accounting', description: 'Double-entry ledger, capital accounts, schedule of investments, and financial statements (in development)', href: '/support#accounting' },
   gp_economics: { label: 'GP economics', description: 'Carry terms, carry accrued and paid per partner, per-deal carry, and GP entity ownership. Split out of Accounting so someone can reconcile the bank without seeing the partners’ carry.', href: '/support#accounting' },

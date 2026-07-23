@@ -766,6 +766,8 @@ export type Database = {
       }
       fund_join_requests: {
         Row: {
+          approval_claim_id: string | null
+          approval_claimed_at: string | null
           created_at: string | null
           email: string
           fund_id: string
@@ -776,6 +778,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_claim_id?: string | null
+          approval_claimed_at?: string | null
           created_at?: string | null
           email: string
           fund_id: string
@@ -786,6 +790,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_claim_id?: string | null
+          approval_claimed_at?: string | null
           created_at?: string | null
           email?: string
           fund_id?: string

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Menu, Github, LogIn, Play, Home, Building2, Mail, Upload, BarChart3, Briefcase, Send, StickyNote, Handshake, FileText, Crown, ShieldCheck, Settings, LifeBuoy, Scale, MessageCircle, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Package, Tag, Star, Lightbulb, Microscope, Lock, Calculator } from 'lucide-react'
 
@@ -342,10 +342,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         router.replace('/dashboard')

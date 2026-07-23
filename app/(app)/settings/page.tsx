@@ -3952,6 +3952,8 @@ interface JoinRequest {
   id: string
   email: string
   createdAt: string
+  status: string
+  claimedAt: string | null
 }
 
 // `featureVisibility` is threaded through to the access grid so it re-derives what's grantable the
@@ -3962,6 +3964,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+  const [memberActionError, setMemberActionError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/settings/members')
@@ -3977,13 +3980,24 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
 
   const handleRequest = async (requestId: string, action: 'approve' | 'reject') => {
     setProcessingId(requestId)
-    const res = await fetch(`/api/settings/members/${requestId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    })
-    setProcessingId(null)
-    if (res.ok) load()
+    setMemberActionError(null)
+    try {
+      const res = await fetch(`/api/settings/members/${requestId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      if (res.ok) {
+        await load()
+        return
+      }
+      const body = await res.json().catch(() => null) as { error?: string } | null
+      setMemberActionError(body?.error ?? 'Unable to update this request right now.')
+    } catch {
+      setMemberActionError('Unable to update this request right now.')
+    } finally {
+      setProcessingId(null)
+    }
   }
 
   const handleRemove = async (memberId: string) => {
@@ -4057,6 +4071,11 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
           {isAdmin && pendingRequests.length > 0 && (
             <div>
               <p className="text-xs font-medium mb-2">Pending requests</p>
+              {memberActionError && (
+                <p className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">
+                  {memberActionError}
+                </p>
+              )}
               <div className="border rounded-lg divide-y">
                 {pendingRequests.map(r => (
                   <div key={r.id} className="flex items-center justify-between px-3 py-2">
@@ -4071,7 +4090,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                         size="sm"
                         variant="outline"
                         onClick={() => handleRequest(r.id, 'reject')}
-                        disabled={processingId === r.id}
+                        disabled={processingId === r.id || r.status === 'provisioning'}
                         className="h-7 text-xs"
                       >
                         Reject
@@ -4082,7 +4101,9 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                         disabled={processingId === r.id}
                         className="h-7 text-xs"
                       >
-                        {processingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Approve'}
+                        {processingId === r.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : r.status === 'provisioning' ? 'Retry approval' : 'Approve'}
                       </Button>
                     </div>
                   </div>

@@ -4,14 +4,17 @@ import { matchRoute } from '@/lib/access/match-route'
 import { ROUTE_DOMAINS, UNGATED_ROUTES, requiredLevel } from '@/lib/access/route-domains'
 import { hasAccess, resolveAccessContext } from '@/lib/access/effective'
 import { DOMAIN_META } from '@/lib/access/domains'
+import { getSupabaseCookieOptions } from '@/lib/supabase/cookie-options'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+  const cookieOptions = getSupabaseCookieOptions()
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions,
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -207,6 +210,6 @@ export const config = {
     // Exclude: Next.js internals, static assets, and the inbound email webhook.
     // The webhook receives large Postmark payloads (base64 attachments) that must
     // not pass through the Edge middleware layer, which has a tight body-size limit.
-    '/((?!_next/static|_next/image|favicon.ico|api/inbound-email|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|_supabase|favicon.ico|api/inbound-email|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
