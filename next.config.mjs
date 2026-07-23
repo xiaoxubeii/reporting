@@ -1,5 +1,22 @@
 import { withBotId } from 'botid/next/config'
 
+export function supabaseConnectSources(rawUrl) {
+  if (!rawUrl) return []
+
+  try {
+    const url = new URL(rawUrl)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return []
+    const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]'])
+    if (url.protocol === 'http:' && !loopbackHosts.has(url.hostname)) return []
+
+    const websocketProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    const websocketOrigin = `${websocketProtocol}//${url.host}`
+    return [url.origin, websocketOrigin]
+  } catch {
+    return []
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
@@ -46,6 +63,18 @@ const nextConfig = {
     ]
   },
   async headers() {
+    const connectSources = [
+      "'self'",
+      'https://*.supabase.co',
+      'https://*.supabase.in',
+      'wss://*.supabase.co',
+      ...supabaseConnectSources(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      'https://cdn.usefathom.com',
+      'https://www.google-analytics.com',
+      'https://api.github.com',
+      'https://calendly.com',
+    ]
+
     const securityHeaders = [
       { key: 'X-Frame-Options', value: 'DENY' },
       { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -54,7 +83,7 @@ const nextConfig = {
       { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
       {
         key: 'Content-Security-Policy',
-        value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://cdn.usefathom.com https://www.google-analytics.com https://api.github.com https://calendly.com; frame-src https://calendly.com; object-src 'none'; base-uri 'self'",
+        value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src ${connectSources.join(' ')}; frame-src https://calendly.com; object-src 'none'; base-uri 'self'`,
       },
     ]
 
