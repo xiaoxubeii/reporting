@@ -1,0 +1,53 @@
+use_default_settings:
+  engines:
+    keep_only:
+      - bing
+      - duckduckgo
+      - brave
+      - startpage
+      - bing news
+      - duckduckgo news
+      - brave.news
+      - startpage news
+
+general:
+  instance_name: Reporting Search
+  debug: false
+
+search:
+  safe_search: 1
+  autocomplete: ""
+  default_lang: auto
+  formats:
+    - json
+
+server:
+  bind_address: 0.0.0.0
+  port: 8080
+  method: POST
+  secret_key: env-required
+  limiter: false
+  image_proxy: false
+  public_instance: false
+
+outgoing:
+  request_timeout: 4.0
+  max_request_timeout: 6.0
+
+engines:
+  - name: bing
+    disabled: false
+  - name: duckduckgo
+    disabled: false
+  - name: brave
+    disabled: false
+  - name: startpage
+    disabled: false
+  - name: bing news
+    disabled: false
+  - name: duckduckgo news
+    disabled: false
+  - name: brave.news
+    disabled: false
+  - name: startpage news
+    disabled: false

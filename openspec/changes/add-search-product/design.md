@@ -4,7 +4,7 @@ Reporting needs one Search page for three practical user needs:
 
 1. Find articles already present in the current user's Miniflux account.
 2. Search the public Web through a Reporting-owned SearXNG instance.
-3. Search five public professional sources directly: PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice.
+3. Search the enabled members of a five-source professional catalog directly: PubMed, ClinicalTrials.gov, FDA/openFDA 510(k), TCTMD, and MassDevice.
 
 The first release is a bounded live federated search. Reporting does not build or maintain a search index, mirror professional datasets, crawl arbitrary websites, fetch result detail pages, or retain search history. The browser talks only to Reporting; Reporting owns authentication, source selection, timeouts, normalization, result limits, and merging.
 
@@ -42,7 +42,7 @@ Search page
 - Provide one explicit-submit Search page with a simple query input and independent source selection.
 - Keep exactly three top-level provider boundaries: Feeds, Web, and Specialized.
 - Search Miniflux and SearXNG without exposing either service to the browser.
-- Directly query the fixed five-source professional catalog through a small internal adapter contract.
+- Directly query enabled professional sources through a fixed five-source internal adapter catalog; disabled website transports remain visible and unavailable rather than falling back.
 - Return one normalized result list while preserving all matching source identities and origin-specific actions.
 - Execute selected providers and professional sources concurrently, isolate failures, and return useful partial results.
 - Keep first-release latency and implementation bounded through fixed source/result limits rather than federated pagination.
@@ -108,16 +108,20 @@ POST /api/search
 
 The server validates query length, control characters, at least one available selection, and registered professional source IDs. The request schema accepts only the query and source selection; clients cannot control Miniflux URLs, SearXNG engines, professional endpoints, or parser configuration.
 
-The response contains normalized results plus one status per selected provider/source:
+The response uses the existing API envelope and contains normalized results plus one status per selected provider/source:
 
 ```json
 {
-  "results": [],
-  "sources": [
-    { "id": "feeds", "status": "ok", "resultCount": 0 },
-    { "id": "web", "status": "timeout", "resultCount": 0 }
-  ],
-  "partial": true
+  "success": true,
+  "data": {
+    "results": [],
+    "sources": [
+      { "id": "feeds", "status": "empty", "resultCount": 0 },
+      { "id": "web", "status": "timeout", "resultCount": 0 }
+    ],
+    "partial": true
+  },
+  "error": null
 }
 ```
 
@@ -169,9 +173,9 @@ The first release implements exactly five public adapters:
 
 - `pubmed`: NCBI E-utilities search and summary APIs.
 - `clinical_trials`: ClinicalTrials.gov API v2.
-- `fda`: the applicable public openFDA endpoints used by the FDA adapter.
-- `tctmd`: direct bounded search of the TCTMD website.
-- `massdevice`: direct bounded search of the MassDevice website.
+- `fda`: the public openFDA device 510(k) endpoint, normalized by `k_number`.
+- `tctmd`: a registered bounded TCTMD search-result parser; live transport requires written permission and a reachable approved endpoint.
+- `massdevice`: a registered bounded MassDevice search-result parser; live transport requires a reachable operator-approved endpoint.
 
 Reporting uses the same stable source IDs and provenance labels as ClinMono where applicable, but owns its own adapters and tests. ClinMono's broader classification registry does not automatically enable NMPA, CMDE, SAMR, WHO, PMC, SinoMed, Wanfang, HPRA, EUDAMED, or other sources in this change.
 
@@ -180,6 +184,8 @@ Reporting uses the same stable source IDs and provenance labels as ClinMono wher
 TCTMD and MassDevice adapters call only their fixed search endpoints and parse only their search result pages.
 
 Website adapter rules:
+
+- The live transport remains unavailable until an operator has confirmed automation permission, robots/terms compatibility, and a reachable approved endpoint. TCTMD and MassDevice are unavailable by default in the first deployment.
 
 - Scheme, hostname, port, path template, query parameters, allowed redirect hosts, allowed result hosts, and result-path rules are fixed server-side.
 - User input is encoded only into documented search parameters.
@@ -234,7 +240,7 @@ interface SearchHit {
   primaryOrigin: "feed" | "specialized" | "web";
   origins: Array<"feed" | "specialized" | "web">;
   title: string;
-  url: string;
+  url?: string;
   snippet?: string;
   publishedAt?: string;
   sources: Array<{ id: string; label: string }>;
@@ -244,6 +250,7 @@ interface SearchHit {
     nct?: string;
     fdaId?: string;
   };
+  feedEntryId?: number;
   isRead?: boolean;
   isSaved?: boolean;
 }
@@ -260,7 +267,7 @@ The first release does not compare raw relevance scores, fuzzily compare titles,
 3. Group exact professional records by allowlisted DOI, PMID, NCT, or FDA identifier.
 4. Choose primary origin using `Feed > Specialized > Web`.
 5. Merge all matching source labels and professional identifiers into the retained hit.
-6. Deterministically interleave remaining provider/source lists up to the 30-result cap.
+6. Assign each merged group to its primary source bucket and round-robin the fixed bucket order `feeds`, `pubmed`, `clinical_trials`, `fda`, `tctmd`, `massdevice`, `web` up to the 30-result cap.
 
 A Feed-primary duplicate keeps its reader/read/saved behavior while retaining PubMed, ClinicalTrials, FDA, or other professional provenance. Fuzzy title matching is explicitly deferred because a false merge is worse than a visible duplicate.
 
@@ -269,7 +276,7 @@ A Feed-primary duplicate keeps its reader/read/saved behavior while retaining Pu
 - Search uses feature key `search` in the existing `dealflow` access domain.
 - Feed selection additionally requires permitted Feeds read access and the current user's Miniflux connection.
 - Web and each professional source can be enabled or disabled for a fund, but no per-fund call quota or cost ledger is added.
-- A basic per-user request rate limit is enforced before upstream calls.
+- A per-user limit of 10 Search requests per 60 seconds is enforced before upstream calls; each source receives an 8-second deadline.
 - Usage metrics contain provider/source ID, timing, status, and result count only. Raw queries, result bodies, credentials, and cost records are not retained.
 - Titles and snippets are rendered as text, never injected as HTML.
 - Result URLs are restricted to validated public HTTP(S) targets; credential-bearing, local, private-network, unsafe-scheme, and adapter-off-domain targets are rejected.
@@ -300,9 +307,9 @@ A Feed-primary duplicate keeps its reader/read/saved behavior while retaining Pu
 3. Define the request, response, provider, source-status, result, and exact merge contracts.
 4. Deploy a Reporting-owned pinned SearXNG service with loopback binding, independent secret, JSON/POST configuration, healthcheck, and the fixed Web/News allowlist.
 5. Implement FeedSearchProvider and WebSearchProvider.
-6. Implement SpecializedSearchProvider plus PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice adapters.
+6. Implement SpecializedSearchProvider plus live PubMed, ClinicalTrials.gov, and FDA/openFDA 510(k) adapters; register TCTMD and MassDevice with fixture-tested parsers and unavailable-by-default transports.
 7. Add `POST /api/search` with validation, bounded concurrency, partial failure, fixed result windows, access checks, rate limiting, privacy, and safe normalization.
 8. Add the Search page, default source selection, professional source controls, unified result list, source statuses, and origin-correct actions.
-9. Verify Feed-only, Web-only, specialized-only, combined, zero-source, timeout, malformed/off-domain HTML, duplicate, rate-limit, mobile, and keyboard flows before enabling a pilot fund.
+9. Verify Feed-only, Web-only, every enabled professional source, combined, zero-source, timeout, malformed/off-domain HTML fixtures, duplicate, rate-limit, mobile, and keyboard flows before enabling a pilot fund.
 
 No local index or search-history migration is part of this change. Rollback disables Search, removes its navigation entry, and stops the Reporting-owned SearXNG service; existing Miniflux subscriptions and reader state remain untouched.

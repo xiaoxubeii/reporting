@@ -25,6 +25,7 @@
     "inbound": "Inbound",
     "deals": "Deals",
     "feeds": "Feeds",
+    "search": "Search",
     "today": "Today",
     "followSources": "Follow sources",
     "emailAudit": "Email audit",
@@ -59,6 +60,53 @@
     "showSidebar": "Show Sidebar",
     "hideSidebar": "Hide Sidebar",
     "beta": "beta"
+  },
+  "SearchProduct": {
+    "title": "Search",
+    "description": "Search your personal feeds, trusted professional sources, and the wider web.",
+    "formLabel": "Search sources",
+    "queryLabel": "Search query",
+    "placeholder": "Search a topic, company, product, or clinical question",
+    "submit": "Search",
+    "sources": "Sources",
+    "sourceHelp": "Choose where this search should run. Unavailable sources cannot be selected.",
+    "applyFilters": "Apply",
+    "cancelFilters": "Cancel",
+    "results": "Results",
+    "loading": "Searching selected sources…",
+    "loaded": "Loaded {count} results.",
+    "stale": "Filters changed — search again",
+    "emptyStart": "Enter a query and submit to search the selected sources.",
+    "noResults": "No results matched this search.",
+    "partial": "Some sources could not be searched. Available results are shown below.",
+    "reader": "Reader",
+    "open": "Open source",
+    "unavailable": "Unavailable",
+    "groups": { "personal": "Personal feeds", "professional": "Professional sources", "web": "Web" },
+    "sourceLabels": { "feeds": "Feeds", "web": "Web search" },
+  "sourceReasons": {
+      "feeds": "Connect your personal Miniflux account first.",
+      "feedsUnavailable": "Feeds are not available for your account.",
+      "web": "The Reporting SearXNG service is not available.",
+      "fundDisabled": "This source is disabled for the current fund.",
+    "siteApproval": "Direct website search requires operator approval."
+  },
+  "sourceStatus": {
+    "loading": "Searching…",
+    "ok": "{count} results",
+    "empty": "No matches",
+    "partial": "Partial results",
+    "unavailable": "Unavailable",
+    "timeout": "Timed out",
+    "rateLimited": "Temporarily rate-limited",
+    "invalidResponse": "Unsupported response",
+    "failed": "Search failed"
+  },
+  "errors": {
+      "query": "Enter a search query.",
+      "sources": "Select at least one available source.",
+      "failed": "Search could not be completed. Try again."
+    }
   },
   "Header": {
     "openMenu": "Open menu",
@@ -4120,7 +4168,7 @@
         "admin": { "label": "Administration", "description": "API keys, AI providers, members, integrations, and fund settings." }
       },
       "features": {
-        "interactions": "Interactions", "investments": "Investments", "notes": "Notes", "lpLetters": "LP Letters", "imports": "Imports", "asks": "Asks", "lps": "LPs", "lpTracking": "LP capital tracking", "lpAssociates": "GP Entities", "lpPortal": "LP documents & sharing", "lpActivity": "LP activity log", "compliance": "Compliance", "deals": "Deals", "diligence": "Diligence", "feeds": "Feeds", "accounting": "Accounting", "gpEconomics": "GP economics"
+        "interactions": "Interactions", "investments": "Investments", "notes": "Notes", "lpLetters": "LP Letters", "imports": "Imports", "asks": "Asks", "lps": "LPs", "lpTracking": "LP capital tracking", "lpAssociates": "GP Entities", "lpPortal": "LP documents & sharing", "lpActivity": "LP activity log", "compliance": "Compliance", "deals": "Deals", "diligence": "Diligence", "feeds": "Feeds", "search": "Search", "accounting": "Accounting", "gpEconomics": "GP economics"
       }
     },
     "vehicles": {

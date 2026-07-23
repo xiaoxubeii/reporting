@@ -6,8 +6,8 @@ Fund teams need one research surface that can search publications already availa
 
 - Add a top-level `Search` product route with one plain-text query, explicit submission, independent Feed/Web/professional-source selection, and one normalized result list.
 - Add exactly three server-only provider boundaries: `FeedSearchProvider` for the current user's Miniflux account, `WebSearchProvider` for a Reporting-owned SearXNG instance, and `SpecializedSearchProvider` for direct professional-source adapters.
-- Fix the first professional source set to the public sources already represented by ClinMono: PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice.
-- Add a small code-registered adapter contract supporting public APIs and bounded HTML search of the two approved medical websites; professional sources are never replaced with SearXNG `site:` queries.
+- Fix the first professional source catalog to PubMed, ClinicalTrials.gov, FDA/openFDA 510(k), TCTMD, and MassDevice. Website transports remain unavailable until operator permission and a reachable approved endpoint exist.
+- Add a small code-registered adapter contract supporting public APIs plus fixture-tested bounded HTML parsers for the two catalogued medical websites; professional sources are never replaced with SearXNG `site:` queries and a disabled website transport is never bypassed.
 - Configure SearXNG with an operator-owned allowlist for Bing, DuckDuckGo, Brave Standard, and Startpage Web/News engines; the browser cannot select individual engines.
 - Query selected providers and professional sources concurrently, isolate failures, and return source-level status with successful partial results.
 - Apply fixed server-owned result windows, conservative exact deduplication, `Feed > Specialized > Web` primary-origin precedence, and deterministic interleaving without cross-provider pagination.
@@ -29,5 +29,5 @@ None.
 - Adds UI under `app/(app)/search`, protected APIs under `app/api/search`, and server-only Search service/provider/adapter modules.
 - Reuses the Miniflux client, authorization boundary, and Feed reader introduced by `add-feeds-product`; implementation starts only after that change has landed.
 - Adds a Reporting-owned, version-pinned SearXNG service with loopback-only exposure, JSON output, POST search, healthcheck, independent secret, and the approved Web/News engine configuration; the existing Refly-owned SearXNG container is not reused.
-- Adds direct public adapters for PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice using the same source identities as ClinMono where applicable.
+- Adds direct public adapters for PubMed, ClinicalTrials.gov, and FDA/openFDA 510(k), plus registered fixture-tested TCTMD and MassDevice website adapters whose live transports default unavailable pending permission/reachability.
 - Updates feature metadata, route access declarations, and the existing sidebar without adding a new access domain, credential store, quota ledger, search-history table, or local search index.

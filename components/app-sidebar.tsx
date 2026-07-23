@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, ClipboardCheck, ListChecks, Mail, Settings, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Lock, Users, ArrowDownCircle, Crown, Lightbulb, Microscope, BookOpen, Rss } from 'lucide-react'
+import { Building2, ClipboardCheck, ListChecks, Mail, Settings, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Lock, Users, ArrowDownCircle, Crown, Lightbulb, Microscope, BookOpen, Rss, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
@@ -96,6 +96,7 @@ const NAV_ITEMS: NavItem[] = [
       { href: '/feeds/sources', labelKey: 'followSources', featureKey: 'feeds' },
     ],
   },
+  { href: '/search', labelKey: 'search', icon: Search, featureKey: 'search' },
   {
     href: '/diligence', labelKey: 'diligence', icon: Microscope, featureKey: 'diligence',
     children: [

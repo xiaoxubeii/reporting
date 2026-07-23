@@ -1,0 +1,33 @@
+{
+  "header": {
+    "type": "esummary",
+    "version": "0.3"
+  },
+  "result": {
+    "uids": ["40710387", "40709295"],
+    "40710387": {
+      "uid": "40710387",
+      "pubdate": "2026 Jul 20",
+      "title": "<b>Safe</b> medical device study",
+      "fulljournalname": "Journal of Medical Devices",
+      "authors": [
+        { "name": "Doe J", "authtype": "Author" },
+        { "name": "Smith A", "authtype": "Author" }
+      ],
+      "articleids": [
+        { "idtype": "pubmed", "value": "40710387" },
+        { "idtype": "doi", "value": "10.1000/DEVICE.123" }
+      ]
+    },
+    "40709295": {
+      "uid": "40709295",
+      "epubdate": "2026 Jul 19",
+      "title": "Second device study",
+      "source": "Med Devices",
+      "authors": [],
+      "articleids": [
+        { "idtype": "pubmed", "value": "40709295" }
+      ]
+    }
+  }
+}

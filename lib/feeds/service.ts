@@ -179,13 +179,14 @@ export class FeedService {
     offset: number
     search: string | null
     filter?: 'all' | 'unread' | 'saved'
+    signal?: AbortSignal
   }) {
     const credential = await getMinifluxCredential(this.admin, params.userId)
     if (!credential) {
       return { items: [], total: 0, nextOffset: null, connected: false, hasSubscriptions: false }
     }
-    const client = await this.verifiedClient(credential)
-    const feeds = await client.listFeeds()
+    const client = await this.verifiedClient(credential, params.signal)
+    const feeds = await client.listFeeds(params.signal)
     if (feeds.length === 0) {
       return { items: [], total: 0, nextOffset: null, connected: true, hasSubscriptions: false }
     }
@@ -195,6 +196,7 @@ export class FeedService {
       search: params.search,
       status: params.filter === 'unread' ? 'unread' : null,
       starred: params.filter === 'saved' ? true : null,
+      signal: params.signal,
     })
     return { ...page, connected: true, hasSubscriptions: true }
   }
@@ -228,9 +230,12 @@ export class FeedService {
     return this.verifiedClient(credential)
   }
 
-  private async verifiedClient(credential: { apiToken: string; externalUserId: number }): Promise<MinifluxClient> {
+  private async verifiedClient(
+    credential: { apiToken: string; externalUserId: number },
+    signal?: AbortSignal,
+  ): Promise<MinifluxClient> {
     const client = this.client(credential.apiToken)
-    const user = await client.verifyConnection()
+    const user = await client.verifyConnection(signal)
     if (user.isAdmin || user.id !== credential.externalUserId) {
       throw new FeedApiError('authentication', 409, 'The feed connection identity changed. Reconnect Miniflux.')
     }

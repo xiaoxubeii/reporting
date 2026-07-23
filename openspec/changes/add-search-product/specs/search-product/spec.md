@@ -54,7 +54,7 @@ The system SHALL execute search through `FeedSearchProvider`, `WebSearchProvider
 - **AND** SHALL NOT substitute SearXNG `site:` queries for those adapters.
 
 ### Requirement: Direct public professional adapters
-The system SHALL directly query PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice through fixed code-reviewed adapters.
+The system SHALL provide fixed code-reviewed adapters for PubMed, ClinicalTrials.gov, FDA/openFDA 510(k), TCTMD, and MassDevice, and SHALL directly query only adapters with an operator-approved enabled transport.
 
 #### Scenario: Public API source is searched
 - **WHEN** PubMed, ClinicalTrials.gov, or FDA is selected
@@ -63,8 +63,14 @@ The system SHALL directly query PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, 
 
 #### Scenario: Approved website is searched
 - **WHEN** TCTMD or MassDevice is selected
+- **AND** its operator-approved transport is enabled
 - **THEN** its adapter SHALL call only its fixed allowlisted search endpoint and parse only the bounded search-result response
 - **AND** SHALL NOT traverse or fetch result detail pages.
+
+#### Scenario: Website transport is not approved or reachable
+- **WHEN** a registered website source lacks automation permission or a reachable approved endpoint
+- **THEN** the source SHALL remain visible but unavailable
+- **AND** SHALL NOT attempt a network request, bypass access controls, or fall back to SearXNG.
 
 #### Scenario: Website returns an off-domain or malformed result
 - **WHEN** parsed HTML contains an unapproved result host/path, advertisement, missing required structure, unsafe content type, oversized body, or invalid redirect
