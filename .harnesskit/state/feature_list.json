@@ -3,6 +3,28 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "investment-decision-e2e",
+      "title": "End-to-end investment decision workflow",
+      "status": "in_progress",
+      "current_task": "Create an isolated worktree and prove Pitch through expert evidence in the real browser flow",
+      "definition_of_done": [
+        "One uniquely tagged public pitch creates exactly one fund-scoped inbound Deal",
+        "Deal Research is requested through the UI and executed through the real Cron path to a recorded terminal result",
+        "Promotion creates exactly one linked Diligence record without losing the inbound Deal relationship",
+        "Diligence ingest and Research produce a valid gap or contradiction for expert validation",
+        "One invited expert submits through the public response page and the immutable answer materializes once as industry_expert evidence",
+        "The Diligence UI reflects the materialized expert evidence and the existing pipeline can continue",
+        "Every in-scope blocker fixed in code has focused regression coverage",
+        "Focused tests, changed-scope checks, production build, security review, and real browser acceptance pass"
+      ],
+      "evidence": [],
+      "blocked_by": [
+        "Deal Research currently requires an Anthropic provider with web search while the local fund is configured for OpenRouter",
+        "No outbound email provider is configured, so invitation acceptance must verify the documented copy-link fallback"
+      ],
+      "notes": "Run only in /home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e with unique test data and cookie namespace. Do not reset the shared local Supabase stack."
+    },
+    {
       "id": "harness-bootstrap",
       "title": "Initialize HarnessKit",
       "status": "in_progress",

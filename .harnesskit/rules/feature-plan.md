@@ -15,6 +15,7 @@ dependency and ownership checks.
 
 | Feature ID | Goal | Lane | OpenSpec | Acceptance | Parallel Class | Dependencies | Owner | Worktree | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
 | expert-validation | Close the Research gap/contradiction → expert answer → industry_expert → existing evidence pipeline loop | feature-planning | `openspec/changes/add-expert-validation` | Real internal and public browser flow works; one immutable submitted answer is materialized and enqueued with the documented security boundaries | single-feature | existing Diligence, email, AI, storage, job pipeline | main-agent | current checkout | in_progress |
 | custom-ai-provider | Configure one generic OpenAI-compatible provider such as MiniMax or codex-lb | feature-planning | `openspec/changes/add-custom-ai-provider` | Admin can save key/base URL/model, select the complete provider as default, and existing AI factory uses it | main-agent-only | existing settings encryption, URL validation, OpenAI provider factory | main-agent | current checkout | complete |
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
@@ -27,6 +28,31 @@ dependency and ownership checks.
 
 Copy this block for each planned feature. Keep it short; it is the shared
 contract for self-check, review, testing, and merge.
+
+### Feature: investment-decision-e2e
+
+#### OpenSpec Decision
+
+- Required now: no
+- Reason: this lane validates already-specified Deal, Diligence, and Expert Validation behavior. If a discovered fix changes a user-visible or API contract, add or amend the relevant project-owned OpenSpec before implementation.
+- Execution: isolate all browser tests, fixes, evidence, and commits in `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e`.
+
+#### Acceptance
+
+- Submit one uniquely tagged pitch through the public token form and prove it creates exactly one fund-scoped inbound Deal.
+- Open that Deal as an authorized fund member, request Deal Research, run the real Cron path, and record either a completed result with sources or the precise configured-provider failure without silently faking research.
+- Promote the Deal exactly once and prove both the inbound Deal and newly created Diligence record retain their linkage.
+- Run the existing Diligence ingest and Research stages until a contradiction or research gap can seed an expert-validation request.
+- Create or select an isolated E2E expert, issue an invitation, open the real public response page, and submit a substantive answer.
+- Prove the answer is immutable, materialized once as an `industry_expert` document, and enqueued into the existing ingest/evidence pipeline; then verify the Diligence UI reflects the new evidence.
+- Capture desktop browser screenshots, console errors, failed network responses, and database/API linkage assertions for each stage.
+- Add focused regression coverage for every in-scope blocker that requires code changes; pass focused tests, changed-scope lint/type checks, production build, security review, and the HarnessKit completion gate before commit.
+
+#### Scope Guardrails
+
+- Use a unique E2E identity, fund, pitch title, expert, and browser cookie namespace; never reset or migrate the shared local Supabase stack.
+- Do not commit credentials, database rows, screenshots, browser profiles, `.next`, logs, or generated evidence unless the project explicitly tracks a compact test fixture or report.
+- An unavailable external provider is evidence of an environment/configuration blocker, not permission to replace a real integration with mocked production behavior.
 
 ### Feature: expert-validation
 
