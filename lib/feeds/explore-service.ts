@@ -14,13 +14,27 @@ import {
   parseExploreEntryRef,
   parseExploreSourceRef,
 } from './explore-references'
-import { MinifluxClient } from './miniflux/client'
+import { MinifluxClient, type MinifluxFeed } from './miniflux/client'
 import { FeedService } from './service'
 
 export interface ExploreCategoryView {
   id: string
   title: string
   sourceCount: number
+  featuredSource: ExploreSourceSummaryView
+}
+
+export interface ExploreSourceSummaryView {
+  id: string
+  title: string
+  siteUrl: string | null
+}
+
+export interface ExploreSourceView extends ExploreSourceSummaryView {
+  category: {
+    id: string
+    title: string
+  }
 }
 
 export interface ExploreEntrySummaryView {
@@ -62,14 +76,48 @@ export class ExploreFeedService {
 
   async listCategories(): Promise<ExploreCategoryView[]> {
     const client = await this.collectorClient()
-    const categories = await client.listCategories()
-    return categories
-      .filter(category => category.feedCount > 0)
-      .map(category => Object.freeze({
+    const [categories, feeds] = await Promise.all([client.listCategories(), client.listFeeds()])
+    const publicCategoryIds = new Set(categories.map(category => category.id))
+    return categories.flatMap(category => {
+      const categoryFeeds = feeds
+        .filter(feed => isPublicCuratedSource(feed, publicCategoryIds) && feed.category?.id === category.id)
+        .sort((left, right) => left.id - right.id)
+      const featured = categoryFeeds[0]
+      if (!featured) return []
+      return [Object.freeze({
         id: exploreCategoryRef(category.id),
         title: category.title,
-        sourceCount: category.feedCount,
+        sourceCount: categoryFeeds.length,
+        featuredSource: sourceSummaryView(featured),
+      })]
+    }).sort((left, right) => compareText(left.title, right.title))
+  }
+
+  async listSources(params: {
+    categoryRef: string | null
+    search: string | null
+  }): Promise<ExploreSourceView[]> {
+    const categoryId = params.categoryRef ? parseExploreCategoryRef(params.categoryRef) : null
+    const client = await this.collectorClient()
+    const [categories, feeds] = await Promise.all([client.listCategories(), client.listFeeds()])
+    if (categoryId && !categories.some(category => category.id === categoryId)) {
+      throw new FeedApiError('not_found', 404, 'The requested Explore category was not found.')
+    }
+    const categoryTitles = new Map(categories.map(category => [category.id, category.title]))
+    const publicCategoryIds = new Set(categoryTitles.keys())
+    const search = params.search?.trim().toLocaleLowerCase() ?? ''
+    return feeds
+      .filter(feed => isPublicCuratedSource(feed, publicCategoryIds))
+      .filter(feed => !categoryId || feed.category?.id === categoryId)
+      .filter(feed => !search || sourceSearchText(feed, categoryTitles.get(feed.category!.id)!).includes(search))
+      .map(feed => Object.freeze({
+        ...sourceSummaryView(feed),
+        category: Object.freeze({
+          id: exploreCategoryRef(feed.category!.id),
+          title: categoryTitles.get(feed.category!.id)!,
+        }),
       }))
+      .sort((left, right) => compareText(left.title, right.title) || left.id.localeCompare(right.id))
   }
 
   async listEntries(params: {
@@ -109,22 +157,31 @@ export class ExploreFeedService {
 
   async listFollowedSourceRefs(userId: string): Promise<string[]> {
     const client = await this.collectorClient()
-    const [collectorFeeds, personalCatalog] = await Promise.all([
+    const [categories, collectorFeeds, personalCatalog] = await Promise.all([
+      client.listCategories(),
       client.listFeeds(),
       this.personal.listSources(userId, null),
     ])
+    const publicCategoryIds = new Set(categories.map(category => category.id))
     const followedUrls = new Set(personalCatalog.sources.flatMap(source =>
       source.endpoints.map(endpoint => canonicalFeedUrl(endpoint.feedUrl)),
     ))
     return collectorFeeds
-      .filter(feed => followedUrls.has(canonicalFeedUrl(feed.feedUrl)))
+      .filter(feed => (
+        isPublicCuratedSource(feed, publicCategoryIds)
+        && followedUrls.has(canonicalFeedUrl(feed.feedUrl))
+      ))
       .map(feed => exploreSourceRef(feed.id))
   }
 
   async followSource(userId: string, reference: string) {
     const sourceId = parseExploreSourceRef(reference)
     const client = await this.collectorClient()
-    const source = (await client.listFeeds()).find(feed => feed.id === sourceId)
+    const [categories, feeds] = await Promise.all([client.listCategories(), client.listFeeds()])
+    const publicCategoryIds = new Set(categories.map(category => category.id))
+    const source = feeds.find(feed => (
+      feed.id === sourceId && isPublicCuratedSource(feed, publicCategoryIds)
+    ))
     if (!source) {
       throw new FeedApiError('not_found', 404, 'The requested Explore source was not found.')
     }
@@ -155,6 +212,31 @@ export class ExploreFeedService {
       throw new FeedApiError('upstream', 503, 'Curated Explore is temporarily unavailable.')
     }
   }
+}
+
+function isPublicCuratedSource(feed: MinifluxFeed, publicCategoryIds: ReadonlySet<number>): boolean {
+  return !feed.disabled && Boolean(feed.category && publicCategoryIds.has(feed.category.id))
+}
+
+function sourceSummaryView(feed: { id: number; title: string; siteUrl: string | null }): ExploreSourceSummaryView {
+  return Object.freeze({
+    id: exploreSourceRef(feed.id),
+    title: feed.title,
+    siteUrl: feed.siteUrl,
+  })
+}
+
+function sourceSearchText(
+  feed: { title: string; siteUrl: string | null },
+  categoryTitle: string,
+): string {
+  return [feed.title, feed.siteUrl ?? '', categoryTitle]
+    .join('\n')
+    .toLocaleLowerCase()
+}
+
+function compareText(left: string, right: string): number {
+  return left.localeCompare(right, undefined, { sensitivity: 'base' })
 }
 
 function canonicalFeedUrl(value: string): string {

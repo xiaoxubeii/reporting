@@ -124,6 +124,20 @@ export interface ExploreCategoryResult {
   id: string
   title: string
   sourceCount: number
+  featuredSource: ExploreSourceSummaryResult
+}
+
+export interface ExploreSourceSummaryResult {
+  id: string
+  title: string
+  siteUrl: string | null
+}
+
+export interface ExploreSourceResult extends ExploreSourceSummaryResult {
+  category: {
+    id: string
+    title: string
+  }
 }
 
 export interface ExploreEntryResult {

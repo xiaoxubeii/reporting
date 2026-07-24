@@ -7,7 +7,7 @@ import { isFeedMutationAllowed } from '@/lib/feeds/route-context'
 
 describe('Feeds access contract', () => {
   it('is independently switchable inside the existing dealflow domain', () => {
-    expect(domainForFeature('feeds' as any)).toBe('dealflow')
+    expect(domainForFeature('feeds')).toBe('dealflow')
     expect((DEFAULT_FEATURE_VISIBILITY as Record<string, string>).feeds).toBe('admin')
   })
 
@@ -51,6 +51,7 @@ describe('Feeds access contract', () => {
       'api/feeds/explore/entries',
       'api/feeds/explore/entries/[id]',
       'api/feeds/explore/following',
+      'api/feeds/explore/sources',
       'api/feeds/explore/sources/[id]/follow',
     ]
     for (const key of expected) {
@@ -73,6 +74,7 @@ describe('Feeds access contract', () => {
       'api/feeds/explore/entries',
       'api/feeds/explore/entries/[id]',
       'api/feeds/explore/following',
+      'api/feeds/explore/sources',
       'api/feeds/explore/sources/[id]/follow',
     ])
     expect(exploreRoutes.some(key => /state|saved|read|subscriptions|categories\//.test(key))).toBe(false)

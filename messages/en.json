@@ -5849,7 +5849,15 @@
     },
     "sources": {
       "title": "Follow sources",
-      "description": "Discover and follow publications in your personal feed.",
+      "description": "Discover trusted publications, then manage the sources in your personal feed.",
+      "views": {
+        "label": "Source views",
+        "explore": "Explore sources",
+        "following": "Following"
+      },
+      "exploreHeading": "Explore",
+      "featured": "Featured",
+      "searchResults": "Curated source results",
       "retry": "Retry",
       "following": "Following",
       "follow": "Follow",
@@ -5901,7 +5909,16 @@
         "label": "Find a source",
         "placeholder": "Search by topic, website, or RSS link",
         "action": "Find feeds",
-        "help": "Search your followed sources by category, or paste a website/RSS URL to discover a new source."
+        "help": "Search the curated directory, or paste a public website/RSS URL to discover a new source."
+      },
+      "catalog": {
+        "loadErrorTitle": "Curated sources could not be loaded",
+        "sourcesErrorTitle": "Source results could not be loaded",
+        "emptyTitle": "No curated sources yet",
+        "emptyDescription": "Curated Website and RSS sources will appear here when they are available.",
+        "followUnavailable": "Connect your personal feed account to follow this source.",
+        "retryFollowing": "Retry follow status",
+        "followingProgress": "Following…"
       },
       "categoryMenu": {
         "title": "Choose a category",
@@ -5934,6 +5951,13 @@
         "label": "Topic",
         "emptyTitle": "No sources in this topic",
         "emptyDescription": "Add a website or RSS source, then assign it to this topic."
+      },
+      "categorySheet": {
+        "label": "Curated category",
+        "titleFallback": "Curated sources",
+        "dialogDescription": "Browse the curated Website and RSS sources in this category.",
+        "emptyTitle": "No sources in this category",
+        "emptyDescription": "This curated category does not currently contain an available source."
       }
     }
   },

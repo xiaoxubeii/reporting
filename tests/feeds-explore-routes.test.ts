@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const requireFeedRoute = vi.hoisted(() => vi.fn())
-const limitFeedAction = vi.hoisted(() => vi.fn(async (..._args: unknown[]): Promise<Response | null> => null))
+const limitFeedAction = vi.hoisted(() => vi.fn(async (): Promise<Response | null> => null))
 const assertSameOriginMutation = vi.hoisted(() => vi.fn())
 const readJsonObject = vi.hoisted(() => vi.fn(async () => ({})))
 const listCategories = vi.hoisted(() => vi.fn())
+const listSources = vi.hoisted(() => vi.fn())
 const listEntries = vi.hoisted(() => vi.fn())
 const getEntry = vi.hoisted(() => vi.fn())
 const listFollowedSourceRefs = vi.hoisted(() => vi.fn())
@@ -19,6 +20,7 @@ vi.mock('@/lib/feeds/route-context', () => ({
 vi.mock('@/lib/feeds/explore-service', () => ({
   ExploreFeedService: class {
     listCategories = listCategories
+    listSources = listSources
     listEntries = listEntries
     getEntry = getEntry
     listFollowedSourceRefs = listFollowedSourceRefs
@@ -33,6 +35,7 @@ beforeEach(() => {
     gate: { userId: 'reporting-user-1', fundId: 'fund-1', role: 'member' },
   })
   listCategories.mockResolvedValue([{ id: 'explore-category:8', title: 'Healthcare AI', sourceCount: 2 }])
+  listSources.mockResolvedValue([{ id: 'explore-source:42', title: 'Medical AI News', siteUrl: 'https://trusted.example', category: { id: 'explore-category:8', title: 'Healthcare AI' } }])
   listEntries.mockResolvedValue({ items: [], total: 0, nextOffset: null })
   getEntry.mockResolvedValue({ id: 'explore-entry:101', title: 'Article' })
   listFollowedSourceRefs.mockResolvedValue(['explore-source:42'])
@@ -63,6 +66,32 @@ describe('Curated Explore BFF routes', () => {
       limit: 25,
       offset: 50,
     })
+  })
+
+  it('lists sanitized curated sources through the authenticated read-only gate', async () => {
+    const { GET } = await import('@/app/api/feeds/explore/sources/route')
+    const response = await GET(new Request(
+      'https://app.test/api/feeds/explore/sources?category=explore-category%3A8&q=diagnostics',
+    ))
+    const body = await response.json()
+
+    expect(requireFeedRoute).toHaveBeenCalledWith('api/feeds/explore/sources', 'GET')
+    expect(limitFeedAction).toHaveBeenCalledWith(expect.any(Object), 'explore-sources', 120, 60)
+    expect(listSources).toHaveBeenCalledWith({ categoryRef: 'explore-category:8', search: 'diagnostics' })
+    expect(body.data.sources).toHaveLength(1)
+    expect(JSON.stringify(body)).not.toContain('feedUrl')
+  })
+
+  it.each([
+    [`q=${encodeURIComponent('x'.repeat(201))}`, 'long search'],
+    [`q=${encodeURIComponent('a\u0000b')}`, 'control character'],
+    [`category=${encodeURIComponent('x'.repeat(65))}`, 'long category'],
+  ])('rejects unsafe source-directory input: %s (%s)', async (query) => {
+    const { GET } = await import('@/app/api/feeds/explore/sources/route')
+    const response = await GET(new Request(`https://app.test/api/feeds/explore/sources?${query}`))
+
+    expect(response.status).toBe(400)
+    expect(listSources).not.toHaveBeenCalled()
   })
 
   it.each([

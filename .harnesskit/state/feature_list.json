@@ -86,6 +86,29 @@
       "notes": "Shared chrome/authentication and the complete Import reference page are implemented. The user clarified that completion means every user-visible system page, so authenticated, public/legal/explainer/setup/token, and LP portal migrations remain in progress. The locale write uses a bounded origin-validated API and adds no Server Action exposure. Static catalog imports avoid missing RSC message chunks during development refreshes. Repository-wide lint and one unrelated full-suite assertion remain pre-existing project maintenance items."
     },
     {
+      "id": "curated-source-catalog",
+      "title": "Curated RSS source catalog and personal Following views",
+      "status": "passing",
+      "current_task": "Complete",
+      "definition_of_done": [
+        "Follow sources defaults to an URL-backed curated Explore view and offers a separate Following management view",
+        "Curated category cards, keyword search, category Sheet, and deterministic representative sources use read-only collector data",
+        "Website/RSS URL discovery and personal category selection remain available without advertising unsupported connectors",
+        "Trusted-reference Follow updates only the current user's Miniflux and refreshes Follow state without exposing collector feed URLs",
+        "Personal connection recovery, categories, health, category Sheet, and unfollow behavior remain intact",
+        "Focused tests, strict OpenSpec validation, changed-scope checks, reviews, and real authenticated desktop/mobile acceptance pass"
+      ],
+      "evidence": [
+        "80 focused Explore service/API/access/UI/localization tests passed",
+        "strict OpenSpec validation, HarnessKit fast, changed-scope lint/type checks, and git diff --check passed",
+        "real authenticated desktop and 390px mobile English/Chinese Explore, category, search, URL discovery, Follow, refresh, Following, and connection-failure-independence flows passed",
+        ".harnesskit/evidence/redesign-follow-sources-catalog/",
+        "code, accessibility, and security reviews completed with no remaining in-scope findings"
+      ],
+      "blocked_by": [],
+      "notes": "Collector browsing and personal Miniflux state load independently. First release supports Website/RSS only and adds no Reporting feed persistence or remote favicon loading. Repository-wide targeted lint remains blocked by unrelated existing errors documented in progress.md."
+    },
+    {
       "id": "feed-category-popover",
       "title": "Anchored category menu for personal feed follows",
       "status": "in_progress",

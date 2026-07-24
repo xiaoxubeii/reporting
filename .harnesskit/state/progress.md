@@ -2,8 +2,8 @@
 
 ## Current Focus
 
-- Active change: `add-zh-en-i18n`
-- Current task: inventory and localize every user-visible page; Import is the reference implementation only.
+- Completed feature change: `redesign-follow-sources-catalog` for the Follow sources redesign; the broader `add-zh-en-i18n` migration remains in progress outside this scoped slice.
+- Current task: commit the verified curated source catalog and category-popover integration requested by the user.
 - Completed scoped implementation: `add-feed-category-popover` replaces the Follow sources topic field with an anchored Miniflux category menu while preserving the active localization work.
 - Branch/worktree: `main` in `/home/ubuntu/workspace/reporting`, explicitly confirmed by the user.
 
@@ -21,6 +21,8 @@
 - Preserved unrelated dirty-worktree changes.
 
 ## Verification
+
+- Curated source catalog: 80 focused service/API/access/UI/localization tests passed; strict OpenSpec, HarnessKit fast, changed-scope lint/type checks, and `git diff --check` passed. Authenticated desktop and 390px mobile English/Chinese Explore, category Sheet, keyword search, URL discovery, trusted Follow, reload/Following, and personal-connection-failure-independence flows passed. Code, accessibility, and security reviews have no remaining in-scope findings. Evidence: `.harnesskit/evidence/redesign-follow-sources-catalog/`. HarnessKit targeted remains blocked at repository-wide lint by unrelated existing errors.
 
 - After integrating main: 77 focused navigation, localization, CSP/proxy, Feeds UI, member provisioning, and Supabase URL/cookie tests passed; `npx tsc --noEmit` passed; both Feeds OpenSpec changes passed strict validation; `npx next build --no-lint` passed. The normal build remains blocked only by the repository-wide pre-existing ESLint debt recorded below.
 - Feeds/Explore focused tests, strict OpenSpec validation, typecheck, production build, code/security review, and real desktop/mobile browser acceptance passed before merging the current main branch.

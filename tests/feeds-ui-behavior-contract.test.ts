@@ -5,6 +5,10 @@ const followSources = readFileSync(
   new URL('../components/feeds/follow-sources.tsx', import.meta.url),
   'utf8',
 )
+const exploreSourceCatalog = readFileSync(
+  new URL('../components/feeds/explore-source-catalog.tsx', import.meta.url),
+  'utf8',
+)
 const todayFeed = readFileSync(
   new URL('../components/feeds/today-feed.tsx', import.meta.url),
   'utf8',
@@ -139,6 +143,46 @@ describe('Feeds recovery and pagination UI contract', () => {
     expect(exploreReaderSheet).not.toMatch(/method:\s*'PATCH'/)
     expect(exploreReaderSheet).not.toMatch(/updateState/)
     expect(exploreReaderSheet).not.toMatch(/isRead|isSaved/)
+  })
+
+  it('separates curated source discovery from personal Following with URL-backed state', () => {
+    expect(followSources).toMatch(/searchParams\.get\('view'\) === 'following'/)
+    expect(followSources).toMatch(/view=following/)
+    expect(followSources).toMatch(/<ExploreSourceCatalog/)
+    expect(exploreSourceCatalog).toMatch(/\/api\/feeds\/explore\/categories/)
+    expect(exploreSourceCatalog).toMatch(/\/api\/feeds\/explore\/sources/)
+    expect(exploreSourceCatalog).toMatch(/\/api\/feeds\/explore\/following/)
+    expect(exploreSourceCatalog).toMatch(/\/api\/feeds\/explore\/sources\/\$\{encodeURIComponent\(sourceId\)\}\/follow/)
+    expect(exploreSourceCatalog).toMatch(/requestGeneration = useRef\(0\)/)
+    expect(exploreSourceCatalog).toMatch(/searchParams\.get\('category'\)/)
+    expect(exploreSourceCatalog).toMatch(/<Sheet/)
+    expect(exploreSourceCatalog).not.toMatch(/Reddit|Newsletters|Google News|language/i)
+  })
+
+  it('keeps curated catalog loading independent from the personal connection', () => {
+    expect(exploreSourceCatalog).toMatch(/catalogError/)
+    expect(exploreSourceCatalog).toMatch(/followingError/)
+    expect(exploreSourceCatalog).toMatch(/async function loadCatalog\(\)[\s\S]*\/api\/feeds\/explore\/categories/)
+    expect(exploreSourceCatalog).toMatch(/async function loadFollowingState\(\)[\s\S]*\/api\/feeds\/explore\/following/)
+    expect(exploreSourceCatalog).not.toMatch(/Promise\.allSettled/)
+    expect(exploreSourceCatalog).not.toMatch(/if \(!connection\?\.connected\) return null/)
+  })
+
+  it('keeps connection and catalog load failures retryable in the Explore view', () => {
+    expect(followSources).toContain('personalConnectionError={loadError && !connection ? loadError : null}')
+    expect(followSources).toContain('personalConnectionLoading={loading}')
+    expect(followSources).toMatch(/onRetryConnection=\{\(\) => void load\(\)\}/)
+    expect(exploreSourceCatalog).toMatch(/personalConnectionError \?\? \(personalConnected \? followingError/)
+    expect(exploreSourceCatalog).toMatch(/personalConnectionError\s*\? onRetryConnection/)
+    expect(exploreSourceCatalog).toMatch(/setCatalogReloadKey\(current => current \+ 1\)/)
+    expect(exploreSourceCatalog).toMatch(/actionLabel=\{t\('retry'\)\}/)
+  })
+
+  it('distinguishes a disconnected account from a retryable Follow-state failure', () => {
+    expect(exploreSourceCatalog).toContain('personalConnectionError ?? (personalConnected ? followingError : null)')
+    expect(exploreSourceCatalog).toContain("followStatusError ?? t('catalog.followUnavailable')")
+    expect(exploreSourceCatalog).toMatch(/setFollowingRefreshKey\(current => current \+ 1\)/)
+    expect(exploreSourceCatalog).toContain("t('catalog.retryFollowing')")
   })
 
   it('groups the all-category Explore view by curated Miniflux category', () => {

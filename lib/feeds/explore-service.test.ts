@@ -49,7 +49,9 @@ beforeEach(() => {
   loadMinifluxExploreToken.mockResolvedValue('collector-token')
   loadMinifluxExploreUserId.mockReturnValue(900)
   collector.verifyConnection.mockResolvedValue({ id: 900, username: 'reporting_explore', isAdmin: false })
-  collector.listCategories.mockResolvedValue([])
+  collector.listCategories.mockResolvedValue([
+    { id: 8, title: 'Healthcare AI', feedCount: 0, totalUnread: 0 },
+  ])
   collector.listEntries.mockResolvedValue({ items: [], total: 0, nextOffset: null })
   collector.listFeeds.mockResolvedValue([])
   personalFollow.mockResolvedValue({ id: 501, externalFeedId: 501 })
@@ -93,13 +95,89 @@ describe('ExploreFeedService collector boundary', () => {
       { id: 8, title: 'Healthcare AI', feedCount: 4, totalUnread: 19 },
       { id: 9, title: 'Empty editorial draft', feedCount: 0, totalUnread: 0 },
     ])
+    collector.listFeeds.mockResolvedValue([
+      feed(43, 'https://second.example/feed.xml', { title: 'Second source' }),
+      feed(42, 'https://trusted.example/feed.xml'),
+      feed(44, 'https://disabled.example/feed.xml', { disabled: true }),
+    ])
 
     const result = await new ExploreFeedService(admin as never).listCategories()
 
-    expect(result).toEqual([{ id: 'explore-category:8', title: 'Healthcare AI', sourceCount: 4 }])
+    expect(result).toEqual([{
+      id: 'explore-category:8',
+      title: 'Healthcare AI',
+      sourceCount: 2,
+      featuredSource: {
+        id: 'explore-source:42',
+        title: 'Medical AI News',
+        siteUrl: 'https://trusted.example',
+      },
+    }])
     expect(JSON.stringify(result)).not.toContain('Unread')
+    expect(JSON.stringify(result)).not.toContain('feed.xml')
     expect(collector.verifyConnection).toHaveBeenCalledOnce()
     expect(admin.from).not.toHaveBeenCalled()
+  })
+
+  it('lists a sanitized stable source directory and filters by title, site, or category', async () => {
+    collector.listCategories.mockResolvedValue([
+      { id: 8, title: 'Healthcare AI', feedCount: 3, totalUnread: 0 },
+      { id: 9, title: 'Biotech', feedCount: 1, totalUnread: 0 },
+    ])
+    collector.listFeeds.mockResolvedValue([
+      feed(44, 'https://diagnostics.example/rss', { title: 'Clinical Diagnostics', siteUrl: 'https://diagnostics.example' }),
+      feed(42, 'https://trusted.example/feed.xml'),
+      feed(45, 'https://hidden.example/rss', { title: 'Hidden source', disabled: true }),
+      feed(50, 'https://biotech.example/rss', {
+        title: 'Drug Discovery',
+        siteUrl: 'https://biotech.example',
+        category: { id: 9, title: 'Biotech' },
+      }),
+    ])
+
+    const service = new ExploreFeedService(admin as never)
+    await expect(service.listSources({ categoryRef: null, search: 'healthcare' })).resolves.toEqual([
+      expect.objectContaining({ id: 'explore-source:44', title: 'Clinical Diagnostics' }),
+      expect.objectContaining({ id: 'explore-source:42', title: 'Medical AI News' }),
+    ])
+    await expect(service.listSources({ categoryRef: null, search: 'diagnostics.example' })).resolves.toEqual([
+      expect.objectContaining({ id: 'explore-source:44' }),
+    ])
+    await expect(service.listSources({ categoryRef: null, search: 'biotech.example' })).resolves.toEqual([
+      expect.objectContaining({ id: 'explore-source:50' }),
+    ])
+    await expect(service.listSources({ categoryRef: null, search: '/rss' })).resolves.toEqual([])
+    const sources = await service.listSources({ categoryRef: 'explore-category:8', search: null })
+    expect(sources.map(source => source.id)).toEqual(['explore-source:44', 'explore-source:42'])
+    expect(sources[0]).toEqual({
+      id: 'explore-source:44',
+      title: 'Clinical Diagnostics',
+      siteUrl: 'https://diagnostics.example',
+      category: { id: 'explore-category:8', title: 'Healthcare AI' },
+    })
+    expect(JSON.stringify(sources)).not.toContain('feedUrl')
+    expect(JSON.stringify(sources)).not.toContain('/rss')
+    expect(JSON.stringify(sources)).not.toContain('parsingErrorCount')
+    expect(JSON.stringify(sources)).not.toContain('disabled')
+  })
+
+  it('rejects a malformed source-directory category before opening the collector connection', async () => {
+    await expect(new ExploreFeedService(admin as never).listSources({
+      categoryRef: 'not-a-category-reference', search: null,
+    })).rejects.toMatchObject({ code: 'invalid_request', status: 400 })
+
+    expect(loadMinifluxExploreToken).not.toHaveBeenCalled()
+    expect(collector.verifyConnection).not.toHaveBeenCalled()
+    expect(collector.listCategories).not.toHaveBeenCalled()
+    expect(collector.listFeeds).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when a source-directory category is not owned by the collector', async () => {
+    collector.listCategories.mockResolvedValue([{ id: 7, title: 'Other', feedCount: 1, totalUnread: 0 }])
+
+    await expect(new ExploreFeedService(admin as never).listSources({
+      categoryRef: 'explore-category:8', search: null,
+    })).rejects.toMatchObject({ code: 'not_found', status: 404 })
   })
 
   it('lists latest entries by collector category without shared read or saved fields', async () => {
@@ -175,6 +253,39 @@ describe('ExploreFeedService collector boundary', () => {
     expect(personalFollow).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['disabled', { disabled: true }],
+    ['uncategorized', { category: null }],
+  ] as const)('rejects a hidden %s collector source before following personally', async (_label, overrides) => {
+    collector.listCategories.mockResolvedValue([
+      { id: 8, title: 'Healthcare AI', feedCount: 1, totalUnread: 0 },
+    ])
+    collector.listFeeds.mockResolvedValue([
+      feed(42, 'https://hidden.example/feed.xml', overrides),
+    ])
+
+    await expect(new ExploreFeedService(admin as never).followSource(
+      'reporting-user-a',
+      'explore-source:42',
+    )).rejects.toMatchObject({ code: 'not_found', status: 404 })
+    expect(personalFollow).not.toHaveBeenCalled()
+  })
+
+  it('rejects a source whose category is not owned by the collector', async () => {
+    collector.listCategories.mockResolvedValue([
+      { id: 9, title: 'Other', feedCount: 1, totalUnread: 0 },
+    ])
+    collector.listFeeds.mockResolvedValue([
+      feed(42, 'https://hidden.example/feed.xml'),
+    ])
+
+    await expect(new ExploreFeedService(admin as never).followSource(
+      'reporting-user-a',
+      'explore-source:42',
+    )).rejects.toMatchObject({ code: 'not_found', status: 404 })
+    expect(personalFollow).not.toHaveBeenCalled()
+  })
+
   it('uses the current Reporting user for every personal write', async () => {
     collector.listFeeds.mockResolvedValue([feed(42, 'https://trusted.example/feed.xml')])
     const service = new ExploreFeedService(admin as never)
@@ -216,10 +327,11 @@ describe('ExploreFeedService collector boundary', () => {
   })
 })
 
-function feed(id: number, feedUrl: string): MinifluxFeed {
+function feed(id: number, feedUrl: string, overrides: Partial<MinifluxFeed> = {}): MinifluxFeed {
   return {
     id, title: 'Medical AI News', siteUrl: 'https://trusted.example', feedUrl,
     category: { id: 8, title: 'Healthcare AI' }, parsingErrorCount: 0, disabled: false,
+    ...overrides,
   }
 }
 

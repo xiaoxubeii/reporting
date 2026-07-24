@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { AlertCircle, Check, ExternalLink, Folder, Globe2, Loader2, Plus, Rss, Search, Unplug } from 'lucide-react'
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { FeedsStatePanel } from './state-panel'
+import { ExploreSourceCatalog } from './explore-source-catalog'
 import {
   feedErrorMessageKey,
   feedsRequest,
@@ -29,6 +31,7 @@ export function FollowSources() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const isFollowingView = searchParams.get('view') === 'following'
   const topicSlug = searchParams.get('topic')
   const [connection, setConnection] = useState<ConnectionStatus | null>(null)
   const [sources, setSources] = useState<FeedSourceResult[]>([])
@@ -44,11 +47,15 @@ export function FollowSources() {
   const [token, setToken] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [announcement, setAnnouncement] = useState('')
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null)
+  const [catalogRefreshKey, setCatalogRefreshKey] = useState(0)
+  const [personalCatalogStale, setPersonalCatalogStale] = useState(false)
 
   useEffect(() => {
     setLoadError(null)
     setRowError({})
     setAnnouncement('')
+    setDiscoveryError(null)
   }, [locale])
 
   async function loadCatalog() {
@@ -56,6 +63,7 @@ export function FollowSources() {
     setSources(catalog.sources ?? [])
     setTopics(catalog.topics ?? [])
     setCategories(catalog.categories ?? (catalog.topics ?? []).map(item => ({ id: item.id, name: item.name })))
+    setPersonalCatalogStale(false)
   }
 
   async function load() {
@@ -79,6 +87,12 @@ export function FollowSources() {
   }
 
   useEffect(() => { void load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isFollowingView && personalCatalogStale && connection?.connected) void loadCatalog().catch(value => {
+      setLoadError(feedError(feedErrorMessageKey(value)))
+    })
+  }, [isFollowingView, personalCatalogStale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function connect(event: FormEvent) {
     event.preventDefault()
@@ -117,7 +131,7 @@ export function FollowSources() {
     const value = query.trim()
     if (!value || !looksLikeUrl(value)) return
     setDiscovering(true)
-    setLoadError(null)
+    setDiscoveryError(null)
     try {
       const data = await feedsRequest<{ results: DiscoveredFeed[] }>('/api/feeds/discover', {
         method: 'POST',
@@ -126,7 +140,7 @@ export function FollowSources() {
       setDiscovered(data.results ?? [])
       if (!data.results?.length) setAnnouncement(t('announcements.noFeeds'))
     } catch (value) {
-      setLoadError(feedError(feedErrorMessageKey(value)))
+      setDiscoveryError(feedError(feedErrorMessageKey(value)))
     } finally {
       setDiscovering(false)
     }
@@ -153,6 +167,7 @@ export function FollowSources() {
       }
       setDiscovered(current => current.map(item => item.url === feed.url ? { ...item, isFollowing: true } : item))
       setAnnouncement(t('announcements.followed', { title: feed.title }))
+      setCatalogRefreshKey(current => current + 1)
       try {
         await loadCatalog()
       } catch (value) {
@@ -203,6 +218,11 @@ export function FollowSources() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
+  function invalidatePersonalCatalog() {
+    setPersonalCatalogStale(true)
+    setCatalogRefreshKey(current => current + 1)
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <header className="pb-2">
@@ -212,14 +232,73 @@ export function FollowSources() {
 
       <p className="sr-only" aria-live="polite">{announcement}</p>
 
-      {loading && <div className="flex min-h-72 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}
-      {!loading && loadError && !connection && <div className="mt-6"><FeedsStatePanel tone="error" title={t('states.loadError.title')} description={loadError} actionLabel={t('retry')} onAction={load} /></div>}
+      <nav className="mt-6 flex gap-7 border-b" aria-label={t('views.label')}>
+        <Link href={pathname} scroll={false} className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${!isFollowingView ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`} aria-current={!isFollowingView ? 'page' : undefined}>
+          {t('views.explore')}
+        </Link>
+        <Link href={`${pathname}?view=following`} scroll={false} className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${isFollowingView ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`} aria-current={isFollowingView ? 'page' : undefined}>
+          {t('views.following')}
+        </Link>
+      </nav>
 
-      {!loading && connection && !connection.baseUrlConfigured && (
+      <form onSubmit={discover} className="mt-4">
+        <Label htmlFor="source-search" className="sr-only">{t('discovery.label')}</Label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Input id="source-search" value={query} onChange={event => { setQuery(event.target.value); setDiscovered([]); setDiscoveryError(null) }} placeholder={t('discovery.placeholder')} className="h-14 pl-12 pr-14 text-base sm:pr-32" />
+          <Button type="submit" size="sm" className="absolute right-2 top-2.5 px-3 sm:px-4" aria-label={t('discovery.action')} disabled={!looksLikeUrl(query) || discovering || !connection?.connected}>
+            {discovering ? <Loader2 className="animate-spin" /> : <Globe2 />} <span className="hidden sm:inline">{t('discovery.action')}</span>
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{t('discovery.help')}</p>
+      </form>
+
+      {discoveryError && <div className="mt-5 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><AlertCircle className="h-4 w-4" />{discoveryError}</div>}
+
+      {looksLikeUrl(query) && discovered.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">{t('discovered.title')}</h2>
+          <div className="mt-3 divide-y rounded-lg border">
+            {discovered.map(feed => {
+              const key = `discover:${feed.url}`
+              return (
+                <div key={feed.url} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted"><Rss className="h-5 w-5 text-muted-foreground" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{feed.title}</p>
+                    <p className="truncate text-sm text-muted-foreground">{feed.url}</p>
+                  </div>
+                  {canManageSources && connection?.connected ? (
+                    <FollowCategoryPopover feed={feed} itemKey={key} categories={categories} pending={pending.has(key)} error={rowError[key]} following={feed.isFollowing} onFollow={follow} />
+                  ) : <span className="text-xs font-medium text-muted-foreground">{t('readOnly')}</span>}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {!isFollowingView && (
+        <ExploreSourceCatalog
+          query={looksLikeUrl(query) ? '' : query}
+          personalConnected={Boolean(connection?.connected)}
+          personalConnectionLoading={loading}
+          personalConnectionError={loadError && !connection ? loadError : null}
+          canManageSources={canManageSources && Boolean(connection?.canManage)}
+          refreshKey={catalogRefreshKey}
+          onRetryConnection={() => void load()}
+          onPersonalCatalogInvalidated={invalidatePersonalCatalog}
+        />
+      )}
+
+      {isFollowingView && loading && <div className="flex min-h-72 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}
+      {isFollowingView && !loading && loadError && !connection && <div className="mt-6"><FeedsStatePanel tone="error" title={t('states.loadError.title')} description={loadError} actionLabel={t('retry')} onAction={load} /></div>}
+
+      {isFollowingView && !loading && connection && !connection.baseUrlConfigured && (
         <div className="mt-6"><FeedsStatePanel tone="error" title={t('states.notConfigured.title')} description={t('states.notConfigured.description')} /></div>
       )}
 
-      {!loading && connection?.managed && connection.baseUrlConfigured && !connection.connected && (
+      {isFollowingView && !loading && connection?.managed && connection.baseUrlConfigured && !connection.connected && (
         <div className="mt-6">
           <FeedsStatePanel
             tone="error"
@@ -231,7 +310,7 @@ export function FollowSources() {
         </div>
       )}
 
-      {!loading && connection?.baseUrlConfigured && !connection.connected && !connection.managed && (
+      {isFollowingView && !loading && connection?.baseUrlConfigured && !connection.connected && !connection.managed && (
         <section className="mt-8 rounded-lg border bg-card p-6">
           <div className="flex items-start gap-3">
             <div className="rounded-full bg-muted p-2"><Unplug className="h-5 w-5 text-muted-foreground" /></div>
@@ -255,44 +334,9 @@ export function FollowSources() {
         </section>
       )}
 
-      {!loading && connection?.connected && (
+      {isFollowingView && !loading && connection?.connected && (
         <>
-          <form onSubmit={discover} className="mt-4">
-            <Label htmlFor="source-search">{t('discovery.label')}</Label>
-            <div className="relative mt-2">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input id="source-search" value={query} onChange={event => { setQuery(event.target.value); setDiscovered([]) }} placeholder={t('discovery.placeholder')} className="h-12 pl-12 pr-28 text-base" />
-              <Button type="submit" size="sm" className="absolute right-2 top-2" disabled={!looksLikeUrl(query) || discovering}>
-                {discovering ? <Loader2 className="animate-spin" /> : <Globe2 />} {t('discovery.action')}
-              </Button>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">{t('discovery.help')}</p>
-          </form>
-
           {loadError && <div className="mt-5 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><AlertCircle className="h-4 w-4" />{loadError}</div>}
-
-          {discovered.length > 0 && (
-            <section className="mt-8">
-              <h2 className="text-lg font-semibold">{t('discovered.title')}</h2>
-              <div className="mt-3 divide-y rounded-lg border">
-                {discovered.map(feed => {
-                  const key = `discover:${feed.url}`
-                  return (
-                    <div key={feed.url} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted"><Rss className="h-5 w-5 text-muted-foreground" /></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{feed.title}</p>
-                        <p className="truncate text-sm text-muted-foreground">{feed.url}</p>
-                      </div>
-                      {canManageSources ? (
-                        <FollowCategoryPopover feed={feed} itemKey={key} categories={categories} pending={pending.has(key)} error={rowError[key]} following={feed.isFollowing} onFollow={follow} />
-                      ) : <span className="text-xs font-medium text-muted-foreground">{t('readOnly')}</span>}
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          )}
 
           {!query && topics.length > 0 && (
             <section className="mt-10">

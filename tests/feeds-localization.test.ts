@@ -9,6 +9,7 @@ const CLIENT_SURFACES = [
   'components/feeds/today-feed.tsx',
   'components/feeds/explore-feed.tsx',
   'components/feeds/follow-sources.tsx',
+  'components/feeds/explore-source-catalog.tsx',
   'components/feeds/feed-reader-sheet.tsx',
   'components/feeds/explore-reader-sheet.tsx',
   'components/feeds/state-panel.tsx',
@@ -42,6 +43,24 @@ describe('Feeds localization', () => {
       searchCategories: '搜索文件夹',
       newCategory: '新建文件夹',
       createAndFollow: '创建并关注',
+    })
+  })
+
+  it('localizes the curated source discovery and personal management views', () => {
+    const english = JSON.parse(source('messages/en.json')).Feeds.sources
+    const chinese = JSON.parse(source('messages/zh-CN.json')).Feeds.sources
+
+    expect(english).toMatchObject({
+      views: { explore: 'Explore sources', following: 'Following' },
+      exploreHeading: 'Explore',
+      featured: 'Featured',
+      categorySheet: { label: 'Curated category' },
+    })
+    expect(chinese).toMatchObject({
+      views: { explore: '探索来源', following: '已关注' },
+      exploreHeading: '探索',
+      featured: '精选来源',
+      categorySheet: { label: '精选分类' },
     })
   })
 
@@ -89,6 +108,7 @@ describe('Feeds localization', () => {
     'components/feeds/today-feed.tsx',
     'components/feeds/explore-feed.tsx',
     'components/feeds/follow-sources.tsx',
+    'components/feeds/explore-source-catalog.tsx',
     'components/feeds/feed-reader-sheet.tsx',
     'components/feeds/explore-reader-sheet.tsx',
   ])('clears localized transient state when the locale changes in %s', path => {

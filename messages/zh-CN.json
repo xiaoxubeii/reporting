@@ -5815,7 +5815,15 @@
     },
     "sources": {
       "title": "关注来源",
-      "description": "发现并关注个人订阅中的出版来源。",
+      "description": "发现可信的精品来源，并管理个人订阅流中的来源。",
+      "views": {
+        "label": "来源视图",
+        "explore": "探索来源",
+        "following": "已关注"
+      },
+      "exploreHeading": "探索",
+      "featured": "精选来源",
+      "searchResults": "精品来源结果",
       "retry": "重试",
       "following": "已关注",
       "follow": "关注",
@@ -5867,7 +5875,16 @@
         "label": "查找来源",
         "placeholder": "按主题、网站或 RSS 链接搜索",
         "action": "查找订阅",
-        "help": "可按分类搜索已关注来源，或粘贴网站/RSS 地址来发现新来源。"
+        "help": "搜索精品来源目录，或粘贴公开网站/RSS 地址来发现新来源。"
+      },
+      "catalog": {
+        "loadErrorTitle": "无法加载精品来源",
+        "sourcesErrorTitle": "无法加载来源结果",
+        "emptyTitle": "暂无精品来源",
+        "emptyDescription": "配置好精选网站和 RSS 来源后，它们会显示在这里。",
+        "followUnavailable": "请先连接个人订阅账户，再关注此来源。",
+        "retryFollowing": "重试关注状态",
+        "followingProgress": "正在关注…"
       },
       "categoryMenu": {
         "title": "选择分类",
@@ -5900,6 +5917,13 @@
         "label": "主题",
         "emptyTitle": "此主题下没有来源",
         "emptyDescription": "添加网站或 RSS 来源后，将其分配到此主题。"
+      },
+      "categorySheet": {
+        "label": "精选分类",
+        "titleFallback": "精品来源",
+        "dialogDescription": "浏览此分类中的精选网站和 RSS 来源。",
+        "emptyTitle": "此分类下暂无来源",
+        "emptyDescription": "此精选分类当前没有可用来源。"
       }
     }
   },

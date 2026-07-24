@@ -20,6 +20,7 @@ dependency and ownership checks.
 | custom-ai-provider | Configure one generic OpenAI-compatible provider such as MiniMax or codex-lb | feature-planning | `openspec/changes/add-custom-ai-provider` | Admin can save key/base URL/model, select the complete provider as default, and existing AI factory uses it | main-agent-only | existing settings encryption, URL validation, OpenAI provider factory | main-agent | current checkout | complete |
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
 | feed-category-popover | Select or create a Miniflux category from an anchored menu when following a personal source | feature-planning | `openspec/changes/add-feed-category-popover` | Follow opens a responsive accessible theme-aware folder picker for Uncategorized, existing categories, or inline new category creation; success refreshes the catalog and failure remains recoverable in context | serial-required | feeds-product, current Feeds localization slice, existing subscription mutation | main-agent | current checkout | in_progress |
+| curated-source-catalog | Redesign Follow sources around a curated RSS directory and a separate personal management view | feature-planning | `openspec/changes/redesign-follow-sources-catalog` | Authorized users can browse and search curated Website/RSS sources, open category sheets, follow trusted sources, and independently manage personal subscriptions without exposing collector feed URLs or requiring a personal connection for browsing | serial-required | curated-explore, feeds-product, feed-category-popover, current Feeds localization slice | main-agent | current checkout | complete |
 | feeds-product | Add personal Today and Follow sources backed exclusively by Miniflux APIs | feature-planning | `openspec/changes/add-feeds-product` | Approved users receive isolated Miniflux identities and can read, save, discover, categorize, follow, and unfollow through the authenticated Reporting BFF | serial-required | Miniflux V2, Reporting auth and approval workflow, Dealflow grants | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | curated-explore | Add a global read-only curated discovery view backed by one non-admin Miniflux user | feature-planning | `openspec/changes/add-curated-explore` | Authorized users can browse curated categories/articles and idempotently follow a trusted source into their personal Miniflux without shared read/save mutations or Reporting feed tables | serial-required | feeds-product, Miniflux BFF, personal FeedService, Today reader | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | croner-node-runtime | Replace Vercel Cron with one persistent Croner process while running the existing Next.js API routes on a persistent Node server | feature-planning | `openspec/changes/replace-vercel-cron-with-croner` | Production exposes separate Web and Cron start commands; the Cron process schedules the existing five authenticated routes with overlap protection, health reporting, bounded requests, and graceful shutdown; Vercel schedules are removed | main-agent-only | existing Next.js cron routes, `CRON_SECRET`, production process supervisor | main-agent | current checkout | complete |
@@ -282,6 +283,60 @@ contract for self-check, review, testing, and merge.
 - reviews: compact styling code review found no correctness or accessibility issue; a native-disabled regression for already-followed discovery rows was fixed before commit
 - verification gaps: repository-wide TypeScript currently has 64 unrelated existing errors from the concurrently changing repository state, with 0 errors in the changed feed scope; HarnessKit fast has no configured automated QA target, so the required browser acceptance ran directly
 - risks: shared-file overlap with the still-active localization change; existing app-shell accounting 403 and Vercel Analytics CSP console noise remain outside this feature
+
+### Feature: curated-source-catalog
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: This redesign adds a user-visible source-directory contract and changes the navigation and interaction model of Follow sources.
+- Change: `openspec/changes/redesign-follow-sources-catalog`
+- Task: implement `tasks.md` serially from read-only collector contracts through the real browser flow.
+
+#### Acceptance
+
+- `/feeds/sources` defaults to an URL-backed Explore sources view and offers a separate URL-backed Following view.
+- Explore remains browsable without a working personal Miniflux connection and shows stable category cards with source counts and one deterministic representative source.
+- Text search filters the curated directory; Website/RSS URLs continue through the existing SSRF-safe discovery and personal category picker.
+- A category opens a responsive Sheet listing its curated sources and current Follow state; Follow sends only a trusted source reference and writes only to the current user's Miniflux.
+- Following preserves personal connection/provisioning recovery, categories, source health, category Sheet, and unfollow behavior.
+- The first release presents Website/RSS only and does not expose unsupported source types, fake language controls, collector feed URLs, or Reporting feed persistence.
+
+#### Allowed Change Scope
+
+- `lib/feeds/explore-service.ts` and focused Explore service contracts
+- `app/api/feeds/explore/sources/**`, focused access/route registration
+- `components/feeds/follow-sources.tsx`, new focused curated catalog components, and Feeds client types
+- `messages/en.json`, `messages/zh-CN.json`
+- focused tests and OpenSpec/HarnessKit planning artifacts
+
+#### Shared Contract Changes
+
+- Add a read-only curated source directory endpoint with optional bounded category and text filters.
+- Extend curated category summaries with one deterministic representative source derived from collector order.
+- Preserve namespaced source/category references and server-side collector ownership checks.
+- Keep curated browsing, personal connection state, and personal Follow-state projection independently recoverable.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec validation, HarnessKit fast, changed-scope lint/type checks.
+- targeted: Explore service/API/access/UI/localization tests, including output redaction and failure independence.
+- full: HarnessKit targeted/full plus real authenticated English/Chinese desktop and 390px mobile browsing, search, category, Follow, refresh, and Following flows.
+
+#### Review Required
+
+- reviewer: yes, shared state and behavior correctness
+- security-reviewer: yes, SSRF, trusted-reference, authorization, and collector read-only boundaries
+- browser/QA: yes, this is a responsive user-visible redesign
+
+#### Progress / Evidence
+
+- status: complete
+- branch/worktree: `main` in the current checkout; unrelated dirty user artifacts are preserved
+- implementation: read-only curated source directory, responsive Explore catalog, URL/RSS discovery, trusted-reference Follow, and separate personal Following management complete
+- verification: 78 focused tests passed; changed-scope lint/type checks, strict OpenSpec, HarnessKit fast, code/security review, and authenticated desktop/mobile English/Chinese browser acceptance passed; repository-wide targeted lint remains blocked by unrelated existing errors
+- evidence: `.harnesskit/evidence/redesign-follow-sources-catalog/`
+- commit: none requested
 
 ### Feature: feeds-product
 
