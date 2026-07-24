@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { Bookmark, BookmarkCheck, CheckCheck, Loader2, RefreshCw, Rss, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,7 @@ import { FeedReaderSheet } from './feed-reader-sheet'
 import { ExploreFeed } from './explore-feed'
 import { FeedRowsSkeleton, FeedsStatePanel } from './state-panel'
 import { TodayViewTabs } from './today-view-tabs'
-import { feedsRequest, type EntriesPayload, FeedsApiError } from './api'
+import { feedErrorMessageKey, feedsRequest, type EntriesPayload, FeedsApiError } from './api'
 import {
   groupFeedEntriesByCategory,
   mergeFeedEntryPages,
@@ -26,6 +26,10 @@ export function TodayFeed() {
 }
 
 function PersonalTodayFeed() {
+  const locale = useLocale()
+  const t = useTranslations('Feeds.today')
+  const relative = useTranslations('Feeds.relative')
+  const feedError = useTranslations('Feeds.errors')
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -44,6 +48,11 @@ function PersonalTodayFeed() {
   const [announcement, setAnnouncement] = useState('')
   const openedFromList = useRef(false)
 
+  useEffect(() => {
+    setError(null)
+    setAnnouncement('')
+  }, [locale])
+
   const load = useCallback(async (offset = 0, append = false) => {
     if (append) setLoadingMore(true)
     else setLoading(true)
@@ -57,9 +66,9 @@ function PersonalTodayFeed() {
       setNextOffset(data.nextOffset)
       setConnected(data.connected)
       setHasSubscriptions(data.hasSubscriptions)
-      setAnnouncement(append ? 'More articles loaded' : 'Articles refreshed')
+      setAnnouncement(append ? t('announcements.moreLoaded') : t('announcements.refreshed'))
     } catch (value) {
-      const message = value instanceof Error ? value.message : 'Articles could not be loaded'
+      const message = feedError(feedErrorMessageKey(value))
       setError(message)
       if (value instanceof FeedsApiError && ['not_configured', 'authentication'].includes(value.detail.code)) {
         setConnected(false)
@@ -69,7 +78,7 @@ function PersonalTodayFeed() {
       setRefreshing(false)
       setLoadingMore(false)
     }
-  }, [filter, query])
+  }, [feedError, filter, query, t])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void load() }, query.trim() ? 250 : 0)
@@ -119,10 +128,10 @@ function PersonalTodayFeed() {
       const updated = { ...optimistic, ...data.state }
       mergeState(updated)
       if (shouldResetFeedPagination(filter, { isSaved: updated.isSaved })) await resetFilteredPage()
-      setAnnouncement(data.state.isSaved ? 'Article saved' : 'Article removed from saved')
+      setAnnouncement(data.state.isSaved ? t('announcements.saved') : t('announcements.removedSaved'))
     } catch {
       mergeState(previous)
-      setAnnouncement('Article state could not be updated')
+      setAnnouncement(t('announcements.stateUpdateFailed'))
     }
   }
 
@@ -136,24 +145,35 @@ function PersonalTodayFeed() {
     )))
     await resetFilteredPage()
     if (results.some(result => result.status === 'rejected')) {
-      setAnnouncement('Some articles could not be marked read')
+      setAnnouncement(t('announcements.someMarkReadFailed'))
     } else {
-      setAnnouncement('All loaded articles marked read')
+      setAnnouncement(t('announcements.allMarkedRead'))
     }
+  }
+
+  function relativeTime(value: string | null): string {
+    if (!value) return relative('unknown')
+    const seconds = Math.max(0, Math.round((Date.now() - Date.parse(value)) / 1000))
+    if (seconds < 60) return relative('justNow')
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return relative('minutesAgo', { count: minutes })
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return relative('hoursAgo', { count: hours })
+    return relative('daysAgo', { count: Math.floor(hours / 24) })
   }
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-col gap-4 pb-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
-          <p className="mt-1 text-sm text-muted-foreground">The latest from sources you follow.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={markVisibleRead} disabled={!entries.some(item => !item.isRead)}>
-            <CheckCheck /> Mark all as read
+            <CheckCheck /> {t('markAllRead')}
           </Button>
-          <Button variant="outline" size="icon" aria-label="Refresh articles" onClick={() => { setRefreshing(true); void load() }} disabled={refreshing}>
+          <Button variant="outline" size="icon" aria-label={t('refresh')} onClick={() => { setRefreshing(true); void load() }} disabled={refreshing}>
             <RefreshCw className={refreshing ? 'animate-spin' : ''} />
           </Button>
         </div>
@@ -162,7 +182,7 @@ function PersonalTodayFeed() {
       <TodayViewTabs active="me" />
 
       <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="inline-flex w-fit rounded-md bg-muted p-1" aria-label="Article filter">
+        <div className="inline-flex w-fit rounded-md bg-muted p-1" aria-label={t('filterLabel')}>
           {(['unread', 'all', 'saved'] as FeedFilter[]).map(value => (
             <button
               key={value}
@@ -170,13 +190,13 @@ function PersonalTodayFeed() {
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
               className={`min-h-9 rounded px-3 text-sm font-medium capitalize transition-colors ${filter === value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >{value}</button>
+            >{t(`filters.${value}`)}</button>
           ))}
         </div>
         <label className="relative block w-full md:max-w-xs">
-          <span className="sr-only">Search articles</span>
+          <span className="sr-only">{t('search')}</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search articles" className="pl-9" />
+          <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('search')} className="pl-9" />
         </label>
       </div>
 
@@ -185,19 +205,19 @@ function PersonalTodayFeed() {
       <div className="mt-6">
         {loading && <FeedRowsSkeleton />}
         {!loading && !connected && (
-          <FeedsStatePanel title="Connect Miniflux to start reading" description="Connect your personal non-admin Miniflux account before articles can be loaded." actionLabel="Open Follow sources" actionHref="/feeds/sources" />
+          <FeedsStatePanel title={t('states.connect.title')} description={t('states.connect.description')} actionLabel={t('states.connect.action')} actionHref="/feeds/sources" />
         )}
         {!loading && connected && !hasSubscriptions && (
-          <FeedsStatePanel title="No sources followed yet" description="Follow trusted publications and their latest articles will appear here." actionLabel="Follow sources" actionHref="/feeds/sources" />
+          <FeedsStatePanel title={t('states.noSources.title')} description={t('states.noSources.description')} actionLabel={t('states.noSources.action')} actionHref="/feeds/sources" />
         )}
         {!loading && error && connected && (
-          <FeedsStatePanel tone="error" title="Articles could not be loaded" description={error} actionLabel="Retry" onAction={() => load()} />
+          <FeedsStatePanel tone="error" title={t('states.loadError.title')} description={error} actionLabel={t('states.loadError.action')} onAction={() => load()} />
         )}
         {!loading && !error && connected && hasSubscriptions && visible.length === 0 && (
           <FeedsStatePanel
-            title={nextOffset !== null ? 'No matching articles on this page' : filter === 'unread' ? "You're all caught up" : 'No articles match these filters'}
-            description={nextOffset !== null ? 'More articles are available from followed sources.' : filter === 'unread' ? 'There are no unread articles in the loaded feed.' : 'Try another filter or search term.'}
-            actionLabel={nextOffset !== null ? 'Load more' : filter === 'unread' ? 'Show all' : 'Clear filters'}
+            title={nextOffset !== null ? t('states.empty.moreTitle') : filter === 'unread' ? t('states.empty.caughtUpTitle') : t('states.empty.filteredTitle')}
+            description={nextOffset !== null ? t('states.empty.moreDescription') : filter === 'unread' ? t('states.empty.caughtUpDescription') : t('states.empty.filteredDescription')}
+            actionLabel={nextOffset !== null ? t('loadMore') : filter === 'unread' ? t('states.empty.showAll') : t('states.empty.clearFilters')}
             onAction={() => {
               if (nextOffset !== null) {
                 void load(nextOffset, true)
@@ -212,11 +232,11 @@ function PersonalTodayFeed() {
           <div>
             {grouped.map(group => (
               <section key={group.key} className="mb-7">
-                <h2 className="mb-3 text-sm font-medium text-muted-foreground">{group.label}</h2>
+                <h2 className="mb-3 text-sm font-medium text-muted-foreground">{group.categoryId === null ? t('uncategorized') : group.label}</h2>
                 <div className="divide-y border-y">
                   {group.items.map(entry => (
                     <article key={entry.externalId} className="relative flex gap-4 py-5">
-                      {!entry.isRead && <span className="absolute -left-3 top-8 h-2 w-2 rounded-full bg-primary" aria-label="Unread" />}
+                      {!entry.isRead && <span className="absolute -left-3 top-8 h-2 w-2 rounded-full bg-primary" aria-label={t('unread')} />}
                       <div className="flex h-[72px] w-[112px] shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/50">
                         {entry.imageUrl
                           ? <img src={entry.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
@@ -229,7 +249,7 @@ function PersonalTodayFeed() {
                         <p className="mt-1 text-xs text-muted-foreground">{entry.source.title} · {relativeTime(entry.publishedAt ?? entry.createdAt)}</p>
                         {entry.summary && <p className="mt-2 line-clamp-2 text-sm leading-5 text-muted-foreground">{entry.summary}</p>}
                       </div>
-                      <Button variant="ghost" size="icon" aria-label={entry.isSaved ? 'Remove from saved' : 'Save for later'} onClick={() => toggleSaved(entry)}>
+                      <Button variant="ghost" size="icon" aria-label={entry.isSaved ? t('removeSaved') : t('saveLater')} onClick={() => toggleSaved(entry)}>
                         {entry.isSaved ? <BookmarkCheck className="text-primary" /> : <Bookmark />}
                       </Button>
                     </article>
@@ -238,10 +258,10 @@ function PersonalTodayFeed() {
               </section>
             ))}
             <div className="flex items-center justify-between py-2">
-              <p className="text-xs text-muted-foreground">Showing {entries.length} of {total}</p>
+              <p className="text-xs text-muted-foreground">{t('showing', { visible: entries.length, total })}</p>
               {nextOffset !== null && (
                 <Button variant="outline" onClick={() => load(nextOffset, true)} disabled={loadingMore}>
-                  {loadingMore && <Loader2 className="animate-spin" />} Load more
+                  {loadingMore && <Loader2 className="animate-spin" />} {t('loadMore')}
                 </Button>
               )}
             </div>
@@ -261,16 +281,4 @@ function PersonalTodayFeed() {
       />
     </div>
   )
-}
-
-function relativeTime(value: string | null): string {
-  if (!value) return 'Unknown time'
-  const seconds = Math.max(0, Math.round((Date.now() - Date.parse(value)) / 1000))
-  if (seconds < 60) return 'Just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
 }

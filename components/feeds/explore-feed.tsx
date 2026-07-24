@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { Check, Loader2, RefreshCw, Rss, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  feedErrorMessageKey,
   feedsRequest,
   type ExploreCategoryResult,
   type ExploreEntriesPayload,
@@ -19,6 +21,10 @@ import { groupExploreEntriesByCategory, mergeExploreEntryPages } from '@/lib/fee
 const ALL_CATEGORY_ID = 'explore-category:all'
 
 export function ExploreFeed() {
+  const locale = useLocale()
+  const t = useTranslations('Feeds.explore')
+  const relative = useTranslations('Feeds.relative')
+  const feedError = useTranslations('Feeds.errors')
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -39,6 +45,12 @@ export function ExploreFeed() {
   const [followErrors, setFollowErrors] = useState<Record<string, string>>({})
   const [announcement, setAnnouncement] = useState('')
   const requestGeneration = useRef(0)
+
+  useEffect(() => {
+    setError(null)
+    setAnnouncement('')
+    setFollowErrors({})
+  }, [locale])
 
   const loadCategories = useCallback(async () => {
     const data = await feedsRequest<{ categories: ExploreCategoryResult[] }>(
@@ -76,10 +88,10 @@ export function ExploreFeed() {
       setEntries(current => append ? mergeExploreEntryPages(current, data.items) : data.items)
       setTotal(data.total)
       setNextOffset(data.nextOffset)
-      setAnnouncement(append ? 'More curated articles loaded' : 'Curated articles refreshed')
+      setAnnouncement(append ? t('announcements.moreLoaded') : t('announcements.refreshed'))
     } catch (value) {
       if (generation !== requestGeneration.current) return
-      setError(value instanceof Error ? value.message : 'Curated articles could not be loaded')
+      setError(feedError(feedErrorMessageKey(value)))
     } finally {
       if (generation === requestGeneration.current) {
         setLoading(false)
@@ -87,14 +99,14 @@ export function ExploreFeed() {
         setRefreshing(false)
       }
     }
-  }, [categoryRef, query])
+  }, [categoryRef, feedError, query, t])
 
   useEffect(() => {
     void loadCategories().catch(value => {
-      setError(value instanceof Error ? value.message : 'Curated categories could not be loaded')
+      setError(feedError(feedErrorMessageKey(value)))
       setLoading(false)
     })
-  }, [loadCategories])
+  }, [feedError, loadCategories])
 
   useEffect(() => { void loadFollowedSources() }, [loadFollowedSources])
 
@@ -112,7 +124,7 @@ export function ExploreFeed() {
     try {
       await Promise.all([loadCategories(), loadEntries(), loadFollowedSources()])
     } catch (value) {
-      setError(value instanceof Error ? value.message : 'Curated Explore could not be loaded')
+      setError(feedError(feedErrorMessageKey(value)))
     } finally {
       setRefreshing(false)
     }
@@ -147,9 +159,9 @@ export function ExploreFeed() {
         { method: 'POST', body: '{}' },
       )
       setFollowedSources(current => new Set([...Array.from(current), sourceId]))
-      setAnnouncement('Source followed in your personal feed')
+      setAnnouncement(t('announcements.followed'))
     } catch (value) {
-      const message = value instanceof Error ? value.message : 'Source could not be followed'
+      const message = feedError(feedErrorMessageKey(value))
       setFollowErrors(current => ({ ...current, [sourceId]: message }))
       setAnnouncement(message)
     } finally {
@@ -157,42 +169,53 @@ export function ExploreFeed() {
     }
   }
 
+  function relativeTime(value: string | null): string {
+    if (!value) return relative('unknown')
+    const seconds = Math.max(0, Math.round((Date.now() - Date.parse(value)) / 1000))
+    if (seconds < 60) return relative('justNow')
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return relative('minutesAgo', { count: minutes })
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return relative('hoursAgo', { count: hours })
+    return relative('daysAgo', { count: Math.floor(hours / 24) })
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-col gap-4 pb-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Curated healthcare and investment intelligence.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
         </div>
-        <Button variant="outline" size="icon" aria-label="Refresh curated articles" onClick={() => { void refreshExplore() }} disabled={refreshing}>
+        <Button variant="outline" size="icon" aria-label={t('refresh')} onClick={() => { void refreshExplore() }} disabled={refreshing}>
           <RefreshCw className={refreshing ? 'animate-spin' : ''} />
         </Button>
       </header>
 
       <TodayViewTabs active="explore" />
 
-      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex max-w-full gap-2 overflow-x-auto pb-1" aria-label="Explore categories">
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto" aria-label={t('categoriesLabel')}>
           <button
             type="button"
             aria-pressed={categoryRef === null}
             onClick={() => selectCategory(ALL_CATEGORY_ID)}
-            className={`min-h-9 shrink-0 rounded-md border px-3 text-sm font-medium ${categoryRef === null ? 'border-foreground bg-foreground text-background' : 'bg-background text-muted-foreground hover:text-foreground'}`}
-          >All</button>
+            className={`h-10 shrink-0 rounded-md border px-3 text-sm font-medium ${categoryRef === null ? 'border-foreground bg-foreground text-background' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+          >{t('all')}</button>
           {categories.map(category => (
             <button
               key={category.id}
               type="button"
               aria-pressed={categoryRef === category.id}
               onClick={() => selectCategory(category.id)}
-              className={`min-h-9 shrink-0 rounded-md border px-3 text-sm font-medium ${categoryRef === category.id ? 'border-foreground bg-foreground text-background' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+              className={`h-10 shrink-0 rounded-md border px-3 text-sm font-medium ${categoryRef === category.id ? 'border-foreground bg-foreground text-background' : 'bg-background text-muted-foreground hover:text-foreground'}`}
             >{category.title} <span className="ml-1 opacity-70">{category.sourceCount}</span></button>
           ))}
         </div>
-        <label className="relative block w-full md:max-w-xs">
-          <span className="sr-only">Search curated articles</span>
+        <label className="relative block w-full shrink-0 md:w-80">
+          <span className="sr-only">{t('search')}</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search curated articles" className="pl-9" />
+          <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('search')} className="h-10 pl-9" />
         </label>
       </div>
 
@@ -201,16 +224,16 @@ export function ExploreFeed() {
       <div className="mt-6">
         {loading && <FeedRowsSkeleton />}
         {!loading && error && (
-          <FeedsStatePanel tone="error" title="Curated Explore could not be loaded" description={error} actionLabel="Retry" onAction={() => { void refreshExplore() }} />
+          <FeedsStatePanel tone="error" title={t('states.loadError.title')} description={error} actionLabel={t('states.loadError.action')} onAction={() => { void refreshExplore() }} />
         )}
         {!loading && !error && entries.length === 0 && (
-          <FeedsStatePanel title="No curated articles match" description="Try another category or search term." actionLabel="Show all" onAction={() => { setCategoryRef(null); setQuery('') }} />
+          <FeedsStatePanel title={t('states.empty.title')} description={t('states.empty.description')} actionLabel={t('states.empty.action')} onAction={() => { setCategoryRef(null); setQuery('') }} />
         )}
         {!loading && !error && entries.length > 0 && (
           <div>
             {groups.map(group => (
               <section key={group.key} className="mb-7">
-                <h2 className="mb-3 text-sm font-medium text-muted-foreground">Latest in {group.label}</h2>
+                <h2 className="mb-3 text-sm font-medium text-muted-foreground">{t('latestIn', { category: group.key === 'explore-category:uncategorized' ? t('uncategorized') : group.label })}</h2>
                 <div className="divide-y border-y">
                   {group.items.map(entry => {
                     const following = followingSources.has(entry.source.id)
@@ -233,7 +256,7 @@ export function ExploreFeed() {
                         </div>
                         <Button variant={followed ? 'secondary' : 'outline'} size="sm" disabled={checkingFollowState || following || followed} onClick={() => followSource(entry.source.id)}>
                           {checkingFollowState || following ? <Loader2 className="animate-spin" /> : followed ? <Check /> : <Rss />}
-                          {checkingFollowState ? 'Checking…' : following ? 'Following…' : followed ? 'Following' : 'Follow'}
+                          {checkingFollowState ? t('checking') : following ? t('followingProgress') : followed ? t('following') : t('follow')}
                         </Button>
                       </article>
                     )
@@ -242,10 +265,10 @@ export function ExploreFeed() {
               </section>
             ))}
             <div className="flex items-center justify-between py-2">
-              <p className="text-xs text-muted-foreground">Showing {entries.length} of {total}</p>
+              <p className="text-xs text-muted-foreground">{t('showing', { visible: entries.length, total })}</p>
               {nextOffset !== null && (
                 <Button variant="outline" onClick={() => loadEntries(nextOffset, true)} disabled={loadingMore}>
-                  {loadingMore && <Loader2 className="animate-spin" />} Load more
+                  {loadingMore && <Loader2 className="animate-spin" />} {t('loadMore')}
                 </Button>
               )}
             </div>
@@ -261,15 +284,4 @@ export function ExploreFeed() {
       />
     </div>
   )
-}
-
-function relativeTime(value: string | null): string {
-  if (!value) return 'Unknown time'
-  const seconds = Math.max(0, Math.round((Date.now() - Date.parse(value)) / 1000))
-  if (seconds < 60) return 'Just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
 }

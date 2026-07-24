@@ -64,7 +64,7 @@ See [LICENSE](./LICENSE.md) for full terms.
 - **Clone the repo** — git clone https://github.com/tdavidson/reporting.git && npm install
 - **Create a Supabase project** — Copy your project URL, anon key, and service role key
 - **Generate an encryption key** — openssl rand -hex 32
-- **Deploy to Netlify or Vercel** — One-click deploy buttons available in the full guide
+- **Deploy the web app and Cron service** — Netlify/Vercel can host the web app, but production recurring jobs require one separately supervised `npm run cron:start` process
 - **Configure auth and add your first user** — Set Supabase redirect URLs and whitelist your email
 - **Add an AI key and forward your first email** — Anthropic, OpenAI, Gemini, or run your LLM locally
 

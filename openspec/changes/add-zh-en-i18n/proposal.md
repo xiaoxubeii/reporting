@@ -9,8 +9,9 @@ The application currently renders all product chrome and workflows in English an
 - Add localized message resources and locale-aware formatting primitives for Server and Client Components.
 - Localize the global application shell, navigation, theme controls, authentication entry points, and shared interaction copy.
 - Localize every user-visible application page as a complete semantic namespace, including authenticated workflows, public and legal pages, setup/token entry points, explainers, and LP portal pages, so switching to Chinese does not leave mixed-language product UI.
+- Make the interactive Analyst answer in the language of the latest user message, using the validated UI locale only when that message is language-neutral or otherwise ambiguous.
 - Set the HTML document language to the active locale and preserve accessible, responsive behavior in both languages.
-- Keep user-entered content, database identifiers, API contracts, currencies, generated reports, emails, and AI-generated content outside the UI-locale contract.
+- Keep user-entered content, database identifiers, API contracts, currencies, generated reports, emails, and non-interactive AI-generated content outside the UI-locale contract.
 
 ## Capabilities
 
@@ -26,6 +27,7 @@ The application currently renders all product chrome and workflows in English an
 
 - Adds a Next.js-compatible internationalization dependency and request configuration.
 - Adds locale/message modules, a language switcher, message catalogs, and focused contract tests.
+- Adds a bounded locale hint to the Analyst request and a response-language instruction to its system prompt; it does not translate stored conversation content.
 - Updates the root layout, shared application/authentication chrome, and every user-visible page and page-level component to consume localized messages.
 - Reads and writes one non-sensitive locale cookie; no database schema or authorization contract changes.
 - Existing pathname-based middleware, APIs, and shared links remain unchanged.

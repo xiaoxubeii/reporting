@@ -237,6 +237,7 @@ describe('UI locale contract', () => {
     expect(analystPanel).not.toContain("'Save as Summary'")
     expect(analystPanel).not.toContain('placeholder={inputPlaceholder(scope)}')
     expect(analystPanel).not.toContain('Draft the entry that records')
+    expect(analystPanel).toContain('locale,')
     expect(analystProposals).not.toContain('>Proposed entries<')
     expect(analystProposals).not.toContain("setError('Could not apply")
     expect(analystPendingActions).not.toContain('>Proposed changes — approve to apply<')

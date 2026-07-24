@@ -96,3 +96,18 @@ The language selector SHALL be keyboard operable, expose an accessible name and 
 #### Scenario: Keyboard language selection
 - **WHEN** a keyboard or assistive-technology user focuses and activates the language selector
 - **THEN** both supported choices and the current selection are communicated and the chosen locale is applied
+
+### Requirement: Analyst response language
+The interactive Analyst SHALL answer in the language of the latest user message. It SHALL use the validated active UI locale only when the latest message is language-neutral or otherwise ambiguous, and SHALL NOT infer the response language from injected deal, company, portfolio, or document context.
+
+#### Scenario: Chinese question over English deal context
+- **WHEN** the active deal context is English and the latest user message is in Simplified Chinese
+- **THEN** the Analyst answers in Simplified Chinese
+
+#### Scenario: English question in a Chinese interface
+- **WHEN** the active UI locale is `zh-CN` and the latest user message is in English
+- **THEN** the Analyst answers in English
+
+#### Scenario: Language-neutral follow-up
+- **WHEN** the latest user message does not provide a reliable language signal
+- **THEN** the Analyst answers in the validated active UI locale

@@ -2,7 +2,8 @@
 // waiting for the next cron tick. Best-effort and fire-and-forget: we only need
 // the request to reach the worker function (which then drains independently), so
 // we start the fetch and abort our wait after a moment. Any failure is swallowed
-// — the cron in vercel.json is the safety net that guarantees jobs still run.
+// — the persistent Croner schedule is the safety net that guarantees another
+// queue drain attempt even when this best-effort kick fails.
 
 function workerBaseUrl(): string | null {
   const base = process.env.NEXT_PUBLIC_SITE_URL

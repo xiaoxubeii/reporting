@@ -1,9 +1,12 @@
 import { Suspense } from 'react'
-import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { TodayFeed } from '@/components/feeds/today-feed'
 import { FeedRowsSkeleton } from '@/components/feeds/state-panel'
 
-export const metadata: Metadata = { title: 'Today · Feeds' }
+export async function generateMetadata() {
+  const t = await getTranslations('Feeds.metadata')
+  return { title: t('todayTitle') }
+}
 
 export default function FeedsPage() {
   return (

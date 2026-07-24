@@ -20,7 +20,7 @@ The first user-visible scope was the document shell, authenticated navigation an
 - Locale-prefixed or localized URLs, alternate-language SEO URLs, or domain routing.
 - Account-level or cross-device preference synchronization.
 - Translation of database values, user-authored content, identifiers, routes, API enums, or permission keys.
-- Automatic translation of email, PDF, Letter, export, or AI-generated content.
+- Automatic translation of email, PDF, Letter, export, or non-interactive AI-generated content. The interactive Analyst has its own per-turn response-language rule and does not translate stored content.
 - Changing the fund's configured currency when the UI language changes.
 
 ## Decisions
@@ -58,6 +58,12 @@ Navigation hrefs, access metadata, icons, feature keys, and permission domains r
 ### Separate locale formatting from business currency
 
 UI dates and numbers migrated in this change use locale-aware formatting. Currency continues to use the fund's configured ISO currency. Existing legal/investor documents with explicitly fixed formatting remain unchanged until their own document-language contract is defined.
+
+### Treat the active locale as an Analyst fallback, not the primary language selector
+
+The Analyst client sends the already validated `en` or `zh-CN` locale with each request. The server appends one response-language block to the system prompt: answer in the language of the latest user message, ignore the language of injected business context, and use the UI locale only when the user message is language-neutral or ambiguous. This permits turn-by-turn language switching without a second model call, a language-detection dependency, or translation of conversation history.
+
+The locale hint is validated again at the API boundary and falls back to `en` if an unsupported caller value reaches the route. Structured proposals and staged actions retain their existing schemas; only the Analyst's narrative reply is governed by this instruction.
 
 ### Reuse the established visual system
 

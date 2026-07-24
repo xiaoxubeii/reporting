@@ -287,6 +287,7 @@
   },
   "Auth": {
     "brand": "投资组合报告",
+    "loginBrand": "中国心血管创新俱乐部",
     "backHome": "← 返回首页",
     "license": "许可证",
     "terms": "条款",
@@ -5668,6 +5669,237 @@
         "title": "LP 资本对账单",
         "lpCapitalAccounts": "LP 资本账户",
         "capitalAccounts": "资本账户"
+      }
+    }
+  },
+  "Feeds": {
+    "metadata": {
+      "todayTitle": "今日 · 订阅",
+      "sourcesTitle": "关注来源 · 订阅"
+    },
+    "errors": {
+      "invalidRequest": "请检查请求后重试。",
+      "unauthorized": "请登录后使用订阅功能。",
+      "forbidden": "你没有执行此订阅操作的权限。",
+      "authentication": "订阅连接需要重新连接。",
+      "rateLimited": "订阅服务繁忙，请稍后重试。",
+      "notFound": "未找到请求的订阅资源。",
+      "notConfigured": "订阅服务尚未配置。",
+      "upstream": "订阅服务暂时不可用。",
+      "internal": "无法完成订阅请求。",
+      "requestFailed": "订阅请求失败，请重试。"
+    },
+    "shared": {
+      "loadingArticles": "正在加载文章"
+    },
+    "tabs": {
+      "label": "今日视图",
+      "me": "我的订阅",
+      "explore": "探索"
+    },
+    "relative": {
+      "unknown": "时间未知",
+      "justNow": "刚刚",
+      "minutesAgo": "{count} 分钟前",
+      "hoursAgo": "{count} 小时前",
+      "daysAgo": "{count} 天前"
+    },
+    "reader": {
+      "personalLabel": "文章阅读器",
+      "exploreLabel": "探索文章阅读器",
+      "close": "关闭文章阅读器",
+      "loadFailed": "无法加载文章",
+      "retry": "重试",
+      "markUnread": "标为未读",
+      "markRead": "标为已读",
+      "removeSaved": "取消收藏",
+      "saveLater": "稍后阅读",
+      "openOriginal": "打开原文",
+      "previewOnly": "此订阅仅提供了简短预览。请访问原网站阅读全文。",
+      "visitOriginal": "访问原网站"
+    },
+    "today": {
+      "title": "今日",
+      "description": "查看你关注来源的最新内容。",
+      "markAllRead": "全部标为已读",
+      "refresh": "刷新文章",
+      "filterLabel": "文章筛选",
+      "filters": {
+        "unread": "未读",
+        "all": "全部",
+        "saved": "已收藏"
+      },
+      "search": "搜索文章",
+      "unread": "未读",
+      "uncategorized": "未分类",
+      "removeSaved": "取消收藏",
+      "saveLater": "稍后阅读",
+      "showing": "显示 {visible} / {total} 篇",
+      "loadMore": "加载更多",
+      "errors": {
+        "load": "无法加载文章"
+      },
+      "announcements": {
+        "moreLoaded": "已加载更多文章",
+        "refreshed": "文章已刷新",
+        "saved": "文章已收藏",
+        "removedSaved": "已取消收藏文章",
+        "stateUpdateFailed": "无法更新文章状态",
+        "someMarkReadFailed": "部分文章无法标为已读",
+        "allMarkedRead": "已将当前加载的文章全部标为已读"
+      },
+      "states": {
+        "connect": {
+          "title": "连接 Miniflux 后开始阅读",
+          "description": "加载文章前，请先连接你的个人非管理员 Miniflux 账户。",
+          "action": "打开关注来源"
+        },
+        "noSources": {
+          "title": "尚未关注来源",
+          "description": "关注可信出版物后，其最新文章会显示在这里。",
+          "action": "关注来源"
+        },
+        "loadError": {
+          "title": "无法加载文章",
+          "action": "重试"
+        },
+        "empty": {
+          "moreTitle": "本页没有匹配的文章",
+          "moreDescription": "关注的来源中还有更多文章。",
+          "caughtUpTitle": "你已读完全部更新",
+          "caughtUpDescription": "当前加载的订阅中没有未读文章。",
+          "filteredTitle": "没有符合筛选条件的文章",
+          "filteredDescription": "请尝试其他筛选条件或搜索词。",
+          "showAll": "显示全部",
+          "clearFilters": "清除筛选"
+        }
+      }
+    },
+    "explore": {
+      "title": "今日",
+      "description": "精选医疗健康与投资资讯。",
+      "refresh": "刷新精选文章",
+      "categoriesLabel": "探索分类",
+      "all": "全部",
+      "search": "搜索精选文章",
+      "uncategorized": "未分类",
+      "latestIn": "{category}最新内容",
+      "checking": "正在检查…",
+      "followingProgress": "正在关注…",
+      "following": "已关注",
+      "follow": "关注",
+      "showing": "显示 {visible} / {total} 篇",
+      "loadMore": "加载更多",
+      "errors": {
+        "articles": "无法加载精选文章",
+        "categories": "无法加载精选分类",
+        "explore": "无法加载探索内容",
+        "follow": "无法关注该来源"
+      },
+      "announcements": {
+        "moreLoaded": "已加载更多精选文章",
+        "refreshed": "精选文章已刷新",
+        "followed": "已将来源添加到你的个人订阅"
+      },
+      "states": {
+        "loadError": {
+          "title": "无法加载探索内容",
+          "action": "重试"
+        },
+        "empty": {
+          "title": "没有匹配的精选文章",
+          "description": "请尝试其他分类或搜索词。",
+          "action": "显示全部"
+        }
+      }
+    },
+    "sources": {
+      "title": "关注来源",
+      "description": "发现并关注个人订阅中的出版来源。",
+      "retry": "重试",
+      "following": "已关注",
+      "follow": "关注",
+      "readOnly": "只读",
+      "sourceCount": "{count} 个来源",
+      "unreadCount": "{count} 篇未读文章",
+      "results": "来源结果",
+      "followedSources": "你关注的来源",
+      "openWebsite": "打开 {name} 网站",
+      "errors": {
+        "load": "无法加载来源",
+        "connect": "无法连接 Miniflux",
+        "provision": "订阅账户开通失败",
+        "discovery": "发现订阅失败",
+        "follow": "关注失败",
+        "unfollow": "取消关注失败"
+      },
+      "announcements": {
+        "connected": "Miniflux 已连接",
+        "accountReady": "个人 Miniflux 账户已就绪",
+        "noFeeds": "未在该网站找到订阅源",
+        "followed": "已关注 {title}",
+        "unfollowed": "已取消关注 {title}"
+      },
+      "states": {
+        "loadError": {
+          "title": "无法加载来源"
+        },
+        "notConfigured": {
+          "title": "Miniflux 尚未安全配置",
+          "description": "请设置仅服务端可见的 Miniflux URL，并确认其订阅抓取网络会阻止访问私有地址和元数据地址。"
+        },
+        "accountNotReady": {
+          "title": "订阅账户尚未就绪",
+          "description": "系统会自动管理你的个人 Miniflux 用户和凭据。请重试开通，或让管理员检查订阅服务。",
+          "provisioning": "正在开通…",
+          "action": "重试开通"
+        }
+      },
+      "connect": {
+        "title": "连接你的 Miniflux 账户",
+        "description": "请使用自己的非管理员 Miniflux 用户，以确保订阅、已读状态和收藏文章仅属于个人。令牌会加密保存在服务器上。",
+        "tokenLabel": "个人 API 令牌",
+        "tokenPlaceholder": "粘贴专用的非管理员 Miniflux 令牌",
+        "action": "连接",
+        "readOnly": "你的账户只有只读权限，无法连接或更改来源。"
+      },
+      "discovery": {
+        "label": "查找来源",
+        "placeholder": "按主题、网站或 RSS 链接搜索",
+        "action": "查找订阅",
+        "help": "可按分类搜索已关注来源，或粘贴网站/RSS 地址来发现新来源。"
+      },
+      "categoryMenu": {
+        "title": "选择分类",
+        "description": "将此来源放到哪里？",
+        "uncategorized": "未分类",
+        "searchCategories": "搜索文件夹",
+        "newCategory": "新建文件夹",
+        "placeholder": "分类名称",
+        "cancel": "取消",
+        "createAndFollow": "创建并关注",
+        "following": "正在关注…"
+      },
+      "discovered": {
+        "title": "发现的订阅"
+      },
+      "topics": {
+        "title": "探索主题"
+      },
+      "empty": {
+        "noMatchTitle": "没有来源匹配“{query}”",
+        "noMatchDescription": "请尝试其他分类，或在上方粘贴网站或 RSS 地址。",
+        "noneTitle": "尚未关注来源",
+        "noneDescription": "在上方粘贴网站或 RSS 地址，关注你的第一个来源。"
+      },
+      "health": {
+        "degraded": "订阅源状态异常",
+        "unavailable": "订阅源不可用"
+      },
+      "topicSheet": {
+        "label": "主题",
+        "emptyTitle": "此主题下没有来源",
+        "emptyDescription": "添加网站或 RSS 来源后，将其分配到此主题。"
       }
     }
   },

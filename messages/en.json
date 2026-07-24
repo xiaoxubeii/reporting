@@ -287,6 +287,7 @@
   },
   "Auth": {
     "brand": "Portfolio Reporting",
+    "loginBrand": "Center for Cardiovascular Innovations",
     "backHome": "← Back to home",
     "license": "License",
     "terms": "Terms",
@@ -5702,6 +5703,237 @@
         "title": "LP capital statement",
         "lpCapitalAccounts": "LP capital accounts",
         "capitalAccounts": "Capital accounts"
+      }
+    }
+  },
+  "Feeds": {
+    "metadata": {
+      "todayTitle": "Today · Feeds",
+      "sourcesTitle": "Follow sources · Feeds"
+    },
+    "errors": {
+      "invalidRequest": "Check the request and try again.",
+      "unauthorized": "Sign in to use feeds.",
+      "forbidden": "You do not have permission to perform this feed action.",
+      "authentication": "The feed connection needs to be reconnected.",
+      "rateLimited": "The feed service is busy. Please retry shortly.",
+      "notFound": "The requested feed resource was not found.",
+      "notConfigured": "The feed service is not configured.",
+      "upstream": "The feed service is temporarily unavailable.",
+      "internal": "Unable to complete the feed request.",
+      "requestFailed": "The feed request failed. Please try again."
+    },
+    "shared": {
+      "loadingArticles": "Loading articles"
+    },
+    "tabs": {
+      "label": "Today view",
+      "me": "Me",
+      "explore": "Explore"
+    },
+    "relative": {
+      "unknown": "Unknown time",
+      "justNow": "Just now",
+      "minutesAgo": "{count}m ago",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago"
+    },
+    "reader": {
+      "personalLabel": "Article reader",
+      "exploreLabel": "Explore article reader",
+      "close": "Close article reader",
+      "loadFailed": "Article could not be loaded",
+      "retry": "Retry",
+      "markUnread": "Mark unread",
+      "markRead": "Mark read",
+      "removeSaved": "Remove from saved",
+      "saveLater": "Save for later",
+      "openOriginal": "Open original article",
+      "previewOnly": "This feed only provided a short preview. Visit the original website to read the complete article.",
+      "visitOriginal": "Visit original website"
+    },
+    "today": {
+      "title": "Today",
+      "description": "The latest from sources you follow.",
+      "markAllRead": "Mark all as read",
+      "refresh": "Refresh articles",
+      "filterLabel": "Article filter",
+      "filters": {
+        "unread": "Unread",
+        "all": "All",
+        "saved": "Saved"
+      },
+      "search": "Search articles",
+      "unread": "Unread",
+      "uncategorized": "Uncategorized",
+      "removeSaved": "Remove from saved",
+      "saveLater": "Save for later",
+      "showing": "Showing {visible} of {total}",
+      "loadMore": "Load more",
+      "errors": {
+        "load": "Articles could not be loaded"
+      },
+      "announcements": {
+        "moreLoaded": "More articles loaded",
+        "refreshed": "Articles refreshed",
+        "saved": "Article saved",
+        "removedSaved": "Article removed from saved",
+        "stateUpdateFailed": "Article state could not be updated",
+        "someMarkReadFailed": "Some articles could not be marked read",
+        "allMarkedRead": "All loaded articles marked read"
+      },
+      "states": {
+        "connect": {
+          "title": "Connect Miniflux to start reading",
+          "description": "Connect your personal non-admin Miniflux account before articles can be loaded.",
+          "action": "Open Follow sources"
+        },
+        "noSources": {
+          "title": "No sources followed yet",
+          "description": "Follow trusted publications and their latest articles will appear here.",
+          "action": "Follow sources"
+        },
+        "loadError": {
+          "title": "Articles could not be loaded",
+          "action": "Retry"
+        },
+        "empty": {
+          "moreTitle": "No matching articles on this page",
+          "moreDescription": "More articles are available from followed sources.",
+          "caughtUpTitle": "You're all caught up",
+          "caughtUpDescription": "There are no unread articles in the loaded feed.",
+          "filteredTitle": "No articles match these filters",
+          "filteredDescription": "Try another filter or search term.",
+          "showAll": "Show all",
+          "clearFilters": "Clear filters"
+        }
+      }
+    },
+    "explore": {
+      "title": "Today",
+      "description": "Curated healthcare and investment intelligence.",
+      "refresh": "Refresh curated articles",
+      "categoriesLabel": "Explore categories",
+      "all": "All",
+      "search": "Search curated articles",
+      "uncategorized": "Uncategorized",
+      "latestIn": "Latest in {category}",
+      "checking": "Checking…",
+      "followingProgress": "Following…",
+      "following": "Following",
+      "follow": "Follow",
+      "showing": "Showing {visible} of {total}",
+      "loadMore": "Load more",
+      "errors": {
+        "articles": "Curated articles could not be loaded",
+        "categories": "Curated categories could not be loaded",
+        "explore": "Curated Explore could not be loaded",
+        "follow": "Source could not be followed"
+      },
+      "announcements": {
+        "moreLoaded": "More curated articles loaded",
+        "refreshed": "Curated articles refreshed",
+        "followed": "Source followed in your personal feed"
+      },
+      "states": {
+        "loadError": {
+          "title": "Curated Explore could not be loaded",
+          "action": "Retry"
+        },
+        "empty": {
+          "title": "No curated articles match",
+          "description": "Try another category or search term.",
+          "action": "Show all"
+        }
+      }
+    },
+    "sources": {
+      "title": "Follow sources",
+      "description": "Discover and follow publications in your personal feed.",
+      "retry": "Retry",
+      "following": "Following",
+      "follow": "Follow",
+      "readOnly": "Read only",
+      "sourceCount": "{count, plural, one {# source} other {# sources}}",
+      "unreadCount": "{count, plural, one {# unread article} other {# unread articles}}",
+      "results": "Source results",
+      "followedSources": "Sources you follow",
+      "openWebsite": "Open {name} website",
+      "errors": {
+        "load": "Sources could not be loaded",
+        "connect": "Miniflux could not be connected",
+        "provision": "Feed account provisioning failed",
+        "discovery": "Feed discovery failed",
+        "follow": "Follow failed",
+        "unfollow": "Unfollow failed"
+      },
+      "announcements": {
+        "connected": "Miniflux connected",
+        "accountReady": "Personal Miniflux account is ready",
+        "noFeeds": "No feeds found for that website",
+        "followed": "{title} followed",
+        "unfollowed": "{title} unfollowed"
+      },
+      "states": {
+        "loadError": {
+          "title": "Sources could not be loaded"
+        },
+        "notConfigured": {
+          "title": "Miniflux is not safely configured",
+          "description": "Set the server-only Miniflux URL and confirm its feed-fetch network blocks private and metadata destinations."
+        },
+        "accountNotReady": {
+          "title": "Feed account is not ready",
+          "description": "Your personal Miniflux user and credentials are managed automatically. Retry provisioning, or ask an administrator to check the feed service.",
+          "provisioning": "Provisioning…",
+          "action": "Retry provisioning"
+        }
+      },
+      "connect": {
+        "title": "Connect your Miniflux account",
+        "description": "Use your own non-admin Miniflux user so subscriptions, read status, and saved articles remain personal. The token stays encrypted on the server.",
+        "tokenLabel": "Personal API token",
+        "tokenPlaceholder": "Paste a dedicated non-admin Miniflux token",
+        "action": "Connect",
+        "readOnly": "Your account has read-only access and cannot connect or change sources."
+      },
+      "discovery": {
+        "label": "Find a source",
+        "placeholder": "Search by topic, website, or RSS link",
+        "action": "Find feeds",
+        "help": "Search your followed sources by category, or paste a website/RSS URL to discover a new source."
+      },
+      "categoryMenu": {
+        "title": "Choose a category",
+        "description": "Where should this source appear?",
+        "uncategorized": "Uncategorized",
+        "searchCategories": "Search folders",
+        "newCategory": "New Folder",
+        "placeholder": "Category name",
+        "cancel": "Cancel",
+        "createAndFollow": "Create and follow",
+        "following": "Following…"
+      },
+      "discovered": {
+        "title": "Discovered feeds"
+      },
+      "topics": {
+        "title": "Explore topics"
+      },
+      "empty": {
+        "noMatchTitle": "No sources match “{query}”",
+        "noMatchDescription": "Try another category, or paste a website or RSS URL above.",
+        "noneTitle": "No sources followed yet",
+        "noneDescription": "Paste a website or RSS URL above to follow your first source."
+      },
+      "health": {
+        "degraded": "Feed degraded",
+        "unavailable": "Feed unavailable"
+      },
+      "topicSheet": {
+        "label": "Topic",
+        "emptyTitle": "No sources in this topic",
+        "emptyDescription": "Add a website or RSS source, then assign it to this topic."
       }
     }
   },

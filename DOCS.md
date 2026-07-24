@@ -76,13 +76,64 @@ Save this value in your .env.local — it's your `ENCRYPTION_KEY`. If you lose i
 
 Next is to deploy the app to your chosen hosting provider. Netlify and Vercel are prebuilt, but you are not tied to those providers, feel free to deploy to your desired host.
 
-**Option A: Netlify**
+> **Recurring jobs require a separate Cron process.** Options A and B deploy the Web process only; they do not schedule the five Reporting background jobs. For either option, run exactly one persistent `npm run cron:start` process on a Node host, set `CRON_RUNNER_BASE_URL` to the deployed Web origin, and give both processes the same `CRON_SECRET`. Option C describes hosting both process types together.
+
+**Option A: Netlify (Web process only)**
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/tdavidson/reporting)
 
-**Option B: Vercel**
+**Option B: Vercel (Web process only)**
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftdavidson%2Freporting&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ENCRYPTION_KEY,NEXT_PUBLIC_APP_URL&envDescription=Required%20environment%20variables%20for%20Portfolio%20Reporting&project-name=portfolio-reporting)
+
+**Option C: Persistent Node.js with Croner**
+
+Run the existing application with `npm run start:web` and the recurring
+background scheduler as an independent, single-replica `npm run cron:start`
+process. Use Node.js 22 or newer, run `npm ci` and `npm run build`, and configure
+a process supervisor or container platform to restart both process types.
+
+The Web and Cron processes must share `CRON_SECRET`. The Cron process also
+requires `CRON_RUNNER_BASE_URL`, set to the Web service origin. Optional
+settings are `CRON_RUNNER_HEALTH_HOST` (default `0.0.0.0`),
+`CRON_RUNNER_HEALTH_PORT` (default `3101`),
+`CRON_RUNNER_REQUEST_TIMEOUT_MS`, `CRON_RUNNER_SHUTDOWN_GRACE_MS` (default
+`30000`), and `CRON_RUNNER_ALLOW_INSECURE_HTTP=true` only for a trusted private
+HTTP network. Production otherwise requires HTTPS.
+
+List the frozen schedule or exercise one route through the real authenticated
+request path:
+
+```bash
+npm run cron:list
+npm run cron:start -- --run deal-research
+```
+
+One-shot mode exits `0` only for a 2xx response. The resident Cron process
+exposes `GET /healthz` and `GET /readyz`; configure the supervisor to restart it
+on exit and alert on health failure. SIGTERM/SIGINT stops future schedules,
+removes readiness, waits for active work, and then aborts work that exceeds the
+configured grace period.
+
+Croner keeps trigger state in memory. It does not persist or backfill missed
+occurrences, automatically retry failed responses, or coordinate multiple Cron
+replicas. Existing database-backed memo, deal-research, and Heartbeat states
+remain authoritative and are scanned on later occurrences. Digest and Affinity
+retain next-occurrence semantics; use a durable queue separately if every
+occurrence must be delivered.
+
+For production cutover:
+
+1. Deploy the persistent Web build and Cron environment without starting
+   recurring Croner.
+2. Run all five named jobs in one-shot mode and confirm 2xx responses.
+3. Configure exactly one supervised Cron process and its health checks.
+4. Remove or disable the Vercel recurring schedules.
+5. Start Croner and confirm its startup log contains five next-run timestamps.
+
+Never leave Vercel Cron and Croner active together. To roll back, stop Croner
+first, restore the Vercel schedules, deploy, and confirm Vercel owns the next
+occurrence.
 
 After deploying, add these environment variables in your hosting platform's settings:
 

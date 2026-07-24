@@ -40,3 +40,7 @@
 - [ ] 6.8 Verify the complete page surface with focused and full tests, type checking, targeted linting, production build, strict OpenSpec validation, and HarnessKit verification.
 - [ ] 6.9 Exercise English-to-Chinese-to-English switching across representative authenticated, public/legal, setup/token, and LP portal pages in the real browser, including reload persistence, responsive layouts, console errors, and failed requests.
 - [ ] 6.10 Run correctness, security, accessibility, responsive, and localization reviews for the complete product-page scope and record final HarnessKit evidence.
+
+## 7. Analyst Response Language
+
+- [x] 7.1 Add focused coverage and implement per-turn Analyst response language: follow the latest user message, use a validated UI locale only as fallback, preserve stored content and structured response contracts, and verify the real Analyst flow.

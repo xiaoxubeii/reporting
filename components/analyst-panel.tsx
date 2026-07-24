@@ -121,6 +121,7 @@ export function AnalystPanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          locale,
           messages: newMessages,
           companyId: companyId ?? undefined,
           dealId: dealId ?? undefined,

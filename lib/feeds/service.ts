@@ -69,6 +69,9 @@ export class FeedService {
       .map(sourceView)
     return {
       sources,
+      categories: categories
+        .map(category => ({ id: category.id, name: category.title }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
       topics: categories
         .filter(category => category.feedCount > 0)
         .map(category => ({
@@ -76,6 +79,7 @@ export class FeedService {
           name: category.title,
           count: category.feedCount,
           description: category.totalUnread > 0 ? `${category.totalUnread} unread` : null,
+          unreadCount: category.totalUnread,
         }))
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
     }

@@ -13,6 +13,26 @@ export class FeedsApiError extends Error {
   }
 }
 
+const FEED_ERROR_KEYS = Object.freeze({
+  invalid_request: 'invalidRequest',
+  unauthorized: 'unauthorized',
+  forbidden: 'forbidden',
+  authentication: 'authentication',
+  rate_limited: 'rateLimited',
+  not_found: 'notFound',
+  not_configured: 'notConfigured',
+  upstream: 'upstream',
+  internal: 'internal',
+  REQUEST_FAILED: 'requestFailed',
+} as const)
+
+export type FeedErrorMessageKey = typeof FEED_ERROR_KEYS[keyof typeof FEED_ERROR_KEYS]
+
+export function feedErrorMessageKey(value: unknown): FeedErrorMessageKey {
+  if (!(value instanceof FeedsApiError)) return 'requestFailed'
+  return FEED_ERROR_KEYS[value.detail.code as keyof typeof FEED_ERROR_KEYS] ?? 'requestFailed'
+}
+
 interface Envelope<T> {
   success: boolean
   data?: T
@@ -74,6 +94,12 @@ export interface FeedTopicResult {
   name: string
   count: number
   description?: string | null
+  unreadCount: number
+}
+
+export interface FeedCategoryResult {
+  id: number
+  name: string
 }
 
 export interface DiscoveredFeed {

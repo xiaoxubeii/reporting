@@ -4,9 +4,9 @@ import { getOutboundConfig, sendOutboundEmail } from '@/lib/email'
 
 /**
  * Weekly digest of deals auto-archived as out_of_thesis. Sent to fund admins.
- * Triggered by Vercel cron — see vercel.json.
+ * Triggered by the persistent Croner service in scripts/cron-runner.
  *
- * Auth: Vercel cron jobs invoke this endpoint with header
+ * Auth: the Cron service invokes this endpoint with header
  * `Authorization: Bearer ${CRON_SECRET}`. Set CRON_SECRET in env.
  */
 export async function GET(req: NextRequest) {

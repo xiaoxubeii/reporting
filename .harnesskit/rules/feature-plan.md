@@ -18,8 +18,10 @@ dependency and ownership checks.
 | expert-validation | Close the Research gap/contradiction → expert answer → industry_expert → existing evidence pipeline loop | feature-planning | `openspec/changes/add-expert-validation` | Real internal and public browser flow works; one immutable submitted answer is materialized and enqueued with the documented security boundaries | single-feature | existing Diligence, email, AI, storage, job pipeline | main-agent | current checkout | in_progress |
 | custom-ai-provider | Configure one generic OpenAI-compatible provider such as MiniMax or codex-lb | feature-planning | `openspec/changes/add-custom-ai-provider` | Admin can save key/base URL/model, select the complete provider as default, and existing AI factory uses it | main-agent-only | existing settings encryption, URL validation, OpenAI provider factory | main-agent | current checkout | complete |
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
+| feed-category-popover | Select or create a Miniflux category from an anchored menu when following a personal source | feature-planning | `openspec/changes/add-feed-category-popover` | Follow opens a responsive accessible theme-aware folder picker for Uncategorized, existing categories, or inline new category creation; success refreshes the catalog and failure remains recoverable in context | serial-required | feeds-product, current Feeds localization slice, existing subscription mutation | main-agent | current checkout | in_progress |
 | feeds-product | Add personal Today and Follow sources backed exclusively by Miniflux APIs | feature-planning | `openspec/changes/add-feeds-product` | Approved users receive isolated Miniflux identities and can read, save, discover, categorize, follow, and unfollow through the authenticated Reporting BFF | serial-required | Miniflux V2, Reporting auth and approval workflow, Dealflow grants | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | curated-explore | Add a global read-only curated discovery view backed by one non-admin Miniflux user | feature-planning | `openspec/changes/add-curated-explore` | Authorized users can browse curated categories/articles and idempotently follow a trusted source into their personal Miniflux without shared read/save mutations or Reporting feed tables | serial-required | feeds-product, Miniflux BFF, personal FeedService, Today reader | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
+| croner-node-runtime | Replace Vercel Cron with one persistent Croner process while running the existing Next.js API routes on a persistent Node server | feature-planning | `openspec/changes/replace-vercel-cron-with-croner` | Production exposes separate Web and Cron start commands; the Cron process schedules the existing five authenticated routes with overlap protection, health reporting, bounded requests, and graceful shutdown; Vercel schedules are removed | main-agent-only | existing Next.js cron routes, `CRON_SECRET`, production process supervisor | main-agent | current checkout | complete |
 
 ## Feature Requirement Contract
 
@@ -194,9 +196,66 @@ contract for self-check, review, testing, and merge.
 - branch: `main`
 - worktree: current checkout; unrelated dirty user changes are preserved
 - commit: none requested
-- self-check: pending
-- tests: pending
+- self-check: Feeds page slice matches the complete-namespace acceptance boundary; routes, access, Miniflux ownership, article/source content, and identifiers remain unchanged
+- tests: 50 focused Feeds localization/inventory/behavior/state/service tests passed, including locale-change transient-state coverage; targeted ESLint has 0 errors and 5 existing image warnings
+- browser: authenticated English → Chinese → reload → English passed for `/feeds`, Explore, and Follow sources on desktop/mobile; all Feeds API requests were 200; disposable Reporting/Miniflux identities were removed
+- reviews: localized transient errors/announcements are cleared on locale changes; the credential-bearing Playwright log was permanently removed and `/.playwright-mcp/` is ignored; no blocker/high findings remain
+- verification gaps: repository-wide TypeScript/HarnessKit targeted verification remains blocked by unrelated in-progress page-localization type failures; full product-surface tasks remain in progress
 - risks: dynamic root rendering, mixed-language omissions, CJK wrapping/font fallback, shared-file overlap with existing user work
+
+### Feature: feed-category-popover
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: This is a user-visible interaction change with an additive source-catalog contract.
+- Change: `openspec/changes/add-feed-category-popover`
+- Task: implement `tasks.md` test-first through service projection, localized UI, review, and browser verification
+
+#### Acceptance
+
+- Activating an unfollowed source's Follow button opens an anchored menu rather than relying on a permanent page-level category field.
+- Uncategorized and existing category choices follow immediately; New category expands an inline bounded input and explicit confirmation.
+- Pending state prevents duplicates; failure remains visible and retryable in the open menu; Escape and outside interaction dismiss without mutation.
+- Empty Miniflux categories remain selectable while only non-empty categories appear as source-browsing topic cards.
+- The menu remains accessible and inside desktop/mobile viewports in English and Simplified Chinese.
+
+#### Allowed Change Scope
+
+- `components/feeds/follow-sources.tsx`, `components/feeds/api.ts`
+- `lib/feeds/service.ts` and focused service/UI tests
+- `messages/en.json`, `messages/zh-CN.json`
+- focused OpenSpec and HarnessKit planning/evidence artifacts
+
+#### Shared Contract Changes
+
+- `/api/feeds/sources` adds a `categories` collection projected from the already-fetched Miniflux categories.
+- Existing `sources`, non-empty `topics`, and POST `/api/feeds/subscriptions` semantics remain compatible.
+- Category names remain bounded by the server and Miniflux remains the sole category owner.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec validation, diff check, catalog parity.
+- targeted: feed service and UI/localization contract tests, targeted ESLint and TypeScript.
+- full: authenticated desktop/mobile browser flow for Uncategorized, existing category, new category, failure recovery, and dismissal.
+
+#### Review Required
+
+- reviewer: yes, category-to-source association and state correctness
+- security-reviewer: no new credential, authorization, persistence, or external-input boundary
+- browser/QA: yes, the interaction is user-visible and responsive
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch: `main`
+- worktree: current checkout; unrelated localization and branding changes are preserved
+- commit: requested; pending final verification
+- tests: 14 focused compact/theme-aware UI regression tests passed; changed-file ESLint has 0 errors and one existing image warning; strict OpenSpec and diff checks passed
+- browser: earlier functional English desktop and Simplified Chinese 390px category flows passed; authenticated visual acceptance for the follow-up compact semantic-token styling remains pending because the isolated automation session could not inherit the ambient browser login
+- reviews: compact styling code review found no correctness or accessibility issue; a native-disabled regression for already-followed discovery rows was fixed before commit
+- verification gaps: repository-wide TypeScript currently has 64 unrelated existing errors from the concurrently changing repository state, with 0 errors in the changed feed scope; HarnessKit fast has no configured automated QA target, so the required browser acceptance ran directly
+- risks: shared-file overlap with the still-active localization change; existing app-shell accounting 403 and Vercel Analytics CSP console noise remain outside this feature
 
 ### Feature: feeds-product
 
@@ -275,6 +334,61 @@ contract for self-check, review, testing, and merge.
 - reviews: code and security reviews complete with no remaining blocker/high findings
 - browser: real authenticated desktop/mobile Me/Explore and Follow flows passed
 - risks: collector token leakage, accidental collector state mutation, untrusted source refs, personal-account cross-write, and personal/collector failure coupling
+
+### Feature: croner-node-runtime
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: This changes the production scheduler, process topology, authentication transport, and deployment contract.
+- Change: `openspec/changes/replace-vercel-cron-with-croner`
+- Task: implement the scheduler contract, persistent process entrypoints, deployment configuration, and runtime verification serially
+
+#### Acceptance
+
+- `npm run start` runs the existing Next.js application as a persistent Node service and `npm run cron:start` runs one independent persistent Croner service.
+- The Cron service preserves all five schedules currently declared in `vercel.json`, calls the existing GET routes with `Authorization: Bearer ${CRON_SECRET}`, and never logs the secret.
+- Each schedule uses UTC, prevents overlap within the Cron process, applies a bounded HTTP timeout, records concise structured results, and remains independently observable through a health endpoint.
+- Missing or unsafe production configuration fails before schedules start; SIGTERM/SIGINT stops future triggers and gives in-flight requests a bounded grace period.
+- Production documentation requires exactly one Cron service replica and an external process supervisor with automatic restart; missed-run backfill and durable execution remain owned by the existing database-backed domain queues/scanners rather than Croner.
+- Vercel Cron declarations are removed only after the replacement entrypoint and contract tests are present.
+
+#### Allowed Change Scope
+
+- `scripts/cron-runner/**`, focused scheduler tests under `tests/**`
+- `package.json`, `package-lock.json`, `.env.example`, `vercel.json`
+- focused production/runtime documentation and OpenSpec/HarnessKit planning artifacts
+- focused comments that still describe Vercel Cron as the production scheduler
+
+#### Shared Contract Changes
+
+- Adds `cron:start` and operational one-shot/dry-run scripts while preserving the existing `start` command for the persistent Next.js server.
+- Adds server-only `CRON_RUNNER_BASE_URL`, optional health host/port, and bounded shutdown/request timeout configuration; `CRON_SECRET` remains the existing route-authentication secret.
+- The five route paths and schedules remain unchanged; the process boundary changes from Vercel-managed scheduling to one supervised Croner service.
+- Vercel function duration metadata may remain for compatibility, but `vercel.json` no longer owns recurring schedules.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec validation, dependency lockfile consistency, scheduler configuration validation.
+- targeted: fake-clock/fake-fetch contract tests for schedule parity, authentication, overlap protection, timeout, health state, and graceful shutdown.
+- runtime: start a local authenticated probe server, run the actual Cron entrypoint in one-shot mode, and verify the received method/path/header without exposing the secret.
+- full: production build plus HarnessKit verification; browser QA is not applicable because no browser-visible behavior changes.
+
+#### Review Required
+
+- reviewer: yes, scheduler correctness, shutdown behavior, and operational clarity
+- security-reviewer: yes, secret handling, destination validation, and health endpoint exposure
+- docs-researcher: no, the current Croner and Next.js contracts were verified from their official documentation before planning
+- browser/QA: no, this is a server process and deployment change
+
+#### Progress / Evidence
+
+- status: complete
+- branch/worktree: `main` in the current checkout; unrelated dirty user changes are preserved
+- implementation: separate Web/Cron entrypoints, immutable five-job manifest, authenticated bounded invocation, overlap protection, health/readiness, one-shot mode, and graceful shutdown complete
+- tests: 29 focused Cron unit/integration tests pass; strict OpenSpec, HarnessKit fast, diff hygiene, and security review pass
+- runtime: actual one-shot and resident entrypoints verified against local authenticated probe servers, including health, SIGTERM, malformed request recovery, and secret-free output
+- risks: Croner is in-memory, a second Cron replica duplicates triggers, process downtime misses occurrences, and long-running HTTP handlers still need their existing database recovery semantics
 
 ## Parallelization Decision
 

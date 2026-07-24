@@ -49,13 +49,13 @@ function clientDouble() {
     verifyConnection: vi.fn(async () => ({ id: 1, username: 'reader', isAdmin: false })),
     listFeeds: vi.fn(async () => [] as MinifluxFeed[]),
     listCategories: vi.fn(async () => [] as MinifluxCategory[]),
-    createCategory: vi.fn(async (_title: string) => null as unknown as MinifluxCategory),
-    discover: vi.fn(async (_input: string) => [] as Array<{ url: string; title: string; type: string }>),
-    createFeed: vi.fn(async (_url: string, _categoryId?: number | null) => 0),
-    deleteFeed: vi.fn(async (_id: number) => undefined),
-    listEntries: vi.fn(async (_params: unknown) => ({ items: [], total: 0, nextOffset: null }) as FeedEntryPage),
-    getEntry: vi.fn(async (_id: number) => null as unknown as FeedEntry),
-    updateEntryState: vi.fn(async (_id: number, state: { isRead?: boolean; isSaved?: boolean }) => ({ ...state })),
+    createCategory: vi.fn(async (title: string) => { void title; return null as unknown as MinifluxCategory }),
+    discover: vi.fn(async (input: string) => { void input; return [] as Array<{ url: string; title: string; type: string }> }),
+    createFeed: vi.fn(async (url: string, categoryId?: number | null) => { void url; void categoryId; return 0 }),
+    deleteFeed: vi.fn(async (id: number) => { void id }),
+    listEntries: vi.fn(async (params: unknown) => { void params; return { items: [], total: 0, nextOffset: null } as FeedEntryPage }),
+    getEntry: vi.fn(async (id: number) => { void id; return null as unknown as FeedEntry }),
+    updateEntryState: vi.fn(async (id: number, state: { isRead?: boolean; isSaved?: boolean }) => { void id; return { ...state } }),
   }
 }
 
@@ -145,7 +145,27 @@ describe('FeedService Miniflux-only user isolation', () => {
 
     const result = await new FeedService(admin as never).listSources('user-a', null)
 
-    expect(result.topics).toEqual([expect.objectContaining({ id: 7, name: '中文科技' })])
+    expect(result.topics).toEqual([expect.objectContaining({
+      id: 7,
+      name: '中文科技',
+      unreadCount: 3,
+    })])
+  })
+
+  it('projects every Miniflux category for follow selection without adding empty topic cards', async () => {
+    const client = clients.get('token-a')!
+    client.listCategories.mockResolvedValue([
+      { id: 7, title: 'Climate', feedCount: 2, totalUnread: 1 },
+      { id: 8, title: 'New research', feedCount: 0, totalUnread: 0 },
+    ])
+
+    const result = await new FeedService(admin as never).listSources('user-a', null)
+
+    expect(result.categories).toEqual([
+      { id: 7, name: 'Climate' },
+      { id: 8, name: 'New research' },
+    ])
+    expect(result.topics.map(topic => topic.name)).toEqual(['Climate'])
   })
 
   it('delegates website discovery to Miniflux exactly once without guessing feed endpoints', async () => {

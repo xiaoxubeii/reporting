@@ -14,8 +14,8 @@ interface IngestJob {
 }
 
 // Documents processed per worker invocation. A large data room is split into
-// batches across cron ticks so no single run approaches the Vercel function
-// ceiling. runIngestDocs also enforces a soft time budget as a second guard.
+// batches across cron ticks so every request stays bounded. runIngestDocs also
+// enforces a soft time budget as a second guard.
 const BATCH_SIZE = 8
 
 /**
@@ -24,8 +24,8 @@ const BATCH_SIZE = 8
  * remain (queued or deferred by the time budget) it re-enqueues another
  * `ingest` job to continue; once the whole data room is done it advances the
  * deal stage and enqueues the `ingest_synthesis` follow-up. Batching across
- * ticks is what keeps multi-doc data rooms from orphaning at the function
- * ceiling — the symptom being a job killed as "timed out (>6m)".
+ * ticks is what keeps multi-doc data rooms from being orphaned when a request
+ * or process dies — the symptom being a job killed as "timed out (>6m)".
  */
 export async function runIngestJob(admin: Admin, job: IngestJob): Promise<unknown> {
   const explicitIds = Array.isArray(job.payload?.document_ids)

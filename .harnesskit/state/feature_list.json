@@ -64,6 +64,33 @@
       "notes": "Shared chrome/authentication and the complete Import reference page are implemented. The user clarified that completion means every user-visible system page, so authenticated, public/legal/explainer/setup/token, and LP portal migrations remain in progress. The locale write uses a bounded origin-validated API and adds no Server Action exposure. Static catalog imports avoid missing RSC message chunks during development refreshes. Repository-wide lint and one unrelated full-suite assertion remain pre-existing project maintenance items."
     },
     {
+      "id": "feed-category-popover",
+      "title": "Anchored category menu for personal feed follows",
+      "status": "in_progress",
+      "current_task": "Compact theme-aware styling implemented; authenticated browser acceptance pending",
+      "definition_of_done": [
+        "Follow actions open an anchored responsive category menu instead of using a permanent page-level category field",
+        "Uncategorized and existing Miniflux categories follow immediately, including empty categories",
+        "A bounded inline new-category form creates the category and follows the source in one action",
+        "Pending, failure recovery, Escape/outside dismissal, keyboard focus, and English/Chinese mobile behavior are verified",
+        "Focused tests, review, strict OpenSpec validation, and real authenticated browser acceptance pass"
+      ],
+      "evidence": [
+        "60 focused feed service, route, access, UI behavior, and localization tests passed",
+        "targeted ESLint: 0 errors and one existing image warning; changed-scope TypeScript: 0 errors",
+        "openspec validate add-feed-category-popover --strict and git diff --check: passed",
+        "real authenticated Chrome: new, existing empty, and uncategorized category flows plus forced failure/retry and Escape dismissal passed",
+        "real authenticated Chrome: the reference-style 448x368 English desktop picker and Simplified Chinese 390px responsive picker plus success/reload focus semantics passed",
+        "real authenticated Chrome: low-space desktop and mobile collision flipping keep the input and fixed New Folder footer inside the viewport; many categories scroll only in the middle list",
+        ".harnesskit/evidence/add-feed-category-popover contains the browser report and final screenshots",
+        "final UI/UX review completed with no remaining findings; disposable QA identities were removed",
+        "compact theme-aware styling regression: 14/14 focused UI tests, changed-file ESLint with 0 errors, strict OpenSpec validation, and reviewer pass",
+        "browser automation reached the real localhost:3001 entrypoint but its isolated session could not inherit the ambient authenticated browser session"
+      ],
+      "blocked_by": [],
+      "notes": "Miniflux remains the sole category owner. The prior fixed-white 448px reference styling was superseded by the user's request to match Reporting controls; semantic theme tokens and a 320px compact menu are now implemented. Repository-wide verification remains blocked by unrelated existing lint errors; the current changed scope has no lint errors."
+    },
+    {
       "id": "feeds-product",
       "title": "Personal Miniflux feeds product",
       "status": "passing",
@@ -109,6 +136,28 @@
       ],
       "blocked_by": [],
       "notes": "V1 uses one global non-admin Miniflux collector and namespaced server-validated references; no Reporting feed persistence or intelligence layer was added."
+    },
+    {
+      "id": "croner-node-runtime",
+      "title": "Persistent Croner runtime for existing cron routes",
+      "status": "passing",
+      "current_task": "Implementation and runtime verification complete",
+      "definition_of_done": [
+        "Web and Cron processes have separate production entrypoints",
+        "One immutable manifest preserves the five existing UTC schedules and authenticated GET routes",
+        "Requests reject redirects, enforce bounded timeouts, and never log bearer secrets or response bodies",
+        "The runner prevents per-process overlap and shuts down active work within a bounded grace period",
+        "Health, readiness, one-shot verification, focused tests, strict OpenSpec validation, and security review pass"
+      ],
+      "evidence": [
+        "29 focused Cron unit/integration tests passed, including real one-shot and resident entrypoints",
+        "Production CRON_SECRET requires at least 32 characters and malformed health request targets return 400",
+        "openspec validate replace-vercel-cron-with-croner --strict and HarnessKit verify-fast passed",
+        "security review found no remaining changed-scope critical, high, or medium issue",
+        "Netlify and Vercel documentation now identifies those options as Web-only and requires one separately supervised Cron process"
+      ],
+      "blocked_by": [],
+      "notes": "Exactly one Cron replica is an operational requirement. Existing application tables remain the durable source of truth; Croner scheduling state is intentionally in memory."
     }
   ]
 }

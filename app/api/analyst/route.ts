@@ -21,6 +21,21 @@ import { buildDiligenceContext, DILIGENCE_ANALYST_GUIDE } from '@/lib/diligence/
 import { extractText } from '@/lib/memo-agent/extract-text'
 import { hasAccess, loadAccessContext } from '@/lib/access/effective'
 import { rateLimit } from '@/lib/rate-limit'
+import { DEFAULT_LOCALE, isSupportedLocale, type Locale } from '@/i18n/locales'
+
+const RESPONSE_LANGUAGE_LABELS: Readonly<Record<Locale, string>> = Object.freeze({
+  en: 'English (en)',
+  'zh-CN': 'Simplified Chinese (zh-CN)',
+})
+
+function responseLanguageInstruction(localeInput: unknown): string {
+  const fallbackLocale = isSupportedLocale(localeInput) ? localeInput : DEFAULT_LOCALE
+  return `=== RESPONSE LANGUAGE ===
+Answer in the language of the latest user message.
+Do not infer the response language from source documents, injected business context, previous conversation memory, or earlier messages.
+If the latest user message has no clear natural-language signal, answer in the validated UI fallback language: ${RESPONSE_LANGUAGE_LABELS[fallbackLocale]}.
+This instruction governs only the narrative reply; preserve names, identifiers, quoted source content, and structured response contracts as provided.`
+}
 
 export async function POST(req: NextRequest) {
   const supabase = createClient()
@@ -42,6 +57,8 @@ export async function POST(req: NextRequest) {
     domain?: 'lps' | 'diligence'
     model?: { id: string; provider: string }
     conversationId?: string
+    /** Untrusted UI hint. The latest user message remains authoritative for response language. */
+    locale?: unknown
   }
   try {
     body = await req.json()
@@ -325,6 +342,8 @@ export async function POST(req: NextRequest) {
   } catch {
     // Non-critical — continue without memory
   }
+
+  systemPrompt += `\n\n${responseLanguageInstruction(body.locale)}`
 
   // AI provider — use override if specified, otherwise fund default
   const providerOverride = body.model?.provider

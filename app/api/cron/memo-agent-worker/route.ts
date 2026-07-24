@@ -13,11 +13,10 @@ import { runAffinitySyncJob } from '@/lib/memo-agent/jobs/affinity-sync-job'
 import { kickWorker } from '@/lib/memo-agent/kick'
 
 /**
- * Memo Agent worker. Triggered by Vercel cron every minute (per
- * BUILD_PLAN_FOR_CLAUDE_CODE.md decision). Claims one pending job from
+ * Memo Agent worker. Triggered by the persistent Croner service every three
+ * minutes and by best-effort immediate kicks. Claims one pending job from
  * `memo_agent_jobs`, dispatches it to the right stage handler, and writes
- * the outcome back. Designed to fit comfortably inside a 120s function
- * — long stages must internally chunk to that ceiling.
+ * the outcome back. Long stages chunk work so each request remains bounded.
  *
  * Auth: same `Authorization: Bearer ${CRON_SECRET}` pattern as the
  * deals-digest cron.

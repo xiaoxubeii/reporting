@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import { AlertCircle, Rss } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 
 export function FeedsStatePanel({
@@ -37,8 +38,9 @@ export function FeedsStatePanel({
 }
 
 export function FeedRowsSkeleton() {
+  const t = useTranslations('Feeds.shared')
   return (
-    <div className="divide-y" aria-label="Loading articles" aria-busy="true">
+    <div className="divide-y" aria-label={t('loadingArticles')} aria-busy="true">
       {Array.from({ length: 6 }, (_, index) => (
         <div key={index} className="flex gap-4 py-5 animate-pulse">
           <div className="h-[72px] w-[112px] shrink-0 rounded-md bg-muted" />
