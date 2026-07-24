@@ -3,6 +3,7 @@ export const MAX_SEARCH_RESULTS = 30
 export const FEED_SEARCH_LIMIT = 10
 export const WEB_SEARCH_LIMIT = 10
 export const SPECIALIZED_SEARCH_LIMIT = 5
+export const MAX_SEARCH_CATEGORIES = 20
 
 export const SPECIALIZED_SOURCE_IDS = Object.freeze([
   'pubmed',
@@ -13,16 +14,18 @@ export const SPECIALIZED_SOURCE_IDS = Object.freeze([
 ] as const)
 
 export type SpecializedSourceId = typeof SPECIALIZED_SOURCE_IDS[number]
-export type SearchSourceId = 'feeds' | 'web' | SpecializedSourceId
+export type SearchAdapterId = 'feeds' | 'web' | SpecializedSourceId
+export type SearchSourceId = SearchAdapterId
 export type SearchOrigin = 'feed' | 'specialized' | 'web'
 
 export interface SearchRequest {
   readonly query: string
-  readonly sources: {
-    readonly feeds: boolean
-    readonly web: boolean
-    readonly specialized: readonly SpecializedSourceId[]
-  }
+  readonly categoryIds: readonly string[]
+}
+
+export interface ResolvedSearchRequest {
+  readonly query: string
+  readonly adapterIds: readonly SearchAdapterId[]
 }
 
 export type SearchSourceState =
@@ -104,43 +107,28 @@ export class SearchContractError extends Error {
   }
 }
 
-const SPECIALIZED_SOURCE_SET = new Set<string>(SPECIALIZED_SOURCE_IDS)
+const CATEGORY_ID_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/
 
 export function parseSearchRequest(value: unknown): SearchRequest {
-  const body = strictRecord(value, ['query', 'sources'], 'Search request')
+  const body = strictRecord(value, ['query', 'categoryIds'], 'Search request')
   const query = parseQuery(body.query)
-  const sources = strictRecord(body.sources, ['feeds', 'web', 'specialized'], 'Search sources')
-
-  if (typeof sources.feeds !== 'boolean' || typeof sources.web !== 'boolean') {
-    throw new SearchContractError('Feed and Web source selections must be boolean values.')
-  }
-  if (!Array.isArray(sources.specialized)) {
-    throw new SearchContractError('Professional source selection must be an array.')
+  if (!Array.isArray(body.categoryIds)) throw new SearchContractError('Category selection must be an array.')
+  if (body.categoryIds.length < 1) throw new SearchContractError('Select at least one available category.')
+  if (body.categoryIds.length > MAX_SEARCH_CATEGORIES) {
+    throw new SearchContractError(`Select no more than ${MAX_SEARCH_CATEGORIES} categories.`)
   }
 
   const seen = new Set<string>()
-  for (const source of sources.specialized) {
-    if (typeof source !== 'string' || !SPECIALIZED_SOURCE_SET.has(source)) {
-      throw new SearchContractError('An unsupported professional source was selected.')
+  for (const categoryId of body.categoryIds) {
+    if (typeof categoryId !== 'string' || !CATEGORY_ID_PATTERN.test(categoryId)) {
+      throw new SearchContractError('An invalid search category was selected.')
     }
-    if (seen.has(source)) {
-      throw new SearchContractError('Each professional source may be selected only once.')
+    if (seen.has(categoryId)) {
+      throw new SearchContractError('Each search category may be selected only once.')
     }
-    seen.add(source)
+    seen.add(categoryId)
   }
-  const specialized = SPECIALIZED_SOURCE_IDS.filter(source => seen.has(source))
-
-  if (!sources.feeds && !sources.web && specialized.length === 0) {
-    throw new SearchContractError('Select at least one available source.')
-  }
-
-  const frozenSpecialized = Object.freeze(specialized.slice())
-  const frozenSources = Object.freeze({
-    feeds: sources.feeds,
-    web: sources.web,
-    specialized: frozenSpecialized,
-  })
-  return Object.freeze({ query, sources: frozenSources })
+  return Object.freeze({ query, categoryIds: Object.freeze(Array.from(seen)) })
 }
 
 function parseQuery(value: unknown): string {

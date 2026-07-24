@@ -3,15 +3,18 @@
 ## Current Focus
 
 - Active change: `add-search-product`
-- Current task: implementation and verification complete; prepare `codex/add-search-product` for merge.
+- Current task: fund-configured categories and unified adapter execution are verified and ready to merge.
 - Branch/worktree: `codex/add-search-product` in `/home/ubuntu/workspace/reporting.worktrees/add-search-product`, based on local `main` commit `90543f5` after Feeds merged.
 
 ## Last Session
 
-- Implemented one bounded federated Search page over exactly three server-only provider boundaries: caller-scoped Miniflux Feeds, Reporting-owned SearXNG Web, and direct professional adapters.
+- Reopened `add-search-product` after the user rejected the duplicate Provider layer and fixed individual-source selector. The accepted increment is fund-configured Category -> code-registered Adapter, with one CategoryResolver/AdapterRegistry/AdapterExecutor path and no platform-admin expansion.
+- Implemented and verified fund-scoped category configuration, the fund-admin Settings editor/API, category-only Search requests, and one CategoryResolver/AdapterRegistry/AdapterExecutor execution path.
+
+- The earlier three-boundary execution model has been replaced: caller-scoped Miniflux, Reporting-owned SearXNG, public APIs, and bounded website search now share one code-owned Adapter contract.
 - Added direct PubMed, ClinicalTrials.gov API v2, and openFDA 510(k) transports; fixture-tested TCTMD and MassDevice parsers remain visibly unavailable until an operator-approved live transport exists.
 - Added deterministic exact URL/identifier merging, `Feed > Specialized > Web` primary-origin precedence, fixed source/final caps, partial results, privacy-safe instrumentation, safe public URLs, access checks, and an atomic fail-closed per-user rate limit.
-- Added responsive localized Search UI, desktop source rail, mobile source drawer with Apply/Cancel semantics, per-source textual states, feed reader state synchronization, focus return, external-link isolation, and Search-specific remote-image suppression.
+- Added responsive localized Search UI, desktop category rail, mobile category drawer with Apply/Cancel semantics, per-source textual states, feed reader state synchronization, focus return, external-link isolation, and Search-specific remote-image suppression.
 - Removed all temporary Reporting/Miniflux test users and credential-bearing local scripts after browser verification.
 - Completed the personal Miniflux Feeds product and V1 Curated Explore implementation in `codex/add-feeds-product`. The feature remains API-only from Reporting: Miniflux owns subscriptions, categories, entries, read state, and saved state.
 - Integrated the current `main` localization work into the feature branch. Conflict resolution preserved localized navigation and settings, Miniflux approval recovery, accessible Sheet labels, and the restricted same-origin Supabase development proxy.
@@ -24,8 +27,9 @@
 
 ## Verification
 
-- Search OpenSpec strict validation and HarnessKit fast passed; every Search task is complete.
-- Full Vitest: 148 files and 1169 tests passed, with 2 files/4 environment-gated integration tests skipped.
+- Updated Category-to-Adapter OpenSpec strict validation and HarnessKit fast passed; all 46 OpenSpec tasks are complete.
+- Category-to-Adapter focused Vitest: 20 files/92 tests passed. Full Vitest: 153 files/1181 tests passed, with 2 files/4 environment-gated integration tests skipped.
+- Authenticated admin browser acceptance passed: changing the `internet` category label and mapping from `web` to `pubmed` immediately changed the Search selection and returned live PubMed results; the mobile drawer reflected the same configuration. The original `Internet -> web` configuration was restored and the disposable user was deleted.
 - `npx tsc --noEmit`, changed-file ESLint, Compose `config --quiet`, and `npx next build --no-lint` passed.
 - Live database verification rejected NULL rate-limit arguments and allowed exactly 10 of 20 concurrent requests for one bucket.
 - Reporting SearXNG was healthy on loopback using the digest-pinned image; live combined Web/PubMed and partial-result behavior were exercised.
@@ -68,6 +72,4 @@
 
 ## Next Session
 
-1. Review and merge `codex/add-search-product` into `main`.
-2. Enable Search only for a pilot fund after its SearXNG and approved direct sources pass health checks.
-3. Repair repository-wide ESLint debt in a separate maintenance change, then rerun unmodified HarnessKit targeted/full.
+1. Review and merge the verified `codex/add-search-product` commit into the intended integration branch.

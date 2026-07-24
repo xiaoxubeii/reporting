@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import type { SearchCandidate, SpecializedSourceDescriptor } from '../../provider-contracts'
-import { SearchProviderError } from '../../provider-contracts'
+import type { SearchCandidate, SearchAdapterDescriptor } from '../../adapter-contracts'
+import { SearchAdapterError } from '../../adapter-contracts'
 import { boundedPlainText, normalizedIsoDate } from '../../sanitize'
 
 const MAX_WEBSITE_HTML_BYTES = 512_000
@@ -11,7 +11,7 @@ const RESULT_ELEMENT = /<(article|li)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi
 const ANCHOR = /<a\b([^>]*?)href\s*=\s*(?:"([^"]*)"|'([^']*)')([^>]*)>([\s\S]*?)<\/a\s*>/gi
 
 export interface WebsiteSearchDefinition {
-  readonly descriptor: SpecializedSourceDescriptor
+  readonly descriptor: SearchAdapterDescriptor
   readonly searchEndpoint: string
   readonly queryParameter: string
   readonly allowedSearchHosts: readonly string[]
@@ -68,7 +68,7 @@ export function validateWebsiteDefinition(definition: WebsiteSearchDefinition): 
   try {
     endpoint = new URL(definition.searchEndpoint)
   } catch {
-    throw new SearchProviderError('invalid_response', `${definition.descriptor.label} has an invalid search endpoint`, {
+    throw new SearchAdapterError('invalid_response', `${definition.descriptor.label} has an invalid search endpoint`, {
       retryable: false,
     })
   }
@@ -80,7 +80,7 @@ export function validateWebsiteDefinition(definition: WebsiteSearchDefinition): 
     || !definition.allowedSearchHosts.includes(endpoint.hostname.toLowerCase())
     || endpoint.pathname !== definition.allowedSearchPath
   ) {
-    throw new SearchProviderError('invalid_response', `${definition.descriptor.label} has an unapproved search endpoint`, {
+    throw new SearchAdapterError('invalid_response', `${definition.descriptor.label} has an unapproved search endpoint`, {
       retryable: false,
     })
   }
@@ -190,14 +190,14 @@ function decodeAttribute(value: string): string {
 function assertBoundedHtml(html: unknown, label: string): asserts html is string {
   if (typeof html !== 'string' || !html.trim()) throw structureChanged(label)
   if (new TextEncoder().encode(html).byteLength > MAX_WEBSITE_HTML_BYTES) {
-    throw new SearchProviderError('invalid_response', `${label} search response exceeded the parser limit.`, {
+    throw new SearchAdapterError('invalid_response', `${label} search response exceeded the parser limit.`, {
       retryable: false,
     })
   }
 }
 
-function structureChanged(label: string): SearchProviderError {
-  return new SearchProviderError('invalid_response', `${label} search result structure changed.`, {
+function structureChanged(label: string): SearchAdapterError {
+  return new SearchAdapterError('invalid_response', `${label} search result structure changed.`, {
     retryable: false,
   })
 }

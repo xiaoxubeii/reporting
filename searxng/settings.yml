@@ -33,6 +33,9 @@ server:
 outgoing:
   request_timeout: 4.0
   max_request_timeout: 6.0
+  proxies:
+    all://:
+      - http://vpnserver-proxy:8118
 
 engines:
   - name: bing

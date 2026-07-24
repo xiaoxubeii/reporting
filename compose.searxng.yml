@@ -10,6 +10,9 @@ services:
     cpus: 1.0
     ports:
       - "127.0.0.1:${REPORTING_SEARXNG_PORT:-8086}:8080"
+    networks:
+      - default
+      - proxy
     environment:
       FORCE_OWNERSHIP: "false"
       SEARXNG_BASE_URL: "http://127.0.0.1:${REPORTING_SEARXNG_PORT:-8086}/"
@@ -17,7 +20,7 @@ services:
     volumes:
       - ./searxng:/etc/searxng:ro
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null && python -c \"import socket; socket.create_connection(('vpnserver-proxy', 8118), 2).close()\""]
       interval: 10s
       timeout: 3s
       retries: 12
@@ -30,3 +33,8 @@ services:
     tmpfs:
       - /tmp:mode=1777
       - /var/cache/searxng:mode=1777
+
+networks:
+  proxy:
+    external: true
+    name: vpnserver-proxy_default

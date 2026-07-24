@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SearchCandidate } from './provider-contracts'
+import type { SearchCandidate } from './adapter-contracts'
 import { mergeSearchCandidates } from './merge'
 
 function candidate(

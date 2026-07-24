@@ -20,7 +20,7 @@ dependency and ownership checks.
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
 | feeds-product | Add personal Today and Follow sources backed exclusively by Miniflux APIs | feature-planning | `openspec/changes/add-feeds-product` | Approved users receive isolated Miniflux identities and can read, save, discover, categorize, follow, and unfollow through the authenticated Reporting BFF | serial-required | Miniflux V2, Reporting auth and approval workflow, Dealflow grants | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | curated-explore | Add a global read-only curated discovery view backed by one non-admin Miniflux user | feature-planning | `openspec/changes/add-curated-explore` | Authorized users can browse curated categories/articles and idempotently follow a trusted source into their personal Miniflux without shared read/save mutations or Reporting feed tables | serial-required | feeds-product, Miniflux BFF, personal FeedService, Today reader | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
-| search-product | Add bounded federated Search across personal Feeds, Reporting SearXNG, and five direct professional sources | feature-planning | `openspec/changes/add-search-product` | Authorized users can explicitly submit one query, select available sources, receive safe normalized partial results with exact provenance, and use origin-correct result actions | serial-required | merged feeds-product, Reporting auth/access, dedicated SearXNG, five public source contracts | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-search-product` | in_progress |
+| search-product | Add bounded federated Search across personal Feeds, Reporting SearXNG, and five direct professional sources | feature-planning | `openspec/changes/add-search-product` | Authorized users select fund-configured categories that resolve to code-reviewed adapters, receive safe normalized partial results with exact provenance, and use origin-correct result actions | serial-required | merged feeds-product, Reporting auth/access, dedicated SearXNG, five public source contracts | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-search-product` | complete |
 
 ## Feature Requirement Contract
 
@@ -135,7 +135,7 @@ contract for self-check, review, testing, and merge.
 
 #### Progress / Evidence
 
-- status: in_progress
+- status: ready_to_merge
 - branch: `main`
 - worktree: current checkout; unrelated dirty user changes are preserved
 - commit: none requested
@@ -284,12 +284,13 @@ contract for self-check, review, testing, and merge.
 - Required: yes
 - Reason: this is a browser-visible, security-sensitive federated feature crossing authenticated Miniflux, an operator-owned metasearch service, public APIs, and bounded website parsing.
 - Change: `openspec/changes/add-search-product`
-- Task: implement the 35 tasks serially from shared contracts through providers, service/API, UI, review, deployment documentation, and real browser verification.
+- Task: preserve the verified first milestone, then implement the Category-to-Adapter increment serially through contracts, fund-admin configuration, unified execution, UI, review, and real browser verification.
 
 #### Acceptance
 
-- An authorized caller explicitly submits one bounded plain-text query and selects available Feed, Web, and fixed professional sources.
-- Reporting exposes exactly three server-only provider boundaries and never exposes Miniflux, SearXNG, source endpoints, engines, or parser controls to the browser.
+- An authorized caller explicitly submits one bounded plain-text query and selects available fund-configured categories.
+- Reporting resolves categories to one code-owned adapter registry/executor and never exposes adapter IDs, Miniflux, SearXNG, source endpoints, engines, or parser controls to the browser.
+- Fund administrators can atomically manage ordered bilingual category presentation, enablement, defaults, and registered adapter mappings for their own fund.
 - PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice are queried directly through reviewed adapters; professional search never falls back to SearXNG `site:` queries.
 - Concurrent source failures produce source-level statuses and useful partial results; fixed limits are 10 Feed, 10 Web, 5 per professional source, and 30 final results.
 - Exact URL and stable-identifier duplicates preserve all provenance, use `Feed > Specialized > Web` primary-origin precedence, and retain origin-correct reader/external-link behavior.
@@ -298,45 +299,46 @@ contract for self-check, review, testing, and merge.
 #### Allowed Change Scope
 
 - `openspec/changes/add-search-product/**`
-- `lib/search/**`, focused reuse of `lib/feeds/**`, access metadata, route declarations, and source configuration
-- `app/api/search/**`, `app/(app)/search/**`, Search components, and the existing sidebar
+- `lib/search/**`, focused reuse of `lib/feeds/**`, access metadata, route declarations, source/category configuration, database types, and a forward-only migration
+- `app/api/search/**`, `app/api/settings/search-categories/**`, `app/(app)/search/**`, Search/Settings components, and the existing sidebar
 - Reporting-owned SearXNG Compose/configuration, `.env.example`, deployment/runbook documentation, fixtures, focused tests, and browser evidence
 - HarnessKit plan/state/progress evidence only
 
 #### Shared Contract Changes
 
 - Adds `dealflow.search` while keeping Feed search dependent on existing permitted Feeds read access and the caller's personal Miniflux identity.
-- Adds one validated authenticated `POST /api/search` contract with fixed source IDs, normalized hits/statuses, and no client-controlled endpoints, engines, selectors, or limits.
-- Adds exactly `FeedSearchProvider`, `WebSearchProvider`, and `SpecializedSearchProvider`, plus a code-only five-source adapter registry.
+- Adds one validated authenticated `POST /api/search` contract with selected category IDs, normalized adapter-level hits/statuses, and no client-controlled adapter IDs, endpoints, engines, selectors, or limits.
+- Adds fund-scoped `search_category_config` plus an admin-only same-origin Settings boundary; the visible catalog is data-driven while adapter implementations remain code-owned.
+- Uses `CategoryResolver`, `AdapterRegistry`, and `AdapterExecutor` without a separate Provider layer.
 - Adds a separately pinned, loopback-only Reporting SearXNG service with an operator-owned General/News engine allowlist and independent secret.
 - Adds no Reporting search index, history, arbitrary crawling, paid API credentials, quota ledger, federated pagination, fuzzy/AI deduplication, or AI reranking.
 
 #### Verification Plan
 
 - smoke: contract tests, OpenSpec strict validation, SearXNG configuration/Compose validation, and HarnessKit fast.
-- targeted: provider/adapter fixtures, merge/URL/security behavior, route authorization/rate limiting/privacy, and Search component contracts.
+- targeted: category configuration/resolution, registry/executor and adapter fixtures, merge/URL/security behavior, route authorization/rate limiting/privacy, Settings editor, and Search component contracts.
 - full: TypeScript, targeted lint, full tests/build where baseline permits, Search E2E, code/security review, and real authenticated desktop/mobile browser verification against Reporting's actual entrypoint.
 
 #### Review Required
 
 - planner: yes, contract/sequence review before implementation
-- reviewer: yes, provider boundaries, normalized contracts, deterministic merge, and UI integration
+- reviewer: yes, category resolution, adapter registry/executor, normalized contracts, deterministic merge, and UI integration
 - security-reviewer: yes, credentials, SSRF/redirects, untrusted HTML, URL safety, access, rate limits, privacy, and external-link isolation
 - docs-researcher: yes, official API parameters/responses and current public website search contracts
 - browser/QA: yes, the route, source drawer, partial/error states, Feed reader, and external actions are user-visible
 
 #### Progress / Evidence
 
-- status: in_progress
+- status: complete
 - branch: `codex/add-search-product`
 - worktree: `/home/ubuntu/workspace/reporting.worktrees/add-search-product`; unrelated dirty changes in the main worktree are preserved
-- planning: OpenSpec `spec-driven`; proposal/design/spec/tasks fully read and all tasks complete
-- architecture: serial-required after merged Feeds; the main agent owns shared contracts and implementation, with independent read-only planning/docs review and final code/security review
-- tests: 148 files and 1169 tests passed; TypeScript, changed-file ESLint, strict OpenSpec, Compose validation, atomic database verification, and production build passed
-- browser: authenticated desktop/mobile combined Search, source drawer, Feed-only Miniflux result, reader, external-link isolation, Escape close, and focus restoration passed; screenshots are under `.harnesskit/evidence/add-search-product/`
-- reviews: code, database, and security reviews completed; credential fixtures were removed and the remaining in-scope findings were fixed
-- baseline: HarnessKit targeted/full were attempted but stop on repository-wide pre-existing ESLint errors outside Search; changed-file ESLint has zero errors
-- risks: external API/engine availability and website parser drift remain operational partial-result states; TCTMD and MassDevice live transports stay unavailable until operator approval and implementation
+- planning: OpenSpec `spec-driven`; proposal/design/spec/tasks fully read; all 46 tasks complete
+- architecture: serial-required after merged Feeds; fund-scoped category JSON uses the existing fund-admin boundary, and one Adapter abstraction handles Feed, Web, API, and Website search
+- tests: Category-to-Adapter focused suite passes with 20 files/92 tests; full suite passes with 153 files/1181 tests, with 2 files/4 environment-gated integration tests skipped
+- browser: authenticated admin changed the `internet` category label and mapping from `web` to `pubmed`; the Search page immediately rendered the new label as selected and returned live PubMed results, including in the mobile category drawer; the original `Internet -> web` configuration was restored
+- reviews: code, database, and security reviews completed with no blocker/high/medium findings; credential fixtures were removed and the remaining in-scope findings were fixed
+- baseline: OpenSpec strict, HarnessKit fast, TypeScript, Compose validation, changed-file ESLint, full Vitest, and `next build --no-lint` pass; HarnessKit targeted/full stop on repository-wide pre-existing ESLint errors outside Search
+- risks: category configuration must remain fund-scoped and data-only; unknown adapter IDs fail closed; external API/engine availability and website parser drift remain operational partial-result states
 
 ## Parallelization Decision
 

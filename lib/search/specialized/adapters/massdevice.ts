@@ -1,20 +1,15 @@
 import {
-  SearchProviderError,
-  type SpecializedSourceAdapter,
-  type SpecializedSourceDescriptor,
-} from '../../provider-contracts'
+  getSearchAdapterDescriptor,
+  SearchAdapterError,
+  type SearchAdapter,
+} from '../../adapter-contracts'
 import {
   parseWebsiteSearchHtml,
   validateWebsiteDefinition,
   type WebsiteSearchDefinition,
 } from './website-parser'
 
-const MASSDEVICE_DESCRIPTOR: SpecializedSourceDescriptor = Object.freeze({
-  id: 'massdevice',
-  label: 'MassDevice',
-  adapterType: 'website',
-  liveTransportAvailable: false,
-})
+const MASSDEVICE_DESCRIPTOR = getSearchAdapterDescriptor('massdevice')
 
 const RESERVED_MASSDEVICE_PATHS = new Set([
   'about',
@@ -56,11 +51,11 @@ export function parseMassDeviceSearchHtml(html: string, limit = 5) {
   return parseWebsiteSearchHtml(html, MASSDEVICE_WEBSITE_DEFINITION, limit)
 }
 
-export class MassDeviceWebsiteAdapter implements SpecializedSourceAdapter {
+export class MassDeviceWebsiteAdapter implements SearchAdapter {
   readonly descriptor = MASSDEVICE_DESCRIPTOR
 
   async search(): Promise<never> {
-    throw new SearchProviderError(
+    throw new SearchAdapterError(
       'unavailable',
       'MassDevice live website transport is disabled pending operator approval.',
       { retryable: false },
@@ -68,6 +63,6 @@ export class MassDeviceWebsiteAdapter implements SpecializedSourceAdapter {
   }
 }
 
-export function createMassDeviceAdapter(): SpecializedSourceAdapter {
+export function createMassDeviceAdapter(): SearchAdapter {
   return new MassDeviceWebsiteAdapter()
 }

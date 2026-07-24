@@ -1,12 +1,12 @@
 import { SPECIALIZED_SEARCH_LIMIT } from '../../contracts'
 import {
+  getSearchAdapterDescriptor,
   type SearchCandidate,
   type SearchContext,
-  type SpecializedSourceAdapter,
-  type SpecializedSourceDescriptor,
-  type SpecializedSourceResults,
-  type SpecializedSourceSearchRequest,
-} from '../../provider-contracts'
+  type SearchAdapter,
+  type SearchAdapterResults,
+  type SearchAdapterRequest,
+} from '../../adapter-contracts'
 import { boundedPlainText, normalizedIsoDate } from '../../sanitize'
 import {
   fetchBoundedApiJson,
@@ -21,22 +21,17 @@ const ESUMMARY_ENDPOINT = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummar
 const PMID_PATTERN = /^\d{1,12}$/
 const DOI_PATTERN = /^10\.\d{4,9}\/[\S]+$/i
 
-const PUBMED_DESCRIPTOR: SpecializedSourceDescriptor = Object.freeze({
-  id: 'pubmed',
-  label: 'PubMed',
-  adapterType: 'api',
-  liveTransportAvailable: true,
-})
+const PUBMED_DESCRIPTOR = getSearchAdapterDescriptor('pubmed')
 
-export class PubMedApiAdapter implements SpecializedSourceAdapter {
+export class PubMedApiAdapter implements SearchAdapter {
   readonly descriptor = PUBMED_DESCRIPTOR
 
   constructor(private readonly fetcher: FetchLike = fetch) {}
 
   async search(
-    request: SpecializedSourceSearchRequest,
+    request: SearchAdapterRequest,
     context: SearchContext,
-  ): Promise<SpecializedSourceResults> {
+  ): Promise<SearchAdapterResults> {
     const limit = Math.max(0, Math.min(request.limit, SPECIALIZED_SEARCH_LIMIT))
     if (limit === 0) return EMPTY_RESULTS
 
@@ -70,7 +65,7 @@ export class PubMedApiAdapter implements SpecializedSourceAdapter {
   }
 }
 
-const EMPTY_RESULTS: SpecializedSourceResults = Object.freeze({ candidates: Object.freeze([]) })
+const EMPTY_RESULTS: SearchAdapterResults = Object.freeze({ candidates: Object.freeze([]) })
 
 function parseSearchIds(payload: unknown): readonly string[] {
   const root = record(payload)

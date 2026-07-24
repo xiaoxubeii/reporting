@@ -6,6 +6,9 @@ const composeText = readFileSync(new URL('../compose.searxng.yml', import.meta.u
 const settingsText = readFileSync(new URL('../searxng/settings.yml', import.meta.url), 'utf8')
 interface SearchCompose {
   readonly name: string
+  readonly networks: {
+    readonly proxy: { readonly external: boolean; readonly name: string }
+  }
   readonly services: {
     readonly searxng: {
       readonly image: string
@@ -15,6 +18,7 @@ interface SearchCompose {
       readonly pids_limit: number
       readonly mem_limit: string
       readonly cpus: number
+      readonly networks: readonly string[]
       readonly environment: { readonly SEARXNG_SECRET: string }
       readonly healthcheck: { readonly test: readonly string[] }
     }
@@ -26,6 +30,9 @@ interface SearchSettings {
   readonly engines: readonly { readonly name: string; readonly disabled: boolean }[]
   readonly search: { readonly formats: readonly string[]; readonly safe_search: number }
   readonly server: { readonly method: string; readonly image_proxy: boolean; readonly public_instance: boolean }
+  readonly outgoing: {
+    readonly proxies: { readonly 'all://': readonly string[] }
+  }
 }
 
 const compose = yaml.load(composeText) as SearchCompose
@@ -57,10 +64,19 @@ describe('Reporting-owned SearXNG deployment', () => {
     expect(service.environment.SEARXNG_SECRET).toContain('REPORTING_SEARXNG_SECRET')
   })
 
-  it('health-checks the local process without performing an external search', () => {
+  it('health-checks the local process and proxy without performing an external search', () => {
     const test = compose.services.searxng.healthcheck.test.join(' ')
     expect(test).toContain('127.0.0.1:8080/healthz')
+    expect(test).toContain('vpnserver-proxy')
+    expect(test).toContain('8118')
     expect(test).not.toMatch(/\/search|q=/)
+  })
+
+  it('routes engine traffic directly to Privoxy on its Docker network', () => {
+    expect(compose.services.searxng.networks).toEqual(['default', 'proxy'])
+    expect(compose.networks.proxy).toEqual({ external: true, name: 'vpnserver-proxy_default' })
+    expect(settings.outgoing.proxies['all://']).toEqual(['http://vpnserver-proxy:8118'])
+    expect(JSON.stringify(compose.services.searxng)).not.toContain('host.docker.internal')
   })
 
   it('keeps only the approved General and News engine families', () => {

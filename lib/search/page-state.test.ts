@@ -2,22 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { initialSearchPageState, isSearchStale, requestFromState, searchPageReducer } from '@/components/search/state'
 
 describe('search page state', () => {
-  it('defaults only the supplied available sources and builds a fixed request', () => {
-    const state = initialSearchPageState(['feeds', 'web'])
-    const selected = searchPageReducer(state, { type: 'source_toggled', sourceId: 'pubmed' })
+  it('defaults supplied categories and builds a category-only request', () => {
+    const state = initialSearchPageState(['subscriptions', 'internet'])
+    const selected = searchPageReducer(state, { type: 'category_toggled', categoryId: 'research' })
     expect(requestFromState({ ...selected, query: '  stent  ' })).toEqual({
       query: 'stent',
-      sources: { feeds: true, web: true, specialized: ['pubmed'] },
+      categoryIds: ['subscriptions', 'internet', 'research'],
     })
   })
 
   it('marks visible results stale when the query or sources change', () => {
-    let state = initialSearchPageState(['feeds'])
+    let state = initialSearchPageState(['subscriptions'])
     state = searchPageReducer({ ...state, query: 'heart' }, { type: 'submit_started' })
     state = searchPageReducer(state, { type: 'submit_succeeded', response: { results: [], sources: [], partial: false } })
     expect(isSearchStale(state)).toBe(false)
     expect(isSearchStale(searchPageReducer(state, { type: 'query_changed', query: 'heart valve' }))).toBe(true)
-    expect(isSearchStale(searchPageReducer(state, { type: 'source_toggled', sourceId: 'web' }))).toBe(true)
+    expect(isSearchStale(searchPageReducer(state, { type: 'category_toggled', categoryId: 'internet' }))).toBe(true)
   })
 
   it('keeps previous results visible during an explicit resubmission', () => {
@@ -31,14 +31,14 @@ describe('search page state', () => {
   })
 
   it('applies a mobile source draft atomically', () => {
-    const state = initialSearchPageState(['feeds', 'web'])
+    const state = initialSearchPageState(['subscriptions', 'internet'])
     const updated = searchPageReducer(state, {
-      type: 'sources_replaced',
-      sourceIds: ['pubmed'],
+      type: 'categories_replaced',
+      categoryIds: ['research'],
     })
 
-    expect(Array.from(updated.selected)).toEqual(['pubmed'])
-    expect(Array.from(state.selected)).toEqual(['feeds', 'web'])
+    expect(Array.from(updated.selected)).toEqual(['research'])
+    expect(Array.from(state.selected)).toEqual(['subscriptions', 'internet'])
   })
 
   it('immutably synchronizes Feed reader state into the matching result', () => {

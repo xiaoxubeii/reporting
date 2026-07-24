@@ -1,4 +1,5 @@
-const MAX_SEARCH_BODY_BYTES = 16 * 1024
+export const MAX_SEARCH_BODY_BYTES = 16 * 1024
+export const MAX_SEARCH_CATEGORY_CONFIG_BODY_BYTES = 64 * 1024
 
 export class SearchRequestBodyError extends Error {
   readonly code = 'invalid_request'
@@ -27,9 +28,12 @@ export function assertSameOriginSearchRequest(request: Request): void {
   }
 }
 
-export async function readSearchJson(request: Request): Promise<unknown> {
+export async function readSearchJson(
+  request: Request,
+  maxBodyBytes = MAX_SEARCH_BODY_BYTES,
+): Promise<unknown> {
   const declared = Number(request.headers.get('Content-Length'))
-  if (Number.isFinite(declared) && declared > MAX_SEARCH_BODY_BYTES) {
+  if (Number.isFinite(declared) && declared > maxBodyBytes) {
     if (request.body) await request.body.cancel().catch(() => undefined)
     throw new SearchRequestBodyError('The search request is too large.', 413)
   }
@@ -44,7 +48,7 @@ export async function readSearchJson(request: Request): Promise<unknown> {
       const { done, value } = await reader.read()
       if (done) break
       total += value.byteLength
-      if (total > MAX_SEARCH_BODY_BYTES) {
+      if (total > maxBodyBytes) {
         await reader.cancel().catch(() => undefined)
         throw new SearchRequestBodyError('The search request is too large.', 413)
       }

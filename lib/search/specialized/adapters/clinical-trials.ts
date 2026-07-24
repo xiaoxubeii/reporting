@@ -1,12 +1,12 @@
 import { SPECIALIZED_SEARCH_LIMIT } from '../../contracts'
 import {
+  getSearchAdapterDescriptor,
   type SearchCandidate,
   type SearchContext,
-  type SpecializedSourceAdapter,
-  type SpecializedSourceDescriptor,
-  type SpecializedSourceResults,
-  type SpecializedSourceSearchRequest,
-} from '../../provider-contracts'
+  type SearchAdapter,
+  type SearchAdapterResults,
+  type SearchAdapterRequest,
+} from '../../adapter-contracts'
 import { boundedPlainText, normalizedIsoDate } from '../../sanitize'
 import {
   fetchBoundedApiJson,
@@ -26,22 +26,17 @@ const FIELDS = Object.freeze([
   'StudyFirstPostDate',
 ])
 
-const CLINICAL_TRIALS_DESCRIPTOR: SpecializedSourceDescriptor = Object.freeze({
-  id: 'clinical_trials',
-  label: 'ClinicalTrials.gov',
-  adapterType: 'api',
-  liveTransportAvailable: true,
-})
+const CLINICAL_TRIALS_DESCRIPTOR = getSearchAdapterDescriptor('clinical_trials')
 
-export class ClinicalTrialsApiAdapter implements SpecializedSourceAdapter {
+export class ClinicalTrialsApiAdapter implements SearchAdapter {
   readonly descriptor = CLINICAL_TRIALS_DESCRIPTOR
 
   constructor(private readonly fetcher: FetchLike = fetch) {}
 
   async search(
-    request: SpecializedSourceSearchRequest,
+    request: SearchAdapterRequest,
     context: SearchContext,
-  ): Promise<SpecializedSourceResults> {
+  ): Promise<SearchAdapterResults> {
     const limit = Math.max(0, Math.min(request.limit, SPECIALIZED_SEARCH_LIMIT))
     if (limit === 0) return EMPTY_RESULTS
 
@@ -61,7 +56,7 @@ export class ClinicalTrialsApiAdapter implements SpecializedSourceAdapter {
   }
 }
 
-const EMPTY_RESULTS: SpecializedSourceResults = Object.freeze({ candidates: Object.freeze([]) })
+const EMPTY_RESULTS: SearchAdapterResults = Object.freeze({ candidates: Object.freeze([]) })
 
 function parseCandidates(payload: unknown): SearchCandidate[] {
   const root = record(payload)

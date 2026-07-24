@@ -1,4 +1,4 @@
-import { SearchProviderError } from '../provider-contracts'
+import { SearchAdapterError } from '../adapter-contracts'
 import { SEARCH_UPSTREAM_TIMEOUT_MS } from '../source-policy'
 import { readBoundedResponseText } from '../read-bounded-text'
 
@@ -17,18 +17,18 @@ export async function withApiDeadline<T>(
   try {
     return await operation(deadline.signal)
   } catch (error) {
-    if (error instanceof SearchProviderError) throw error
+    if (error instanceof SearchAdapterError) throw error
     if (isAbortError(error)) {
-      throw new SearchProviderError('timeout', 'Professional API request timed out', {
+      throw new SearchAdapterError('timeout', 'Professional API request timed out', {
         retryable: true,
       })
     }
     if (error instanceof SyntaxError) {
-      throw new SearchProviderError('invalid_response', 'Professional API returned malformed JSON', {
+      throw new SearchAdapterError('invalid_response', 'Professional API returned malformed JSON', {
         retryable: false,
       })
     }
-    throw new SearchProviderError('failed', 'Professional API request failed', {
+    throw new SearchAdapterError('failed', 'Professional API request failed', {
       retryable: true,
     })
   } finally {
@@ -54,21 +54,21 @@ export async function fetchBoundedApiJson(
     const payload = await readJsonResponse(response)
     const error = record(record(payload)?.error)
     if (error?.code === options.notFoundErrorCode) return null
-    throw new SearchProviderError('failed', 'Professional API endpoint was not found', {
+    throw new SearchAdapterError('failed', 'Professional API endpoint was not found', {
       retryable: false,
       upstreamStatus: response.status,
     })
   }
   if (response.status === 429) {
     await discardBody(response)
-    throw new SearchProviderError('rate_limited', 'Professional API rate limited the request', {
+    throw new SearchAdapterError('rate_limited', 'Professional API rate limited the request', {
       retryable: true,
       upstreamStatus: response.status,
     })
   }
   if (!response.ok) {
     await discardBody(response)
-    throw new SearchProviderError('failed', 'Professional API request failed', {
+    throw new SearchAdapterError('failed', 'Professional API request failed', {
       retryable: response.status >= 500,
       upstreamStatus: response.status,
     })
@@ -77,8 +77,8 @@ export async function fetchBoundedApiJson(
   return readJsonResponse(response)
 }
 
-export function invalidApiResponse(message: string): SearchProviderError {
-  return new SearchProviderError('invalid_response', message, { retryable: false })
+export function invalidApiResponse(message: string): SearchAdapterError {
+  return new SearchAdapterError('invalid_response', message, { retryable: false })
 }
 
 export function record(value: unknown): Record<string, unknown> | null {
@@ -91,7 +91,7 @@ async function readJsonResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get('Content-Type')?.toLowerCase() ?? ''
   if (!contentType.includes('application/json')) {
     await discardBody(response)
-    throw new SearchProviderError('invalid_response', 'Professional API returned non-JSON content', {
+    throw new SearchAdapterError('invalid_response', 'Professional API returned non-JSON content', {
       retryable: false,
     })
   }

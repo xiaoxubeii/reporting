@@ -305,6 +305,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/settings/heartbeat': { domain: 'admin' },
   'api/settings/senders': { domain: 'admin' },
   'api/settings/senders/[id]': { domain: 'admin' },
+  'api/settings/search-categories': { domain: 'admin' },
   // The control panel for who can see what: reading it maps the fund's data.
   'api/settings/access': { domain: 'admin' },
   'api/settings/whitelist': { domain: 'admin' },

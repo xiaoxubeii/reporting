@@ -1,20 +1,15 @@
 import {
-  SearchProviderError,
-  type SpecializedSourceAdapter,
-  type SpecializedSourceDescriptor,
-} from '../../provider-contracts'
+  getSearchAdapterDescriptor,
+  SearchAdapterError,
+  type SearchAdapter,
+} from '../../adapter-contracts'
 import {
   parseWebsiteSearchHtml,
   validateWebsiteDefinition,
   type WebsiteSearchDefinition,
 } from './website-parser'
 
-const TCTMD_DESCRIPTOR: SpecializedSourceDescriptor = Object.freeze({
-  id: 'tctmd',
-  label: 'TCTMD',
-  adapterType: 'website',
-  liveTransportAvailable: false,
-})
+const TCTMD_DESCRIPTOR = getSearchAdapterDescriptor('tctmd')
 
 export const TCTMD_WEBSITE_DEFINITION: WebsiteSearchDefinition = Object.freeze({
   descriptor: TCTMD_DESCRIPTOR,
@@ -36,11 +31,11 @@ export function parseTctmdSearchHtml(html: string, limit = 5) {
   return parseWebsiteSearchHtml(html, TCTMD_WEBSITE_DEFINITION, limit)
 }
 
-export class TctmdWebsiteAdapter implements SpecializedSourceAdapter {
+export class TctmdWebsiteAdapter implements SearchAdapter {
   readonly descriptor = TCTMD_DESCRIPTOR
 
   async search(): Promise<never> {
-    throw new SearchProviderError(
+    throw new SearchAdapterError(
       'unavailable',
       'TCTMD live website transport is disabled pending operator approval.',
       { retryable: false },
@@ -48,6 +43,6 @@ export class TctmdWebsiteAdapter implements SpecializedSourceAdapter {
   }
 }
 
-export function createTctmdAdapter(): SpecializedSourceAdapter {
+export function createTctmdAdapter(): SearchAdapter {
   return new TctmdWebsiteAdapter()
 }

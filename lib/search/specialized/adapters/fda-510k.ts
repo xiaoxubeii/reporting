@@ -1,12 +1,12 @@
 import { SPECIALIZED_SEARCH_LIMIT } from '../../contracts'
 import {
+  getSearchAdapterDescriptor,
   type SearchCandidate,
   type SearchContext,
-  type SpecializedSourceAdapter,
-  type SpecializedSourceDescriptor,
-  type SpecializedSourceResults,
-  type SpecializedSourceSearchRequest,
-} from '../../provider-contracts'
+  type SearchAdapter,
+  type SearchAdapterResults,
+  type SearchAdapterRequest,
+} from '../../adapter-contracts'
 import { boundedPlainText, normalizedIsoDate } from '../../sanitize'
 import {
   fetchBoundedApiJson,
@@ -20,22 +20,17 @@ const FDA_510K_ENDPOINT = 'https://api.fda.gov/device/510k.json'
 const K_NUMBER_PATTERN = /^K\d{6,8}$/
 const FDA_QUERY_SPECIAL_CHARACTERS = /([+\-&|!(){}\[\]^"~*?:\\/])/g
 
-const FDA_DESCRIPTOR: SpecializedSourceDescriptor = Object.freeze({
-  id: 'fda',
-  label: 'FDA/openFDA · 510(k)',
-  adapterType: 'api',
-  liveTransportAvailable: true,
-})
+const FDA_DESCRIPTOR = getSearchAdapterDescriptor('fda')
 
-export class Fda510kApiAdapter implements SpecializedSourceAdapter {
+export class Fda510kApiAdapter implements SearchAdapter {
   readonly descriptor = FDA_DESCRIPTOR
 
   constructor(private readonly fetcher: FetchLike = fetch) {}
 
   async search(
-    request: SpecializedSourceSearchRequest,
+    request: SearchAdapterRequest,
     context: SearchContext,
-  ): Promise<SpecializedSourceResults> {
+  ): Promise<SearchAdapterResults> {
     const limit = Math.max(0, Math.min(request.limit, SPECIALIZED_SEARCH_LIMIT))
     if (limit === 0) return EMPTY_RESULTS
 
@@ -59,7 +54,7 @@ export class Fda510kApiAdapter implements SpecializedSourceAdapter {
   }
 }
 
-const EMPTY_RESULTS: SpecializedSourceResults = Object.freeze({ candidates: Object.freeze([]) })
+const EMPTY_RESULTS: SearchAdapterResults = Object.freeze({ candidates: Object.freeze([]) })
 
 function escapeOpenFdaPhrase(query: string): string {
   return query.replace(FDA_QUERY_SPECIAL_CHARACTERS, '\\$1')

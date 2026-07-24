@@ -11,7 +11,7 @@ import {
   MERGE_BUCKET_ORDER,
   ORIGIN_PRIORITY,
   type SearchCandidate,
-} from './provider-contracts'
+} from './adapter-contracts'
 import { boundedPlainText, normalizedIsoDate } from './sanitize'
 
 interface IndexedCandidate {
@@ -29,7 +29,7 @@ const SOURCE_IDS = new Set<SearchSourceId>(['feeds', 'web', ...SPECIALIZED_SOURC
 
 export function mergeSearchCandidates(input: readonly SearchCandidate[]): readonly SearchHit[] {
   const candidates = input.flatMap((candidate, index) => {
-    const value = normalizeCandidate(candidate)
+    const value = normalizeSearchCandidate(candidate)
     return value ? [{ index, value }] : []
   })
   const parents = candidates.map((_, index) => index)
@@ -77,7 +77,7 @@ export function mergeSearchCandidates(input: readonly SearchCandidate[]): readon
   return Object.freeze(results)
 }
 
-function normalizeCandidate(candidate: SearchCandidate): SearchCandidate | null {
+export function normalizeSearchCandidate(candidate: SearchCandidate): SearchCandidate | null {
   const id = boundedPlainText(candidate.id, 240)
   const title = boundedPlainText(candidate.title, 500)
   const label = boundedPlainText(candidate.source?.label, 120)

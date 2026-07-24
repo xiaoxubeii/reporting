@@ -9,16 +9,10 @@ import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { FeedReaderSheet } from '@/components/feeds/feed-reader-sheet'
 import type { FeedEntryView } from '@/lib/feeds/today-state'
-import type { SearchResponse, SearchSourceId, SearchSourceStatus } from '@/lib/search/contracts'
+import { SEARCH_ADAPTER_DESCRIPTORS } from '@/lib/search/adapter-contracts'
+import type { SearchCategoryOption } from '@/lib/search/categories'
+import type { SearchResponse, SearchSourceStatus } from '@/lib/search/contracts'
 import { initialSearchPageState, isSearchStale, requestFromState, searchPageReducer } from './state'
-
-export interface SearchSourceOption {
-  readonly id: SearchSourceId
-  readonly label: string
-  readonly group: 'personal' | 'professional' | 'web'
-  readonly available: boolean
-  readonly reason?: string
-}
 
 interface SearchEnvelope {
   readonly success: boolean
@@ -26,13 +20,16 @@ interface SearchEnvelope {
   readonly error: { readonly message?: string } | null
 }
 
-export function SearchPage({ sources }: { readonly sources: readonly SearchSourceOption[] }) {
+export function SearchPage({ categories, configurationUnavailable = false }: {
+  readonly categories: readonly SearchCategoryOption[]
+  readonly configurationUnavailable?: boolean
+}) {
   const t = useTranslations('SearchProduct')
-  const defaults = useMemo(() => sources
-    .filter(source => source.available && (source.id === 'feeds' || source.id === 'web'))
-    .map(source => source.id), [sources])
+  const defaults = useMemo(() => categories
+    .filter(category => category.available && category.defaultSelected)
+    .map(category => category.id), [categories])
   const [state, dispatch] = useReducer(searchPageReducer, defaults, initialSearchPageState)
-  const [mobileSelection, setMobileSelection] = useState<ReadonlySet<SearchSourceId>>(new Set())
+  const [mobileSelection, setMobileSelection] = useState<ReadonlySet<string>>(new Set())
   const [readerEntryId, setReaderEntryId] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const filterButtonRef = useRef<HTMLButtonElement>(null)
@@ -89,17 +86,17 @@ export function SearchPage({ sources }: { readonly sources: readonly SearchSourc
     setFiltersOpen(true)
   }
 
-  function toggleMobileSource(sourceId: SearchSourceId) {
+  function toggleMobileCategory(categoryId: string) {
     setMobileSelection(current => {
       const next = new Set(current)
-      if (next.has(sourceId)) next.delete(sourceId)
-      else next.add(sourceId)
+      if (next.has(categoryId)) next.delete(categoryId)
+      else next.add(categoryId)
       return next
     })
   }
 
   function applyMobileFilters() {
-    dispatch({ type: 'sources_replaced', sourceIds: Array.from(mobileSelection) })
+    dispatch({ type: 'categories_replaced', categoryIds: Array.from(mobileSelection) })
     setFiltersOpen(false)
   }
 
@@ -127,7 +124,7 @@ export function SearchPage({ sources }: { readonly sources: readonly SearchSourc
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('title')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t('description')}</p>
       </header>
 
@@ -144,15 +141,16 @@ export function SearchPage({ sources }: { readonly sources: readonly SearchSourc
             className="h-11 pl-9"
           />
         </label>
-        <Button type="button" variant="outline" className="h-11 lg:hidden" ref={filterButtonRef} onClick={openMobileFilters}>
+        <Button type="button" variant="outline" className="h-11 lg:hidden" ref={filterButtonRef} onClick={openMobileFilters} disabled={configurationUnavailable}>
           <Filter /> <span className="sr-only sm:not-sr-only">{t('sources')}</span>
         </Button>
-        <Button type="submit" className="h-11" disabled={state.loading}>
+        <Button type="submit" className="h-11" disabled={state.loading || configurationUnavailable}>
           {state.loading ? <Loader2 className="animate-spin" /> : <SearchIcon />}
           {t('submit')}
         </Button>
       </form>
 
+      {configurationUnavailable && <div role="alert" className="mt-3 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">{t('errors.configurationUnavailable')}</div>}
       {state.error && <div role="alert" className="mt-3 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">{state.error}</div>}
       <p className="sr-only" aria-live="polite">{state.loading ? t('loading') : state.response ? t('loaded', { count: state.response.results.length }) : ''}</p>
 
@@ -165,19 +163,17 @@ export function SearchPage({ sources }: { readonly sources: readonly SearchSourc
           <SearchResults
             response={state.response}
             loading={state.loading}
-            sources={sources}
             onOpenFeed={openFeedReader}
           />
         </main>
         <aside className="hidden lg:block" aria-label={t('sources')}>
           <div className="sticky top-6 rounded-lg border bg-card p-4">
             <h2 className="font-semibold">{t('sources')}</h2>
-            <SourceControls
-              sources={sources}
+            <CategoryControls
+              categories={categories}
               selected={state.selected}
-              statuses={state.response?.sources ?? []}
               loading={state.loading}
-              onToggle={sourceId => dispatch({ type: 'source_toggled', sourceId })}
+              onToggle={categoryId => dispatch({ type: 'category_toggled', categoryId })}
             />
           </div>
         </aside>
@@ -190,12 +186,11 @@ export function SearchPage({ sources }: { readonly sources: readonly SearchSourc
             <p className="mt-1 text-sm text-muted-foreground">{t('sourceHelp')}</p>
           </div>
           <div className="mt-5">
-            <SourceControls
-              sources={sources}
+            <CategoryControls
+              categories={categories}
               selected={mobileSelection}
-              statuses={state.response?.sources ?? []}
               loading={state.loading}
-              onToggle={toggleMobileSource}
+              onToggle={toggleMobileCategory}
             />
           </div>
           <div className="sticky bottom-0 mt-6 flex gap-2 border-t bg-background pt-4">
@@ -222,68 +217,44 @@ export function SearchPage({ sources }: { readonly sources: readonly SearchSourc
   )
 }
 
-function SourceControls({ sources, selected, statuses, loading, onToggle }: {
-  readonly sources: readonly SearchSourceOption[]
-  readonly selected: ReadonlySet<SearchSourceId>
-  readonly statuses: readonly SearchSourceStatus[]
+function CategoryControls({ categories, selected, loading, onToggle }: {
+  readonly categories: readonly SearchCategoryOption[]
+  readonly selected: ReadonlySet<string>
   readonly loading: boolean
-  readonly onToggle: (sourceId: SearchSourceId) => void
+  readonly onToggle: (categoryId: string) => void
 }) {
   const t = useTranslations('SearchProduct')
   const controlId = useId()
-  function statusText(sourceId: SearchSourceId): string | null {
-    if (loading && selected.has(sourceId)) return t('sourceStatus.loading')
-    const status = statuses.find(candidate => candidate.id === sourceId)
-    if (!status) return null
-    switch (status.status) {
-      case 'ok': return t('sourceStatus.ok', { count: status.resultCount })
-      case 'empty': return t('sourceStatus.empty')
-      case 'partial': return t('sourceStatus.partial')
-      case 'unavailable': return t('sourceStatus.unavailable')
-      case 'timeout': return t('sourceStatus.timeout')
-      case 'rate_limited': return t('sourceStatus.rateLimited')
-      case 'invalid_response': return t('sourceStatus.invalidResponse')
-      case 'failed': return t('sourceStatus.failed')
-    }
-  }
-  return <div className="mt-3 space-y-5">
-    {(['personal', 'professional', 'web'] as const).map(group => {
-      const options = sources.filter(source => source.group === group)
-      if (options.length === 0) return null
-      return <fieldset key={group} className="space-y-2">
-        <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{group === 'personal' ? t('groups.personal') : group === 'professional' ? t('groups.professional') : t('groups.web')}</legend>
-        {options.map(source => {
-          const currentStatus = statusText(source.id)
-          const inputId = `${controlId}-${source.id}`
+  return <fieldset className="mt-3 space-y-2">
+        <legend className="sr-only">{t('sources')}</legend>
+        {categories.map(category => {
+          const inputId = `${controlId}-${category.id}`
           const descriptionId = `${inputId}-description`
           return (
-          <div key={source.id} className={`flex min-h-10 items-start gap-3 rounded-md px-2 py-2 text-sm ${source.available ? 'hover:bg-accent' : 'opacity-60'}`}>
-            <input id={inputId} aria-describedby={descriptionId} type="checkbox" className="mt-0.5 h-4 w-4" checked={selected.has(source.id)} disabled={!source.available} onChange={() => onToggle(source.id)} />
+          <div key={category.id} className={`flex min-h-10 items-start gap-3 rounded-md px-2 py-2 text-sm ${category.available ? 'hover:bg-accent' : 'opacity-60'}`}>
+            <input id={inputId} aria-describedby={descriptionId} type="checkbox" className="mt-0.5 h-4 w-4" checked={selected.has(category.id)} disabled={!category.available} onChange={() => onToggle(category.id)} />
             <span className="min-w-0">
-              <label htmlFor={inputId} className={`block font-medium ${source.available ? 'cursor-pointer' : 'cursor-not-allowed'}`}>{source.label}</label>
+              <label htmlFor={inputId} className={`block font-medium ${category.available ? 'cursor-pointer' : 'cursor-not-allowed'}`}>{category.label}</label>
               <span id={descriptionId} aria-live="polite" className="block text-xs text-muted-foreground">
-                {!source.available ? source.reason ?? t('unavailable') : currentStatus}
+                {!category.available ? category.reason ?? t('unavailable') : loading && selected.has(category.id) ? t('sourceStatus.loading') : category.description}
               </span>
             </span>
           </div>
           )
         })}
       </fieldset>
-    })}
-  </div>
 }
 
-function SearchResults({ response, loading, sources, onOpenFeed }: {
+function SearchResults({ response, loading, onOpenFeed }: {
   readonly response: SearchResponse | null
   readonly loading: boolean
-  readonly sources: readonly SearchSourceOption[]
   readonly onOpenFeed: (entryId: number, trigger: HTMLButtonElement) => void
 }) {
   const t = useTranslations('SearchProduct')
   if (!response && loading) return <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
   if (!response) return <div className="mt-6 rounded-lg border border-dashed px-6 py-14 text-center text-sm text-muted-foreground">{t('emptyStart')}</div>
   return <div className={`mt-4 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
-    <SourceStatusSummary statuses={response.sources} partial={response.partial} sources={sources} />
+    <SourceStatusSummary statuses={response.sources} partial={response.partial} />
     {response.results.length === 0 ? (
       <div className="mt-5 rounded-lg border border-dashed px-6 py-14 text-center text-sm text-muted-foreground">{t('noResults')}</div>
     ) : (
@@ -317,10 +288,9 @@ function SearchResults({ response, loading, sources, onOpenFeed }: {
   </div>
 }
 
-function SourceStatusSummary({ statuses, partial, sources }: {
+function SourceStatusSummary({ statuses, partial }: {
   readonly statuses: readonly SearchSourceStatus[]
   readonly partial: boolean
-  readonly sources: readonly SearchSourceOption[]
 }) {
   const t = useTranslations('SearchProduct')
   const failures = statuses.filter(status => !['ok', 'empty'].includes(status.status))
@@ -330,7 +300,7 @@ function SourceStatusSummary({ statuses, partial, sources }: {
     {failures.length > 0 && (
       <ul className="mt-1 list-inside list-disc text-muted-foreground">
         {failures.map(status => {
-          const label = sources.find(source => source.id === status.id)?.label ?? status.id
+          const label = SEARCH_ADAPTER_DESCRIPTORS.find(source => source.id === status.id)?.label ?? status.id
           return <li key={status.id}><span className="font-medium text-foreground">{label}:</span> {status.message ?? status.status}</li>
         })}
       </ul>

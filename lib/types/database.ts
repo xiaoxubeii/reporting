@@ -945,6 +945,7 @@ export type Database = {
           dropbox_refresh_token_encrypted: string | null
           encryption_key_encrypted: string | null
           feature_visibility: Json | null
+          search_category_config: Json
           search_source_config: Json
           file_storage_provider: string | null
           fund_id: string
@@ -1008,6 +1009,7 @@ export type Database = {
           dropbox_refresh_token_encrypted?: string | null
           encryption_key_encrypted?: string | null
           feature_visibility?: Json | null
+          search_category_config?: Json
           search_source_config?: Json
           file_storage_provider?: string | null
           fund_id: string
@@ -1071,6 +1073,7 @@ export type Database = {
           dropbox_refresh_token_encrypted?: string | null
           encryption_key_encrypted?: string | null
           feature_visibility?: Json | null
+          search_category_config?: Json
           search_source_config?: Json
           file_storage_provider?: string | null
           fund_id?: string

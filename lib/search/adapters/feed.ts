@@ -1,13 +1,14 @@
 import type { FeedEntry } from '@/lib/feeds/contracts'
 import { FEED_SEARCH_LIMIT } from '../contracts'
 import {
-  SearchProviderError,
-  type FeedSearchProvider,
+  getSearchAdapterDescriptor,
+  SearchAdapterError,
+  type SearchAdapter,
+  type SearchAdapterRequest,
+  type SearchAdapterResults,
   type SearchCandidate,
   type SearchContext,
-  type SearchProviderRequest,
-  type SearchProviderResults,
-} from '../provider-contracts'
+} from '../adapter-contracts'
 
 interface FeedQueryResult {
   readonly items: readonly FeedEntry[]
@@ -28,51 +29,49 @@ interface FeedQueryService {
   }): Promise<FeedQueryResult>
 }
 
-export class MinifluxFeedSearchProvider implements FeedSearchProvider {
+const DESCRIPTOR = getSearchAdapterDescriptor('feeds')
+
+export class MinifluxFeedSearchAdapter implements SearchAdapter {
+  readonly descriptor = DESCRIPTOR
+
   constructor(private readonly service: FeedQueryService) {}
 
-  async search(
-    request: SearchProviderRequest,
-    context: SearchContext,
-  ): Promise<SearchProviderResults> {
+  async search(request: SearchAdapterRequest, context: SearchContext): Promise<SearchAdapterResults> {
     try {
       const result = await this.service.listEntries({
         userId: context.userId,
-        limit: FEED_SEARCH_LIMIT,
+        limit: Math.min(request.limit, FEED_SEARCH_LIMIT),
         offset: 0,
         search: request.query,
         filter: 'all',
         signal: context.signal,
       })
-      if (!result.connected) return feedState('unavailable')
-      if (!result.hasSubscriptions) return feedState('empty')
-      const candidates = result.items.slice(0, FEED_SEARCH_LIMIT).map(normalizeFeedCandidate)
+      if (!result.connected) throw new SearchAdapterError('unavailable', 'Feeds are not connected', { retryable: false })
+      if (!result.hasSubscriptions) return EMPTY_RESULTS
       return Object.freeze({
-        candidates: Object.freeze(candidates),
-        statuses: Object.freeze([Object.freeze({
-          id: 'feeds' as const,
-          status: candidates.length > 0 ? 'ok' as const : 'empty' as const,
-          resultCount: candidates.length,
-        })]),
+        candidates: Object.freeze(result.items.slice(0, request.limit).map(normalizeFeedCandidate)),
       })
     } catch (error) {
+      if (error instanceof SearchAdapterError) throw error
       if (context.signal.aborted || isAbortError(error)) {
-        throw new SearchProviderError('timeout', 'Feed search timed out', { retryable: true })
+        throw new SearchAdapterError('timeout', 'Feed search timed out', { retryable: true })
       }
-      const code = providerCode(error)
+      const code = adapterCode(error)
       if (code === 'not_configured' || code === 'authentication') {
-        throw new SearchProviderError('unavailable', 'Feeds are not available', { retryable: false })
+        throw new SearchAdapterError('unavailable', 'Feeds are not available', { retryable: false })
       }
       if (code === 'rate_limited') {
-        throw new SearchProviderError('rate_limited', 'Miniflux rate limited the request', { retryable: true })
+        throw new SearchAdapterError('rate_limited', 'Miniflux rate limited the request', { retryable: true })
       }
       if (code === 'invalid_response') {
-        throw new SearchProviderError('invalid_response', 'Miniflux returned an invalid response', { retryable: false })
+        throw new SearchAdapterError('invalid_response', 'Miniflux returned an invalid response', { retryable: false })
       }
-      throw new SearchProviderError('failed', 'Feed search failed', { retryable: true })
+      throw new SearchAdapterError('failed', 'Feed search failed', { retryable: true })
     }
   }
 }
+
+const EMPTY_RESULTS: SearchAdapterResults = Object.freeze({ candidates: Object.freeze([]) })
 
 function normalizeFeedCandidate(entry: FeedEntry): SearchCandidate {
   return Object.freeze({
@@ -89,21 +88,7 @@ function normalizeFeedCandidate(entry: FeedEntry): SearchCandidate {
   })
 }
 
-function feedState(status: 'empty' | 'unavailable'): SearchProviderResults {
-  return Object.freeze({
-    candidates: Object.freeze([]),
-    statuses: Object.freeze([Object.freeze({
-      id: 'feeds' as const,
-      status,
-      resultCount: 0,
-      ...(status === 'unavailable'
-        ? { retryable: false, message: 'Connect a personal Miniflux account to search Feeds.' }
-        : {}),
-    })]),
-  })
-}
-
-function providerCode(error: unknown): string | null {
+function adapterCode(error: unknown): string | null {
   return typeof error === 'object' && error !== null && 'code' in error
     && typeof (error as { code?: unknown }).code === 'string'
     ? (error as { code: string }).code

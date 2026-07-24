@@ -1,23 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { assertRouteAccess } from '@/lib/access/gate'
-import { hasAccess } from '@/lib/access/effective'
-import { FeedService } from '@/lib/feeds/service'
 import { rateLimit } from '@/lib/rate-limit'
 import { parseSearchRequest, SearchContractError, type SearchFailureEnvelope, type SearchSuccessEnvelope } from '@/lib/search/contracts'
-import { MinifluxFeedSearchProvider } from '@/lib/search/providers/feed'
-import { DirectSpecializedSearchProvider } from '@/lib/search/providers/specialized'
-import { SearxngWebSearchProvider } from '@/lib/search/providers/web'
+import { loadSearchCategoryConfig } from '@/lib/search/categories'
 import { assertSameOriginSearchRequest, readSearchJson, SearchRequestBodyError } from '@/lib/search/route-input'
-import { configuredSearxngUrl } from '@/lib/search/searxng/config'
-import { instrumentFeedProvider, instrumentSpecializedProvider, instrumentWebProvider } from '@/lib/search/instrumentation'
+import { createSearchRuntime } from '@/lib/search/runtime'
 import { SearchService } from '@/lib/search/service'
 import { loadSearchSourcePolicy, SEARCH_RATE_LIMIT } from '@/lib/search/source-policy'
-import { ClinicalTrialsApiAdapter } from '@/lib/search/specialized/adapters/clinical-trials'
-import { Fda510kApiAdapter } from '@/lib/search/specialized/adapters/fda-510k'
-import { MassDeviceWebsiteAdapter } from '@/lib/search/specialized/adapters/massdevice'
-import { PubMedApiAdapter } from '@/lib/search/specialized/adapters/pubmed'
-import { TctmdWebsiteAdapter } from '@/lib/search/specialized/adapters/tctmd'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -50,23 +40,24 @@ export async function POST(request: Request) {
     }
 
     const parsed = parseSearchRequest(await readSearchJson(request))
-    const policy = await loadSearchSourcePolicy(admin, gate.fundId)
-    const searxngUrl = policy.web ? safeSearxngUrl() : null
-    const canSearchFeeds = hasAccess(gate.access, 'dealflow', 'read', 'feeds')
-    const specializedProvider = new DirectSpecializedSearchProvider([
-      new PubMedApiAdapter(),
-      new ClinicalTrialsApiAdapter(),
-      new Fda510kApiAdapter(),
-      new TctmdWebsiteAdapter(),
-      new MassDeviceWebsiteAdapter(),
-    ], () => policy)
+    const [policy, categories] = await Promise.all([
+      loadSearchSourcePolicy(admin, gate.fundId),
+      loadSearchCategoryConfig(admin, gate.fundId),
+    ])
+    if (!categories) return failure('unavailable', 'Search categories are not configured.', 503, true, requestId)
     const metricSink = (metric: { readonly source: string; readonly outcome: string; readonly resultCount: number; readonly durationMs: number }) => {
       console.info('[search] source completed', { requestId, ...metric })
     }
+    const runtime = await createSearchRuntime({
+      admin,
+      access: gate.access,
+      userId: gate.userId,
+      policy,
+    })
     const service = new SearchService({
-      ...(canSearchFeeds ? { feedProvider: instrumentFeedProvider(new MinifluxFeedSearchProvider(new FeedService(admin)), metricSink) } : {}),
-      ...(searxngUrl ? { webProvider: instrumentWebProvider(new SearxngWebSearchProvider(searxngUrl), metricSink) } : {}),
-      specializedProvider: instrumentSpecializedProvider(specializedProvider, metricSink),
+      categories,
+      registry: runtime.registry,
+      metricSink,
     })
     const data = await service.search(parsed, {
       fundId: gate.fundId,
@@ -90,10 +81,6 @@ export async function POST(request: Request) {
     console.error('[search] request failed', { requestId, durationMs: Math.round(performance.now() - startedAt) })
     return failure('search_failed', 'Search could not be completed. Try again shortly.', 500, true, requestId)
   }
-}
-
-function safeSearxngUrl(): string | null {
-  try { return configuredSearxngUrl() } catch { return null }
 }
 
 function failure(code: string, message: string, status: number, retryable: boolean, requestId: string) {
