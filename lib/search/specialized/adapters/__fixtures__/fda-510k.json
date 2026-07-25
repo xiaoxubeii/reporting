@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "last_updated": "2026-07-20",
+    "results": {
+      "skip": 0,
+      "limit": 5,
+      "total": 2
+    }
+  },
+  "results": [
+    {
+      "k_number": "K261234",
+      "device_name": "<b>Cardiac</b> Monitor",
+      "applicant": "Example Medical Inc.",
+      "decision_date": "20260718",
+      "product_code": "DSI",
+      "clearance_type": "Traditional"
+    },
+    {
+      "k_number": "K261235",
+      "device_name": "Infusion Pump",
+      "applicant": "Second Applicant",
+      "decision_date": "2026-07-17"
+    }
+  ]
+}

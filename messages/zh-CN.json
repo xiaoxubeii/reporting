@@ -25,6 +25,7 @@
     "inbound": "收件箱",
     "deals": "项目",
     "feeds": "订阅",
+    "search": "搜索",
     "today": "今日",
     "followSources": "关注来源",
     "emailAudit": "邮件审计",
@@ -59,6 +60,55 @@
     "showSidebar": "显示侧边栏",
     "hideSidebar": "隐藏侧边栏",
     "beta": "测试版"
+  },
+  "SearchProduct": {
+    "title": "搜索",
+    "description": "同时搜索个人订阅、可信专业来源和互联网。",
+    "formLabel": "搜索分类",
+    "queryLabel": "搜索关键词",
+    "placeholder": "搜索主题、公司、产品或临床问题",
+    "submit": "搜索",
+    "sources": "搜索分类",
+    "sourceHelp": "选择一个或多个已配置分类；不可用的分类无法勾选。",
+    "applyFilters": "应用",
+    "cancelFilters": "取消",
+    "results": "搜索结果",
+    "loading": "正在搜索所选分类…",
+    "loaded": "已加载 {count} 条结果。",
+    "stale": "条件已改变，请重新搜索",
+    "emptyStart": "输入关键词并提交，即可搜索所选分类。",
+    "noResults": "没有找到匹配的结果。",
+    "partial": "部分来源暂时无法搜索，以下仍显示已获取的结果。",
+    "reader": "阅读器",
+    "open": "打开来源",
+    "unavailable": "不可用",
+    "groups": { "personal": "个人订阅", "professional": "专业来源", "web": "互联网" },
+    "sourceLabels": { "feeds": "订阅", "web": "互联网搜索" },
+  "sourceReasons": {
+      "feeds": "请先连接个人 Miniflux 账户。",
+      "feedsUnavailable": "你的账户没有订阅源访问权限。",
+      "web": "Reporting 的 SearXNG 服务当前不可用。",
+      "fundDisabled": "当前基金未启用此来源。",
+      "categoryUnavailable": "此分类目前没有可用的搜索来源。",
+    "siteApproval": "直接搜索该网站需要运维人员批准。"
+  },
+  "sourceStatus": {
+    "loading": "正在搜索…",
+    "ok": "{count} 条结果",
+    "empty": "没有匹配结果",
+    "partial": "部分结果",
+    "unavailable": "不可用",
+    "timeout": "搜索超时",
+    "rateLimited": "暂时受到频率限制",
+    "invalidResponse": "返回格式不受支持",
+    "failed": "搜索失败"
+  },
+  "errors": {
+    "configurationUnavailable": "无法加载搜索分类，请联系基金管理员检查搜索设置。",
+    "query": "请输入搜索关键词。",
+      "sources": "请至少选择一个可用分类。",
+      "failed": "搜索失败，请重试。"
+    }
   },
   "Header": {
     "openMenu": "打开菜单",
@@ -3033,8 +3083,28 @@
       "appearance": "外观",
       "investmentVehicles": "投资载体",
       "defaultMetrics": "默认指标",
+      "searchCategories": "搜索分类",
       "agentAccess": "智能体访问（MCP 和 REST API 密钥）",
       "dealAi": "AI"
+    },
+    "searchCategories": {
+      "description": "将经过代码审核的搜索适配器组织成用户可选的分类。端点和凭据仍由服务端控制。",
+      "loading": "正在加载搜索分类…",
+      "loadError": "无法加载搜索分类。",
+      "saveError": "无法保存搜索分类。",
+      "saved": "搜索分类已保存。",
+      "newCategory": "新分类",
+      "label": "名称（{locale}）",
+      "categoryDescription": "描述（{locale}）",
+      "adapters": "搜索适配器",
+      "unavailableAdapter": "已停用的适配器",
+      "enabled": "启用",
+      "defaultSelected": "默认选中",
+      "moveUp": "上移分类",
+      "moveDown": "下移分类",
+      "remove": "删除分类",
+      "add": "添加分类",
+      "save": "保存分类"
     },
     "groups": {
       "externalData": "外部数据",
@@ -4102,7 +4172,7 @@
         "admin": { "label": "管理", "description": "API 密钥、AI 提供商、成员、集成和基金设置。" }
       },
       "features": {
-        "interactions": "互动", "investments": "投资", "notes": "备注", "lpLetters": "LP 信函", "imports": "导入", "asks": "请求", "lps": "LP", "lpTracking": "LP 资本跟踪", "lpAssociates": "GP 实体", "lpPortal": "LP 文档与共享", "lpActivity": "LP 活动日志", "compliance": "合规", "deals": "交易", "diligence": "尽职调查", "feeds": "订阅", "accounting": "会计", "gpEconomics": "GP 经济权益"
+        "interactions": "互动", "investments": "投资", "notes": "备注", "lpLetters": "LP 信函", "imports": "导入", "asks": "请求", "lps": "LP", "lpTracking": "LP 资本跟踪", "lpAssociates": "GP 实体", "lpPortal": "LP 文档与共享", "lpActivity": "LP 活动日志", "compliance": "合规", "deals": "交易", "diligence": "尽职调查", "feeds": "订阅", "search": "搜索", "accounting": "会计", "gpEconomics": "GP 经济权益"
       }
     },
     "vehicles": {

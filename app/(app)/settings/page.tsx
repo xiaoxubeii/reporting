@@ -37,6 +37,7 @@ import { AnalystPanel } from '@/components/analyst-panel'
 import { AffinityConnect } from '@/components/settings/affinity-connect'
 import { HeartbeatConnect } from '@/components/settings/heartbeat-connect'
 import { DealResearchSettings } from '@/components/settings/deal-research-settings'
+import { SearchCategorySettings } from '@/components/settings/search-category-settings'
 import { AdminSectionContext, GroupHeader, Section } from '@/components/settings/section'
 import {
   CUSTOM_AI_PROVIDER_LABEL,
@@ -194,6 +195,9 @@ export default function SettingsPage() {
           </Section>
           <CurrencySection currency={settings.currency} onSaved={load} />
           <FeatureVisibilitySection featureVisibility={settings.featureVisibility} lpPortalEnabled={settings.lpPortalEnabled} onSaved={load} />
+          <Section title={t('sections.searchCategories')}>
+            <SearchCategorySettings />
+          </Section>
           <Section title={t('sections.investmentVehicles')}>
             <VehiclesSettings />
           </Section>

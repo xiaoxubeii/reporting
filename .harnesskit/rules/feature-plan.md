@@ -21,9 +21,11 @@ dependency and ownership checks.
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
 | feed-category-popover | Select or create a Miniflux category from an anchored menu when following a personal source | feature-planning | `openspec/changes/add-feed-category-popover` | Follow opens a responsive accessible theme-aware folder picker for Uncategorized, existing categories, or inline new category creation; success refreshes the catalog and failure remains recoverable in context | serial-required | feeds-product, current Feeds localization slice, existing subscription mutation | main-agent | current checkout | complete |
 | curated-source-catalog | Redesign Follow sources around a curated RSS directory and a personal category-grouped Following view | feature-planning | `openspec/changes/redesign-follow-sources-catalog` | Authorized users can browse/search curated Website/RSS sources, choose a personal category when following a trusted source, and manage subscriptions grouped only by their personal Miniflux categories | serial-required | curated-explore, feeds-product, feed-category-popover, current Feeds localization slice | main-agent | current checkout | complete |
+| devctl-service-manager | Manage every repository-owned local service from one safe CLI with conflict-free ports and verified ownership | feature-planning | `openspec/changes/add-devctl-service-manager` | `./devctl.sh` starts, stops, restarts, inspects, and tails Web, Croner, Miniflux, and SearXNG; reserves a complete 5000/5010/5020 port block; never controls the external Supabase stack or foreign processes/containers | main-agent-only | Node.js, npm, Docker Compose, existing service entrypoints, external Supabase reachability | main-agent | current checkout | in_progress |
 | feeds-product | Add personal Today and Follow sources backed exclusively by Miniflux APIs | feature-planning | `openspec/changes/add-feeds-product` | Approved users receive isolated Miniflux identities and can read, save, discover, categorize, follow, and unfollow through the authenticated Reporting BFF | serial-required | Miniflux V2, Reporting auth and approval workflow, Dealflow grants | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | curated-explore | Add a global read-only curated discovery view backed by one non-admin Miniflux user | feature-planning | `openspec/changes/add-curated-explore` | Authorized users can browse curated categories/articles and idempotently follow a trusted source into their personal Miniflux without shared read/save mutations or Reporting feed tables | serial-required | feeds-product, Miniflux BFF, personal FeedService, Today reader | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | croner-node-runtime | Replace Vercel Cron with one persistent Croner process while running the existing Next.js API routes on a persistent Node server | feature-planning | `openspec/changes/replace-vercel-cron-with-croner` | Production exposes separate Web and Cron start commands; the Cron process schedules the existing five authenticated routes with overlap protection, health reporting, bounded requests, and graceful shutdown; Vercel schedules are removed | main-agent-only | existing Next.js cron routes, `CRON_SECRET`, production process supervisor | main-agent | current checkout | complete |
+| search-product | Add bounded federated Search across personal Feeds, Reporting SearXNG, and five direct professional sources | feature-planning | `openspec/changes/add-search-product` | Authorized users select fund-configured categories that resolve to code-reviewed adapters, receive safe normalized partial results with exact provenance, and use origin-correct result actions | serial-required | merged feeds-product, Reporting auth/access, dedicated SearXNG, five public source contracts | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-search-product` | complete |
 
 ## Feature Requirement Contract
 
@@ -342,6 +344,57 @@ contract for self-check, review, testing, and merge.
 - evidence: `.harnesskit/evidence/redesign-follow-sources-catalog/`
 - commit: included in the current main-branch submission
 
+### Feature: devctl-service-manager
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: This introduces a cross-service CLI, runtime ownership model, and local port contract.
+- Change: `openspec/changes/add-devctl-service-manager`
+- Task: implement `tasks.md` from failing lifecycle tests through the real CLI path.
+
+#### Acceptance
+
+- `./devctl.sh` supports `start`, `stop`, `restart`, `status`, and `logs` for Web, Croner, Miniflux, and SearXNG, with all services selected by default.
+- A complete ten-port block is reserved at 5000, then 5010, 5020, and so on; Web/Cron/Miniflux/SearXNG use offsets 0/1/2/3.
+- State, logs, generated development secrets, PIDs, process groups, and Compose project ownership remain checkout-local under `.devctl/`.
+- Repeated commands are idempotent, partial startup rolls back only newly created resources, and stale/foreign PIDs or containers are never stopped.
+- The configured Supabase service is observed as an external dependency and is never started or stopped.
+
+#### Allowed Change Scope
+
+- root `devctl.sh`, `scripts/devctl/**`, focused tests/fixtures
+- `scripts/miniflux-local.sh` only if required for an isolated Compose project name
+- `.gitignore`, README local-development documentation
+- focused OpenSpec and HarnessKit planning/state artifacts
+
+#### Shared Contract Changes
+
+- No production service contract changes.
+- Local Web, Cron health, Miniflux, and SearXNG URLs become dynamically derived from the selected port block when launched through devctl.
+- Existing standalone npm, Compose, and Miniflux script entrypoints remain valid.
+
+#### Verification Plan
+
+- smoke: shell syntax, strict OpenSpec validation, HarnessKit fast, diff check.
+- targeted: port allocation and lifecycle Vitest suites with fake processes/Compose commands; changed-scope lint/type checks.
+- full: real CLI Web/Cron lifecycle plus default-service preflight; browser verification is not applicable to a CLI-only change.
+
+#### Review Required
+
+- reviewer: yes, lifecycle correctness and safe rollback
+- security-reviewer: yes, PID ownership, secret handling, and command construction
+- browser/QA: no, CLI-only; real CLI verification is required instead
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `main` in the current checkout; unrelated untracked artifacts are preserved
+- implementation: OpenSpec and HarnessKit contracts complete; failing tests pending
+- verification: pending
+- risks: Docker/VPN availability, shared Compose names, stale PID reuse, and unrelated repository-wide type/lint failures
+- commit: not requested
+
 ### Feature: feeds-product
 
 #### OpenSpec Decision
@@ -475,6 +528,69 @@ contract for self-check, review, testing, and merge.
 - runtime: actual one-shot and resident entrypoints verified against local authenticated probe servers, including health, SIGTERM, malformed request recovery, and secret-free output
 - risks: Croner is in-memory, a second Cron replica duplicates triggers, process downtime misses occurrences, and long-running HTTP handlers still need their existing database recovery semantics
 
+### Feature: search-product
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible, security-sensitive federated feature crossing authenticated Miniflux, an operator-owned metasearch service, public APIs, and bounded website parsing.
+- Change: `openspec/changes/add-search-product`
+- Task: preserve the verified first milestone, then implement the Category-to-Adapter increment serially through contracts, fund-admin configuration, unified execution, UI, review, and real browser verification.
+
+#### Acceptance
+
+- An authorized caller explicitly submits one bounded plain-text query and selects available fund-configured categories.
+- Reporting resolves categories to one code-owned adapter registry/executor and never exposes adapter IDs, Miniflux, SearXNG, source endpoints, engines, or parser controls to the browser.
+- Fund administrators can atomically manage ordered bilingual category presentation, enablement, defaults, and registered adapter mappings for their own fund.
+- PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice are queried directly through reviewed adapters; professional search never falls back to SearXNG `site:` queries.
+- Concurrent source failures produce source-level statuses and useful partial results; fixed limits are 10 Feed, 10 Web, 5 per professional source, and 30 final results.
+- Exact URL and stable-identifier duplicates preserve all provenance, use `Feed > Specialized > Web` primary-origin precedence, and retain origin-correct reader/external-link behavior.
+- Access, source enablement, per-user rate limiting, query privacy, bounded plain-text rendering, public-URL validation, desktop/mobile accessibility, and reader focus restoration are verified.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-search-product/**`
+- `lib/search/**`, focused reuse of `lib/feeds/**`, access metadata, route declarations, source/category configuration, database types, and a forward-only migration
+- `app/api/search/**`, `app/api/settings/search-categories/**`, `app/(app)/search/**`, Search/Settings components, and the existing sidebar
+- Reporting-owned SearXNG Compose/configuration, `.env.example`, deployment/runbook documentation, fixtures, focused tests, and browser evidence
+- HarnessKit plan/state/progress evidence only
+
+#### Shared Contract Changes
+
+- Adds `dealflow.search` while keeping Feed search dependent on existing permitted Feeds read access and the caller's personal Miniflux identity.
+- Adds one validated authenticated `POST /api/search` contract with selected category IDs, normalized adapter-level hits/statuses, and no client-controlled adapter IDs, endpoints, engines, selectors, or limits.
+- Adds fund-scoped `search_category_config` plus an admin-only same-origin Settings boundary; the visible catalog is data-driven while adapter implementations remain code-owned.
+- Uses `CategoryResolver`, `AdapterRegistry`, and `AdapterExecutor` without a separate Provider layer.
+- Adds a separately pinned, loopback-only Reporting SearXNG service with an operator-owned General/News engine allowlist and independent secret.
+- Adds no Reporting search index, history, arbitrary crawling, paid API credentials, quota ledger, federated pagination, fuzzy/AI deduplication, or AI reranking.
+
+#### Verification Plan
+
+- smoke: contract tests, OpenSpec strict validation, SearXNG configuration/Compose validation, and HarnessKit fast.
+- targeted: category configuration/resolution, registry/executor and adapter fixtures, merge/URL/security behavior, route authorization/rate limiting/privacy, Settings editor, and Search component contracts.
+- full: TypeScript, targeted lint, full tests/build where baseline permits, Search E2E, code/security review, and real authenticated desktop/mobile browser verification against Reporting's actual entrypoint.
+
+#### Review Required
+
+- planner: yes, contract/sequence review before implementation
+- reviewer: yes, category resolution, adapter registry/executor, normalized contracts, deterministic merge, and UI integration
+- security-reviewer: yes, credentials, SSRF/redirects, untrusted HTML, URL safety, access, rate limits, privacy, and external-link isolation
+- docs-researcher: yes, official API parameters/responses and current public website search contracts
+- browser/QA: yes, the route, source drawer, partial/error states, Feed reader, and external actions are user-visible
+
+#### Progress / Evidence
+
+- status: complete
+- branch: `main` (merged from `codex/add-search-product`)
+- worktree: `/home/ubuntu/workspace/reporting`; unrelated dirty changes in the feature worktree and untracked main-worktree artifacts were preserved
+- planning: OpenSpec `spec-driven`; proposal/design/spec/tasks fully read; all 46 tasks complete
+- architecture: serial-required after merged Feeds; fund-scoped category JSON uses the existing fund-admin boundary, and one Adapter abstraction handles Feed, Web, API, and Website search
+- tests: pre-merge Category-to-Adapter focused suite passed with 20 files/92 tests; post-merge full suite passed with 157 files/1268 tests, with 2 files/4 environment-gated integration tests skipped
+- browser: authenticated admin changed the `internet` category label and mapping from `web` to `pubmed`; the Search page immediately rendered the new label as selected and returned live PubMed results, including in the mobile category drawer; the original `Internet -> web` configuration was restored
+- reviews: code, database, and security reviews completed with no blocker/high/medium findings; merge review removed SearXNG from the shared proxy network and retained port 8118 egress through an explicit host-gateway mapping
+- baseline: OpenSpec strict, HarnessKit fast, TypeScript, Compose validation, changed-file ESLint, full Vitest, and `next build --no-lint` pass; HarnessKit targeted/full stop on repository-wide pre-existing ESLint errors outside Search
+- risks: category configuration must remain fund-scoped and data-only; unknown adapter IDs fail closed; external API/engine availability and website parser drift remain operational partial-result states
+
 ## Parallelization Decision
 
 Classify every feature before assigning workers:
@@ -518,6 +634,7 @@ unmerged worktrees intact if a merge or verification fails.
 1. expert-validation (single feature; no merge split)
 2. ui-localization (serial-required in current checkout; no merge split)
 3. feeds-product and curated-explore (one shared feature branch because curated-explore depends on the personal Feeds BFF and Today UI)
+4. search-product (serial after feeds-product; merged from its isolated feature worktree)
 
 ## Final Evidence
 

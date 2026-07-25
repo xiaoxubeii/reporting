@@ -61,8 +61,8 @@ export class MinifluxClient {
     if (!this.apiKey) throw new Error('Miniflux API key is required')
   }
 
-  async verifyConnection(): Promise<{ id: number; username: string; isAdmin: boolean }> {
-    const value = await this.request('/v1/me')
+  async verifyConnection(signal?: AbortSignal): Promise<{ id: number; username: string; isAdmin: boolean }> {
+    const value = await this.request('/v1/me', { signal })
     if (!isRecord(value)) throw new MinifluxError('invalid_response', 'Miniflux returned an invalid user response')
     const id = positiveId(value.id)
     const username = scalarString(value.username)
@@ -87,8 +87,8 @@ export class MinifluxClient {
     })
   }
 
-  async listFeeds(): Promise<MinifluxFeed[]> {
-    const value = await this.request('/v1/feeds')
+  async listFeeds(signal?: AbortSignal): Promise<MinifluxFeed[]> {
+    const value = await this.request('/v1/feeds', { signal })
     if (!Array.isArray(value)) throw new MinifluxError('invalid_response', 'Miniflux returned an invalid feeds response')
     return value.flatMap(item => {
       if (!isRecord(item)) return []
@@ -172,6 +172,7 @@ export class MinifluxClient {
     search?: string | null
     status?: 'read' | 'unread' | null
     starred?: boolean | null
+    signal?: AbortSignal
   }): Promise<FeedEntryPage> {
     const query = new URLSearchParams()
     query.set('limit', String(params.limit))
@@ -184,7 +185,7 @@ export class MinifluxClient {
     if (params.starred !== undefined && params.starred !== null) query.set('starred', String(params.starred))
     const value = await this.request(
       `/v1/entries?${query.toString()}`,
-      {},
+      { signal: params.signal },
       MAX_ENTRY_LIST_RESPONSE_BYTES,
     )
     return normalizeMinifluxEntryPage(value, params)
@@ -206,6 +207,10 @@ export class MinifluxClient {
 
   private async request(path: string, init: RequestInit = {}, maxResponseBytes?: number): Promise<unknown> {
     const controller = new AbortController()
+    const parentSignal = init.signal
+    const abortFromParent = () => controller.abort(parentSignal?.reason)
+    if (parentSignal?.aborted) abortFromParent()
+    else parentSignal?.addEventListener('abort', abortFromParent, { once: true })
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs)
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
@@ -235,6 +240,7 @@ export class MinifluxClient {
       throw new MinifluxError('unavailable', 'Miniflux is unavailable')
     } finally {
       clearTimeout(timeout)
+      parentSignal?.removeEventListener('abort', abortFromParent)
     }
   }
 }

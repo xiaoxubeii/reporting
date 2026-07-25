@@ -1,0 +1,37 @@
+{
+  "studies": [
+    {
+      "protocolSection": {
+        "identificationModule": {
+          "nctId": "NCT01234567",
+          "briefTitle": "<b>Device</b> feasibility study",
+          "officialTitle": "Official device feasibility study"
+        },
+        "statusModule": {
+          "studyFirstPostDateStruct": {
+            "date": "2026-07-18",
+            "type": "ACTUAL"
+          }
+        },
+        "descriptionModule": {
+          "briefSummary": "<p>A controlled feasibility study.</p>"
+        }
+      }
+    },
+    {
+      "protocolSection": {
+        "identificationModule": {
+          "nctId": "NCT07654321",
+          "officialTitle": "Official-only title"
+        },
+        "statusModule": {
+          "studyFirstPostDateStruct": {
+            "date": "2026-07"
+          }
+        },
+        "descriptionModule": {}
+      }
+    }
+  ],
+  "totalCount": 2
+}

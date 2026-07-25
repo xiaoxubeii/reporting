@@ -945,6 +945,8 @@ export type Database = {
           dropbox_refresh_token_encrypted: string | null
           encryption_key_encrypted: string | null
           feature_visibility: Json | null
+          search_category_config: Json
+          search_source_config: Json
           file_storage_provider: string | null
           fund_id: string
           gemini_api_key_encrypted: string | null
@@ -1007,6 +1009,8 @@ export type Database = {
           dropbox_refresh_token_encrypted?: string | null
           encryption_key_encrypted?: string | null
           feature_visibility?: Json | null
+          search_category_config?: Json
+          search_source_config?: Json
           file_storage_provider?: string | null
           fund_id: string
           gemini_api_key_encrypted?: string | null
@@ -1069,6 +1073,8 @@ export type Database = {
           dropbox_refresh_token_encrypted?: string | null
           encryption_key_encrypted?: string | null
           feature_visibility?: Json | null
+          search_category_config?: Json
+          search_source_config?: Json
           file_storage_provider?: string | null
           fund_id?: string
           gemini_api_key_encrypted?: string | null
@@ -2973,6 +2979,14 @@ export type Database = {
     }
     Functions: {
       count_unread_notes: { Args: { p_user_id: string }; Returns: number }
+      rate_limit_check: {
+        Args: {
+          p_key: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: number
+      }
       enqueue_ingest_if_deal_idle: {
         Args: {
           p_fund_id: string

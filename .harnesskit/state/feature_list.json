@@ -137,6 +137,24 @@
       "notes": "Miniflux remains the sole category owner. The prior fixed-white 448px reference styling was superseded by the user's request to match Reporting controls; semantic theme tokens and a 320px compact menu are now implemented. Repository-wide verification remains blocked by unrelated existing lint errors; the current changed scope has no lint errors."
     },
     {
+      "id": "devctl-service-manager",
+      "title": "Unified local service and process control",
+      "status": "in_progress",
+      "current_task": "Add failing port allocation and lifecycle tests",
+      "definition_of_done": [
+        "One root CLI manages Web, Croner, Miniflux, and SearXNG lifecycle and logs",
+        "A complete free ten-port block is selected at 5000, 5010, 5020, or the next available increment",
+        "Runtime state, generated secrets, PIDs, process groups, logs, and Compose projects are checkout-local and protected",
+        "Repeated commands are idempotent and partial failures roll back only resources created by that invocation",
+        "Stale or foreign processes and Compose projects are never signaled or stopped",
+        "Supabase is reported only as an external dependency and is never controlled",
+        "Focused tests, strict OpenSpec, HarnessKit verification, reviews, and the real CLI path pass"
+      ],
+      "evidence": [],
+      "blocked_by": [],
+      "notes": "The default managed port block maps Web/Cron/Miniflux/SearXNG to offsets 0/1/2/3 and reserves offsets 4-9. The configured Supabase stack is shared outside this repository."
+    },
+    {
       "id": "feeds-product",
       "title": "Personal Miniflux feeds product",
       "status": "passing",
@@ -204,6 +222,38 @@
       ],
       "blocked_by": [],
       "notes": "Exactly one Cron replica is an operational requirement. Existing application tables remain the durable source of truth; Croner scheduling state is intentionally in memory."
+    },
+    {
+      "id": "search-product",
+      "title": "Federated Search across Feeds, Web, and direct professional sources",
+      "status": "passing",
+      "current_task": "Merged into main",
+      "definition_of_done": [
+        "Authorized callers can explicitly submit one bounded query with available fund-configured categories",
+        "CategoryResolver, AdapterRegistry, and AdapterExecutor isolate Miniflux, Reporting SearXNG, and the five direct professional adapters without a Provider layer",
+        "Fund administrators can atomically configure ordered bilingual categories and mappings to registered adapters for their own fund",
+        "Concurrent failures return useful partial results with fixed source and final result limits",
+        "Exact URL and stable-identifier duplicates preserve provenance and Feed over Specialized over Web primary-origin precedence",
+        "Search access, Feeds dependency, fund source enablement, per-user rate limiting, privacy, safe URLs, and untrusted content are enforced",
+        "Responsive desktop and mobile Search UI supports category selection, source statuses, origin-correct actions, accessibility, and Feed reader focus restoration",
+        "Focused tests, typecheck, Compose validation, strict OpenSpec validation, review, and real browser verification pass"
+      ],
+      "evidence": [
+        "Created codex/add-search-product from main 90543f5 after merged Feeds implementation was confirmed",
+        "openspec validate add-search-product --strict: passed with every implementation task complete",
+        "Category-to-Adapter focused Vitest: 20 files and 92 tests passed; full Vitest: 153 files and 1181 tests passed, with 2 files and 4 integration tests skipped by their declared environment gates",
+        "Post-merge full Vitest: 157 files and 1268 tests passed, with 2 files and 4 environment-gated integration tests skipped",
+        "npx tsc --noEmit and changed-file ESLint: passed with zero errors",
+        "npx next build --no-lint: passed with the existing local Supabase environment loaded",
+        "Reporting-owned SearXNG Compose config passed and the digest-pinned loopback container was healthy",
+        "Live PostgreSQL rate-limit verification rejected NULL arguments and allowed exactly 10 of 20 concurrent calls",
+        "Authenticated admin changed the internet category label and mapping from web to PubMed; Search immediately rendered the new selected category and returned live PubMed results, including in the mobile drawer",
+        "The local test fund was restored to Internet -> web; the disposable browser user and credential-bearing script were deleted and verified absent",
+        "Code, database, and security reviews completed with no remaining blocker, high, or medium findings",
+        "Post-merge security review removed unauthenticated SearXNG from the shared proxy network while retaining host-gateway access to Privoxy port 8118"
+      ],
+      "blocked_by": [],
+      "notes": "The fund-configured Category to code-owned Adapter increment is implemented, verified, and merged. V1 remains a bounded live federation only: no Reporting-owned index/history, paid APIs, arbitrary crawling, federated pagination, quota ledger, fuzzy/AI deduplication, or AI ranking."
     }
   ]
 }

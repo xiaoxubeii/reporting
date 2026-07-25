@@ -8,6 +8,8 @@ interface RateLimitConfig {
   limit: number
   /** Window size in seconds */
   windowSeconds: number
+  /** Multi-instance sensitive callers can deny when the shared DB limiter is unavailable. */
+  databaseFailure?: 'memory' | 'deny'
 }
 
 // ---------------------------------------------------------------------------
@@ -58,14 +60,14 @@ function memoryRateLimit(key: string, limit: number, windowMs: number): boolean 
  * Returns null if the request is allowed, or a 429 NextResponse if rate limited.
  */
 export async function rateLimit(config: RateLimitConfig): Promise<NextResponse | null> {
-  const { key, limit, windowSeconds } = config
+  const { key, limit, windowSeconds, databaseFailure = 'memory' } = config
 
   try {
     const admin = createAdminClient()
 
     // Atomic check-and-increment: deletes expired entries, counts remaining,
     // inserts new entry, and returns the count — all in one DB call.
-    const { data, error } = await admin.rpc('rate_limit_check' as any, {
+    const { data, error } = await admin.rpc('rate_limit_check', {
       p_key: key,
       p_limit: limit,
       p_window_seconds: windowSeconds,
@@ -74,7 +76,7 @@ export async function rateLimit(config: RateLimitConfig): Promise<NextResponse |
     if (error) throw error
 
     // RPC returns the count AFTER inserting. If count > limit, we're over.
-    const count = typeof data === 'number' ? data : (data as any)?.count ?? 0
+    const count = typeof data === 'number' ? data : 0
     if (count > limit) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -89,8 +91,20 @@ export async function rateLimit(config: RateLimitConfig): Promise<NextResponse |
 
     return null // Allowed
   } catch (err) {
-    // DB unavailable — fall back to in-memory rate limiting (fail-closed)
-    console.error('[rate-limit] DB error, using in-memory fallback:', err)
+    console.error('[rate-limit] shared limiter unavailable', {
+      fallback: databaseFailure,
+      error: err instanceof Error ? err.name : 'unknown',
+    })
+
+    // Search fans out to several external services. In a multi-instance
+    // deployment, a process-local bucket is not a real shared limit, so callers
+    // that opt into deny mode stop here instead of silently weakening the gate.
+    if (databaseFailure === 'deny') {
+      return NextResponse.json(
+        { error: 'Request capacity is temporarily unavailable.' },
+        { status: 429, headers: { 'Retry-After': String(windowSeconds) } },
+      )
+    }
 
     const allowed = memoryRateLimit(key, limit, windowSeconds * 1000)
     if (!allowed) {

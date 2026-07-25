@@ -15,6 +15,7 @@ export function FeedReaderSheet({
   onOpenChange,
   onStateChange,
   onStateCommitted,
+  loadRemoteImages = true,
 }: {
   entry: FeedEntryView | null
   entryId: string | null
@@ -22,6 +23,7 @@ export function FeedReaderSheet({
   onOpenChange: (open: boolean) => void
   onStateChange: (entry: FeedEntryView) => void
   onStateCommitted: (patch: { isRead?: boolean; isSaved?: boolean }) => void | Promise<void>
+  loadRemoteImages?: boolean
 }) {
   const locale = useLocale()
   const t = useTranslations('Feeds.reader')
@@ -128,7 +130,7 @@ export function FeedReaderSheet({
                 <p className="mt-3 text-sm text-muted-foreground">
                   {detail.source.title}{detail.author ? ` · ${detail.author}` : ''}{detail.publishedAt ? ` · ${format.dateTime(new Date(detail.publishedAt), { dateStyle: 'medium', timeStyle: 'short' })}` : ''}
                 </p>
-                {detail.imageUrl && (
+                {loadRemoteImages && detail.imageUrl && (
                   <img src={detail.imageUrl} alt="" className="mt-8 max-h-[480px] w-full rounded-lg border object-cover" referrerPolicy="no-referrer" />
                 )}
                 {detail.contentText ? (

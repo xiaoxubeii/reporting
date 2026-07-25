@@ -282,6 +282,32 @@ Two things worth knowing:
 - **A vehicle does not need a ledger to appear in LP reporting.** If you don't keep books on an SPV, record its LP capital movements directly under **Accounting > LP capital events** — by hand or by pasting a spreadsheet — and it produces the same capital accounts, statements and LP report as a fully-booked vehicle. You can promote it to a full ledger later.
 - **Associates and GP entities.** If a GP/associate vehicle invests in one of your funds, set both halves of its link in **Settings > Investment vehicles**: which fund it is *GP of*, and which partner on that fund's books it *invests as*. Without both, its members won't appear in the LP report.
 
+### Optional: Federated Search
+
+Search combines the signed-in user's Miniflux articles, direct professional APIs, and a Reporting-owned SearXNG instance. The feature is off by default and must be enabled for a fund under **Settings > Feature access** after its upstreams are healthy.
+
+The web-search container is intentionally separate from the main application Compose stack and from any SearXNG used by another product:
+
+```bash
+# Never overwrite an existing .env.local. Copy the example only for a new setup,
+# then add the REPORTING_SEARXNG_* values without replacing existing secrets.
+test -f .env.local || cp .env.example .env.local
+# Put a fresh value from `openssl rand -hex 32` in REPORTING_SEARXNG_SECRET.
+# The container runs as UID 977 and needs read-only traversal/read access.
+chmod 755 searxng && chmod 644 searxng/settings.yml
+set -a; . ./.env.local; set +a
+docker compose -f compose.searxng.yml up -d
+docker compose -f compose.searxng.yml ps
+```
+
+The pinned image listens only on `127.0.0.1:${REPORTING_SEARXNG_PORT:-8086}`. Keep `REPORTING_SEARXNG_URL` server-only and set it to the numeric loopback URL (normally `http://127.0.0.1:8086`). Do not proxy this port to the public internet. SearXNG reaches the host-published Privoxy service on port `8118` through Docker's explicit `host-gateway` mapping and does not join Privoxy's shared Docker network. The allowlist is fixed to Bing, DuckDuckGo, Brave, and Startpage general/news engines; clients cannot supply an endpoint, engine, selector, or `site:` fallback.
+
+Direct professional sources are PubMed, ClinicalTrials.gov API v2, and openFDA 510(k). TCTMD and MassDevice have bounded, fixture-tested HTML parsers, but their live transports are unavailable by default. Do not enable a website source until an operator has reviewed its terms/robots policy and the parser contract against the live structure. A structure change is reported as a source-level failure while other results remain available.
+
+Each user/fund pair may make 10 search requests per 60 seconds. A request can return at most 10 Feed results, 10 aggregate Web results, 5 per professional source, and 30 merged results. Logs contain request IDs, timings, outcomes, and counts only—never raw queries, result bodies, or downloaded HTML.
+
+For rollback, set the fund's `search` feature to **Off**, then stop the isolated container with `docker compose -f compose.searxng.yml down`. This does not modify Miniflux subscriptions or stored portfolio data. After an upgrade, validate with `docker compose -f compose.searxng.yml config --quiet` (do not print the expanded secret-bearing configuration) and confirm the container healthcheck before re-enabling a pilot fund.
+
 ### Optional: Two-factor authentication
 
 Admins and team members can enable TOTP-based two-factor authentication from the Settings page. Once enabled, MFA is enforced on every login. Use any authenticator app (1Password, Authy, Google Authenticator, etc.).
