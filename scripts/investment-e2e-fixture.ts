@@ -3,12 +3,10 @@ import { mkdtemp, open, rmdir, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import nextEnv from '@next/env'
+import { loadEnvConfig } from '@next/env'
 import { createClient } from '@supabase/supabase-js'
 
 const STATE_DIRECTORY_PREFIX = join(tmpdir(), 'reporting-investment-e2e-')
-const { loadEnvConfig } = nextEnv
-
 interface FixtureState {
   suffix: string
   email: string
