@@ -1,8 +1,6 @@
 import { spawn } from 'node:child_process'
-import { createHash } from 'node:crypto'
 import { open } from 'node:fs/promises'
 import { constants } from 'node:fs'
-import { createConnection } from 'node:net'
 import path from 'node:path'
 
 import { processIdentityMatches, readProcessIdentity } from './runtime.mjs'
@@ -38,53 +36,6 @@ export function buildDefaultAdapters(options) {
       ready: response => response.status === 200,
       env,
       stopTimeoutMs: cronStopTimeout,
-    }),
-    miniflux: createComposeAdapter({
-      name: 'miniflux',
-      serviceName: 'miniflux',
-      rootDir,
-      runtimeDir,
-      env,
-      composeFile: 'compose.miniflux.yml',
-      startCommand: context => ({
-        command: path.join(rootDir, 'scripts/miniflux-local.sh'),
-        args: [],
-        env: {
-          COMPOSE_PROJECT_NAME: composeProjectName(rootDir, context.basePort, 'feeds'),
-          MINIFLUX_COMPOSE_PROJECT_NAME: composeProjectName(rootDir, context.basePort, 'feeds'),
-          MINIFLUX_SECRETS_DIR: path.join(runtimeDir, 'secrets', 'miniflux'),
-          MINIFLUX_PORT: String(context.ports.miniflux),
-        },
-      }),
-      projectName: context => composeProjectName(rootDir, context.basePort, 'feeds'),
-      requiredServices: ['database', 'miniflux'],
-      publishedService: 'miniflux',
-    }),
-    searxng: createComposeAdapter({
-      name: 'searxng',
-      serviceName: 'searxng',
-      rootDir,
-      runtimeDir,
-      env,
-      composeFile: 'compose.searxng.yml',
-      preflight: async context => {
-        await runCommand('docker', ['network', 'inspect', 'vpnserver-proxy_default'], {
-          cwd: rootDir,
-          env: context.env,
-          errorMessage: 'SearXNG requires Docker network vpnserver-proxy_default',
-        })
-      },
-      startCommand: context => ({
-        command: 'docker',
-        args: [...composePrefix(rootDir, context, 'search', 'compose.searxng.yml'), 'up', '-d', '--wait'],
-        env: {
-          REPORTING_SEARXNG_PORT: String(context.ports.searxng),
-          REPORTING_SEARXNG_SECRET: context.env.REPORTING_SEARXNG_SECRET,
-        },
-      }),
-      projectName: context => composeProjectName(rootDir, context.basePort, 'search'),
-      requiredServices: ['searxng'],
-      publishedService: 'searxng',
     }),
   })
 }
@@ -167,128 +118,16 @@ function createProcessAdapter(options) {
   })
 }
 
-function createComposeAdapter(options) {
-  return Object.freeze({
-    async start(context) {
-      if (options.preflight) await options.preflight(context)
-      const definition = options.startCommand(context)
-      const logPath = path.join(options.runtimeDir, 'logs', `${options.name}.log`)
-      let result
-      try {
-        result = await runCommand(definition.command, definition.args, {
-          cwd: options.rootDir,
-          env: { ...context.env, ...dynamicRuntimeEnv(context), ...definition.env },
-          errorMessage: `${options.name} failed to start`,
-        })
-      } catch (error) {
-        try {
-          await rollbackCompose(options, context)
-        } catch (cleanupError) {
-          const failure = new Error(`${error.message}; cleanup failed: ${cleanupError.message}`)
-          failure.partialRecord = Object.freeze({
-            kind: 'compose',
-            project: options.projectName(context),
-            port: context.ports[options.name],
-          })
-          throw failure
-        }
-        throw error
-      }
-      await appendLog(logPath, result)
-      return Object.freeze({
-        kind: 'compose',
-        project: options.projectName(context),
-        port: context.ports[options.name],
-      })
-    },
-
-    async stop(record, context) {
-      const expectedProject = options.projectName(context)
-      if (record.project !== expectedProject) throw new Error(`${options.name} ownership does not match this runtime`)
-      await runCommand('docker', [
-        'compose',
-        '--project-name', expectedProject,
-        '-f', path.join(options.rootDir, options.composeFile),
-        'down',
-        '--remove-orphans',
-      ], {
-        cwd: options.rootDir,
-        env: { ...context.env, ...dynamicRuntimeEnv(context) },
-        errorMessage: `${options.name} failed to stop`,
-      })
-    },
-
-    async status(record, context) {
-      if (record?.kind !== 'compose' || record.project !== options.projectName(context)) {
-        return Object.freeze({ state: 'stale' })
-      }
-      try {
-        const output = await runCommand('docker', [
-          'compose',
-          '--project-name', options.projectName(context),
-          '-f', path.join(options.rootDir, options.composeFile),
-          'ps', '--format', 'json',
-        ], {
-          cwd: options.rootDir,
-          env: { ...context.env, ...dynamicRuntimeEnv(context) },
-          errorMessage: `${options.name} status failed`,
-        })
-        const healthy = composeServicesHealthy(output.stdout, options.requiredServices)
-        const published = composePublishesPort(output.stdout, options.publishedService, record.port)
-        const reachable = published && await canConnectPort(record.port)
-        return Object.freeze({ state: healthy && reachable ? 'running' : 'degraded' })
-      } catch {
-        return Object.freeze({ state: 'degraded' })
-      }
-    },
-
-    async logs(record, context) {
-      try {
-        const result = await runCommand('docker', [
-          'compose',
-          '--project-name', options.projectName(context),
-          '-f', path.join(options.rootDir, options.composeFile),
-          'logs', '--tail', '80', options.serviceName,
-        ], {
-          cwd: options.rootDir,
-          env: { ...context.env, ...dynamicRuntimeEnv(context) },
-          errorMessage: `${options.name} logs failed`,
-        })
-        return result.stdout
-      } catch (error) {
-        return `${error.message}\n${await tailFile(path.join(options.runtimeDir, 'logs', `${options.name}.log`), options.runtimeDir)}`
-      }
-    },
-  })
-}
-
 function dynamicRuntimeEnv(context) {
-  const minifluxSecrets = path.join(context.runtimeDir, 'secrets', 'miniflux')
   return Object.freeze({
     PORT: String(context.ports.web),
     NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${context.ports.web}`,
     NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${context.ports.web}`,
     CRON_RUNNER_BASE_URL: `http://127.0.0.1:${context.ports.web}`,
+    BACKGROUND_JOB_INTERNAL_ORIGIN: `http://127.0.0.1:${context.ports.web}`,
     CRON_RUNNER_HEALTH_HOST: '127.0.0.1',
     CRON_RUNNER_HEALTH_PORT: String(context.ports.cron),
-    MINIFLUX_PORT: String(context.ports.miniflux),
-    MINIFLUX_BASE_URL: `http://127.0.0.1:${context.ports.miniflux}`,
-    MINIFLUX_PROVISIONER_TOKEN_FILE: path.join(minifluxSecrets, 'provisioner_token'),
-    MINIFLUX_ALLOW_INSECURE_HTTP: 'true',
-    REPORTING_SEARXNG_PORT: String(context.ports.searxng),
-    REPORTING_SEARXNG_URL: `http://127.0.0.1:${context.ports.searxng}`,
   })
-}
-
-function composePrefix(rootDir, context, suffix, composeFile) {
-  const values = ['compose', '--project-name', composeProjectName(rootDir, context.basePort, suffix)]
-  values.push('-f', path.join(rootDir, composeFile))
-  return values
-}
-
-function composeProjectName(rootDir, basePort, suffix) {
-  const identity = createHash('sha256').update(rootDir).digest('hex').slice(0, 8)
-  return `reporting-devctl-${identity}-${basePort}-${suffix}`
 }
 
 async function waitForIdentity(pid) {
@@ -361,48 +200,6 @@ function processGroupExists(pgid) {
   }
 }
 
-async function rollbackCompose(options, context) {
-  await runCommand('docker', [
-    'compose',
-    '--project-name', options.projectName(context),
-    '-f', path.join(options.rootDir, options.composeFile),
-    'down',
-    '--remove-orphans',
-  ], {
-    cwd: options.rootDir,
-    env: { ...context.env, ...dynamicRuntimeEnv(context) },
-    errorMessage: `${options.name} rollback failed`,
-  })
-}
-
-async function runCommand(command, args, options) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: options.cwd,
-      env: options.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', chunk => { stdout += chunk.toString() })
-    child.stderr.on('data', chunk => { stderr += chunk.toString() })
-    child.once('error', error => reject(new Error(`${options.errorMessage}: ${error.message}`)))
-    child.once('exit', code => {
-      if (code === 0) resolve({ stdout, stderr })
-      else reject(new Error(`${options.errorMessage}${stderr.trim() ? `: ${stderr.trim()}` : ''}`))
-    })
-  })
-}
-
-async function appendLog(logPath, result) {
-  const handle = await openSafeLog(logPath)
-  try {
-    await handle.writeFile(`${result.stdout}${result.stderr}`, 'utf8')
-  } finally {
-    await handle.close()
-  }
-}
-
 async function tailFile(logPath, runtimeDir) {
   const expectedDirectory = path.resolve(runtimeDir, 'logs')
   if (path.dirname(path.resolve(logPath)) !== expectedDirectory) throw new Error('Refusing to read a log outside the devctl runtime')
@@ -472,16 +269,6 @@ function parseComposeOutput(rawOutput) {
   }
 }
 
-async function canConnectPort(port) {
-  return new Promise(resolve => {
-    const socket = createConnection({ host: '127.0.0.1', port })
-    socket.setTimeout(1_000)
-    socket.once('connect', () => { socket.destroy(); resolve(true) })
-    socket.once('timeout', () => { socket.destroy(); resolve(false) })
-    socket.once('error', () => resolve(false))
-  })
-}
-
 function parseBoundedInteger(rawValue, fallback, min, max) {
   if (rawValue === undefined || rawValue === '') return fallback
   if (!/^\d+$/.test(String(rawValue))) throw new Error('devctl timeout must be an integer')
@@ -494,4 +281,4 @@ function delay(milliseconds) {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-export { composeProjectName, dynamicRuntimeEnv }
+export { dynamicRuntimeEnv }

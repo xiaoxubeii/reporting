@@ -1,9 +1,10 @@
 import { clearState, ensureRuntimeLayout, readState, withRuntimeLock, writeState } from './runtime.mjs'
 import { findAvailablePortBlock, portMapForBase, validateBasePort } from './ports.mjs'
+import { EXTERNAL_DEPENDENCY_NAMES } from './dependencies.mjs'
 import path from 'node:path'
 
-export const SERVICE_NAMES = Object.freeze(['web', 'cron', 'miniflux', 'searxng'])
-const START_ORDER = Object.freeze(['miniflux', 'searxng', 'web', 'cron'])
+export const SERVICE_NAMES = Object.freeze(['web', 'cron'])
+const START_ORDER = Object.freeze(['web', 'cron'])
 const STOP_ORDER = Object.freeze([...START_ORDER].reverse())
 
 export function createDevctlManager(options) {
@@ -13,7 +14,7 @@ export function createDevctlManager(options) {
     env = process.env,
     adapters,
     portAllocator = findAvailablePortBlock,
-    supabaseProbe = async () => ({ state: 'unknown', ownership: 'external' }),
+    dependencyProbes = {},
   } = options
   if (!rootDir || !runtimeDir) throw new Error('rootDir and runtimeDir are required')
   for (const name of SERVICE_NAMES) {
@@ -147,11 +148,20 @@ export function createDevctlManager(options) {
       : states.every(value => value === 'stopped' || value === 'stale')
         ? 'stopped'
         : 'degraded'
+    const dependencies = await Promise.all(EXTERNAL_DEPENDENCY_NAMES.map(async name => {
+      const probe = dependencyProbes[name]
+      if (typeof probe !== 'function') return externalDependency(name, { state: 'unknown' })
+      try {
+        return externalDependency(name, await probe())
+      } catch {
+        return externalDependency(name, { state: 'unreachable' })
+      }
+    }))
     return Object.freeze({
       aggregate,
       basePort: state?.basePort ?? null,
       services: Object.freeze(services),
-      supabase: Object.freeze(await supabaseProbe()),
+      dependencies: Object.freeze(dependencies),
     })
   }
 
@@ -175,12 +185,23 @@ export function createDevctlManager(options) {
 
 function createEmptyState(rootDir, basePort, ports) {
   return Object.freeze({
-    version: 1,
+    version: 2,
     rootDir,
     basePort,
     ports: { ...ports },
     services: {},
     createdAt: new Date().toISOString(),
+  })
+}
+
+function externalDependency(name, result) {
+  const state = typeof result?.state === 'string' ? result.state : 'unknown'
+  const url = typeof result?.url === 'string' ? result.url : undefined
+  return Object.freeze({
+    name,
+    state,
+    ownership: 'external',
+    ...(url ? { url } : {}),
   })
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildDefaultAdapters,
   composePublishesPort,
   composeServicesHealthy,
   cronStopTimeout,
@@ -8,6 +9,16 @@ import {
 } from '../scripts/devctl/adapters.mjs'
 
 describe('devctl real adapter contracts', () => {
+  it('builds adapters only for lifecycle-managed Web and Cron', () => {
+    const adapters = buildDefaultAdapters({
+      rootDir: process.cwd(),
+      runtimeDir: '/tmp/reporting-devctl-test',
+      env: {},
+    })
+
+    expect(Object.keys(adapters)).toEqual(['web', 'cron'])
+  })
+
   it('requires every Compose service to be running and healthy', () => {
     const healthy = [
       { Service: 'database', State: 'running', Health: 'healthy' },
@@ -31,15 +42,25 @@ describe('devctl real adapter contracts', () => {
     expect(composePublishesPort(output, 'miniflux', 8085)).toBe(false)
   })
 
-  it('injects dynamic local URLs and the explicit local HTTP allowance', () => {
+  it('derives only managed Web/Cron topology and never overrides external dependencies', () => {
     const env = dynamicRuntimeEnv({
       runtimeDir: '/tmp/reporting-devctl-test',
-      ports: { web: 5000, cron: 5001, miniflux: 5002, searxng: 5003 },
+      ports: { web: 5000, cron: 5001 },
     })
 
-    expect(env.MINIFLUX_BASE_URL).toBe('http://127.0.0.1:5002')
-    expect(env.MINIFLUX_ALLOW_INSECURE_HTTP).toBe('true')
     expect(env.CRON_RUNNER_BASE_URL).toBe('http://127.0.0.1:5000')
+    expect(env.BACKGROUND_JOB_INTERNAL_ORIGIN).toBe('http://127.0.0.1:5000')
+    for (const key of [
+      'MINIFLUX_BASE_URL',
+      'MINIFLUX_PROVISIONER_TOKEN_FILE',
+      'MINIFLUX_ALLOW_INSECURE_HTTP',
+      'MINIFLUX_PORT',
+      'REPORTING_SEARXNG_URL',
+      'REPORTING_SEARXNG_PORT',
+      'REPORTING_SEARXNG_SECRET',
+    ]) {
+      expect(env).not.toHaveProperty(key)
+    }
   })
 
   it('keeps the stop timeout beyond the configured Cron shutdown grace', () => {

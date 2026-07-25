@@ -22,8 +22,6 @@ export function portMapForBase(basePort) {
   return Object.freeze({
     web: validated,
     cron: validated + 1,
-    miniflux: validated + 2,
-    searxng: validated + 3,
   })
 }
 

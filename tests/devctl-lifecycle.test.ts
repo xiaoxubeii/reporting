@@ -1,10 +1,10 @@
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { createDevctlManager } from '../scripts/devctl/manager.mjs'
-import { readState } from '../scripts/devctl/runtime.mjs'
+import { ensureRuntimeLayout, readState } from '../scripts/devctl/runtime.mjs'
 
 const temporaryDirectories = new Set<string>()
 
@@ -22,32 +22,38 @@ describe('devctl lifecycle orchestration', () => {
 
     expect((await fixture.manager.start()).changed).toBe(true)
     expect((await fixture.manager.start()).changed).toBe(false)
-    expect(fixture.events.filter(event => event.startsWith('start:'))).toHaveLength(4)
+    expect(fixture.events.filter(event => event.startsWith('start:'))).toEqual([
+      'start:web',
+      'start:cron',
+    ])
 
     const state = await readState(fixture.runtimeDir)
     expect(state?.basePort).toBe(5000)
-    expect(state?.ports).toEqual({ web: 5000, cron: 5001, miniflux: 5002, searxng: 5003 })
+    expect(state?.ports).toEqual({ web: 5000, cron: 5001 })
+    expect(Object.keys(state?.services ?? {})).toEqual(['web', 'cron'])
+    const persisted = JSON.parse(await readFile(path.join(fixture.runtimeDir, 'state.json'), 'utf8'))
+    expect(persisted).toMatchObject({
+      version: 1,
+      ports: { web: 5000, cron: 5001, miniflux: 5002, searxng: 5003 },
+    })
+    expect(Object.keys(persisted.services)).toEqual(['web', 'cron'])
 
     expect((await fixture.manager.stop()).changed).toBe(true)
     expect((await fixture.manager.stop()).changed).toBe(false)
     expect(fixture.events.filter(event => event.startsWith('stop:'))).toEqual([
       'stop:cron',
       'stop:web',
-      'stop:searxng',
-      'stop:miniflux',
     ])
   })
 
   it('rolls back only services created by a failed start in reverse order', async () => {
-    const fixture = await createFixture({ failService: 'web' })
+    const fixture = await createFixture({ failService: 'cron' })
 
-    await expect(fixture.manager.start()).rejects.toThrow('web failed')
+    await expect(fixture.manager.start()).rejects.toThrow('cron failed')
     expect(fixture.events).toEqual([
-      'start:miniflux',
-      'start:searxng',
       'start:web',
-      'stop:searxng',
-      'stop:miniflux',
+      'start:cron',
+      'stop:web',
     ])
     expect(await readState(fixture.runtimeDir)).toBeNull()
   })
@@ -63,19 +69,19 @@ describe('devctl lifecycle orchestration', () => {
   })
 
   it('retains ownership state when rollback cannot stop a created service', async () => {
-    const fixture = await createFixture({ failService: 'web', stopFailureService: 'searxng' })
+    const fixture = await createFixture({ failService: 'cron', stopFailureService: 'web' })
 
     await expect(fixture.manager.start()).rejects.toThrow('rollback incomplete')
     const state = await readState(fixture.runtimeDir)
-    expect(Object.keys(state?.services ?? {})).toEqual(['searxng'])
+    expect(Object.keys(state?.services ?? {})).toEqual(['web'])
   })
 
   it('persists a partial adapter record when internal cleanup fails', async () => {
-    const fixture = await createFixture({ partialStartService: 'miniflux' })
+    const fixture = await createFixture({ partialStartService: 'web' })
 
-    await expect(fixture.manager.start(['miniflux'])).rejects.toThrow('internal cleanup failed')
+    await expect(fixture.manager.start(['web'])).rejects.toThrow('internal cleanup failed')
     const state = await readState(fixture.runtimeDir)
-    expect(Object.keys(state?.services ?? {})).toEqual(['miniflux'])
+    expect(Object.keys(state?.services ?? {})).toEqual(['web'])
   })
 
   it('does not stop a stale or foreign process record', async () => {
@@ -90,7 +96,7 @@ describe('devctl lifecycle orchestration', () => {
     expect(await readState(fixture.runtimeDir)).toBeNull()
   })
 
-  it('reports running, degraded, stopped, and external Supabase separately', async () => {
+  it('reports managed health separately from all three external dependencies', async () => {
     const fixture = await createFixture({ degradedService: 'cron' })
     await fixture.manager.start(['web', 'cron'])
 
@@ -101,7 +107,41 @@ describe('devctl lifecycle orchestration', () => {
       ['web', 'running'],
       ['cron', 'degraded'],
     ])
-    expect(status.supabase.ownership).toBe('external')
+    expect(status.dependencies).toEqual([
+      { name: 'miniflux', state: 'running', ownership: 'external', url: 'https://feeds.example' },
+      { name: 'searxng', state: 'unreachable', ownership: 'external', url: 'https://search.example' },
+      { name: 'supabase', state: 'unconfigured', ownership: 'external' },
+    ])
+  })
+
+  it('silently removes legacy external Compose records without stopping them', async () => {
+    const fixture = await createFixture()
+    await ensureRuntimeLayout(fixture.runtimeDir)
+    const legacyState = {
+      version: 1,
+      rootDir: process.cwd(),
+      basePort: 5000,
+      ports: { web: 5000, cron: 5001, miniflux: 5002, searxng: 5003 },
+      services: {
+        miniflux: { kind: 'compose', project: 'legacy-miniflux', port: 5002 },
+        searxng: { kind: 'compose', project: 'legacy-searxng', port: 5003 },
+      },
+      createdAt: new Date().toISOString(),
+    }
+    await writeFile(
+      path.join(fixture.runtimeDir, 'state.json'),
+      `${JSON.stringify(legacyState, null, 2)}\n`,
+      { mode: 0o600 },
+    )
+
+    await fixture.manager.start(['web'])
+
+    const state = await readState(fixture.runtimeDir)
+    expect(state?.ports).toEqual({ web: 5000, cron: 5001 })
+    expect(Object.keys(state?.services ?? {})).toEqual(['web'])
+    expect(fixture.events).toEqual(['start:web'])
+    expect(fixture.events).not.toContain('stop:miniflux')
+    expect(fixture.events).not.toContain('stop:searxng')
   })
 
   it('creates a protected runtime directory and never stores injected secrets in state', async () => {
@@ -134,11 +174,11 @@ async function createFixture(options: {
       events.push(`start:${name}`)
       if (options.partialStartService === name) {
         const error = new Error('internal cleanup failed') as Error & { partialRecord?: object }
-        error.partialRecord = { kind: 'compose', project: `fixture-${name}`, port: context.ports[name] }
+        error.partialRecord = processRecord(name, context.ports[name])
         throw error
       }
       if (options.failService === name) throw new Error(`${name} failed`)
-      return { kind: 'compose', project: `fixture-${name}`, port: context.ports[name] }
+      return processRecord(name, context.ports[name])
     },
     async stop() {
       events.push(`stop:${name}`)
@@ -158,12 +198,33 @@ async function createFixture(options: {
     env: {
       DEVCTL_BASE_PORT: '5000',
       CRON_SECRET: fixtureMarker,
+      BACKGROUND_JOB_TOKEN_SECRET: fixtureMarker,
       REPORTING_SEARXNG_SECRET: fixtureMarker,
       NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:8000',
     },
     adapters,
     portAllocator: async () => 5000,
-    supabaseProbe: async () => ({ state: 'running', ownership: 'external' }),
+    dependencyProbes: Object.freeze({
+      miniflux: async () => ({
+        name: 'miniflux', state: 'running', ownership: 'external', url: 'https://feeds.example',
+      }),
+      searxng: async () => ({
+        name: 'searxng', state: 'unreachable', ownership: 'external', url: 'https://search.example',
+      }),
+      supabase: async () => ({ name: 'supabase', state: 'unconfigured', ownership: 'external' }),
+    }),
   })
   return { manager, runtimeDir, events, fixtureMarker }
+}
+
+function processRecord(name: string, port: number) {
+  const pid = name === 'web' ? 20_001 : 20_002
+  return {
+    kind: 'process',
+    pid,
+    pgid: pid,
+    startTime: '1',
+    commandHash: 'a'.repeat(64),
+    port,
+  }
 }

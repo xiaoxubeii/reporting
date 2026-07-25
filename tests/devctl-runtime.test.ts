@@ -12,7 +12,8 @@ import {
   readState,
   withRuntimeLock,
 } from '../scripts/devctl/runtime.mjs'
-import { filterDotenv } from '../scripts/devctl/cli.mjs'
+import { filterDotenv, parseArguments } from '../scripts/devctl/cli.mjs'
+import { SERVICE_NAMES } from '../scripts/devctl/manager.mjs'
 
 const temporaryDirectories = new Set<string>()
 const childProcessGroups = new Set<number>()
@@ -77,6 +78,14 @@ describe('devctl runtime safety', () => {
 
     expect(result.exitCode).toBe(1)
     expect(result.stderr).toContain('Unknown service: database')
+  })
+
+  it('allows only Web and Cron as lifecycle targets', () => {
+    expect(SERVICE_NAMES).toEqual(['web', 'cron'])
+    expect(parseArguments(['start'])).toMatchObject({ services: ['web', 'cron'] })
+    for (const dependency of ['miniflux', 'searxng', 'supabase']) {
+      expect(() => parseArguments(['start', dependency])).toThrow(`Unknown service: ${dependency}`)
+    }
   })
 
   it('refuses an existing unowned runtime directory and corrupted state', async () => {

@@ -12,7 +12,8 @@ import {
 import { constants } from 'node:fs'
 import path from 'node:path'
 
-const STATE_VERSION = 1
+const STATE_VERSION = 2
+const LEGACY_STATE_VERSION = 1
 const OWNER_MARKER = '.reporting-devctl-runtime'
 
 export async function ensureRuntimeLayout(runtimeDir) {
@@ -36,8 +37,9 @@ export async function readState(runtimeDir) {
     const statePath = path.join(runtimeDir, 'state.json')
     await assertRegularFile(statePath)
     const parsed = JSON.parse(await readSafeFile(statePath))
-    if (!isState(parsed)) throw new Error('devctl state is invalid; inspect or remove the protected runtime state')
-    return parsed
+    const state = normalizeState(parsed)
+    if (!state) throw new Error('devctl state is invalid; inspect or remove the protected runtime state')
+    return state
   } catch (error) {
     if (error?.code === 'ENOENT') return null
     if (error instanceof SyntaxError) throw new Error('devctl state is corrupted; inspect or remove the protected runtime state')
@@ -51,13 +53,29 @@ export async function writeState(runtimeDir, state) {
   const temporary = path.join(runtimeDir, `.state.${process.pid}.${randomBytes(6).toString('hex')}.tmp`)
   const handle = await open(temporary, 'wx', 0o600)
   try {
-    await handle.writeFile(`${JSON.stringify({ ...state, version: STATE_VERSION }, null, 2)}\n`, 'utf8')
+    await handle.writeFile(`${JSON.stringify(rollbackCompatibleState(state), null, 2)}\n`, 'utf8')
     await handle.sync()
   } finally {
     await handle.close()
   }
   await rename(temporary, target)
   await chmod(target, 0o600)
+}
+
+function rollbackCompatibleState(state) {
+  return {
+    ...state,
+    version: LEGACY_STATE_VERSION,
+    ports: {
+      web: state.basePort,
+      cron: state.basePort + 1,
+      miniflux: state.basePort + 2,
+      searxng: state.basePort + 3,
+    },
+    services: Object.fromEntries(
+      Object.entries(state.services).filter(([name]) => ['web', 'cron'].includes(name)),
+    ),
+  }
 }
 
 export async function clearState(runtimeDir) {
@@ -192,15 +210,30 @@ export function processExists(pid) {
   }
 }
 
-function isState(value) {
+function normalizeState(value) {
   if (!value || typeof value !== 'object') return false
   if (Object.keys(value).some(key => !['version', 'rootDir', 'basePort', 'ports', 'services', 'createdAt'].includes(key))) return false
-  if (value.version !== STATE_VERSION || typeof value.rootDir !== 'string') return false
+  if (![LEGACY_STATE_VERSION, STATE_VERSION].includes(value.version) || typeof value.rootDir !== 'string') return false
   if (!Number.isInteger(value.basePort) || value.basePort < 1024 || value.basePort > 65_526) return false
-  const names = ['web', 'cron', 'miniflux', 'searxng']
+  const names = value.version === LEGACY_STATE_VERSION
+    ? ['web', 'cron', 'miniflux', 'searxng']
+    : ['web', 'cron']
   if (!value.ports || Object.keys(value.ports).length !== names.length || names.some((name, offset) => value.ports[name] !== value.basePort + offset)) return false
   if (!value.services || typeof value.services !== 'object') return false
-  return Object.entries(value.services).every(([name, record]) => names.includes(name) && isServiceRecord(record, value.ports[name]))
+  if (!Object.entries(value.services).every(([name, record]) => (
+    names.includes(name)
+    && isServiceRecord(record, value.ports[name])
+    && (value.version === LEGACY_STATE_VERSION || record.kind === 'process')
+  ))) return false
+  const services = Object.fromEntries(
+    Object.entries(value.services).filter(([name, record]) => ['web', 'cron'].includes(name) && record.kind === 'process'),
+  )
+  return Object.freeze({
+    ...value,
+    version: STATE_VERSION,
+    ports: Object.freeze({ web: value.basePort, cron: value.basePort + 1 }),
+    services: Object.freeze(services),
+  })
 }
 
 function isServiceRecord(record, expectedPort) {

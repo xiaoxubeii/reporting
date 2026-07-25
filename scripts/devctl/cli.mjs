@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildDefaultAdapters } from './adapters.mjs'
+import { createExternalDependencyProbes } from './dependencies.mjs'
 import { createDevctlManager, normalizeServices, SERVICE_NAMES } from './manager.mjs'
 import { readExistingSecret, readOrCreateSecret } from './runtime.mjs'
 
@@ -30,13 +31,13 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   const cronSecret = startsServices
     ? await readOrCreateSecret(runtimeDir, 'cron_secret', sourceEnv.CRON_SECRET)
     : await readExistingSecret(runtimeDir, 'cron_secret', sourceEnv.CRON_SECRET)
-  const searchSecret = startsServices
-    ? await readOrCreateSecret(runtimeDir, 'searxng_secret', sourceEnv.REPORTING_SEARXNG_SECRET)
-    : await readExistingSecret(runtimeDir, 'searxng_secret', sourceEnv.REPORTING_SEARXNG_SECRET)
+  const backgroundJobTokenSecret = startsServices
+    ? await readOrCreateSecret(runtimeDir, 'background_job_token_secret', sourceEnv.BACKGROUND_JOB_TOKEN_SECRET)
+    : await readExistingSecret(runtimeDir, 'background_job_token_secret', sourceEnv.BACKGROUND_JOB_TOKEN_SECRET)
   const env = Object.freeze({
     ...sourceEnv,
     ...(cronSecret ? { CRON_SECRET: cronSecret } : {}),
-    ...(searchSecret ? { REPORTING_SEARXNG_SECRET: searchSecret } : {}),
+    ...(backgroundJobTokenSecret ? { BACKGROUND_JOB_TOKEN_SECRET: backgroundJobTokenSecret } : {}),
   })
   const adapters = dependencies.adapters ?? buildDefaultAdapters({ rootDir, runtimeDir, env })
   const manager = createDevctlManager({
@@ -45,7 +46,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     env,
     adapters,
     portAllocator: dependencies.portAllocator,
-    supabaseProbe: dependencies.supabaseProbe ?? (() => probeSupabase(sourceEnv)),
+    dependencyProbes: dependencies.dependencyProbes ?? createExternalDependencyProbes(sourceEnv),
   })
 
   try {
@@ -116,33 +117,11 @@ function formatStatus(status) {
       service.logPath,
     ].join(' '))
   }
-  const supabaseUrl = status.supabase.url ? ` ${status.supabase.url}` : ''
-  lines.push(`supabase   ${String(status.supabase.state).padEnd(11)} external${supabaseUrl}`)
+  for (const dependency of status.dependencies) {
+    const url = dependency.url ? ` ${dependency.url}` : ''
+    lines.push(`${dependency.name.padEnd(10)} ${String(dependency.state).padEnd(11)} external${url}`)
+  }
   return `${lines.join('\n')}\n`
-}
-
-export async function probeSupabase(env) {
-  const rawUrl = env.NEXT_PUBLIC_SUPABASE_URL?.trim()
-  if (!rawUrl) return Object.freeze({ state: 'unconfigured', ownership: 'external' })
-  let url
-  try {
-    url = new URL(rawUrl)
-  } catch {
-    return Object.freeze({ state: 'invalid', ownership: 'external', url: rawUrl })
-  }
-  try {
-    const response = await fetch(new URL('/auth/v1/health', url), {
-      signal: AbortSignal.timeout(1_500),
-      redirect: 'manual',
-    })
-    return Object.freeze({
-      state: response.status < 500 ? 'running' : 'degraded',
-      ownership: 'external',
-      url: url.origin,
-    })
-  } catch {
-    return Object.freeze({ state: 'unreachable', ownership: 'external', url: url.origin })
-  }
 }
 
 export function parseDotenv(text) {
