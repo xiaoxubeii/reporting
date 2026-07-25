@@ -3,10 +3,38 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "background-job-http-context",
+      "title": "HTTP-only background execution context and provider Search tool",
+      "status": "passing",
+      "current_task": "Implementation, runtime verification, and hardening complete",
+      "definition_of_done": [
+        "Session requests persist an immutable user actor while automatic work persists an explicit system actor",
+        "Croner authenticates one generic dispatcher and every worker call crosses HTTP with an attempt-scoped short Job Token",
+        "Workers restore fund, actor, payload, membership, access, scope, kind, attempt, and lease from live server state",
+        "The existing Search API is exposed as an optional provider tool without giving models tokens, endpoints, actor fields, or adapter controls",
+        "Generic claim and finalize logic contain no Deal-specific branches; domain projections remain in domain-owned hooks",
+        "Registry, token, context, queue, Search, provider loops, provenance, migrations, and real HTTP execution are verified",
+        "Correctness and security reviews have no remaining blocker or high finding"
+      ],
+      "evidence": [
+        "strict OpenSpec and HarnessKit fast passed",
+        "current feature-focused suite passed 18 files/131 tests; earlier correctness and security review suites also passed",
+        "current full Vitest run passed 177 files/1389 tests; its only failure was an unrelated devctl test unable to bind the running Next server's port 5000, and excluding that environmental test yielded 177 files/1384 tests passing",
+        "TypeScript passed; HarnessKit targeted remains blocked by repository-wide lint debt, including six pre-existing any usages in the touched Anthropic provider outside this change's diff",
+        "generalized migration replayed on local Supabase; claim/finalize introspection and rollback-only Deal projection verification passed",
+        "real generic Croner to dispatcher to worker to Search HTTP flow executed three attempts and failed closed on fabricated provider citations",
+        "current database state records one worker claim and nine completed Search tool calls; a freshly signed terminal-attempt Search token was rejected live",
+        "final correctness and security reviews found no remaining MEDIUM/HIGH/CRITICAL",
+        "production compilation passed with next build --no-lint; normal build remains blocked by unrelated repository-wide lint debt"
+      ],
+      "blocked_by": [],
+      "notes": "The remaining operational risk is provider behavior: the configured OpenRouter model may cite URLs outside server-collected Search evidence. Provenance validation intentionally rejects that output instead of persisting ungrounded Research."
+    },
+    {
       "id": "investment-decision-e2e",
       "title": "End-to-end investment decision workflow",
-      "status": "blocked",
-      "current_task": "End-to-end flow completed; repository baseline and browser evidence archive prevent the full done gate",
+      "status": "in_progress",
+      "current_task": "Re-run the complete workflow after synchronizing the current main branch",
       "definition_of_done": [
         "One uniquely tagged public pitch creates exactly one fund-scoped inbound Deal",
         "Deal Research is requested through the UI and executed through the real Cron path to a recorded terminal result",
@@ -18,18 +46,14 @@
         "Focused tests, changed-scope checks, production build, security review, and real browser acceptance pass"
       ],
       "evidence": [
-        "Real browser flow passed from public pitch through Deal conversion, research, promotion, Diligence, expert response, evidence ingestion, checklist, scoring, and memo",
-        "The expert response materialized once as an industry_expert document and contributed 10 claims and 10 citations after re-ingestion",
-        "Focused verification passed 118 tests across 11 files; full Vitest passed 1128 tests with 4 skips; TypeScript passed",
-        ".harnesskit/evidence/investment-decision-e2e/results.md records sanitized linkage assertions and verification outcomes",
-        "Changed-scope ESLint, secret scan, and git diff check passed"
+        "Pre-merge run: real browser flow passed from public pitch through Deal conversion, research, promotion, Diligence, expert response, evidence ingestion, checklist, scoring, and memo",
+        "Pre-merge run: the expert response materialized once as an industry_expert document and contributed 10 claims and 10 citations after re-ingestion",
+        "Pre-merge run: focused verification passed 118 tests across 11 files; full Vitest passed 1128 tests with 4 skips; TypeScript passed",
+        ".harnesskit/evidence/investment-decision-e2e/results.md records the pre-merge sanitized linkage assertions and verification outcomes",
+        "Pre-merge changed-scope ESLint, secret scan, and git diff check passed"
       ],
-      "blocked_by": [
-        "Repository-wide lint and production build remain red on pre-existing no-explicit-any and unused-variable errors outside this branch's changed scope",
-        "npm audit reports 19 pre-existing production dependency findings; dependency manifests were not changed in this lane",
-        "The real browser flow was exercised and its sanitized data assertions are recorded, but screenshots, console logs, and network traces were not retained as commit-safe evidence"
-      ],
-      "notes": "The isolated CardioSignal fixture completed the system workflow. Its two-of-five diligence progress and nine memo must-address items are valid unresolved investment evidence gaps, not pipeline failures. Expert auto-match used the supported manual fallback because no embedding model was configured; invitation used the copy-link fallback because outbound email was unavailable."
+      "blocked_by": [],
+      "notes": "The earlier isolated CardioSignal fixture completed the system workflow, but current-main revalidation and browser evidence are still required. No outbound email provider is configured, so invitation acceptance must verify the product's documented copy-link fallback without claiming provider delivery."
     },
     {
       "id": "harness-bootstrap",
@@ -96,30 +120,31 @@
       "id": "curated-source-catalog",
       "title": "Curated RSS source catalog and personal Following views",
       "status": "passing",
-      "current_task": "Complete",
+      "current_task": "Completed personal Miniflux category grouping and curated Follow category choice",
       "definition_of_done": [
         "Follow sources defaults to an URL-backed curated Explore view and offers a separate Following management view",
         "Curated category cards, keyword search, category Sheet, and deterministic representative sources use read-only collector data",
         "Website/RSS URL discovery and personal category selection remain available without advertising unsupported connectors",
-        "Trusted-reference Follow updates only the current user's Miniflux and refreshes Follow state without exposing collector feed URLs",
-        "Personal connection recovery, categories, health, category Sheet, and unfollow behavior remain intact",
+        "Trusted-reference Follow accepts a bounded personal category choice, updates only the current user's Miniflux, and never exposes or accepts collector feed URLs",
+        "Following groups sources only by the user's personal Miniflux categories, omits empty groups, and places Uncategorized last",
+        "Personal connection recovery, source health, filtering, and unfollow behavior remain intact",
         "Focused tests, strict OpenSpec validation, changed-scope checks, reviews, and real authenticated desktop/mobile acceptance pass"
       ],
       "evidence": [
-        "80 focused Explore service/API/access/UI/localization tests passed",
+        "103 focused Explore service/API/access/grouping/UI/localization tests passed",
         "strict OpenSpec validation, HarnessKit fast, changed-scope lint/type checks, and git diff --check passed",
-        "real authenticated desktop and 390px mobile English/Chinese Explore, category, search, URL discovery, Follow, refresh, Following, and connection-failure-independence flows passed",
+        "real authenticated desktop and 390px mobile English/Chinese Explore, category, search, URL discovery, Follow, refresh, Following, and connection-failure-independence flows passed; final category typography and count/helper removal are captured in explore-style desktop/mobile evidence",
         ".harnesskit/evidence/redesign-follow-sources-catalog/",
         "code, accessibility, and security reviews completed with no remaining in-scope findings"
       ],
       "blocked_by": [],
-      "notes": "Collector browsing and personal Miniflux state load independently. First release supports Website/RSS only and adds no Reporting feed persistence or remote favicon loading. Repository-wide targeted lint remains blocked by unrelated existing errors documented in progress.md."
+      "notes": "Collector browsing and personal Miniflux state load independently. Curated Follow accepts only a trusted source reference and bounded personal category choice; Following groups directly from personal Miniflux category state. First release supports Website/RSS only and adds no Reporting feed persistence or remote favicon loading. Repository-wide targeted lint remains blocked by unrelated existing errors documented in progress.md."
     },
     {
       "id": "feed-category-popover",
       "title": "Anchored category menu for personal feed follows",
-      "status": "in_progress",
-      "current_task": "Compact theme-aware styling implemented; authenticated browser acceptance pending",
+      "status": "passing",
+      "current_task": "Compact theme-aware category picker completed and verified",
       "definition_of_done": [
         "Follow actions open an anchored responsive category menu instead of using a permanent page-level category field",
         "Uncategorized and existing Miniflux categories follow immediately, including empty categories",
@@ -137,10 +162,35 @@
         ".harnesskit/evidence/add-feed-category-popover contains the browser report and final screenshots",
         "final UI/UX review completed with no remaining findings; disposable QA identities were removed",
         "compact theme-aware styling regression: 14/14 focused UI tests, changed-file ESLint with 0 errors, strict OpenSpec validation, and reviewer pass",
-        "browser automation reached the real localhost:3001 entrypoint but its isolated session could not inherit the ambient authenticated browser session"
+        "the final shared compact picker was exercised in the authenticated curated Follow desktop/mobile flow with focus restoration and viewport fit"
       ],
       "blocked_by": [],
       "notes": "Miniflux remains the sole category owner. The prior fixed-white 448px reference styling was superseded by the user's request to match Reporting controls; semantic theme tokens and a 320px compact menu are now implemented. Repository-wide verification remains blocked by unrelated existing lint errors; the current changed scope has no lint errors."
+    },
+    {
+      "id": "devctl-service-manager",
+      "title": "Unified local service and process control",
+      "status": "passing",
+      "current_task": "External dependency ownership migration implemented and verified",
+      "definition_of_done": [
+        "One root CLI manages only Web and Croner lifecycle and logs",
+        "A complete free ten-port block is selected at 5000, 5010, 5020, or the next available increment",
+        "Runtime state, generated Web/Cron secrets, PIDs, process groups, and logs are checkout-local and protected",
+        "Repeated commands are idempotent and partial failures roll back only resources created by that invocation",
+        "Stale or foreign processes are never signaled or stopped, and legacy Compose records are forgotten without container mutation",
+        "Miniflux, SearXNG, and Supabase are reported only as external dependencies and are never controlled",
+        "Focused tests, strict OpenSpec, HarnessKit verification, reviews, and the real CLI path pass"
+      ],
+      "evidence": [
+        "32 focused lifecycle, probe, migration, environment, port, runtime, and real shell-entrypoint tests passed; full Vitest passed 179 files and 1398 tests",
+        "changed-scope ESLint, repository TypeScript, shell/Node syntax, strict OpenSpec, HarnessKit fast, and diff hygiene passed",
+        "real restart started only Web and Cron; status reported external Miniflux 8085, SearXNG 8086, and Supabase 8000 as running",
+        "Docker identity, status, and start time for external and legacy duplicate Miniflux/SearXNG containers were identical before and after restart",
+        "runtime state exposes only Web/Cron; the disk file retains a v1-readable port envelope with only Web/Cron process records for safe code rollback",
+        "correctness and security re-reviews closed all findings; no MEDIUM, HIGH, or CRITICAL remains"
+      ],
+      "blocked_by": [],
+      "notes": "The managed port block assigns only Web/Cron offsets 0/1 and reserves offsets 2-9. Operator-supervised Miniflux, SearXNG, and Supabase remain external. Legacy duplicate 5002/5003 containers remain an operator cleanup item. HarnessKit targeted remains blocked by pre-existing repository-wide lint debt outside the devctl scope."
     },
     {
       "id": "feeds-product",
@@ -210,6 +260,38 @@
       ],
       "blocked_by": [],
       "notes": "Exactly one Cron replica is an operational requirement. Existing application tables remain the durable source of truth; Croner scheduling state is intentionally in memory."
+    },
+    {
+      "id": "search-product",
+      "title": "Federated Search across Feeds, Web, and direct professional sources",
+      "status": "passing",
+      "current_task": "Merged into main",
+      "definition_of_done": [
+        "Authorized callers can explicitly submit one bounded query with available fund-configured categories",
+        "CategoryResolver, AdapterRegistry, and AdapterExecutor isolate Miniflux, Reporting SearXNG, and the five direct professional adapters without a Provider layer",
+        "Fund administrators can atomically configure ordered bilingual categories and mappings to registered adapters for their own fund",
+        "Concurrent failures return useful partial results with fixed source and final result limits",
+        "Exact URL and stable-identifier duplicates preserve provenance and Feed over Specialized over Web primary-origin precedence",
+        "Search access, Feeds dependency, fund source enablement, per-user rate limiting, privacy, safe URLs, and untrusted content are enforced",
+        "Responsive desktop and mobile Search UI supports category selection, source statuses, origin-correct actions, accessibility, and Feed reader focus restoration",
+        "Focused tests, typecheck, Compose validation, strict OpenSpec validation, review, and real browser verification pass"
+      ],
+      "evidence": [
+        "Created codex/add-search-product from main 90543f5 after merged Feeds implementation was confirmed",
+        "openspec validate add-search-product --strict: passed with every implementation task complete",
+        "Category-to-Adapter focused Vitest: 20 files and 92 tests passed; full Vitest: 153 files and 1181 tests passed, with 2 files and 4 integration tests skipped by their declared environment gates",
+        "Post-merge full Vitest: 157 files and 1268 tests passed, with 2 files and 4 environment-gated integration tests skipped",
+        "npx tsc --noEmit and changed-file ESLint: passed with zero errors",
+        "npx next build --no-lint: passed with the existing local Supabase environment loaded",
+        "Reporting-owned SearXNG Compose config passed and the digest-pinned loopback container was healthy",
+        "Live PostgreSQL rate-limit verification rejected NULL arguments and allowed exactly 10 of 20 concurrent calls",
+        "Authenticated admin changed the internet category label and mapping from web to PubMed; Search immediately rendered the new selected category and returned live PubMed results, including in the mobile drawer",
+        "The local test fund was restored to Internet -> web; the disposable browser user and credential-bearing script were deleted and verified absent",
+        "Code, database, and security reviews completed with no remaining blocker, high, or medium findings",
+        "Post-merge security review removed unauthenticated SearXNG from the shared proxy network while retaining host-gateway access to Privoxy port 8118"
+      ],
+      "blocked_by": [],
+      "notes": "The fund-configured Category to code-owned Adapter increment is implemented, verified, and merged. V1 remains a bounded live federation only: no Reporting-owned index/history, paid APIs, arbitrary crawling, federated pagination, quota ledger, fuzzy/AI deduplication, or AI ranking."
     }
   ]
 }

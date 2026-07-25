@@ -10,6 +10,6 @@ services:
 
 secrets:
   miniflux_admin_password:
-    file: ./.miniflux-secrets/runtime/admin_password
+    file: ${MINIFLUX_SECRETS_DIR:-./.miniflux-secrets}/runtime/admin_password
   miniflux_admin_username:
-    file: ./.miniflux-secrets/runtime/admin_username
+    file: ${MINIFLUX_SECRETS_DIR:-./.miniflux-secrets}/runtime/admin_username

@@ -43,9 +43,13 @@ The existing `/api/feeds/explore/following` endpoint remains authoritative for w
 
 Text input in Explore is debounced into the curated source query and displays matching source rows. A public HTTP(S) website/RSS URL is submitted to the existing `/api/feeds/discover` contract and displays discovered feed candidates. Following view keeps personal source filtering. The UI does not claim to search unsupported connector types or languages.
 
-### Preserve the server-resolved Follow boundary
+### Preserve the server-resolved Follow boundary with personal category choice
 
-Curated source rows submit only their namespaced source reference to the existing Explore Follow route. The server reparses the reference, verifies collector ownership, resolves the trusted feed URL, and writes through `FeedService` to the current user's personal Miniflux. Folder organization remains available from the Following view; catalog Follow is intentionally one action into Uncategorized so no client source metadata crosses the boundary.
+Curated source rows submit their namespaced source reference plus an optional bounded personal category name to the existing Explore Follow route. The server rejects unknown fields, reparses the reference, verifies collector ownership, resolves the trusted feed URL, and writes through `FeedService` to the current user's personal Miniflux. The client never submits a collector feed URL or other source metadata. The category picker is shared with public website/RSS discovery so existing, new, and uncategorized choices behave consistently.
+
+### Group Following by personal Miniflux category
+
+The Following view derives its groups from the personal `/api/feeds/sources` projection. Only categories containing currently visible sources render, and sources without category metadata render in one localized Uncategorized group after all named categories. The prior topic cards and topic Sheet are removed because they duplicate the same personal category relationship. Reporting adds no category persistence and does not use curated Explore categories for this grouping.
 
 ### Split catalog presentation from personal management
 
@@ -59,6 +63,7 @@ The new catalog UI lives in a focused component rather than expanding the alread
 - **A large source catalog creates repeated client requests** → Search is debounced, query length is bounded, and the collector source set is currently small; pagination is deferred until justified.
 - **Tabs could imply unsupported source types** → Labels are product views (`Explore sources`, `Following`), not connector types.
 - **Shared Feeds files overlap localization work** → Changes remain localized through the existing `Feeds.sources` namespace and preserve unrelated in-progress translations.
+- **Category names are user-controlled** → The existing 100-character server bound is retained, unknown mutation fields are rejected, and React renders category text without HTML interpretation.
 
 ## Migration Plan
 

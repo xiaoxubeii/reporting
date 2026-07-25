@@ -1,0 +1,36 @@
+name: reporting-search
+
+services:
+  searxng:
+    image: docker.io/searxng/searxng@sha256:6a89a150d0163877caab1982b7a20d0a03fd4b39401a0d3f26f61ad205949442
+    user: "977:977"
+    restart: unless-stopped
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: 1.0
+    ports:
+      - "127.0.0.1:${REPORTING_SEARXNG_PORT:-8086}:8080"
+    networks:
+      - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      FORCE_OWNERSHIP: "false"
+      SEARXNG_BASE_URL: "http://127.0.0.1:${REPORTING_SEARXNG_PORT:-8086}/"
+      SEARXNG_SECRET: "${REPORTING_SEARXNG_SECRET:?Set REPORTING_SEARXNG_SECRET to a random secret}"
+    volumes:
+      - ./searxng:/etc/searxng:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null && python -c \"import socket; socket.create_connection(('host.docker.internal', 8118), 2).close()\""]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /var/cache/searxng:mode=1777

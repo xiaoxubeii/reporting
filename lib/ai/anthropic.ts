@@ -158,6 +158,10 @@ export class AnthropicProvider implements AIProvider {
     const customTools = params.tools ?? []
     const mcpServers = params.mcpServers ?? []
     const maxIterations = params.maxIterations ?? 6
+    if (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > 20) {
+      throw new Error('Invalid tool-loop iteration limit')
+    }
+    const knownCustomTools = new Set(customTools.map(tool => tool.name))
 
     const toolDefs: any[] = [
       ...customTools.map(t => ({
@@ -216,10 +220,10 @@ export class AnthropicProvider implements AIProvider {
             url: s.url,
             ...(s.authorizationToken ? { authorization_token: s.authorizationToken } : {}),
           })),
-        })
+        }, params.signal ? { signal: params.signal } : undefined)
         response = await stream.finalMessage()
       } else {
-        const stream = this.client.messages.stream(request)
+        const stream = this.client.messages.stream(request, params.signal ? { signal: params.signal } : undefined)
         response = await stream.finalMessage()
       }
 
@@ -247,6 +251,10 @@ export class AnthropicProvider implements AIProvider {
       // already resolved server-side by the time we get here.
       if (pending.length === 0) break
 
+      if (i === maxIterations - 1) {
+        throw new Error('Tool loop exhausted before a final response')
+      }
+
       messages.push({ role: 'assistant', content: response.content })
 
       // Run the requested tools. All results go back in ONE user message —
@@ -258,19 +266,20 @@ export class AnthropicProvider implements AIProvider {
         let resultText: string
         let isError = false
 
-        if (!params.executeTool) {
-          resultText = 'No tool executor is configured.'
+        if (!knownCustomTools.has(call.name) || !params.executeTool) {
+          resultText = 'Tool execution failed.'
           isError = true
         } else {
           try {
-            resultText = await params.executeTool({ name: call.name, input })
-          } catch (err) {
-            resultText = err instanceof Error ? err.message : 'Tool execution failed'
+            resultText = await params.executeTool({ id: call.id, name: call.name, input })
+          } catch {
+            resultText = 'Tool execution failed.'
             isError = true
           }
         }
 
         toolCalls.push({
+          id: call.id,
           name: call.name,
           input,
           resultPreview: resultText.slice(0, 500),

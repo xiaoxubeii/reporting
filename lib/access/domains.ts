@@ -128,7 +128,7 @@ export const DOMAIN_META: Record<Domain, DomainMeta> = {
     label: 'Deals',
     description: 'Inbound deals, the email inbox, source feeds, referrers, screening.',
     primaryFeature: 'deals',
-    features: ['deals', 'feeds'],
+    features: ['deals', 'feeds', 'search'],
   },
   diligence: {
     label: 'Diligence',

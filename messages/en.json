@@ -25,6 +25,7 @@
     "inbound": "Inbound",
     "deals": "Deals",
     "feeds": "Feeds",
+    "search": "Search",
     "today": "Today",
     "followSources": "Follow sources",
     "emailAudit": "Email audit",
@@ -59,6 +60,56 @@
     "showSidebar": "Show Sidebar",
     "hideSidebar": "Hide Sidebar",
     "beta": "beta"
+  },
+  "SearchProduct": {
+    "title": "Search",
+    "description": "Search your personal feeds, trusted professional sources, and the wider web.",
+    "formLabel": "Search categories",
+    "queryLabel": "Search query",
+    "placeholder": "Search a topic, company, product, or clinical question",
+    "submit": "Search",
+    "sources": "Search categories",
+    "sourceHelp": "Choose one or more configured categories. Unavailable categories cannot be selected.",
+    "applyFilters": "Apply",
+    "cancelFilters": "Cancel",
+    "results": "Results",
+    "loading": "Searching selected categories…",
+    "loaded": "Loaded {count} results.",
+    "stale": "Filters changed — search again",
+    "emptyStart": "Enter a query and submit to search the selected categories.",
+    "noResults": "No results matched this search.",
+    "partial": "Some sources could not be searched. Available results are shown below.",
+    "reader": "Reader",
+    "open": "Open source",
+    "opensInNewTab": "opens in a new tab",
+    "unavailable": "Unavailable",
+    "groups": { "personal": "Personal feeds", "professional": "Professional sources", "web": "Web" },
+    "sourceLabels": { "feeds": "Feeds", "web": "Web search" },
+  "sourceReasons": {
+      "feeds": "Connect your personal Miniflux account first.",
+      "feedsUnavailable": "Feeds are not available for your account.",
+      "web": "The Reporting SearXNG service is not available.",
+      "fundDisabled": "This source is disabled for the current fund.",
+      "categoryUnavailable": "No source in this category is currently available.",
+    "siteApproval": "Direct website search requires operator approval."
+  },
+  "sourceStatus": {
+    "loading": "Searching…",
+    "ok": "{count} results",
+    "empty": "No matches",
+    "partial": "Partial results",
+    "unavailable": "Unavailable",
+    "timeout": "Timed out",
+    "rateLimited": "Temporarily rate-limited",
+    "invalidResponse": "Unsupported response",
+    "failed": "Search failed"
+  },
+  "errors": {
+    "configurationUnavailable": "Search categories could not be loaded. Ask a fund administrator to check Search settings.",
+    "query": "Enter a search query.",
+      "sources": "Select at least one available category.",
+      "failed": "Search could not be completed. Try again."
+    }
   },
   "Header": {
     "openMenu": "Open menu",
@@ -3043,8 +3094,28 @@
       "appearance": "Appearance",
       "investmentVehicles": "Investment vehicles",
       "defaultMetrics": "Default metrics",
+      "searchCategories": "Search categories",
       "agentAccess": "Agent access (MCP + REST API keys)",
       "dealAi": "AI"
+    },
+    "searchCategories": {
+      "description": "Organize code-reviewed search adapters into the categories users choose. Endpoints and credentials remain server-controlled.",
+      "loading": "Loading search categories…",
+      "loadError": "Could not load search categories.",
+      "saveError": "Could not save search categories.",
+      "saved": "Search categories saved.",
+      "newCategory": "New category",
+      "label": "Label ({locale})",
+      "categoryDescription": "Description ({locale})",
+      "adapters": "Search adapters",
+      "unavailableAdapter": "Unavailable adapter",
+      "enabled": "Enabled",
+      "defaultSelected": "Selected by default",
+      "moveUp": "Move category up",
+      "moveDown": "Move category down",
+      "remove": "Remove category",
+      "add": "Add category",
+      "save": "Save categories"
     },
     "groups": {
       "externalData": "External Data",
@@ -4121,7 +4192,7 @@
         "admin": { "label": "Administration", "description": "API keys, AI providers, members, integrations, and fund settings." }
       },
       "features": {
-        "interactions": "Interactions", "investments": "Investments", "notes": "Notes", "lpLetters": "LP Letters", "imports": "Imports", "asks": "Asks", "lps": "LPs", "lpTracking": "LP capital tracking", "lpAssociates": "GP Entities", "lpPortal": "LP documents & sharing", "lpActivity": "LP activity log", "compliance": "Compliance", "deals": "Deals", "diligence": "Diligence", "feeds": "Feeds", "accounting": "Accounting", "gpEconomics": "GP economics"
+        "interactions": "Interactions", "investments": "Investments", "notes": "Notes", "lpLetters": "LP Letters", "imports": "Imports", "asks": "Asks", "lps": "LPs", "lpTracking": "LP capital tracking", "lpAssociates": "GP Entities", "lpPortal": "LP documents & sharing", "lpActivity": "LP activity log", "compliance": "Compliance", "deals": "Deals", "diligence": "Diligence", "feeds": "Feeds", "search": "Search", "accounting": "Accounting", "gpEconomics": "GP economics"
       }
     },
     "vehicles": {
@@ -5880,7 +5951,8 @@
         "accountReady": "Personal Miniflux account is ready",
         "noFeeds": "No feeds found for that website",
         "followed": "{title} followed",
-        "unfollowed": "{title} unfollowed"
+        "unfollowed": "{title} unfollowed",
+        "rssCopied": "RSS link for {title} copied"
       },
       "states": {
         "loadError": {
@@ -5911,6 +5983,22 @@
         "action": "Find feeds",
         "help": "Search the curated directory, or paste a public website/RSS URL to discover a new source."
       },
+      "followingSearch": {
+        "label": "Search followed sources",
+        "placeholder": "Search followed sources",
+        "addSource": "Add source",
+        "resultsLabel": "Followed source results"
+      },
+      "actions": {
+        "menuLabel": "Manage {name}",
+        "openSource": "Open source",
+        "openSourceLabel": "Open {name}",
+        "copyRss": "Copy RSS",
+        "copyRssLabel": "Copy RSS for {name}",
+        "unfollow": "Unfollow",
+        "unfollowLabel": "Unfollow {name}",
+        "copyFailed": "RSS link could not be copied"
+      },
       "catalog": {
         "loadErrorTitle": "Curated sources could not be loaded",
         "sourcesErrorTitle": "Source results could not be loaded",
@@ -5939,9 +6027,9 @@
       },
       "empty": {
         "noMatchTitle": "No sources match “{query}”",
-        "noMatchDescription": "Try another category, or paste a website or RSS URL above.",
+        "noMatchDescription": "Try another source name, category, domain, or RSS URL.",
         "noneTitle": "No sources followed yet",
-        "noneDescription": "Paste a website or RSS URL above to follow your first source."
+        "noneDescription": "Explore trusted sources or add a website or RSS URL to get started."
       },
       "health": {
         "degraded": "Feed degraded",

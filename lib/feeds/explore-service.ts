@@ -174,7 +174,7 @@ export class ExploreFeedService {
       .map(feed => exploreSourceRef(feed.id))
   }
 
-  async followSource(userId: string, reference: string) {
+  async followSource(userId: string, reference: string, topic?: string | null) {
     const sourceId = parseExploreSourceRef(reference)
     const client = await this.collectorClient()
     const [categories, feeds] = await Promise.all([client.listCategories(), client.listFeeds()])
@@ -185,7 +185,9 @@ export class ExploreFeedService {
     if (!source) {
       throw new FeedApiError('not_found', 404, 'The requested Explore source was not found.')
     }
-    return this.personal.followResolvedSource(userId, source.feedUrl)
+    return topic === undefined
+      ? this.personal.followResolvedSource(userId, source.feedUrl)
+      : this.personal.followResolvedSource(userId, source.feedUrl, topic)
   }
 
   private async collectorClient(): Promise<MinifluxClient> {

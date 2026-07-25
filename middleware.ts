@@ -4,7 +4,12 @@ import { matchRoute } from '@/lib/access/match-route'
 import { ROUTE_DOMAINS, UNGATED_ROUTES, requiredLevel } from '@/lib/access/route-domains'
 import { hasAccess, resolveAccessContext } from '@/lib/access/effective'
 import { DOMAIN_META } from '@/lib/access/domains'
+import { listBackgroundJobPolicies } from '@/lib/background-jobs/registry'
 import { getSupabaseCookieOptions } from '@/lib/supabase/cookie-options'
+
+const BACKGROUND_JOB_WORKER_PATHS = new Set(
+  listBackgroundJobPolicies().map(policy => policy.workerPath),
+)
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -15,6 +20,15 @@ export async function middleware(request: NextRequest) {
   if (pathname === '/expert-response' || pathname.startsWith('/api/public/expert-response/')) {
     return NextResponse.next({ request })
   }
+
+  // Alternate server-to-server authentication. Presence of Authorization is
+  // an exclusive mode switch: these handlers validate an exact-audience Job
+  // Token and never fall back to Session. Bypass Session refresh/MFA/domain
+  // middleware so a stray browser cookie cannot change that identity mode.
+  const hasBackgroundAuthorization = request.method === 'POST' && request.headers.has('authorization') && (
+    pathname === '/api/search' || BACKGROUND_JOB_WORKER_PATHS.has(pathname)
+  )
+  if (hasBackgroundAuthorization) return NextResponse.next({ request })
 
   let supabaseResponse = NextResponse.next({ request })
   const cookieOptions = getSupabaseCookieOptions()

@@ -9,6 +9,14 @@ const exploreSourceCatalog = readFileSync(
   new URL('../components/feeds/explore-source-catalog.tsx', import.meta.url),
   'utf8',
 )
+const followCategoryPopover = readFileSync(
+  new URL('../components/feeds/follow-category-popover.tsx', import.meta.url),
+  'utf8',
+)
+const followingSourceActions = readFileSync(
+  new URL('../components/feeds/following-source-actions.tsx', import.meta.url),
+  'utf8',
+)
 const todayFeed = readFileSync(
   new URL('../components/feeds/today-feed.tsx', import.meta.url),
   'utf8',
@@ -46,42 +54,27 @@ describe('Feeds recovery and pagination UI contract', () => {
   })
 
   it('chooses a Miniflux category from an anchored Follow menu instead of a permanent field', () => {
-    expect(followSources).toMatch(/function FollowCategoryPopover/)
-    expect(followSources).toMatch(/<Popover[\s\S]*<PopoverTrigger asChild>[\s\S]*<PopoverContent/)
-    expect(followSources).toMatch(/t\('categoryMenu\.uncategorized'\)/)
-    expect(followSources).toMatch(/t\('categoryMenu\.newCategory'\)/)
-    expect(followSources).toMatch(/maxLength=\{100\}/)
-    expect(followSources).toMatch(/if \(!nextOpen && pending\) return/)
-    expect(followSources).toMatch(/onEscapeKeyDown=\{event => \{ if \(pending\) event\.preventDefault\(\) \}\}/)
-    expect(followSources).toMatch(/onInteractOutside=\{event => \{ if \(pending\) event\.preventDefault\(\) \}\}/)
-    expect(followSources).toContain('max-h-[var(--radix-popover-content-available-height)]')
-    expect(followSources).toMatch(/newCategoryButtonRef[\s\S]*requestAnimationFrame[\s\S]*\.focus\(\)/)
+    expect(followCategoryPopover).toMatch(/export function FollowCategoryPopover/)
+    expect(followCategoryPopover).toMatch(/<Popover[\s\S]*<PopoverTrigger asChild>[\s\S]*<PopoverContent/)
+    expect(followCategoryPopover).toMatch(/t\('categoryMenu\.uncategorized'\)/)
+    expect(followCategoryPopover).toMatch(/t\('categoryMenu\.newCategory'\)/)
+    expect(followCategoryPopover).toMatch(/maxLength=\{100\}/)
+    expect(followCategoryPopover).toMatch(/if \(!nextOpen && pending\) return/)
+    expect(followCategoryPopover).toContain('max-h-[var(--radix-popover-content-available-height)]')
     expect(followSources).toContain('following={feed.isFollowing}')
-    expect(followSources).toContain('following={endpoint.isFollowing}')
-    expect(followSources).toContain('disabled={!onFollowingClick}')
-    expect(followSources).toMatch(/if \(following\) \{[\s\S]*return \([\s\S]*followingButtonRef[\s\S]*tabIndex=\{onFollowingClick \? 0 : -1\}[\s\S]*<Popover open=\{open\}/)
-    expect(followSources).toMatch(/previousFollowingRef[\s\S]*becameFollowing[\s\S]*if \(becameFollowing\)[\s\S]*followingButtonRef\.current\?\.focus\(\)/)
+    expect(followSources).not.toContain('following={endpoint.isFollowing}')
+    expect(followCategoryPopover).toContain('aria-disabled={!onFollowingClick || pending || undefined}')
+    expect(followCategoryPopover).not.toContain('disabled={!onFollowingClick}')
     expect(followSources).not.toContain('id="source-topic"')
     expect(followSources).not.toContain("t('discovery.topicLabel')")
   })
 
   it('matches the application control system for category selection', () => {
-    expect(followSources).toMatch(/PopoverArrow/)
-    expect(followSources).toContain("t('categoryMenu.searchCategories')")
-    expect(followSources).toMatch(/filteredCategories/)
-    expect(followSources).toContain('w-[min(20rem,calc(100vw-2rem))]')
-    expect(followSources).toContain('sideOffset={8}')
-    expect(followSources).toContain('collisionPadding={4}')
-    expect(followSources).toContain('bg-popover')
-    expect(followSources).toContain('text-popover-foreground')
-    expect(followSources).toContain('max-h-[var(--radix-popover-content-available-height)]')
-    expect(followSources).toMatch(/<Folder className="size-4/)
-    expect(followSources).toMatch(/<Plus className="size-4/)
-    expect(followSources).not.toContain('h-20')
-    expect(followSources).not.toContain('text-xl')
-    expect(followSources).not.toContain('bg-white')
-    expect(followSources).not.toContain('border-green-500')
-    expect(followSources).not.toContain("t('categoryMenu.description')")
+    expect(followCategoryPopover).toMatch(/PopoverArrow/)
+    expect(followCategoryPopover).toContain("t('categoryMenu.searchCategories')")
+    expect(followCategoryPopover).toMatch(/filteredCategories/)
+    expect(followCategoryPopover).toContain('w-[min(20rem,calc(100vw-2rem))]')
+    expect(followCategoryPopover).toContain('max-h-[var(--radix-popover-content-available-height)]')
   })
 
   it('treats a committed follow as success even when the catalog refresh needs recovery', () => {
@@ -159,6 +152,52 @@ describe('Feeds recovery and pagination UI contract', () => {
     expect(exploreSourceCatalog).not.toMatch(/Reddit|Newsletters|Google News|language/i)
   })
 
+  it('gives Following a local filter and keeps discovery controls in Explore only', () => {
+    expect(followSources).toMatch(/!isFollowingView && \([\s\S]*?<form onSubmit=\{discover\}/)
+    expect(followSources).toMatch(/isFollowingView && \([\s\S]*?followingSearch\.placeholder/)
+    expect(followSources).toContain("t('followingSearch.addSource')")
+    expect(followSources).toMatch(/href=\{pathname\}/)
+    expect(followSources).toMatch(/source\.endpoints[\s\S]*endpoint\.title[\s\S]*endpoint\.feedUrl/)
+    expect(followSources.match(/<form onSubmit=\{discover\}/g)).toHaveLength(1)
+  })
+
+  it('groups Following only by personal Miniflux categories', () => {
+    expect(followSources).toMatch(/groupFollowingSources\(filteredSources, topics/)
+    expect(followSources).toMatch(/followingGroups\.map\(\(group, index\) =>/)
+    expect(followSources).not.toContain("t('topics.title')")
+    expect(followSources).not.toMatch(/TopicSourcesSheet|openTopic|topicSlug/)
+  })
+
+  it('uses compact disclosure groups and explicit endpoint actions in Following', () => {
+    expect(followSources).toMatch(/<details key=\{group\.key\} open/)
+    expect(followSources).toMatch(/<summary[\s\S]*aria-labelledby=\{headingId\}/)
+    expect(followSources).toContain('<FollowingSourceActions')
+    expect(followSources).not.toContain('following={endpoint.isFollowing}')
+    expect(followSources).not.toContain("t('followedSources')")
+    expect(followSources).not.toMatch(/<p className="truncate text-xs text-muted-foreground">\{endpoint\.feedUrl\}<\/p>/)
+    expect(followingSourceActions).toMatch(/<Popover[\s\S]*<PopoverTrigger asChild>[\s\S]*<PopoverContent/)
+    expect(followingSourceActions).toContain("t('actions.openSource')")
+    expect(followingSourceActions).toContain("t('actions.copyRss')")
+    expect(followingSourceActions).toContain("t('actions.unfollow')")
+    expect(followingSourceActions).toContain('rel="noopener noreferrer"')
+    expect(followingSourceActions).toMatch(/navigator\.clipboard\.writeText\(feedUrl\)/)
+    expect(followingSourceActions).not.toMatch(/move|rename|PATCH/i)
+  })
+
+  it('uses the shared personal category picker for trusted curated Follow', () => {
+    expect(followSources).toContain('personalCategories={categories}')
+    expect(exploreSourceCatalog).toContain('<FollowCategoryPopover')
+    expect(exploreSourceCatalog).toContain('body: JSON.stringify({ topic: category })')
+    expect(exploreSourceCatalog).not.toMatch(/body: JSON\.stringify\(\{[^}]*feedUrl/)
+    expect(exploreSourceCatalog).not.toContain('error={rowError[source.id]}')
+  })
+
+  it('uses safe generated ids for Following group labels', () => {
+    expect(followSources).toContain('const followingGroupIdPrefix = useId()')
+    expect(followSources).toContain('aria-labelledby={headingId}')
+    expect(followSources).not.toContain('aria-labelledby={`${group.key}-heading`}')
+  })
+
   it('keeps curated catalog loading independent from the personal connection', () => {
     expect(exploreSourceCatalog).toMatch(/catalogError/)
     expect(exploreSourceCatalog).toMatch(/followingError/)
@@ -183,6 +222,27 @@ describe('Feeds recovery and pagination UI contract', () => {
     expect(exploreSourceCatalog).toContain("followStatusError ?? t('catalog.followUnavailable')")
     expect(exploreSourceCatalog).toMatch(/setFollowingRefreshKey\(current => current \+ 1\)/)
     expect(exploreSourceCatalog).toContain("t('catalog.retryFollowing')")
+  })
+
+  it('matches the supplied Explore category typography without count or helper copy', () => {
+    expect(exploreSourceCatalog).toContain('text-sm font-normal leading-normal tracking-normal')
+    expect(exploreSourceCatalog).toContain('truncate text-sm font-medium text-muted-foreground')
+    expect(exploreSourceCatalog).not.toContain("t('sourceCount', { count: category.sourceCount })")
+    expect(exploreSourceCatalog).not.toContain("t('sourceCount', { count: sources.length })")
+    expect(exploreSourceCatalog).not.toContain("t('sourceCount', { count: selectedCategory.sourceCount })")
+    expect(followSources).not.toContain("t('discovery.help')")
+  })
+
+  it('uses four compact category columns at desktop widths', () => {
+    expect(exploreSourceCatalog).toContain('sm:grid-cols-2 lg:grid-cols-4')
+    expect(exploreSourceCatalog).not.toContain('lg:grid-cols-3')
+  })
+
+  it('uses compact category card height and vertical spacing', () => {
+    expect(exploreSourceCatalog).toContain('min-h-36 rounded-xl')
+    expect(exploreSourceCatalog).toContain('mt-8 flex items-center gap-3')
+    expect(exploreSourceCatalog).not.toContain('min-h-44 rounded-xl')
+    expect(exploreSourceCatalog).not.toContain('mt-12 flex items-center gap-3')
   })
 
   it('groups the all-category Explore view by curated Miniflux category', () => {

@@ -1,5 +1,8 @@
 import OpenAI from 'openai'
-import type { AIProvider, AIModel, AIResult, CreateMessageParams, CreateChatParams, ContentBlock } from './types'
+import type {
+  AIProvider, AIModel, AIResult, CreateMessageParams, CreateChatParams, ContentBlock,
+  CreateToolLoopParams, ToolCallRecord, ToolLoopResult,
+} from './types'
 import {
   parseCustomAIProviderRequestParameters,
   type CustomAIProviderRequestParameters,
@@ -15,6 +18,8 @@ export class OpenAIProvider implements AIProvider {
   private client: OpenAI
   private customBaseURL: boolean
   private requestParameters: CustomAIProviderRequestParameters
+
+  readonly supportsToolLoop = true
 
   constructor(apiKey: string, baseURL?: string, options: OpenAIProviderOptions = {}) {
     const safeFetch: typeof fetch | undefined = options.rejectRedirects
@@ -89,6 +94,93 @@ export class OpenAIProvider implements AIProvider {
     }
   }
 
+  async createToolLoop(params: CreateToolLoopParams): Promise<ToolLoopResult> {
+    if ((params.mcpServers?.length ?? 0) > 0) {
+      throw new Error('OpenAI-compatible provider does not support remote MCP toolsets')
+    }
+    const maxIterations = params.maxIterations ?? 6
+    if (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > 20) {
+      throw new Error('Invalid tool-loop iteration limit')
+    }
+
+    const messages: OpenAI.ChatCompletionMessageParam[] = []
+    if (params.system) messages.push({ role: 'system', content: params.system })
+    if (params.messages?.length) {
+      messages.push(...params.messages.map(message => ({ role: message.role, content: message.content } as const)))
+    } else {
+      const content = typeof params.content === 'string'
+        ? params.content
+        : toOpenAIContent(params.content ?? [])
+      messages.push({ role: 'user', content })
+    }
+
+    const definitions = params.tools ?? []
+    const knownTools = new Set(definitions.map(tool => tool.name))
+    const tools: OpenAI.ChatCompletionTool[] = definitions.map(tool => ({
+      type: 'function',
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.inputSchema,
+      },
+    }))
+    const toolCalls: ToolCallRecord[] = []
+    const usage = { inputTokens: 0, outputTokens: 0 }
+    let truncated = false
+
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      const response = await this.client.chat.completions.create({
+        ...this.requestParameters,
+        model: params.model,
+        max_tokens: params.maxTokens,
+        messages,
+        ...(tools.length > 0 ? { tools } : {}),
+      } as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming, params.signal ? { signal: params.signal } : undefined)
+      usage.inputTokens += response.usage?.prompt_tokens ?? 0
+      usage.outputTokens += response.usage?.completion_tokens ?? 0
+      const choice = response.choices[0]
+      if (!choice) throw new Error('OpenAI-compatible provider returned no choice')
+      if (choice.finish_reason === 'length') truncated = true
+
+      const pending = choice.message.tool_calls ?? []
+      if (pending.length === 0) {
+        return {
+          text: choice.message.content ?? '',
+          usage,
+          truncated,
+          toolCalls,
+        }
+      }
+      if (iteration === maxIterations - 1) {
+        throw new Error('Tool loop exhausted before a final response')
+      }
+
+      messages.push(choice.message as OpenAI.ChatCompletionAssistantMessageParam)
+      for (const call of pending) {
+        if (call.type !== 'function') throw new Error('Unsupported OpenAI-compatible tool call type')
+        const name = call.function.name
+        let input: Record<string, unknown> = {}
+        let resultText = 'Tool execution failed.'
+        let isError = false
+        try {
+          const parsed = JSON.parse(call.function.arguments)
+          if (!isRecord(parsed)) throw new Error('Tool arguments must be an object')
+          input = parsed
+          if (!knownTools.has(name)) throw new Error('Unknown tool')
+          if (!params.executeTool) throw new Error('No tool executor')
+          resultText = await params.executeTool({ id: call.id, name, input })
+        } catch {
+          isError = true
+          resultText = 'Tool execution failed.'
+        }
+        toolCalls.push({ id: call.id, name, input, resultPreview: resultText.slice(0, 500), isError })
+        messages.push({ role: 'tool', tool_call_id: call.id, content: resultText })
+      }
+    }
+
+    throw new Error('Tool loop exhausted before a final response')
+  }
+
   async testConnection(): Promise<void> {
     if (this.customBaseURL) {
       // For Ollama/custom endpoints, list models to verify connectivity
@@ -127,6 +219,10 @@ export class OpenAIProvider implements AIProvider {
       .sort((a, b) => b.created - a.created)
       .map(m => ({ id: m.id, name: m.id }))
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function toOpenAIContent(blocks: ContentBlock[]): OpenAI.ChatCompletionContentPart[] {

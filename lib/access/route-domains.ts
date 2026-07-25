@@ -214,6 +214,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/feeds/sources': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/subscriptions': { domain: 'dealflow', feature: 'feeds', level: { POST: 'read' } },
   'api/feeds/subscriptions/[id]': { domain: 'dealflow', feature: 'feeds', level: { DELETE: 'read' } },
+  'api/search': { domain: 'dealflow', feature: 'search', level: { POST: 'read' } },
   'api/known-referrers': { domain: 'dealflow' },
   'api/known-referrers/[id]': { domain: 'dealflow' },
   'api/emails': { domain: 'dealflow' },
@@ -305,6 +306,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/settings/heartbeat': { domain: 'admin' },
   'api/settings/senders': { domain: 'admin' },
   'api/settings/senders/[id]': { domain: 'admin' },
+  'api/settings/search-categories': { domain: 'admin' },
   // The control panel for who can see what: reading it maps the fund's data.
   'api/settings/access': { domain: 'admin' },
   'api/settings/whitelist': { domain: 'admin' },
@@ -409,10 +411,11 @@ export const UNGATED_ROUTES: Record<string, string> = {
 
   // Service-triggered: shared CRON_SECRET, fail-closed if unset.
   'api/cron/affinity-sync': 'Cron: CRON_SECRET.',
-  'api/cron/deal-research': 'Cron: CRON_SECRET.',
+  'api/cron/background-jobs': 'Cron: CRON_SECRET; dispatches only code-registered background workers.',
   'api/cron/deals-digest': 'Cron: CRON_SECRET.',
   'api/cron/heartbeat-backfill': 'Cron: CRON_SECRET.',
   'api/cron/memo-agent-worker': 'Cron: CRON_SECRET.',
+  'api/internal/background-jobs/deal-research/run': 'Internal HTTP worker: exact-audience, attempt-bound Job Token and live context restoration.',
 
   // Inbound from third parties, authenticated by a token in the path or a provider signature.
   'api/webhooks/heartbeat/[token]': 'Inbound webhook: high-entropy path token.',

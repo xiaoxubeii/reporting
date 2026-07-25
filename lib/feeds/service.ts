@@ -127,25 +127,19 @@ export class FeedService {
     const existing = feeds.find(feed => canonicalUrl(feed.feedUrl) === canonicalUrl(feedUrl))
     if (existing) return subscriptionView(existing.id)
 
-    const topic = cleanText(input.topic, 100)
-    let categoryId: number | null = null
-    if (topic) {
-      const categories = await client.listCategories()
-      const category = categories.find(item => item.title.toLocaleLowerCase() === topic.toLocaleLowerCase())
-        ?? await client.createCategory(topic)
-      categoryId = category.id
-    }
+    const categoryId = await this.resolveCategoryId(client, input.topic)
     return this.createFeedWithRecovery(client, feedUrl, categoryId)
   }
 
-  async followResolvedSource(userId: string, trustedUrl: string) {
+  async followResolvedSource(userId: string, trustedUrl: string, topic?: string | null) {
     const feedUrl = await validDiscoveryUrl(trustedUrl)
     const client = await this.clientForUser(userId)
     const existing = (await client.listFeeds()).find(
       feed => canonicalUrl(feed.feedUrl) === canonicalUrl(feedUrl),
     )
     if (existing) return subscriptionView(existing.id)
-    return this.createFeedWithRecovery(client, feedUrl, null)
+    const categoryId = await this.resolveCategoryId(client, topic)
+    return this.createFeedWithRecovery(client, feedUrl, categoryId)
   }
 
   async unfollow(userId: string, feedId: number): Promise<void> {
@@ -177,19 +171,29 @@ export class FeedService {
     }
   }
 
+  private async resolveCategoryId(client: MinifluxClient, value?: string | null): Promise<number | null> {
+    const topic = cleanText(value, 100)
+    if (!topic) return null
+    const categories = await client.listCategories()
+    const category = categories.find(item => item.title.toLocaleLowerCase() === topic.toLocaleLowerCase())
+      ?? await client.createCategory(topic)
+    return category.id
+  }
+
   async listEntries(params: {
     userId: string
     limit: number
     offset: number
     search: string | null
     filter?: 'all' | 'unread' | 'saved'
+    signal?: AbortSignal
   }) {
     const credential = await getMinifluxCredential(this.admin, params.userId)
     if (!credential) {
       return { items: [], total: 0, nextOffset: null, connected: false, hasSubscriptions: false }
     }
-    const client = await this.verifiedClient(credential)
-    const feeds = await client.listFeeds()
+    const client = await this.verifiedClient(credential, params.signal)
+    const feeds = await client.listFeeds(params.signal)
     if (feeds.length === 0) {
       return { items: [], total: 0, nextOffset: null, connected: true, hasSubscriptions: false }
     }
@@ -199,6 +203,7 @@ export class FeedService {
       search: params.search,
       status: params.filter === 'unread' ? 'unread' : null,
       starred: params.filter === 'saved' ? true : null,
+      signal: params.signal,
     })
     return { ...page, connected: true, hasSubscriptions: true }
   }
@@ -232,9 +237,12 @@ export class FeedService {
     return this.verifiedClient(credential)
   }
 
-  private async verifiedClient(credential: { apiToken: string; externalUserId: number }): Promise<MinifluxClient> {
+  private async verifiedClient(
+    credential: { apiToken: string; externalUserId: number },
+    signal?: AbortSignal,
+  ): Promise<MinifluxClient> {
     const client = this.client(credential.apiToken)
-    const user = await client.verifyConnection()
+    const user = await client.verifyConnection(signal)
     if (user.isAdmin || user.id !== credential.externalUserId) {
       throw new FeedApiError('authentication', 409, 'The feed connection identity changed. Reconnect Miniflux.')
     }

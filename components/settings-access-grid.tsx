@@ -129,6 +129,7 @@ export function AccessGrid({ featureVisibility }: { featureVisibility: FeatureVi
     deals: t('features.deals'),
     diligence: t('features.diligence'),
     feeds: t('features.feeds'),
+    search: t('features.search'),
     accounting: t('features.accounting'),
     gp_economics: t('features.gpEconomics'),
   }

@@ -23,8 +23,8 @@ const jobs = [
     timeoutMs: 120_000,
   },
   {
-    name: 'deal-research',
-    path: '/api/cron/deal-research',
+    name: 'background-jobs',
+    path: '/api/cron/background-jobs',
     schedule: '*/10 * * * *',
     timezone: 'UTC',
     timeoutMs: 360_000,

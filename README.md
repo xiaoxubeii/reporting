@@ -70,4 +70,19 @@ See [LICENSE](./LICENSE.md) for full terms.
 
 Full deployment guide with detailed steps, optional services, and local development setup: [DOCS](./DOCS.md)
 
+## Local development
+
+Use the repository service manager to run the application processes:
+
+```bash
+./devctl.sh start
+./devctl.sh status
+./devctl.sh logs
+./devctl.sh stop
+```
+
+Without service names, commands manage Web and Croner. You can also target one process, for example `./devctl.sh restart web`. The first runtime reserves ports 5000-5009 and uses Web 5000 plus Cron health 5001. If any port in the complete block is occupied, devctl tries 5010-5019, then 5020-5029, and so on. Set `DEVCTL_BASE_PORT` to change the first candidate.
+
+Runtime state, generated local-only Web/Cron secrets, PIDs, and logs live under ignored `.devctl/`. Configured Miniflux, SearXNG, and Supabase endpoints are external/shared dependencies: `status` probes and reports them, but devctl never creates, restarts, or stops their containers. Local defaults are Miniflux `http://127.0.0.1:8085` and SearXNG `http://127.0.0.1:8086`; operators supervise those services independently.
+
 For setup assistance or hosted deployments: [hemrock.com/contact](https://www.hemrock.com/contact). For bug reports and feature requests: [GitHub Issues](https://github.com/tdavidson/reporting/issues).

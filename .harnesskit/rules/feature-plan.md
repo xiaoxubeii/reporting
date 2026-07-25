@@ -15,20 +15,86 @@ dependency and ownership checks.
 
 | Feature ID | Goal | Lane | OpenSpec | Acceptance | Parallel Class | Dependencies | Owner | Worktree | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | blocked |
+| background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
+| investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
 | expert-validation | Close the Research gap/contradiction → expert answer → industry_expert → existing evidence pipeline loop | feature-planning | `openspec/changes/add-expert-validation` | Real internal and public browser flow works; one immutable submitted answer is materialized and enqueued with the documented security boundaries | single-feature | existing Diligence, email, AI, storage, job pipeline | main-agent | current checkout | in_progress |
 | custom-ai-provider | Configure one generic OpenAI-compatible provider such as MiniMax or codex-lb | feature-planning | `openspec/changes/add-custom-ai-provider` | Admin can save key/base URL/model, select the complete provider as default, and existing AI factory uses it | main-agent-only | existing settings encryption, URL validation, OpenAI provider factory | main-agent | current checkout | complete |
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
-| feed-category-popover | Select or create a Miniflux category from an anchored menu when following a personal source | feature-planning | `openspec/changes/add-feed-category-popover` | Follow opens a responsive accessible theme-aware folder picker for Uncategorized, existing categories, or inline new category creation; success refreshes the catalog and failure remains recoverable in context | serial-required | feeds-product, current Feeds localization slice, existing subscription mutation | main-agent | current checkout | in_progress |
-| curated-source-catalog | Redesign Follow sources around a curated RSS directory and a separate personal management view | feature-planning | `openspec/changes/redesign-follow-sources-catalog` | Authorized users can browse and search curated Website/RSS sources, open category sheets, follow trusted sources, and independently manage personal subscriptions without exposing collector feed URLs or requiring a personal connection for browsing | serial-required | curated-explore, feeds-product, feed-category-popover, current Feeds localization slice | main-agent | current checkout | complete |
+| feed-category-popover | Select or create a Miniflux category from an anchored menu when following a personal source | feature-planning | `openspec/changes/add-feed-category-popover` | Follow opens a responsive accessible theme-aware folder picker for Uncategorized, existing categories, or inline new category creation; success refreshes the catalog and failure remains recoverable in context | serial-required | feeds-product, current Feeds localization slice, existing subscription mutation | main-agent | current checkout | complete |
+| curated-source-catalog | Redesign Follow sources around a curated RSS directory and a personal category-grouped Following view | feature-planning | `openspec/changes/redesign-follow-sources-catalog` | Authorized users can browse/search curated Website/RSS sources, choose a personal category when following a trusted source, and manage subscriptions grouped only by their personal Miniflux categories | serial-required | curated-explore, feeds-product, feed-category-popover, current Feeds localization slice | main-agent | current checkout | complete |
+| following-source-management | Make the personal Following view compact, unambiguous, and management-focused | feature-planning | `openspec/changes/optimize-following-source-management` | Following filters only the loaded personal catalog, renders compact collapsible personal-category groups, and exposes open/copy/unfollow actions per endpoint without changing Miniflux ownership or APIs | main-agent-only | curated-source-catalog, feeds-product, current Feeds localization slice | main-agent | current checkout | in_progress |
+| devctl-service-manager | Manage every repository-owned local service from one safe CLI with conflict-free ports and verified ownership | feature-planning | `openspec/changes/add-devctl-service-manager` | `./devctl.sh` starts, stops, restarts, inspects, and tails Web, Croner, Miniflux, and SearXNG; reserves a complete 5000/5010/5020 port block; never controls the external Supabase stack or foreign processes/containers | main-agent-only | Node.js, npm, Docker Compose, existing service entrypoints, external Supabase reachability | main-agent | current checkout | complete |
+| external-devctl-dependencies | Restrict devctl lifecycle ownership to Web/Cron and reuse operator-owned Miniflux/SearXNG | feature-planning | `openspec/changes/externalize-devctl-service-dependencies` | Default lifecycle commands manage only Web/Cron; configured Miniflux 8085, SearXNG 8086, and Supabase are status-only external dependencies; legacy Compose records are forgotten without container or volume mutation | main-agent-only | completed devctl-service-manager, operator-owned Miniflux/SearXNG, external Supabase | main-agent | current checkout | in_progress |
 | feeds-product | Add personal Today and Follow sources backed exclusively by Miniflux APIs | feature-planning | `openspec/changes/add-feeds-product` | Approved users receive isolated Miniflux identities and can read, save, discover, categorize, follow, and unfollow through the authenticated Reporting BFF | serial-required | Miniflux V2, Reporting auth and approval workflow, Dealflow grants | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | curated-explore | Add a global read-only curated discovery view backed by one non-admin Miniflux user | feature-planning | `openspec/changes/add-curated-explore` | Authorized users can browse curated categories/articles and idempotently follow a trusted source into their personal Miniflux without shared read/save mutations or Reporting feed tables | serial-required | feeds-product, Miniflux BFF, personal FeedService, Today reader | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | croner-node-runtime | Replace Vercel Cron with one persistent Croner process while running the existing Next.js API routes on a persistent Node server | feature-planning | `openspec/changes/replace-vercel-cron-with-croner` | Production exposes separate Web and Cron start commands; the Cron process schedules the existing five authenticated routes with overlap protection, health reporting, bounded requests, and graceful shutdown; Vercel schedules are removed | main-agent-only | existing Next.js cron routes, `CRON_SECRET`, production process supervisor | main-agent | current checkout | complete |
+| search-product | Add bounded federated Search across personal Feeds, Reporting SearXNG, and five direct professional sources | feature-planning | `openspec/changes/add-search-product` | Authorized users select fund-configured categories that resolve to code-reviewed adapters, receive safe normalized partial results with exact provenance, and use origin-correct result actions | serial-required | merged feeds-product, Reporting auth/access, dedicated SearXNG, five public source contracts | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-search-product` | complete |
 
 ## Feature Requirement Contract
 
 Copy this block for each planned feature. Keep it short; it is the shared
 contract for self-check, review, testing, and merge.
+
+### Feature: background-job-http-context
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a security-sensitive cross-module data, authentication, concurrency, HTTP, Search, and AI-provider contract change.
+- Change: `openspec/changes/add-background-job-http-context`
+- Task: implement serially from persistence and token contracts through dispatcher, HTTP context, Research/Search tool integration, provider loops, and real runtime verification.
+
+#### Acceptance
+
+- A user-initiated Deal Research request persists an immutable actor/fund association from the authenticated Session; system work is explicitly identified and cannot inherit a personal user identity.
+- Croner continues to authenticate only with `CRON_SECRET`; a service-owned dispatcher atomically claims due work and signs a short-lived token bound to exactly one job attempt and trusted audience.
+- Every downstream Research and Search call is HTTP; receivers reject invalid/expired/replayed/stale attempts, reload the job, live-check membership/access, match fund/resource/scope, and restore one immutable `BackgroundExecutionContext`.
+- The existing `/api/search` preserves browser Session/Same-Origin/rate-limit semantics and adds a distinct fail-closed Job Token mode without accepting caller-selected actor, adapter, endpoint, scope, or limits.
+- Deal Research uses the fund-configured provider and an LLM-directed Reporting Search tool; it does not hardcode Anthropic Web Search, duplicate Search execution, expose tokens to the model, or accept model-authored citations.
+- Anthropic and tool-capable OpenAI/OpenRouter/custom endpoints complete the same bounded tool-loop contract; unsupported tool calling fails explicitly without falling back to ungrounded model memory.
+- Source persistence derives only from Search results actually returned to the model, personal Feed state metadata is stripped, and job/tool limits, deadlines, retries, leases, dedupe, and terminal writeback are deterministic.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-background-job-http-context/**`, focused HarnessKit plan/progress/evidence.
+- `supabase/migrations/**`, generated database types, server environment documentation.
+- `lib/background-jobs/**`, focused access/rate-limit helpers.
+- `scripts/cron-runner/**`, `app/api/cron/**`, internal Deal Research HTTP routes, `app/api/deals/[id]/research/route.ts`.
+- `lib/deals/research*`, `lib/search/**`, `app/api/search/route.ts`, `lib/ai/**`.
+- Focused unit, migration, route, integration, and runtime tests.
+
+#### Shared Contract Changes
+
+- Add one service-owned `background_jobs` queue with actor, fund, validated per-kind payload, dedupe, status, attempt, lease, retry, and audit fields.
+- Add server-only `BACKGROUND_JOB_TOKEN_SECRET`; Job Tokens contain only trusted issuer/audience, job id, attempt id, issue time, and expiry.
+- Add a code-owned job-kind policy registry mapping validated payload schemas to fixed worker paths and allowed route scopes; no database/client/LLM-controlled destination or scope.
+- Add one shared `requireBackgroundExecutionContext` HTTP boundary and dual-mode `/api/search` authentication selected explicitly by the presence of a bearer token.
+- Extend the existing provider tool-loop abstraction to OpenAI-compatible endpoints while preserving Anthropic behavior and failing closed on unsupported tools.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec, migration/type/static secret contracts, HarnessKit fast, diff check.
+- targeted: token/context authorization, queue claim/lease/retry/dedupe, dispatcher fixed-destination, Research enqueue/worker, Search dual-auth/tool projection, source provenance, Anthropic/OpenAI tool loops, changed-scope type/lint.
+- full: production build, HarnessKit full, security/code review, and a real local Croner → dispatcher → Research HTTP → LLM tool → `/api/search` flow using an isolated user/fund/job.
+
+#### Review Required
+
+- planner/architect: yes, shared contract and execution sequence before implementation.
+- reviewer: yes, concurrency, failure semantics, provider parity, and no duplicated Search path.
+- security-reviewer: yes, token issuance/verification, confused-deputy, SSRF, RLS/service role, cross-fund access, replay, secrets, and personal Feed leakage.
+- browser/QA: no new visual behavior; real authenticated API/runtime flow is required.
+
+#### Progress / Evidence
+
+- status: complete
+- branch/worktree: `main` in the current checkout; unrelated localization and screenshot changes are preserved.
+- planning: strict OpenSpec change `add-background-job-http-context` is valid; implementation tasks are complete.
+- architecture: Croner calls `/api/cron/background-jobs`; the registry-driven dispatcher claims one globally bounded multi-kind batch, signs an attempt token, and POSTs only to fixed worker paths. Every later stage crosses HTTP and restores live context; Search is an optional policy capability.
+- tests: the current feature-focused suite passes 18 files/131 tests and TypeScript passes. The current full Vitest run passes 177 files/1389 tests with one unrelated devctl test unable to bind port 5000 because the running Next server owns it; excluding that environmental test produces 177 files/1384 tests passing. Earlier correctness/security review suites and the clean-port full run also passed.
+- runtime: the running Croner invokes `background-jobs` successfully. A persisted user-attributed job crossed generic Croner → dispatcher → Deal Research worker → `/api/search` three attempts; the database records one worker claim and nine completed Search tool calls. The provider's invalid evidence citations failed closed at the retry limit, and a freshly signed token for that terminal attempt received live HTTP 401.
+- verification: HarnessKit fast, strict OpenSpec, `git diff --check`, generated-state parsing, focused tests, TypeScript, live HTTP replay rejection, and database object inspection pass. HarnessKit targeted remains blocked by existing repository-wide ESLint debt; file-level lint of the touched Anthropic provider reports six pre-existing `any` usages outside this change's diff.
+- reviews: final correctness and security re-reviews found no remaining MEDIUM/HIGH/CRITICAL after generic lifecycle/domain projection separation, registry invariant hardening, POST-only bypass, required-kind binding, and Cron/Job secret separation.
+- risks: the accepted at-least-once provider billing window remains; the configured OpenRouter model may emit citations that fail server provenance validation, which produces a safe terminal Research failure rather than ungrounded output.
 
 ### Feature: investment-decision-e2e
 
@@ -102,7 +168,7 @@ contract for self-check, review, testing, and merge.
 
 #### Progress / Evidence
 
-- status: in_progress
+- status: complete
 - branch/worktree: current checkout; unrelated dirty user changes preserved; no commit requested
 - implementation: request resolver, static catalog loaders, HttpOnly locale preference, root provider/metadata/lang, shared public/portal/app chrome, and authentication entry points complete
 - focused verification: 15 locale/action/navigation tests passed; TypeScript, targeted ESLint, OpenSpec strict, and HarnessKit fast passed
@@ -163,7 +229,7 @@ contract for self-check, review, testing, and merge.
 
 #### Progress / Evidence
 
-- status: in_progress
+- status: complete
 - branch: `main`
 - worktree: current checkout; unrelated dirty user changes are preserved
 - commit: none requested
@@ -219,7 +285,7 @@ contract for self-check, review, testing, and merge.
 
 #### Progress / Evidence
 
-- status: in_progress
+- status: complete
 - branch: `main`
 - worktree: current checkout; unrelated dirty user changes are preserved
 - commit: none requested
@@ -274,14 +340,14 @@ contract for self-check, review, testing, and merge.
 
 #### Progress / Evidence
 
-- status: in_progress
+- status: completed
 - branch: `main`
 - worktree: current checkout; unrelated localization and branding changes are preserved
-- commit: requested; pending final verification
+- commit: included in the current main-branch submission
 - tests: 14 focused compact/theme-aware UI regression tests passed; changed-file ESLint has 0 errors and one existing image warning; strict OpenSpec and diff checks passed
-- browser: earlier functional English desktop and Simplified Chinese 390px category flows passed; authenticated visual acceptance for the follow-up compact semantic-token styling remains pending because the isolated automation session could not inherit the ambient browser login
+- browser: authenticated desktop and 390px mobile category flows passed; the final shared compact semantic-token picker was also exercised through the curated Follow flow and retained focus restoration and viewport fit
 - reviews: compact styling code review found no correctness or accessibility issue; a native-disabled regression for already-followed discovery rows was fixed before commit
-- verification gaps: repository-wide TypeScript currently has 64 unrelated existing errors from the concurrently changing repository state, with 0 errors in the changed feed scope; HarnessKit fast has no configured automated QA target, so the required browser acceptance ran directly
+- verification gaps: repository-wide TypeScript remains blocked by unrelated errors from the concurrently changing localization scope, with 0 diagnostics in the changed feed scope
 - risks: shared-file overlap with the still-active localization change; existing app-shell accounting 403 and Vercel Analytics CSP console noise remain outside this feature
 
 ### Feature: curated-source-catalog
@@ -296,17 +362,19 @@ contract for self-check, review, testing, and merge.
 #### Acceptance
 
 - `/feeds/sources` defaults to an URL-backed Explore sources view and offers a separate URL-backed Following view.
-- Explore remains browsable without a working personal Miniflux connection and shows stable category cards with source counts and one deterministic representative source.
+- Explore remains browsable without a working personal Miniflux connection and shows stable category cards with one deterministic representative source, without redundant source counts.
 - Text search filters the curated directory; Website/RSS URLs continue through the existing SSRF-safe discovery and personal category picker.
 - A category opens a responsive Sheet listing its curated sources and current Follow state; Follow sends only a trusted source reference and writes only to the current user's Miniflux.
-- Following preserves personal connection/provisioning recovery, categories, source health, category Sheet, and unfollow behavior.
+- Curated Follow reuses the personal category picker; only the trusted source reference and a bounded category choice cross the client boundary.
+- Following groups sources directly by the user's personal Miniflux categories, omits empty categories, places Uncategorized last, and removes the redundant topic-card/Sheet directory.
+- Following preserves personal connection/provisioning recovery, source health, filtering, and unfollow behavior.
 - The first release presents Website/RSS only and does not expose unsupported source types, fake language controls, collector feed URLs, or Reporting feed persistence.
 
 #### Allowed Change Scope
 
-- `lib/feeds/explore-service.ts` and focused Explore service contracts
+- `lib/feeds/explore-service.ts`, `lib/feeds/service.ts`, and focused service contracts
 - `app/api/feeds/explore/sources/**`, focused access/route registration
-- `components/feeds/follow-sources.tsx`, new focused curated catalog components, and Feeds client types
+- `components/feeds/follow-sources.tsx`, shared category-picker and curated catalog components, and Feeds client types
 - `messages/en.json`, `messages/zh-CN.json`
 - focused tests and OpenSpec/HarnessKit planning artifacts
 
@@ -316,6 +384,8 @@ contract for self-check, review, testing, and merge.
 - Extend curated category summaries with one deterministic representative source derived from collector order.
 - Preserve namespaced source/category references and server-side collector ownership checks.
 - Keep curated browsing, personal connection state, and personal Follow-state projection independently recoverable.
+- Allow the trusted Explore Follow route to accept only an optional bounded personal category name in addition to the URL path source reference.
+- Keep personal Miniflux as the sole authority for Following group membership; add no Reporting category state.
 
 #### Verification Plan
 
@@ -331,12 +401,166 @@ contract for self-check, review, testing, and merge.
 
 #### Progress / Evidence
 
-- status: complete
+- status: in_progress
 - branch/worktree: `main` in the current checkout; unrelated dirty user artifacts are preserved
-- implementation: read-only curated source directory, responsive Explore catalog, URL/RSS discovery, trusted-reference Follow, and separate personal Following management complete
-- verification: 78 focused tests passed; changed-scope lint/type checks, strict OpenSpec, HarnessKit fast, code/security review, and authenticated desktop/mobile English/Chinese browser acceptance passed; repository-wide targeted lint remains blocked by unrelated existing errors
+- implementation: category-aware trusted Follow and direct personal-category grouping are complete in the curated directory and separate Following view
+- verification: 103 focused tests passed; changed-scope lint/type checks, strict OpenSpec, HarnessKit fast, code/security review, and authenticated desktop/mobile English/Chinese browser acceptance passed; repository-wide targeted lint remains blocked by unrelated existing errors
 - evidence: `.harnesskit/evidence/redesign-follow-sources-catalog/`
-- commit: none requested
+- commit: included in the current main-branch submission
+
+### Feature: following-source-management
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: This is a user-visible behavior and interaction change on an existing source-management route.
+- Change: `openspec/changes/optimize-following-source-management`
+- Task: implement `tasks.md` serially without changing the personal Miniflux or subscription API contracts.
+
+#### Acceptance
+
+- Explore keeps curated and website/RSS discovery; Following provides only a local personal-source filter plus navigation back to Explore.
+- Non-empty personal Miniflux categories render as compact open-by-default disclosure groups, with Uncategorized last.
+- Every followed endpoint remains independently actionable while single-endpoint sources do not repeat their title or raw RSS URL in the default row.
+- Each endpoint exposes localized Open source, Copy RSS, and Unfollow actions; clipboard failure and mutation failure remain recoverable in context.
+- The optimized view remains accessible and overflow-free in English and Simplified Chinese at desktop and mobile widths.
+
+#### Allowed Change Scope
+
+- `components/feeds/follow-sources.tsx` and one focused Following source-actions component.
+- `messages/en.json`, `messages/zh-CN.json`.
+- Focused feed UI behavior/localization tests.
+- `openspec/changes/optimize-following-source-management/**` and focused HarnessKit plan/progress/evidence.
+
+#### Shared Contract Changes
+
+- No route, database, Miniflux ownership, category persistence, or permission changes.
+- Following local filtering expands to personal category and endpoint metadata already present in the loaded projection.
+- The actions menu invokes only current public URLs, clipboard APIs, and the existing authenticated Unfollow callback.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec, HarnessKit fast, changed-scope lint/type checks, and diff check.
+- targeted: feed UI behavior/localization tests plus source-actions interaction coverage.
+- full: code/accessibility/security review and authenticated English/Chinese desktop and 390px mobile browser verification.
+
+#### Review Required
+
+- planner: yes, minimal scope and multi-endpoint behavior before implementation.
+- reviewer: yes, state, filtering, and endpoint mutation identity.
+- security-reviewer: yes, external-link isolation, clipboard error handling, and no new mutation boundary.
+- browser/QA: yes, responsive user-visible management workflow.
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `main` in the current checkout; unrelated dirty changes are preserved.
+- planning: OpenSpec proposal, design, specification, and tasks are apply-ready.
+- tests/browser/reviews: pending.
+
+### Feature: devctl-service-manager
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: This introduces a cross-service CLI, runtime ownership model, and local port contract.
+- Change: `openspec/changes/add-devctl-service-manager`
+- Task: implement `tasks.md` from failing lifecycle tests through the real CLI path.
+
+#### Acceptance
+
+- `./devctl.sh` supports `start`, `stop`, `restart`, `status`, and `logs` for Web, Croner, Miniflux, and SearXNG, with all services selected by default.
+- A complete ten-port block is reserved at 5000, then 5010, 5020, and so on; Web/Cron/Miniflux/SearXNG use offsets 0/1/2/3.
+- State, logs, generated development secrets, PIDs, process groups, and Compose project ownership remain checkout-local under `.devctl/`.
+- Repeated commands are idempotent, partial startup rolls back only newly created resources, and stale/foreign PIDs or containers are never stopped.
+- The configured Supabase service is observed as an external dependency and is never started or stopped.
+
+#### Allowed Change Scope
+
+- root `devctl.sh`, `scripts/devctl/**`, focused tests/fixtures
+- `scripts/miniflux-local.sh` only if required for an isolated Compose project name
+- `.gitignore`, README local-development documentation
+- focused OpenSpec and HarnessKit planning/state artifacts
+
+#### Shared Contract Changes
+
+- No production service contract changes.
+- Local Web, Cron health, Miniflux, and SearXNG URLs become dynamically derived from the selected port block when launched through devctl.
+- Existing standalone npm, Compose, and Miniflux script entrypoints remain valid.
+
+#### Verification Plan
+
+- smoke: shell syntax, strict OpenSpec validation, HarnessKit fast, diff check.
+- targeted: port allocation and lifecycle Vitest suites with fake processes/Compose commands; changed-scope lint/type checks.
+- full: real CLI Web/Cron lifecycle plus default-service preflight; browser verification is not applicable to a CLI-only change.
+
+#### Review Required
+
+- reviewer: yes, lifecycle correctness and safe rollback
+- security-reviewer: yes, PID ownership, secret handling, and command construction
+- browser/QA: no, CLI-only; real CLI verification is required instead
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `main` in the current checkout; unrelated untracked artifacts are preserved
+- implementation: unified lifecycle, ten-port allocation, protected state/secrets, process-group ownership, isolated Compose projects, external Supabase status, documentation, and focused tests complete
+- verification: 24 focused tests, changed-scope lint, repository typecheck, syntax/Compose config, strict OpenSpec, HarnessKit fast, real 5000 and conflict-driven 5010 CLI flows, and the complete default stack passed; code/security review has no remaining blocker/high; HarnessKit targeted remains blocked by unrelated repository-wide lint debt
+- risks: Docker/VPN availability, shared Compose names, stale PID reuse, and unrelated repository-wide type/lint failures
+- commit: not requested
+
+### Feature: external-devctl-dependencies
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this changes the CLI lifecycle, ownership, port, state migration, and external dependency contracts established by `add-devctl-service-manager`.
+- Change: `openspec/changes/externalize-devctl-service-dependencies`
+- Task: implement contract-first from failing lifecycle/probe tests through a real Web/Cron-only runtime restart.
+
+#### Acceptance
+
+- `./devctl.sh start`, `stop`, `restart`, and `logs` accept and manage only Web and Cron; Miniflux, SearXNG, and Supabase are never lifecycle targets.
+- Status probes configured external Miniflux, SearXNG, and Supabase with bounded side-effect-free requests and reports their sanitized origins independently from the managed aggregate.
+- Web/Cron preserve `.env.local` Miniflux/SearXNG endpoints and token paths instead of deriving checkout-specific 5002/5003 values.
+- Legacy Miniflux/SearXNG records are removed from devctl state without Docker stop/down/recreate/volume operations; already-created duplicate containers remain an explicit operator cleanup item.
+- The real default CLI starts only Web/Cron and reconnects them to the running Reporting Miniflux 8085 and SearXNG 8086 instances.
+
+#### Allowed Change Scope
+
+- `devctl.sh`, `scripts/devctl/**`, focused devctl tests and local-development documentation.
+- `openspec/changes/externalize-devctl-service-dependencies/**` and focused HarnessKit plan/progress evidence.
+- No Feeds/Search API, database, external container, volume, or credential mutation.
+
+#### Shared Contract Changes
+
+- Managed lifecycle service names become exactly `web` and `cron`.
+- External dependency descriptors become `miniflux`, `searxng`, and `supabase`; they expose status only and never enter managed state.
+- The ten-port block remains for checkout collision isolation, but only offsets `+0` and `+1` are assigned.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec, HarnessKit fast, syntax, and diff check.
+- targeted: CLI parsing, manager lifecycle/rollback, legacy state sanitation, external probe/status, adapter environment, and changed-scope lint/type checks.
+- runtime: restart the actual CLI, verify Web/Cron and external 8085/8086 status, and compare Docker container identities before/after.
+
+#### Review Required
+
+- planner: main-agent architecture/contract gate before implementation.
+- reviewer: yes, lifecycle, state migration, and diagnostic accuracy.
+- security-reviewer: yes, URL validation, redirect behavior, secret/log safety, and no external mutation.
+- browser/QA: no; CLI/runtime behavior only.
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `main` in the current dirty checkout; all unrelated changes are preserved.
+- implementation: devctl adapters, lifecycle names, ports, child environment, rollback-compatible state sanitation, external probes, CLI output, and documentation complete.
+- tests: 32 focused tests pass; full Vitest passes 179 files and 1398 tests.
+- verification: repository TypeScript, changed-scope ESLint, strict OpenSpec, HarnessKit fast, syntax, and diff hygiene pass; HarnessKit targeted is blocked only by unrelated repository-wide lint debt.
+- runtime: real Web/Cron restart passed at 5010/5011; status reports Miniflux 8085, SearXNG 8086, and Supabase 8000; all observed external and legacy duplicate container identities/start times were unchanged.
+- review: correctness and security re-reviews closed the rollback-compatibility, base-path probing, and non-loopback HTTP findings; no MEDIUM/HIGH/CRITICAL remains.
+- cleanup: legacy duplicate Miniflux/SearXNG containers on 5002/5003 remain operator-owned cleanup and were not mutated.
 
 ### Feature: feeds-product
 
@@ -471,6 +695,69 @@ contract for self-check, review, testing, and merge.
 - runtime: actual one-shot and resident entrypoints verified against local authenticated probe servers, including health, SIGTERM, malformed request recovery, and secret-free output
 - risks: Croner is in-memory, a second Cron replica duplicates triggers, process downtime misses occurrences, and long-running HTTP handlers still need their existing database recovery semantics
 
+### Feature: search-product
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible, security-sensitive federated feature crossing authenticated Miniflux, an operator-owned metasearch service, public APIs, and bounded website parsing.
+- Change: `openspec/changes/add-search-product`
+- Task: preserve the verified first milestone, then implement the Category-to-Adapter increment serially through contracts, fund-admin configuration, unified execution, UI, review, and real browser verification.
+
+#### Acceptance
+
+- An authorized caller explicitly submits one bounded plain-text query and selects available fund-configured categories.
+- Reporting resolves categories to one code-owned adapter registry/executor and never exposes adapter IDs, Miniflux, SearXNG, source endpoints, engines, or parser controls to the browser.
+- Fund administrators can atomically manage ordered bilingual category presentation, enablement, defaults, and registered adapter mappings for their own fund.
+- PubMed, ClinicalTrials.gov, FDA/openFDA, TCTMD, and MassDevice are queried directly through reviewed adapters; professional search never falls back to SearXNG `site:` queries.
+- Concurrent source failures produce source-level statuses and useful partial results; fixed limits are 10 Feed, 10 Web, 5 per professional source, and 30 final results.
+- Exact URL and stable-identifier duplicates preserve all provenance, use `Feed > Specialized > Web` primary-origin precedence, and retain origin-correct reader/external-link behavior.
+- Access, source enablement, per-user rate limiting, query privacy, bounded plain-text rendering, public-URL validation, desktop/mobile accessibility, and reader focus restoration are verified.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-search-product/**`
+- `lib/search/**`, focused reuse of `lib/feeds/**`, access metadata, route declarations, source/category configuration, database types, and a forward-only migration
+- `app/api/search/**`, `app/api/settings/search-categories/**`, `app/(app)/search/**`, Search/Settings components, and the existing sidebar
+- Reporting-owned SearXNG Compose/configuration, `.env.example`, deployment/runbook documentation, fixtures, focused tests, and browser evidence
+- HarnessKit plan/state/progress evidence only
+
+#### Shared Contract Changes
+
+- Adds `dealflow.search` while keeping Feed search dependent on existing permitted Feeds read access and the caller's personal Miniflux identity.
+- Adds one validated authenticated `POST /api/search` contract with selected category IDs, normalized adapter-level hits/statuses, and no client-controlled adapter IDs, endpoints, engines, selectors, or limits.
+- Adds fund-scoped `search_category_config` plus an admin-only same-origin Settings boundary; the visible catalog is data-driven while adapter implementations remain code-owned.
+- Uses `CategoryResolver`, `AdapterRegistry`, and `AdapterExecutor` without a separate Provider layer.
+- Adds a separately pinned, loopback-only Reporting SearXNG service with an operator-owned General/News engine allowlist and independent secret.
+- Adds no Reporting search index, history, arbitrary crawling, paid API credentials, quota ledger, federated pagination, fuzzy/AI deduplication, or AI reranking.
+
+#### Verification Plan
+
+- smoke: contract tests, OpenSpec strict validation, SearXNG configuration/Compose validation, and HarnessKit fast.
+- targeted: category configuration/resolution, registry/executor and adapter fixtures, merge/URL/security behavior, route authorization/rate limiting/privacy, Settings editor, and Search component contracts.
+- full: TypeScript, targeted lint, full tests/build where baseline permits, Search E2E, code/security review, and real authenticated desktop/mobile browser verification against Reporting's actual entrypoint.
+
+#### Review Required
+
+- planner: yes, contract/sequence review before implementation
+- reviewer: yes, category resolution, adapter registry/executor, normalized contracts, deterministic merge, and UI integration
+- security-reviewer: yes, credentials, SSRF/redirects, untrusted HTML, URL safety, access, rate limits, privacy, and external-link isolation
+- docs-researcher: yes, official API parameters/responses and current public website search contracts
+- browser/QA: yes, the route, source drawer, partial/error states, Feed reader, and external actions are user-visible
+
+#### Progress / Evidence
+
+- status: complete
+- branch: `main` (merged from `codex/add-search-product`)
+- worktree: `/home/ubuntu/workspace/reporting`; unrelated dirty changes in the feature worktree and untracked main-worktree artifacts were preserved
+- planning: OpenSpec `spec-driven`; proposal/design/spec/tasks fully read; all 46 tasks complete
+- architecture: serial-required after merged Feeds; fund-scoped category JSON uses the existing fund-admin boundary, and one Adapter abstraction handles Feed, Web, API, and Website search
+- tests: pre-merge Category-to-Adapter focused suite passed with 20 files/92 tests; post-merge full suite passed with 157 files/1268 tests, with 2 files/4 environment-gated integration tests skipped
+- browser: authenticated admin changed the `internet` category label and mapping from `web` to `pubmed`; the Search page immediately rendered the new label as selected and returned live PubMed results, including in the mobile category drawer; the original `Internet -> web` configuration was restored
+- reviews: code, database, and security reviews completed with no blocker/high/medium findings; merge review removed SearXNG from the shared proxy network and retained port 8118 egress through an explicit host-gateway mapping
+- baseline: OpenSpec strict, HarnessKit fast, TypeScript, Compose validation, changed-file ESLint, full Vitest, and `next build --no-lint` pass; HarnessKit targeted/full stop on repository-wide pre-existing ESLint errors outside Search
+- risks: category configuration must remain fund-scoped and data-only; unknown adapter IDs fail closed; external API/engine availability and website parser drift remain operational partial-result states
+
 ## Parallelization Decision
 
 Classify every feature before assigning workers:
@@ -514,6 +801,7 @@ unmerged worktrees intact if a merge or verification fails.
 1. expert-validation (single feature; no merge split)
 2. ui-localization (serial-required in current checkout; no merge split)
 3. feeds-product and curated-explore (one shared feature branch because curated-explore depends on the personal Feeds BFF and Today UI)
+4. search-product (serial after feeds-product; merged from its isolated feature worktree)
 
 ## Final Evidence
 

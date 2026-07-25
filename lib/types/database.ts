@@ -930,6 +930,8 @@ export type Database = {
           created_at: string | null
           currency: string
           deal_intake_enabled: boolean
+          deal_research_enabled: boolean
+          deal_research_min_fit: string
           deal_screening_prompt: string | null
           deal_submission_token: string | null
           deal_thesis: string | null
@@ -945,6 +947,8 @@ export type Database = {
           dropbox_refresh_token_encrypted: string | null
           encryption_key_encrypted: string | null
           feature_visibility: Json | null
+          search_category_config: Json
+          search_source_config: Json
           file_storage_provider: string | null
           fund_id: string
           gemini_api_key_encrypted: string | null
@@ -992,6 +996,8 @@ export type Database = {
           created_at?: string | null
           currency?: string
           deal_intake_enabled?: boolean
+          deal_research_enabled?: boolean
+          deal_research_min_fit?: string
           deal_screening_prompt?: string | null
           deal_submission_token?: string | null
           deal_thesis?: string | null
@@ -1007,6 +1013,8 @@ export type Database = {
           dropbox_refresh_token_encrypted?: string | null
           encryption_key_encrypted?: string | null
           feature_visibility?: Json | null
+          search_category_config?: Json
+          search_source_config?: Json
           file_storage_provider?: string | null
           fund_id: string
           gemini_api_key_encrypted?: string | null
@@ -1054,6 +1062,8 @@ export type Database = {
           created_at?: string | null
           currency?: string
           deal_intake_enabled?: boolean
+          deal_research_enabled?: boolean
+          deal_research_min_fit?: string
           deal_screening_prompt?: string | null
           deal_submission_token?: string | null
           deal_thesis?: string | null
@@ -1069,6 +1079,8 @@ export type Database = {
           dropbox_refresh_token_encrypted?: string | null
           encryption_key_encrypted?: string | null
           feature_visibility?: Json | null
+          search_category_config?: Json
+          search_source_config?: Json
           file_storage_provider?: string | null
           fund_id?: string
           gemini_api_key_encrypted?: string | null
@@ -1506,6 +1518,124 @@ export type Database = {
         }
         Relationships: []
       }
+      background_job_tool_calls: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          id: string
+          job_id: string
+          request_hash: string
+          response: Json | null
+          status: string
+          tool_call_id: string
+          tool_name: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          id?: string
+          job_id: string
+          request_hash: string
+          response?: Json | null
+          status?: string
+          tool_call_id: string
+          tool_name: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          request_hash?: string
+          response?: Json | null
+          status?: string
+          tool_call_id?: string
+          tool_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "background_job_tool_calls_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "background_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      background_jobs: {
+        Row: {
+          actor_type: string
+          actor_user_id: string | null
+          attempts: number
+          attempt_id: string | null
+          available_at: string
+          created_at: string
+          dedupe_key: string
+          fund_id: string
+          id: string
+          kind: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_seconds: number
+          max_attempts: number
+          payload: Json
+          status: string
+          updated_at: string
+          worker_claimed_attempt_id: string | null
+        }
+        Insert: {
+          actor_type: string
+          actor_user_id?: string | null
+          attempts?: number
+          attempt_id?: string | null
+          available_at?: string
+          created_at?: string
+          dedupe_key: string
+          fund_id: string
+          id?: string
+          kind: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_seconds?: number
+          max_attempts?: number
+          payload?: Json
+          status?: string
+          updated_at?: string
+          worker_claimed_attempt_id?: string | null
+        }
+        Update: {
+          actor_type?: string
+          actor_user_id?: string | null
+          attempts?: number
+          attempt_id?: string | null
+          available_at?: string
+          created_at?: string
+          dedupe_key?: string
+          fund_id?: string
+          id?: string
+          kind?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_seconds?: number
+          max_attempts?: number
+          payload?: Json
+          status?: string
+          updated_at?: string
+          worker_claimed_attempt_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "background_jobs_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memo_agent_jobs: {
         Row: {
           id: string
@@ -1786,6 +1916,12 @@ export type Database = {
           raise_amount: string | null
           referrer_email: string | null
           referrer_name: string | null
+          research_error: string | null
+          research_findings: Json | null
+          research_sources: Json | null
+          research_status: string | null
+          research_summary: string | null
+          researched_at: string | null
           stage: string | null
           status: string
           thesis_fit_analysis: string | null
@@ -1813,6 +1949,12 @@ export type Database = {
           raise_amount?: string | null
           referrer_email?: string | null
           referrer_name?: string | null
+          research_error?: string | null
+          research_findings?: Json | null
+          research_sources?: Json | null
+          research_status?: string | null
+          research_summary?: string | null
+          researched_at?: string | null
           stage?: string | null
           status?: string
           thesis_fit_analysis?: string | null
@@ -1840,6 +1982,12 @@ export type Database = {
           raise_amount?: string | null
           referrer_email?: string | null
           referrer_name?: string | null
+          research_error?: string | null
+          research_findings?: Json | null
+          research_sources?: Json | null
+          research_status?: string | null
+          research_summary?: string | null
+          researched_at?: string | null
           stage?: string | null
           status?: string
           thesis_fit_analysis?: string | null
@@ -2972,7 +3120,83 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      background_job_claim_due: {
+        Args: { p_kinds: string[]; p_limit?: number }
+        Returns: Database["public"]["Tables"]["background_jobs"]["Row"][]
+      }
+      background_job_claim_tool_call: {
+        Args: {
+          p_attempt_id: string
+          p_job_id: string
+          p_max_calls?: number
+          p_request_hash: string
+          p_tool_call_id: string
+          p_tool_name: string
+        }
+        Returns: Json
+      }
+      background_job_complete_tool_call: {
+        Args: {
+          p_attempt_id: string
+          p_is_error?: boolean
+          p_job_id: string
+          p_request_hash: string
+          p_response: Json
+          p_tool_call_id: string
+          p_tool_name: string
+        }
+        Returns: boolean
+      }
+      background_job_enqueue: {
+        Args: {
+          p_actor_type: string
+          p_actor_user_id: string | null
+          p_available_at?: string
+          p_dedupe_key: string
+          p_fund_id: string
+          p_kind: string
+          p_lease_seconds?: number
+          p_max_attempts?: number
+          p_payload: Json
+        }
+        Returns: Database["public"]["Tables"]["background_jobs"]["Row"]
+      }
+      background_job_finalize: {
+        Args: {
+          p_attempt_id: string
+          p_error?: string | null
+          p_job_id: string
+          p_retry_after_seconds?: number
+          p_status: string
+        }
+        Returns: boolean
+      }
+      background_job_claim_worker_attempt: {
+        Args: { p_job_id: string; p_attempt_id: string }
+        Returns: boolean
+      }
+      background_job_write_deal_research: {
+        Args: {
+          p_attempt_id: string
+          p_deal_id: string
+          p_error?: string | null
+          p_findings?: Json | null
+          p_job_id: string
+          p_sources?: Json | null
+          p_status: string
+          p_summary?: string | null
+        }
+        Returns: boolean
+      }
       count_unread_notes: { Args: { p_user_id: string }; Returns: number }
+      rate_limit_check: {
+        Args: {
+          p_key: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: number
+      }
       enqueue_ingest_if_deal_idle: {
         Args: {
           p_fund_id: string

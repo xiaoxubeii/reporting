@@ -9,6 +9,8 @@ const CLIENT_SURFACES = [
   'components/feeds/today-feed.tsx',
   'components/feeds/explore-feed.tsx',
   'components/feeds/follow-sources.tsx',
+  'components/feeds/follow-category-popover.tsx',
+  'components/feeds/following-source-actions.tsx',
   'components/feeds/explore-source-catalog.tsx',
   'components/feeds/feed-reader-sheet.tsx',
   'components/feeds/explore-reader-sheet.tsx',
@@ -61,6 +63,33 @@ describe('Feeds localization', () => {
       exploreHeading: '探索',
       featured: '精选来源',
       categorySheet: { label: '精选分类' },
+    })
+
+    expect(english.followingSearch).toMatchObject({
+      placeholder: 'Search followed sources',
+      addSource: 'Add source',
+    })
+    expect(chinese.followingSearch).toMatchObject({
+      placeholder: '搜索已关注来源',
+      addSource: '添加来源',
+    })
+    expect(english.actions).toMatchObject({
+      openSource: 'Open source',
+      openSourceLabel: 'Open {name}',
+      copyRss: 'Copy RSS',
+      copyRssLabel: 'Copy RSS for {name}',
+      unfollow: 'Unfollow',
+      unfollowLabel: 'Unfollow {name}',
+      copyFailed: 'RSS link could not be copied',
+    })
+    expect(chinese.actions).toMatchObject({
+      openSource: '打开来源',
+      openSourceLabel: '打开 {name}',
+      copyRss: '复制 RSS',
+      copyRssLabel: '复制 {name} 的 RSS',
+      unfollow: '取消关注',
+      unfollowLabel: '取消关注 {name}',
+      copyFailed: '无法复制 RSS 链接',
     })
   })
 
