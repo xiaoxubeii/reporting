@@ -6,6 +6,24 @@ export interface FollowingSourceGroup {
   sources: FeedSourceResult[]
 }
 
+export function filterFollowingSources(
+  sources: FeedSourceResult[],
+  query: string,
+): FeedSourceResult[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+  if (!normalizedQuery) return sources
+
+  return sources.filter(source => [
+    source.name,
+    source.description,
+    source.siteUrl,
+    ...source.topics,
+    ...source.endpoints.flatMap(endpoint => [endpoint.title, endpoint.feedUrl, endpoint.format]),
+  ]
+    .filter(Boolean)
+    .some(field => String(field).toLocaleLowerCase().includes(normalizedQuery)))
+}
+
 export function groupFollowingSources(
   sources: FeedSourceResult[],
   topics: FeedTopicResult[],

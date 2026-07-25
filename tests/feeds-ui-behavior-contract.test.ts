@@ -13,6 +13,10 @@ const followCategoryPopover = readFileSync(
   new URL('../components/feeds/follow-category-popover.tsx', import.meta.url),
   'utf8',
 )
+const followingSourceActions = readFileSync(
+  new URL('../components/feeds/following-source-actions.tsx', import.meta.url),
+  'utf8',
+)
 const todayFeed = readFileSync(
   new URL('../components/feeds/today-feed.tsx', import.meta.url),
   'utf8',
@@ -58,7 +62,7 @@ describe('Feeds recovery and pagination UI contract', () => {
     expect(followCategoryPopover).toMatch(/if \(!nextOpen && pending\) return/)
     expect(followCategoryPopover).toContain('max-h-[var(--radix-popover-content-available-height)]')
     expect(followSources).toContain('following={feed.isFollowing}')
-    expect(followSources).toContain('following={endpoint.isFollowing}')
+    expect(followSources).not.toContain('following={endpoint.isFollowing}')
     expect(followCategoryPopover).toContain('aria-disabled={!onFollowingClick || pending || undefined}')
     expect(followCategoryPopover).not.toContain('disabled={!onFollowingClick}')
     expect(followSources).not.toContain('id="source-topic"')
@@ -148,11 +152,36 @@ describe('Feeds recovery and pagination UI contract', () => {
     expect(exploreSourceCatalog).not.toMatch(/Reddit|Newsletters|Google News|language/i)
   })
 
+  it('gives Following a local filter and keeps discovery controls in Explore only', () => {
+    expect(followSources).toMatch(/!isFollowingView && \([\s\S]*?<form onSubmit=\{discover\}/)
+    expect(followSources).toMatch(/isFollowingView && \([\s\S]*?followingSearch\.placeholder/)
+    expect(followSources).toContain("t('followingSearch.addSource')")
+    expect(followSources).toMatch(/href=\{pathname\}/)
+    expect(followSources).toMatch(/source\.endpoints[\s\S]*endpoint\.title[\s\S]*endpoint\.feedUrl/)
+    expect(followSources.match(/<form onSubmit=\{discover\}/g)).toHaveLength(1)
+  })
+
   it('groups Following only by personal Miniflux categories', () => {
     expect(followSources).toMatch(/groupFollowingSources\(filteredSources, topics/)
     expect(followSources).toMatch(/followingGroups\.map\(\(group, index\) =>/)
     expect(followSources).not.toContain("t('topics.title')")
     expect(followSources).not.toMatch(/TopicSourcesSheet|openTopic|topicSlug/)
+  })
+
+  it('uses compact disclosure groups and explicit endpoint actions in Following', () => {
+    expect(followSources).toMatch(/<details key=\{group\.key\} open/)
+    expect(followSources).toMatch(/<summary[\s\S]*aria-labelledby=\{headingId\}/)
+    expect(followSources).toContain('<FollowingSourceActions')
+    expect(followSources).not.toContain('following={endpoint.isFollowing}')
+    expect(followSources).not.toContain("t('followedSources')")
+    expect(followSources).not.toMatch(/<p className="truncate text-xs text-muted-foreground">\{endpoint\.feedUrl\}<\/p>/)
+    expect(followingSourceActions).toMatch(/<Popover[\s\S]*<PopoverTrigger asChild>[\s\S]*<PopoverContent/)
+    expect(followingSourceActions).toContain("t('actions.openSource')")
+    expect(followingSourceActions).toContain("t('actions.copyRss')")
+    expect(followingSourceActions).toContain("t('actions.unfollow')")
+    expect(followingSourceActions).toContain('rel="noopener noreferrer"')
+    expect(followingSourceActions).toMatch(/navigator\.clipboard\.writeText\(feedUrl\)/)
+    expect(followingSourceActions).not.toMatch(/move|rename|PATCH/i)
   })
 
   it('uses the shared personal category picker for trusted curated Follow', () => {

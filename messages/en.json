@@ -81,6 +81,7 @@
     "partial": "Some sources could not be searched. Available results are shown below.",
     "reader": "Reader",
     "open": "Open source",
+    "opensInNewTab": "opens in a new tab",
     "unavailable": "Unavailable",
     "groups": { "personal": "Personal feeds", "professional": "Professional sources", "web": "Web" },
     "sourceLabels": { "feeds": "Feeds", "web": "Web search" },
@@ -5950,7 +5951,8 @@
         "accountReady": "Personal Miniflux account is ready",
         "noFeeds": "No feeds found for that website",
         "followed": "{title} followed",
-        "unfollowed": "{title} unfollowed"
+        "unfollowed": "{title} unfollowed",
+        "rssCopied": "RSS link for {title} copied"
       },
       "states": {
         "loadError": {
@@ -5981,6 +5983,22 @@
         "action": "Find feeds",
         "help": "Search the curated directory, or paste a public website/RSS URL to discover a new source."
       },
+      "followingSearch": {
+        "label": "Search followed sources",
+        "placeholder": "Search followed sources",
+        "addSource": "Add source",
+        "resultsLabel": "Followed source results"
+      },
+      "actions": {
+        "menuLabel": "Manage {name}",
+        "openSource": "Open source",
+        "openSourceLabel": "Open {name}",
+        "copyRss": "Copy RSS",
+        "copyRssLabel": "Copy RSS for {name}",
+        "unfollow": "Unfollow",
+        "unfollowLabel": "Unfollow {name}",
+        "copyFailed": "RSS link could not be copied"
+      },
       "catalog": {
         "loadErrorTitle": "Curated sources could not be loaded",
         "sourcesErrorTitle": "Source results could not be loaded",
@@ -6009,9 +6027,9 @@
       },
       "empty": {
         "noMatchTitle": "No sources match “{query}”",
-        "noMatchDescription": "Try another category, or paste a website or RSS URL above.",
+        "noMatchDescription": "Try another source name, category, domain, or RSS URL.",
         "noneTitle": "No sources followed yet",
-        "noneDescription": "Paste a website or RSS URL above to follow your first source."
+        "noneDescription": "Explore trusted sources or add a website or RSS URL to get started."
       },
       "health": {
         "degraded": "Feed degraded",

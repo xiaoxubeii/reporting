@@ -81,6 +81,7 @@
     "partial": "部分来源暂时无法搜索，以下仍显示已获取的结果。",
     "reader": "阅读器",
     "open": "打开来源",
+    "opensInNewTab": "在新标签页中打开",
     "unavailable": "不可用",
     "groups": { "personal": "个人订阅", "professional": "专业来源", "web": "互联网" },
     "sourceLabels": { "feeds": "订阅", "web": "互联网搜索" },
@@ -5916,7 +5917,8 @@
         "accountReady": "个人 Miniflux 账户已就绪",
         "noFeeds": "未在该网站找到订阅源",
         "followed": "已关注 {title}",
-        "unfollowed": "已取消关注 {title}"
+        "unfollowed": "已取消关注 {title}",
+        "rssCopied": "已复制 {title} 的 RSS 链接"
       },
       "states": {
         "loadError": {
@@ -5947,6 +5949,22 @@
         "action": "查找订阅",
         "help": "搜索精品来源目录，或粘贴公开网站/RSS 地址来发现新来源。"
       },
+      "followingSearch": {
+        "label": "搜索已关注来源",
+        "placeholder": "搜索已关注来源",
+        "addSource": "添加来源",
+        "resultsLabel": "已关注来源结果"
+      },
+      "actions": {
+        "menuLabel": "管理 {name}",
+        "openSource": "打开来源",
+        "openSourceLabel": "打开 {name}",
+        "copyRss": "复制 RSS",
+        "copyRssLabel": "复制 {name} 的 RSS",
+        "unfollow": "取消关注",
+        "unfollowLabel": "取消关注 {name}",
+        "copyFailed": "无法复制 RSS 链接"
+      },
       "catalog": {
         "loadErrorTitle": "无法加载精品来源",
         "sourcesErrorTitle": "无法加载来源结果",
@@ -5975,9 +5993,9 @@
       },
       "empty": {
         "noMatchTitle": "没有来源匹配“{query}”",
-        "noMatchDescription": "请尝试其他分类，或在上方粘贴网站或 RSS 地址。",
+        "noMatchDescription": "请尝试其他来源名称、分类、域名或 RSS 地址。",
         "noneTitle": "尚未关注来源",
-        "noneDescription": "在上方粘贴网站或 RSS 地址，关注你的第一个来源。"
+        "noneDescription": "探索可信来源，或添加网站或 RSS 地址以开始使用。"
       },
       "health": {
         "degraded": "订阅源状态异常",
