@@ -67,8 +67,7 @@ Results                                  Search categories
                                          [x] Internet
                                          [ ] Medical literature
                                          [ ] Clinical trials
-                                         [ ] Regulatory
-                                         [ ] Industry news
+                                         [ ] Medical regulatory
 ```
 
 The database seed selects Personal subscriptions and Internet by default. Professional categories are visible but off by default and run only after explicit selection. A fund administrator can reorder, rename, describe, enable, choose defaults, add/remove categories, and map them to registered adapters. Search runs only after form submission.

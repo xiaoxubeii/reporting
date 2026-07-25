@@ -15,9 +15,14 @@ describe('Search category migration', () => {
     expect(SQL).not.toMatch(/"(?:endpoint|selector|credential|apiKey|engineList)"\s*:/i)
   })
 
-  it('seeds feed, web, direct APIs, and reviewed website adapters as configurable categories', () => {
-    for (const adapterId of ['feeds', 'web', 'pubmed', 'clinical_trials', 'fda', 'tctmd', 'massdevice']) {
+  it('seeds only the five default product categories requested by the platform', () => {
+    for (const adapterId of ['feeds', 'web', 'pubmed', 'clinical_trials', 'fda']) {
       expect(SQL).toContain(`"${adapterId}"`)
     }
+    expect(SQL).toContain('"en":"Medical regulatory"')
+    expect(SQL).toContain('"zh-CN":"医疗监管"')
+    expect(SQL).not.toContain('"id":"industry-news"')
+    expect(SQL).not.toContain('"tctmd"')
+    expect(SQL).not.toContain('"massdevice"')
   })
 })
