@@ -3,6 +3,34 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "background-job-http-context",
+      "title": "HTTP-only background execution context and provider Search tool",
+      "status": "passing",
+      "current_task": "Implementation, runtime verification, and hardening complete",
+      "definition_of_done": [
+        "Session requests persist an immutable user actor while automatic work persists an explicit system actor",
+        "Croner authenticates one generic dispatcher and every worker call crosses HTTP with an attempt-scoped short Job Token",
+        "Workers restore fund, actor, payload, membership, access, scope, kind, attempt, and lease from live server state",
+        "The existing Search API is exposed as an optional provider tool without giving models tokens, endpoints, actor fields, or adapter controls",
+        "Generic claim and finalize logic contain no Deal-specific branches; domain projections remain in domain-owned hooks",
+        "Registry, token, context, queue, Search, provider loops, provenance, migrations, and real HTTP execution are verified",
+        "Correctness and security reviews have no remaining blocker or high finding"
+      ],
+      "evidence": [
+        "strict OpenSpec and HarnessKit fast passed",
+        "current feature-focused suite passed 18 files/131 tests; earlier correctness and security review suites also passed",
+        "current full Vitest run passed 177 files/1389 tests; its only failure was an unrelated devctl test unable to bind the running Next server's port 5000, and excluding that environmental test yielded 177 files/1384 tests passing",
+        "TypeScript passed; HarnessKit targeted remains blocked by repository-wide lint debt, including six pre-existing any usages in the touched Anthropic provider outside this change's diff",
+        "generalized migration replayed on local Supabase; claim/finalize introspection and rollback-only Deal projection verification passed",
+        "real generic Croner to dispatcher to worker to Search HTTP flow executed three attempts and failed closed on fabricated provider citations",
+        "current database state records one worker claim and nine completed Search tool calls; a freshly signed terminal-attempt Search token was rejected live",
+        "final correctness and security reviews found no remaining MEDIUM/HIGH/CRITICAL",
+        "production compilation passed with next build --no-lint; normal build remains blocked by unrelated repository-wide lint debt"
+      ],
+      "blocked_by": [],
+      "notes": "The remaining operational risk is provider behavior: the configured OpenRouter model may cite URLs outside server-collected Search evidence. Provenance validation intentionally rejects that output instead of persisting ungrounded Research."
+    },
+    {
       "id": "investment-decision-e2e",
       "title": "End-to-end investment decision workflow",
       "status": "in_progress",
@@ -19,7 +47,6 @@
       ],
       "evidence": [],
       "blocked_by": [
-        "Deal Research currently requires an Anthropic provider with web search while the local fund is configured for OpenRouter",
         "No outbound email provider is configured, so invitation acceptance must verify the documented copy-link fallback"
       ],
       "notes": "Run only in /home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e with unique test data and cookie namespace. Do not reset the shared local Supabase stack."
@@ -140,26 +167,26 @@
       "id": "devctl-service-manager",
       "title": "Unified local service and process control",
       "status": "passing",
-      "current_task": "Implementation and real CLI verification complete",
+      "current_task": "External dependency ownership migration implemented and verified",
       "definition_of_done": [
-        "One root CLI manages Web, Croner, Miniflux, and SearXNG lifecycle and logs",
+        "One root CLI manages only Web and Croner lifecycle and logs",
         "A complete free ten-port block is selected at 5000, 5010, 5020, or the next available increment",
-        "Runtime state, generated secrets, PIDs, process groups, logs, and Compose projects are checkout-local and protected",
+        "Runtime state, generated Web/Cron secrets, PIDs, process groups, and logs are checkout-local and protected",
         "Repeated commands are idempotent and partial failures roll back only resources created by that invocation",
-        "Stale or foreign processes and Compose projects are never signaled or stopped",
-        "Supabase is reported only as an external dependency and is never controlled",
+        "Stale or foreign processes are never signaled or stopped, and legacy Compose records are forgotten without container mutation",
+        "Miniflux, SearXNG, and Supabase are reported only as external dependencies and are never controlled",
         "Focused tests, strict OpenSpec, HarnessKit verification, reviews, and the real CLI path pass"
       ],
       "evidence": [
-        "24 focused port allocation, adapter health and publishing, lifecycle, runtime ownership, lock, environment filtering, and real shell-entrypoint tests passed",
-        "changed-scope ESLint, repository TypeScript, shell/Node syntax, Compose config, strict OpenSpec, and HarnessKit fast passed",
-        "real default start/status/repeated-start/HTTP readiness/stop/repeated-stop/status passed for Web, Croner, isolated Miniflux, and isolated SearXNG",
-        "occupying port 5007 moved the entire runtime from 5000-5009 to 5010-5019",
-        "the external Supabase stack remained healthy and ambient reporting-miniflux containers remained running after devctl stop",
-        "code and security reviewers found no remaining blocker or high issue after lifecycle, rollback, health, environment, state, path, and permission hardening"
+        "32 focused lifecycle, probe, migration, environment, port, runtime, and real shell-entrypoint tests passed; full Vitest passed 179 files and 1398 tests",
+        "changed-scope ESLint, repository TypeScript, shell/Node syntax, strict OpenSpec, HarnessKit fast, and diff hygiene passed",
+        "real restart started only Web and Cron; status reported external Miniflux 8085, SearXNG 8086, and Supabase 8000 as running",
+        "Docker identity, status, and start time for external and legacy duplicate Miniflux/SearXNG containers were identical before and after restart",
+        "runtime state exposes only Web/Cron; the disk file retains a v1-readable port envelope with only Web/Cron process records for safe code rollback",
+        "correctness and security re-reviews closed all findings; no MEDIUM, HIGH, or CRITICAL remains"
       ],
       "blocked_by": [],
-      "notes": "The default managed port block maps Web/Cron/Miniflux/SearXNG to offsets 0/1/2/3 and reserves offsets 4-9. The configured Supabase stack is shared outside this repository. HarnessKit targeted was run but remains blocked by pre-existing repository-wide lint debt outside the devctl scope."
+      "notes": "The managed port block assigns only Web/Cron offsets 0/1 and reserves offsets 2-9. Operator-supervised Miniflux, SearXNG, and Supabase remain external. Legacy duplicate 5002/5003 containers remain an operator cleanup item. HarnessKit targeted remains blocked by pre-existing repository-wide lint debt outside the devctl scope."
     },
     {
       "id": "feeds-product",
