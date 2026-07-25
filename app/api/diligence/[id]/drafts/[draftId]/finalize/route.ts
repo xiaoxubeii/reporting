@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbError } from '@/lib/api-error'
+import { findPartnerRecommendation } from '@/lib/diligence/memo-finalization'
 
 /**
  * Finalize a memo draft. Admin-only. Sets is_draft=false, finalized_at, and
@@ -20,9 +21,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
-  if ((membership as any).role !== 'admin') return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+  if (membership.role !== 'admin') return NextResponse.json({ error: 'Admin required' }, { status: 403 })
 
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
 
   // Verify the draft has a recommendation paragraph filled in. Per hard rule:
   // recommendation is partner_only — if the prose is still the placeholder,
@@ -35,11 +36,11 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .eq('fund_id', fundId)
     .maybeSingle()
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (!(row as any).is_draft) return NextResponse.json({ error: 'Already finalized' }, { status: 409 })
+  if (!row.is_draft) return NextResponse.json({ error: 'Already finalized' }, { status: 409 })
 
-  const memo = (row as any).memo_draft_output as { paragraphs?: Array<{ section_id: string; prose: string; origin: string }> } | null
-  const recommendation = memo?.paragraphs?.find(p => p.section_id === 'recommendation')
-  if (!recommendation || recommendation.prose.trim() === '[Partner to complete]' || recommendation.origin === 'partner_only_placeholder') {
+  const memo = row.memo_draft_output as { paragraphs?: Array<{ section_id: string; prose: string; origin: string }> } | null
+  const recommendation = findPartnerRecommendation(memo?.paragraphs ?? [])
+  if (!recommendation) {
     return NextResponse.json({
       error: 'Recommendation section is empty. The partner must complete this before finalizing.',
     }, { status: 422 })
@@ -51,7 +52,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       is_draft: false,
       finalized_at: new Date().toISOString(),
       finalized_by: user.id,
-    } as any)
+    })
     .eq('id', params.draftId)
     .eq('fund_id', fundId)
   if (error) return dbError(error, 'diligence-draft-finalize')
