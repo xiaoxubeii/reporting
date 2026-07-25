@@ -231,7 +231,7 @@ function PublicSidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         {collapsed && (
           <div className="hidden md:block">
-            <LanguageSwitcher compact />
+            <LanguageSwitcher compact className="h-9 w-full" />
           </div>
         )}
 

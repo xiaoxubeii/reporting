@@ -82,13 +82,7 @@ const NAV_ITEMS: NavItem[] = [
   // The queue spans domains; gate the nav on portfolio (like Review) and let the list filter rows.
   { href: '/pending-actions', labelKey: 'pendingActions', icon: ListChecks, domain: 'portfolio' },
   { href: '/emails', labelKey: 'inbound', icon: Mail, domain: 'dealflow' },
-  {
-    href: '/deals', labelKey: 'deals', icon: Lightbulb, featureKey: 'deals',
-    children: [
-      { href: '/settings/email-audit',       labelKey: 'emailAudit',       adminOnly: true },
-      { href: '/settings/routing-accuracy',  labelKey: 'routingAccuracy',  adminOnly: true },
-    ],
-  },
+  { href: '/deals', labelKey: 'deals', icon: Lightbulb, featureKey: 'deals' },
   {
     href: '/feeds', labelKey: 'feeds', icon: Rss, featureKey: 'feeds',
     children: [
@@ -382,7 +376,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
         </div>
         {collapsed && (
           <div className="hidden md:block">
-            <LanguageSwitcher compact />
+            <LanguageSwitcher compact className="h-9 w-full" />
           </div>
         )}
 

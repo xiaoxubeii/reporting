@@ -401,6 +401,7 @@ describe('UI locale contract', () => {
       resolve(process.cwd(), 'components/language-switcher.tsx'),
       'utf8',
     )
+    const appSidebar = readFileSync(resolve(process.cwd(), 'components/app-sidebar.tsx'), 'utf8')
     const appLayout = readFileSync(resolve(process.cwd(), 'app/(app)/layout.tsx'), 'utf8')
     const appHeader = readFileSync(resolve(process.cwd(), 'components/app-header.tsx'), 'utf8')
     const publicLayout = readFileSync(resolve(process.cwd(), 'app/(public)/layout.tsx'), 'utf8')
@@ -411,6 +412,9 @@ describe('UI locale contract', () => {
     expect(languageSwitcher).toContain('window.location.hash')
     expect(languageSwitcher).toContain('localeHashRestoreUrl(pendingLocation, window.location)')
     expect(languageSwitcher).toContain('router.refresh()')
+    expect(languageSwitcher).toContain("compact && 'w-11 justify-center px-0")
+    expect(appSidebar).toContain('<LanguageSwitcher compact className="h-9 w-full" />')
+    expect(publicLayout).toContain('<LanguageSwitcher compact className="h-9 w-full" />')
     expect(languageSwitcher).not.toContain('document.documentElement.lang = nextLocale')
     expect(languageSwitcher).not.toContain('window.location.reload()')
     expect(appLayout).toContain("t('demoViewing')")
