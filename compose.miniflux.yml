@@ -70,6 +70,6 @@ volumes:
 
 secrets:
   miniflux_database_password:
-    file: ./.miniflux-secrets/runtime/database_password
+    file: ${MINIFLUX_SECRETS_DIR:-./.miniflux-secrets}/runtime/database_password
   miniflux_database_url:
-    file: ./.miniflux-secrets/runtime/database_url
+    file: ${MINIFLUX_SECRETS_DIR:-./.miniflux-secrets}/runtime/database_url

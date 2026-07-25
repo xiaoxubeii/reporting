@@ -21,7 +21,7 @@ dependency and ownership checks.
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
 | feed-category-popover | Select or create a Miniflux category from an anchored menu when following a personal source | feature-planning | `openspec/changes/add-feed-category-popover` | Follow opens a responsive accessible theme-aware folder picker for Uncategorized, existing categories, or inline new category creation; success refreshes the catalog and failure remains recoverable in context | serial-required | feeds-product, current Feeds localization slice, existing subscription mutation | main-agent | current checkout | complete |
 | curated-source-catalog | Redesign Follow sources around a curated RSS directory and a personal category-grouped Following view | feature-planning | `openspec/changes/redesign-follow-sources-catalog` | Authorized users can browse/search curated Website/RSS sources, choose a personal category when following a trusted source, and manage subscriptions grouped only by their personal Miniflux categories | serial-required | curated-explore, feeds-product, feed-category-popover, current Feeds localization slice | main-agent | current checkout | complete |
-| devctl-service-manager | Manage every repository-owned local service from one safe CLI with conflict-free ports and verified ownership | feature-planning | `openspec/changes/add-devctl-service-manager` | `./devctl.sh` starts, stops, restarts, inspects, and tails Web, Croner, Miniflux, and SearXNG; reserves a complete 5000/5010/5020 port block; never controls the external Supabase stack or foreign processes/containers | main-agent-only | Node.js, npm, Docker Compose, existing service entrypoints, external Supabase reachability | main-agent | current checkout | in_progress |
+| devctl-service-manager | Manage every repository-owned local service from one safe CLI with conflict-free ports and verified ownership | feature-planning | `openspec/changes/add-devctl-service-manager` | `./devctl.sh` starts, stops, restarts, inspects, and tails Web, Croner, Miniflux, and SearXNG; reserves a complete 5000/5010/5020 port block; never controls the external Supabase stack or foreign processes/containers | main-agent-only | Node.js, npm, Docker Compose, existing service entrypoints, external Supabase reachability | main-agent | current checkout | complete |
 | feeds-product | Add personal Today and Follow sources backed exclusively by Miniflux APIs | feature-planning | `openspec/changes/add-feeds-product` | Approved users receive isolated Miniflux identities and can read, save, discover, categorize, follow, and unfollow through the authenticated Reporting BFF | serial-required | Miniflux V2, Reporting auth and approval workflow, Dealflow grants | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | curated-explore | Add a global read-only curated discovery view backed by one non-admin Miniflux user | feature-planning | `openspec/changes/add-curated-explore` | Authorized users can browse curated categories/articles and idempotently follow a trusted source into their personal Miniflux without shared read/save mutations or Reporting feed tables | serial-required | feeds-product, Miniflux BFF, personal FeedService, Today reader | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | croner-node-runtime | Replace Vercel Cron with one persistent Croner process while running the existing Next.js API routes on a persistent Node server | feature-planning | `openspec/changes/replace-vercel-cron-with-croner` | Production exposes separate Web and Cron start commands; the Cron process schedules the existing five authenticated routes with overlap protection, health reporting, bounded requests, and graceful shutdown; Vercel schedules are removed | main-agent-only | existing Next.js cron routes, `CRON_SECRET`, production process supervisor | main-agent | current checkout | complete |
@@ -221,7 +221,7 @@ contract for self-check, review, testing, and merge.
 
 #### Progress / Evidence
 
-- status: in_progress
+- status: complete
 - branch: `main`
 - worktree: current checkout; unrelated dirty user changes are preserved
 - commit: none requested
@@ -390,8 +390,8 @@ contract for self-check, review, testing, and merge.
 
 - status: in_progress
 - branch/worktree: `main` in the current checkout; unrelated untracked artifacts are preserved
-- implementation: OpenSpec and HarnessKit contracts complete; failing tests pending
-- verification: pending
+- implementation: unified lifecycle, ten-port allocation, protected state/secrets, process-group ownership, isolated Compose projects, external Supabase status, documentation, and focused tests complete
+- verification: 24 focused tests, changed-scope lint, repository typecheck, syntax/Compose config, strict OpenSpec, HarnessKit fast, real 5000 and conflict-driven 5010 CLI flows, and the complete default stack passed; code/security review has no remaining blocker/high; HarnessKit targeted remains blocked by unrelated repository-wide lint debt
 - risks: Docker/VPN availability, shared Compose names, stale PID reuse, and unrelated repository-wide type/lint failures
 - commit: not requested
 

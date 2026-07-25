@@ -3,15 +3,27 @@
 set -euo pipefail
 
 deployment_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-secrets_dir="${deployment_root}/.miniflux-secrets"
+secrets_dir="${MINIFLUX_SECRETS_DIR:-${deployment_root}/.miniflux-secrets}"
 runtime_secrets_dir="${secrets_dir}/runtime"
 base_compose="${deployment_root}/compose.miniflux.yml"
 init_compose="${deployment_root}/compose.miniflux.init.yml"
 
-mkdir -p "${secrets_dir}"
-chmod 700 "${secrets_dir}"
-mkdir -p "${runtime_secrets_dir}"
-chmod 700 "${runtime_secrets_dir}"
+ensure_private_directory() {
+  local directory="$1"
+  if [[ -L "${directory}" ]]; then
+    printf 'Refusing unsafe Miniflux secret directory: %s\n' "${directory}" >&2
+    exit 1
+  fi
+  mkdir -p "${directory}"
+  if [[ ! -d "${directory}" || -L "${directory}" ]]; then
+    printf 'Refusing unsafe Miniflux secret directory: %s\n' "${directory}" >&2
+    exit 1
+  fi
+  chmod 700 "${directory}"
+}
+
+ensure_private_directory "${secrets_dir}"
+ensure_private_directory "${runtime_secrets_dir}"
 
 cleanup_bootstrap_runtime_secrets() {
   rm -f \
@@ -26,21 +38,25 @@ write_secret() {
   local secret_value="$2"
 
   if [[ -s "${target_path}" ]]; then
+    if [[ -L "${target_path}" || ! -f "${target_path}" ]]; then
+      printf 'Refusing unsafe Miniflux secret path: %s\n' "${target_path}" >&2
+      exit 1
+    fi
     return
   fi
-
-  umask 077
-  printf '%s' "${secret_value}" > "${target_path}"
-  chmod 600 "${target_path}"
+  replace_secret "${target_path}" "${secret_value}"
 }
 
 replace_secret() {
   local target_path="$1"
   local secret_value="$2"
+  local temporary_path
 
   umask 077
-  printf '%s' "${secret_value}" > "${target_path}"
-  chmod 600 "${target_path}"
+  temporary_path="$(mktemp "${target_path}.tmp.XXXXXX")"
+  printf '%s' "${secret_value}" > "${temporary_path}"
+  chmod 600 "${temporary_path}"
+  mv -fT -- "${temporary_path}" "${target_path}"
 }
 
 write_secret "${secrets_dir}/database_password" "$(openssl rand -hex 32)"

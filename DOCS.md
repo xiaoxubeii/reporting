@@ -330,8 +330,16 @@ cp .env.example .env.local
 npx supabase db push
 
 # Start the dev server
-npm run dev
+./devctl.sh start
+
+# Inspect all repository-owned services and the external Supabase dependency
+./devctl.sh status
+
+# Stop only services owned by this checkout's devctl runtime
+./devctl.sh stop
 ```
+
+`devctl.sh` manages the Web, Croner, Miniflux, and SearXNG units. It reserves a complete ten-port block at 5000-5009, falling forward by 10 when any port in the block is occupied. Target a subset with commands such as `./devctl.sh start web cron`. State, logs, and generated development secrets stay under ignored `.devctl/`; the configured Supabase endpoint remains an external dependency and is never started or stopped by this repository.
 
 ### Tunnel for webhook testing
 

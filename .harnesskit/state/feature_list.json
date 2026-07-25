@@ -139,8 +139,8 @@
     {
       "id": "devctl-service-manager",
       "title": "Unified local service and process control",
-      "status": "in_progress",
-      "current_task": "Add failing port allocation and lifecycle tests",
+      "status": "passing",
+      "current_task": "Implementation and real CLI verification complete",
       "definition_of_done": [
         "One root CLI manages Web, Croner, Miniflux, and SearXNG lifecycle and logs",
         "A complete free ten-port block is selected at 5000, 5010, 5020, or the next available increment",
@@ -150,9 +150,16 @@
         "Supabase is reported only as an external dependency and is never controlled",
         "Focused tests, strict OpenSpec, HarnessKit verification, reviews, and the real CLI path pass"
       ],
-      "evidence": [],
+      "evidence": [
+        "24 focused port allocation, adapter health and publishing, lifecycle, runtime ownership, lock, environment filtering, and real shell-entrypoint tests passed",
+        "changed-scope ESLint, repository TypeScript, shell/Node syntax, Compose config, strict OpenSpec, and HarnessKit fast passed",
+        "real default start/status/repeated-start/HTTP readiness/stop/repeated-stop/status passed for Web, Croner, isolated Miniflux, and isolated SearXNG",
+        "occupying port 5007 moved the entire runtime from 5000-5009 to 5010-5019",
+        "the external Supabase stack remained healthy and ambient reporting-miniflux containers remained running after devctl stop",
+        "code and security reviewers found no remaining blocker or high issue after lifecycle, rollback, health, environment, state, path, and permission hardening"
+      ],
       "blocked_by": [],
-      "notes": "The default managed port block maps Web/Cron/Miniflux/SearXNG to offsets 0/1/2/3 and reserves offsets 4-9. The configured Supabase stack is shared outside this repository."
+      "notes": "The default managed port block maps Web/Cron/Miniflux/SearXNG to offsets 0/1/2/3 and reserves offsets 4-9. The configured Supabase stack is shared outside this repository. HarnessKit targeted was run but remains blocked by pre-existing repository-wide lint debt outside the devctl scope."
     },
     {
       "id": "feeds-product",

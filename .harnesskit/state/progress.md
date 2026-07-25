@@ -3,7 +3,7 @@
 ## Current Focus
 
 - Active feature: `add-devctl-service-manager`, a unified local lifecycle CLI for Web, Croner, Miniflux, and SearXNG with external-only Supabase status.
-- Current task: write failing tests for complete ten-port block allocation, idempotent lifecycle, stale ownership, and rollback before implementation.
+- Current task: complete; implementation, hardening, review, and real CLI verification are recorded below.
 - Port contract: reserve 5000-5009, then 5010-5019, 5020-5029, and so on; service offsets are Web +0, Cron +1, Miniflux +2, and SearXNG +3.
 - Completed merge of `add-search-product`: fund-configured categories now resolve through the unified code-owned adapter execution path on `main`.
 - Completed follow-up in `redesign-follow-sources-catalog`: Following now groups sources directly by the user's personal Miniflux categories, while trusted curated Follow reuses the shared category picker.
@@ -26,6 +26,8 @@
 
 ## Verification
 
+- Devctl: 24/24 focused tests passed across port allocation, Compose health/publisher parsing, lifecycle rollback/idempotency, partial ownership retention, runtime ownership/locking, environment filtering, and the real shell status entrypoint. Changed-scope ESLint, repository TypeScript, Bash/Node syntax, Miniflux/SearXNG Compose config, strict OpenSpec, HarnessKit fast, and `git diff --check` passed. Code and security re-reviews found no remaining blocker/high after lifecycle, health, environment, state, path, and permission hardening. HarnessKit targeted was run and remains blocked at the existing repository-wide lint debt outside the devctl scope.
+- Devctl real CLI: the full Web/Cron/Miniflux/SearXNG stack started healthy at 5000-5003, repeated start was idempotent, all four HTTP/readiness probes returned healthy responses, stop and repeated stop succeeded, and no 5000-5003 listener remained. With port 5007 occupied, Web selected 5010 and the complete persisted block became 5010-5019. The shared external Supabase endpoint and ambient `reporting-miniflux` containers remained running after devctl stop.
 - Search merge verification: OpenSpec strict validation, HarnessKit fast, TypeScript, changed-scope ESLint, production build, Compose validation, and full Vitest passed; HarnessKit targeted/full were attempted and remain blocked only by pre-existing repository-wide ESLint debt.
 - Post-merge full Vitest: 157 files/1268 tests passed, with 2 files/4 environment-gated integration tests skipped. The pre-merge Category-to-Adapter focused suite passed 20 files/92 tests.
 - Authenticated admin browser acceptance passed before merge: changing the `internet` category label and mapping from `web` to `pubmed` immediately changed Search and returned live PubMed results; the original configuration and disposable user were restored.
