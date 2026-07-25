@@ -9,6 +9,7 @@ const CLIENT_SURFACES = [
   'components/feeds/today-feed.tsx',
   'components/feeds/explore-feed.tsx',
   'components/feeds/follow-sources.tsx',
+  'components/feeds/follow-category-popover.tsx',
   'components/feeds/explore-source-catalog.tsx',
   'components/feeds/feed-reader-sheet.tsx',
   'components/feeds/explore-reader-sheet.tsx',

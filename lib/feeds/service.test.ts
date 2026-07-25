@@ -215,6 +215,38 @@ describe('FeedService Miniflux-only user isolation', () => {
     expect(admin.from).not.toHaveBeenCalled()
   })
 
+  it('follows a trusted resolved source into an existing personal category', async () => {
+    const client = clients.get('token-a')!
+    client.listCategories.mockResolvedValue([
+      { id: 7, title: 'Cardiology', feedCount: 1, totalUnread: 0 },
+    ])
+    client.createFeed.mockResolvedValue(42)
+
+    await new FeedService(admin as never).followResolvedSource(
+      'user-a',
+      'https://example.com/feed.xml',
+      'Cardiology',
+    )
+
+    expect(client.createCategory).not.toHaveBeenCalled()
+    expect(client.createFeed).toHaveBeenCalledWith('https://example.com/feed.xml', 7)
+  })
+
+  it('creates a missing personal category when following a trusted resolved source', async () => {
+    const client = clients.get('token-a')!
+    client.createCategory.mockResolvedValue({ id: 8, title: 'Medical Devices', feedCount: 0, totalUnread: 0 })
+    client.createFeed.mockResolvedValue(43)
+
+    await new FeedService(admin as never).followResolvedSource(
+      'user-a',
+      'https://example.com/device.xml',
+      'Medical Devices',
+    )
+
+    expect(client.createCategory).toHaveBeenCalledWith('Medical Devices')
+    expect(client.createFeed).toHaveBeenCalledWith('https://example.com/device.xml', 8)
+  })
+
   it('returns an existing personal subscription without creating a duplicate feed', async () => {
     const client = clients.get('token-a')!
     client.listFeeds.mockResolvedValue([{

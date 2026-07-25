@@ -27,11 +27,15 @@ The system SHALL expose collector-owned sources through an authenticated, rate-l
 - **THEN** the request fails with a controlled 4xx response and no collector data is leaked
 
 ### Requirement: Featured category cards
-The system SHALL render responsive curated category cards containing the category title, source count, and one deterministic featured source when the category contains a source.
+The system SHALL render responsive curated category cards containing a regular-weight category title at the same 14px size as the featured source content and one deterministic featured source when the category contains a source, without rendering source-count copy in the Explore presentation.
 
 #### Scenario: Category has curated sources
 - **WHEN** the Explore sources view loads a populated category
-- **THEN** its card shows the category, count, and the earliest curated collector source with a source icon fallback
+- **THEN** its card shows the category and the earliest curated collector source with a source icon fallback, without an “N sources” label
+
+#### Scenario: Catalog is shown at a desktop viewport
+- **WHEN** the viewport is at least the desktop `lg` breakpoint
+- **THEN** the category catalog uses four columns and compact-height cards so the catalog remains dense and scannable
 
 #### Scenario: User opens a category
 - **WHEN** the user activates a category card
@@ -53,7 +57,7 @@ The system SHALL show whether each curated source is already present in the curr
 
 #### Scenario: Curated source is not followed
 - **WHEN** a connected user follows a catalog source
-- **THEN** the client submits only its namespaced collector reference, the server revalidates collector ownership, and the source is idempotently added only to that user's personal account
+- **THEN** the user selects an existing, new, or uncategorized personal Miniflux category; the client submits only the namespaced collector reference and bounded category choice; and the server revalidates collector ownership before adding the source only to that user's personal account
 
 #### Scenario: Personal account is unavailable
 - **WHEN** curated catalog loading succeeds but personal connection or Follow-state projection is unavailable
@@ -64,7 +68,11 @@ The system SHALL retain the existing personal Miniflux source-management behavio
 
 #### Scenario: Connected user manages personal sources
 - **WHEN** a connected user opens Following
-- **THEN** personal folders, source endpoints, health state, category selection, arbitrary URL discovery, and Unfollow operate with their existing contracts
+- **THEN** followed sources are grouped by the categories assigned in that user's personal Miniflux account, empty categories are omitted, uncategorized sources appear last, and source endpoints, health state, arbitrary URL discovery, and Unfollow retain their existing contracts
+
+#### Scenario: User filters followed sources
+- **WHEN** a connected user enters a text query in Following
+- **THEN** only matching sources remain and they stay grouped under their assigned personal categories without rendering a separate topic-card directory
 
 #### Scenario: Personal account requires setup
 - **WHEN** the user has no usable personal Miniflux connection

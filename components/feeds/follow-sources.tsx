@@ -1,17 +1,17 @@
 'use client'
 
-import { FormEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { FormEvent, useEffect, useId, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { AlertCircle, Check, ExternalLink, Folder, Globe2, Loader2, Plus, Rss, Search, Unplug } from 'lucide-react'
+import { AlertCircle, ExternalLink, Globe2, Loader2, Rss, Search, Unplug } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { FeedsStatePanel } from './state-panel'
 import { ExploreSourceCatalog } from './explore-source-catalog'
+import { FollowCategoryPopover } from './follow-category-popover'
+import { groupFollowingSources } from './following-groups'
 import {
   feedErrorMessageKey,
   feedsRequest,
@@ -28,11 +28,10 @@ export function FollowSources() {
   const t = useTranslations('Feeds.sources')
   const feedError = useTranslations('Feeds.errors')
   const canManageSources = true
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const followingGroupIdPrefix = useId()
   const isFollowingView = searchParams.get('view') === 'following'
-  const topicSlug = searchParams.get('topic')
   const [connection, setConnection] = useState<ConnectionStatus | null>(null)
   const [sources, setSources] = useState<FeedSourceResult[]>([])
   const [topics, setTopics] = useState<FeedTopicResult[]>([])
@@ -201,26 +200,17 @@ export function FollowSources() {
       .filter(Boolean)
       .some(field => String(field).toLocaleLowerCase().includes(value)))
   }, [query, sources])
-  const selectedTopic = topics.find(topic => String(topic.id) === topicSlug) ?? null
-  const selectedTopicSources = selectedTopic
-    ? sources.filter(source => source.topics.includes(selectedTopic.name))
-    : []
-
-  function closeTopic() {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('topic')
-    router.replace(params.size ? `${pathname}?${params.toString()}` : pathname, { scroll: false })
-  }
-
-  function openTopic(topicId: number) {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('topic', String(topicId))
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
+  const followingGroups = useMemo(
+    () => groupFollowingSources(filteredSources, topics, t('categoryMenu.uncategorized')),
+    [filteredSources, t, topics],
+  )
 
   function invalidatePersonalCatalog() {
     setPersonalCatalogStale(true)
     setCatalogRefreshKey(current => current + 1)
+    if (connection?.connected) void loadCatalog().catch(value => {
+      setLoadError(feedError(feedErrorMessageKey(value)))
+    })
   }
 
   return (
@@ -250,7 +240,6 @@ export function FollowSources() {
             {discovering ? <Loader2 className="animate-spin" /> : <Globe2 />} <span className="hidden sm:inline">{t('discovery.action')}</span>
           </Button>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">{t('discovery.help')}</p>
       </form>
 
       {discoveryError && <div className="mt-5 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><AlertCircle className="h-4 w-4" />{discoveryError}</div>}
@@ -269,7 +258,7 @@ export function FollowSources() {
                     <p className="truncate text-sm text-muted-foreground">{feed.url}</p>
                   </div>
                   {canManageSources && connection?.connected ? (
-                    <FollowCategoryPopover feed={feed} itemKey={key} categories={categories} pending={pending.has(key)} error={rowError[key]} following={feed.isFollowing} onFollow={follow} />
+                    <FollowCategoryPopover categories={categories} pending={pending.has(key)} error={rowError[key]} following={feed.isFollowing} onFollow={category => follow(feed, key, category)} />
                   ) : <span className="text-xs font-medium text-muted-foreground">{t('readOnly')}</span>}
                 </div>
               )
@@ -285,6 +274,7 @@ export function FollowSources() {
           personalConnectionLoading={loading}
           personalConnectionError={loadError && !connection ? loadError : null}
           canManageSources={canManageSources && Boolean(connection?.canManage)}
+          personalCategories={categories}
           refreshKey={catalogRefreshKey}
           onRetryConnection={() => void load()}
           onPersonalCatalogInvalidated={invalidatePersonalCatalog}
@@ -338,30 +328,27 @@ export function FollowSources() {
         <>
           {loadError && <div className="mt-5 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert"><AlertCircle className="h-4 w-4" />{loadError}</div>}
 
-          {!query && topics.length > 0 && (
-            <section className="mt-10">
-              <h2 className="text-lg font-semibold">{t('topics.title')}</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {topics.map(topic => (
-                  <button key={topic.id} type="button" onClick={() => openTopic(topic.id)} className="rounded-lg border bg-card p-5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <div className="flex items-center justify-between gap-3"><span className="font-semibold">{topic.name}</span><span className="text-xs text-muted-foreground">{t('sourceCount', { count: topic.count })}</span></div>
-                    {topic.unreadCount > 0 && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{t('unreadCount', { count: topic.unreadCount })}</p>}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
           <section className="mt-10">
             <div className="flex items-baseline justify-between gap-3"><h2 className="text-lg font-semibold">{query && !looksLikeUrl(query) ? t('results') : t('followedSources')}</h2><span className="text-xs text-muted-foreground">{t('sourceCount', { count: filteredSources.length })}</span></div>
             {filteredSources.length === 0 ? (
               <div className="mt-4"><FeedsStatePanel title={query ? t('empty.noMatchTitle', { query }) : t('empty.noneTitle')} description={query ? t('empty.noMatchDescription') : t('empty.noneDescription')} /></div>
             ) : (
-              <SourceList sources={filteredSources} categories={categories} pending={pending} rowError={rowError} canManage={canManageSources} onFollow={follow} onUnfollow={unfollow} />
+              <div className="mt-6 space-y-8">
+                {followingGroups.map((group, index) => {
+                  const headingId = `${followingGroupIdPrefix}-group-${index}`
+                  return (
+                    <section key={group.key} aria-labelledby={headingId}>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h3 id={headingId} className="font-semibold">{group.label}</h3>
+                        <span className="text-xs text-muted-foreground">{t('sourceCount', { count: group.sources.length })}</span>
+                      </div>
+                      <SourceList sources={group.sources} categories={categories} pending={pending} rowError={rowError} canManage={canManageSources} onFollow={follow} onUnfollow={unfollow} />
+                    </section>
+                  )
+                })}
+              </div>
             )}
           </section>
-
-          <TopicSourcesSheet topic={selectedTopic} sources={selectedTopicSources} categories={categories} open={!!selectedTopic} onOpenChange={open => { if (!open) closeTopic() }} pending={pending} rowError={rowError} canManage={canManageSources} onFollow={follow} onUnfollow={unfollow} />
         </>
       )}
     </div>
@@ -370,190 +357,6 @@ export function FollowSources() {
 
 type FollowTarget = { url: string; title: string; type?: string; siteUrl?: string | null }
 type FollowHandler = (feed: FollowTarget, key: string, category: string | null) => Promise<boolean>
-
-function FollowCategoryPopover({ feed, itemKey, categories, pending, error, disabled = false, following = false, size, onFollow, onFollowingClick }: {
-  feed: FollowTarget
-  itemKey: string
-  categories: FeedCategoryResult[]
-  pending: boolean
-  error?: string
-  disabled?: boolean
-  following?: boolean
-  size?: 'sm' | 'default'
-  onFollow: FollowHandler
-  onFollowingClick?: () => void
-}) {
-  const t = useTranslations('Feeds.sources')
-  const [open, setOpen] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [categoryQuery, setCategoryQuery] = useState('')
-  const [newCategory, setNewCategory] = useState('')
-  const titleId = useId()
-  const inputId = useId()
-  const categoryInputRef = useRef<HTMLInputElement>(null)
-  const newCategoryButtonRef = useRef<HTMLButtonElement>(null)
-  const followingButtonRef = useRef<HTMLButtonElement>(null)
-  const previousFollowingRef = useRef(following)
-  const normalizedQuery = categoryQuery.trim().toLocaleLowerCase()
-  const uncategorizedLabel = t('categoryMenu.uncategorized')
-  const filteredCategories = normalizedQuery
-    ? categories.filter(category => category.name.toLocaleLowerCase().includes(normalizedQuery))
-    : categories
-  const showUncategorized = !normalizedQuery || uncategorizedLabel.toLocaleLowerCase().includes(normalizedQuery)
-
-  useEffect(() => {
-    const becameFollowing = following && !previousFollowingRef.current
-    previousFollowingRef.current = following
-    if (!following) return
-    setOpen(false)
-    setCreating(false)
-    setCategoryQuery('')
-    setNewCategory('')
-    if (becameFollowing) requestAnimationFrame(() => followingButtonRef.current?.focus())
-  }, [following])
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen && pending) return
-    setOpen(nextOpen)
-    if (!nextOpen) {
-      setCreating(false)
-      setCategoryQuery('')
-      setNewCategory('')
-    }
-  }
-
-  async function chooseCategory(category: string | null) {
-    if (pending) return
-    if (await onFollow(feed, itemKey, category)) handleOpenChange(false)
-  }
-
-  async function createAndFollow(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const category = newCategory.trim()
-    if (!category || pending) return
-    await chooseCategory(category)
-  }
-
-  function cancelCreation() {
-    setCreating(false)
-    setCategoryQuery('')
-    setNewCategory('')
-    requestAnimationFrame(() => newCategoryButtonRef.current?.focus())
-  }
-
-  function startCreation() {
-    setCreating(true)
-    setNewCategory('')
-    setCategoryQuery('')
-    requestAnimationFrame(() => categoryInputRef.current?.focus())
-  }
-
-  if (following) {
-    return (
-      <Button
-        ref={followingButtonRef}
-        type="button"
-        size={size}
-        variant="secondary"
-        className={pending ? 'min-h-11 opacity-50' : 'min-h-11'}
-        disabled={!onFollowingClick}
-        aria-disabled={pending || undefined}
-        tabIndex={onFollowingClick ? 0 : -1}
-        onClick={() => { if (!pending) onFollowingClick?.() }}
-      >
-        {pending ? <Loader2 className="animate-spin" /> : <Check />}
-        {t('following')}
-      </Button>
-    )
-  }
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          size={size}
-          variant="outline"
-          className="min-w-24"
-          disabled={disabled || pending}
-        >
-          {pending && <Loader2 className="animate-spin" />}
-          {pending ? t('categoryMenu.following') : t('follow')}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={8}
-        collisionPadding={4}
-        aria-labelledby={titleId}
-        aria-busy={pending}
-        onOpenAutoFocus={event => {
-          event.preventDefault()
-          requestAnimationFrame(() => categoryInputRef.current?.focus())
-        }}
-        onEscapeKeyDown={event => { if (pending) event.preventDefault() }}
-        onInteractOutside={event => { if (pending) event.preventDefault() }}
-        className="w-[min(20rem,calc(100vw-2rem))] bg-popover p-0 text-popover-foreground"
-      >
-        <PopoverArrow width={16} height={8} className="fill-popover stroke-border" />
-        <form onSubmit={createAndFollow} className="flex max-h-[var(--radix-popover-content-available-height)] flex-col overflow-hidden rounded-md bg-popover">
-          <h3 id={titleId} className="sr-only">{t('categoryMenu.title')}</h3>
-          <div className="shrink-0 p-3">
-            <Label htmlFor={inputId} className="sr-only">
-              {creating ? t('categoryMenu.newCategory') : t('categoryMenu.searchCategories')}
-            </Label>
-            <Input
-              ref={categoryInputRef}
-              id={inputId}
-              value={creating ? newCategory : categoryQuery}
-              onChange={event => creating ? setNewCategory(event.target.value) : setCategoryQuery(event.target.value)}
-              aria-label={creating ? t('categoryMenu.newCategory') : t('categoryMenu.searchCategories')}
-              placeholder={creating ? t('categoryMenu.placeholder') : ''}
-              className="bg-background"
-              maxLength={100}
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto border-y border-border bg-popover py-1">
-            {showUncategorized && (
-              <Button type="button" variant="ghost" className="h-11 w-full justify-start rounded-none px-3 font-normal" disabled={pending} onClick={() => void chooseCategory(null)}>
-                <Folder className="size-4 text-muted-foreground" />
-                <span className="truncate">{uncategorizedLabel}</span>
-              </Button>
-            )}
-            {filteredCategories.map(category => (
-              <Button key={category.id} type="button" variant="ghost" className="h-11 w-full justify-start rounded-none px-3 font-normal" disabled={pending} onClick={() => void chooseCategory(category.name)}>
-                <Folder className="size-4 text-muted-foreground" />
-                <span className="truncate">{category.name}</span>
-              </Button>
-            ))}
-          </div>
-
-          <div className="shrink-0 bg-popover">
-            {creating ? (
-              <div className="flex min-h-14 items-center justify-end gap-2 p-3">
-                <Button type="button" variant="ghost" disabled={pending} onClick={cancelCreation}>
-                  {t('categoryMenu.cancel')}
-                </Button>
-                <Button type="submit" disabled={pending || !newCategory.trim()}>
-                  {pending && <Loader2 className="animate-spin" />}
-                  {t('categoryMenu.createAndFollow')}
-                </Button>
-              </div>
-            ) : (
-              <Button ref={newCategoryButtonRef} type="button" variant="ghost" className="h-11 w-full justify-start rounded-none px-3 text-primary hover:text-primary" disabled={pending} onClick={startCreation}>
-                <Plus className="size-4" />
-                {t('categoryMenu.newCategory')}
-              </Button>
-            )}
-            {error && <p className="px-3 pb-3 text-sm text-destructive" role="alert">{error}</p>}
-          </div>
-        </form>
-      </PopoverContent>
-    </Popover>
-  )
-}
 
 function SourceList({ sources, categories, pending, rowError, canManage, onFollow, onUnfollow }: {
   sources: FeedSourceResult[]
@@ -595,15 +398,13 @@ function SourceList({ sources, categories, pending, rowError, canManage, onFollo
                   </div>
                   {canManage ? (
                     <FollowCategoryPopover
-                      feed={{ url: endpoint.feedUrl, title: endpoint.title, type: endpoint.format ?? undefined, siteUrl: source.siteUrl }}
-                      itemKey={key}
                       categories={categories}
                       pending={pending.has(key)}
                       error={rowError[key]}
                       disabled={!endpoint.isFollowing && endpoint.health === 'unavailable'}
                       following={endpoint.isFollowing}
                       size="sm"
-                      onFollow={onFollow}
+                      onFollow={category => onFollow({ url: endpoint.feedUrl, title: endpoint.title, type: endpoint.format ?? undefined, siteUrl: source.siteUrl }, key, category)}
                       onFollowingClick={() => onUnfollow(endpoint, key)}
                     />
                   ) : <span className="text-xs font-medium text-muted-foreground">{t('readOnly')}</span>}
@@ -614,22 +415,6 @@ function SourceList({ sources, categories, pending, rowError, canManage, onFollo
         </div>
       ))}
     </div>
-  )
-}
-
-function TopicSourcesSheet(props: Parameters<typeof SourceList>[0] & { topic: FeedTopicResult | null; open: boolean; onOpenChange: (open: boolean) => void }) {
-  const t = useTranslations('Feeds.sources')
-  return (
-    <Sheet open={props.open} onOpenChange={props.onOpenChange}>
-      <SheetContent side="right" overlayClassName="bg-black/35" className="w-screen max-w-none overflow-y-auto p-0 sm:w-[80vw] sm:max-w-[880px]">
-        <div className="px-5 py-8 md:px-10">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('topicSheet.label')}</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">{props.topic?.name}</h2>
-          {!!props.topic?.unreadCount && <p className="mt-3 text-muted-foreground">{t('unreadCount', { count: props.topic.unreadCount })}</p>}
-          {props.sources.length > 0 ? <SourceList {...props} /> : <div className="mt-8"><FeedsStatePanel title={t('topicSheet.emptyTitle')} description={t('topicSheet.emptyDescription')} /></div>}
-        </div>
-      </SheetContent>
-    </Sheet>
   )
 }
 

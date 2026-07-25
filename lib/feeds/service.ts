@@ -127,25 +127,19 @@ export class FeedService {
     const existing = feeds.find(feed => canonicalUrl(feed.feedUrl) === canonicalUrl(feedUrl))
     if (existing) return subscriptionView(existing.id)
 
-    const topic = cleanText(input.topic, 100)
-    let categoryId: number | null = null
-    if (topic) {
-      const categories = await client.listCategories()
-      const category = categories.find(item => item.title.toLocaleLowerCase() === topic.toLocaleLowerCase())
-        ?? await client.createCategory(topic)
-      categoryId = category.id
-    }
+    const categoryId = await this.resolveCategoryId(client, input.topic)
     return this.createFeedWithRecovery(client, feedUrl, categoryId)
   }
 
-  async followResolvedSource(userId: string, trustedUrl: string) {
+  async followResolvedSource(userId: string, trustedUrl: string, topic?: string | null) {
     const feedUrl = await validDiscoveryUrl(trustedUrl)
     const client = await this.clientForUser(userId)
     const existing = (await client.listFeeds()).find(
       feed => canonicalUrl(feed.feedUrl) === canonicalUrl(feedUrl),
     )
     if (existing) return subscriptionView(existing.id)
-    return this.createFeedWithRecovery(client, feedUrl, null)
+    const categoryId = await this.resolveCategoryId(client, topic)
+    return this.createFeedWithRecovery(client, feedUrl, categoryId)
   }
 
   async unfollow(userId: string, feedId: number): Promise<void> {
@@ -175,6 +169,15 @@ export class FeedService {
       }
       throw error
     }
+  }
+
+  private async resolveCategoryId(client: MinifluxClient, value?: string | null): Promise<number | null> {
+    const topic = cleanText(value, 100)
+    if (!topic) return null
+    const categories = await client.listCategories()
+    const category = categories.find(item => item.title.toLocaleLowerCase() === topic.toLocaleLowerCase())
+      ?? await client.createCategory(topic)
+    return category.id
   }
 
   async listEntries(params: {

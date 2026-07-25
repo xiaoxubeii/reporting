@@ -89,30 +89,31 @@
       "id": "curated-source-catalog",
       "title": "Curated RSS source catalog and personal Following views",
       "status": "passing",
-      "current_task": "Complete",
+      "current_task": "Completed personal Miniflux category grouping and curated Follow category choice",
       "definition_of_done": [
         "Follow sources defaults to an URL-backed curated Explore view and offers a separate Following management view",
         "Curated category cards, keyword search, category Sheet, and deterministic representative sources use read-only collector data",
         "Website/RSS URL discovery and personal category selection remain available without advertising unsupported connectors",
-        "Trusted-reference Follow updates only the current user's Miniflux and refreshes Follow state without exposing collector feed URLs",
-        "Personal connection recovery, categories, health, category Sheet, and unfollow behavior remain intact",
+        "Trusted-reference Follow accepts a bounded personal category choice, updates only the current user's Miniflux, and never exposes or accepts collector feed URLs",
+        "Following groups sources only by the user's personal Miniflux categories, omits empty groups, and places Uncategorized last",
+        "Personal connection recovery, source health, filtering, and unfollow behavior remain intact",
         "Focused tests, strict OpenSpec validation, changed-scope checks, reviews, and real authenticated desktop/mobile acceptance pass"
       ],
       "evidence": [
-        "80 focused Explore service/API/access/UI/localization tests passed",
+        "103 focused Explore service/API/access/grouping/UI/localization tests passed",
         "strict OpenSpec validation, HarnessKit fast, changed-scope lint/type checks, and git diff --check passed",
-        "real authenticated desktop and 390px mobile English/Chinese Explore, category, search, URL discovery, Follow, refresh, Following, and connection-failure-independence flows passed",
+        "real authenticated desktop and 390px mobile English/Chinese Explore, category, search, URL discovery, Follow, refresh, Following, and connection-failure-independence flows passed; final category typography and count/helper removal are captured in explore-style desktop/mobile evidence",
         ".harnesskit/evidence/redesign-follow-sources-catalog/",
         "code, accessibility, and security reviews completed with no remaining in-scope findings"
       ],
       "blocked_by": [],
-      "notes": "Collector browsing and personal Miniflux state load independently. First release supports Website/RSS only and adds no Reporting feed persistence or remote favicon loading. Repository-wide targeted lint remains blocked by unrelated existing errors documented in progress.md."
+      "notes": "Collector browsing and personal Miniflux state load independently. Curated Follow accepts only a trusted source reference and bounded personal category choice; Following groups directly from personal Miniflux category state. First release supports Website/RSS only and adds no Reporting feed persistence or remote favicon loading. Repository-wide targeted lint remains blocked by unrelated existing errors documented in progress.md."
     },
     {
       "id": "feed-category-popover",
       "title": "Anchored category menu for personal feed follows",
-      "status": "in_progress",
-      "current_task": "Compact theme-aware styling implemented; authenticated browser acceptance pending",
+      "status": "passing",
+      "current_task": "Compact theme-aware category picker completed and verified",
       "definition_of_done": [
         "Follow actions open an anchored responsive category menu instead of using a permanent page-level category field",
         "Uncategorized and existing Miniflux categories follow immediately, including empty categories",
@@ -130,7 +131,7 @@
         ".harnesskit/evidence/add-feed-category-popover contains the browser report and final screenshots",
         "final UI/UX review completed with no remaining findings; disposable QA identities were removed",
         "compact theme-aware styling regression: 14/14 focused UI tests, changed-file ESLint with 0 errors, strict OpenSpec validation, and reviewer pass",
-        "browser automation reached the real localhost:3001 entrypoint but its isolated session could not inherit the ambient authenticated browser session"
+        "the final shared compact picker was exercised in the authenticated curated Follow desktop/mobile flow with focus restoration and viewport fit"
       ],
       "blocked_by": [],
       "notes": "Miniflux remains the sole category owner. The prior fixed-white 448px reference styling was superseded by the user's request to match Reporting controls; semantic theme tokens and a 320px compact menu are now implemented. Repository-wide verification remains blocked by unrelated existing lint errors; the current changed scope has no lint errors."

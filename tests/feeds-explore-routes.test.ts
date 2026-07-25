@@ -128,21 +128,35 @@ describe('Curated Explore BFF routes', () => {
     expect(body.data.sourceIds).toEqual(['explore-source:42'])
   })
 
-  it('rate-limits Follow and passes only current user plus source reference', async () => {
+  it('rate-limits Follow and passes only current user, source reference, and personal topic', async () => {
+    readJsonObject.mockResolvedValueOnce({ topic: 'Cardiology' })
     const { POST } = await import('@/app/api/feeds/explore/sources/[id]/follow/route')
     const request = new Request('https://app.test/api/feeds/explore/sources/explore-source%3A42/follow', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: 'https://app.test' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ topic: 'Cardiology' }),
     })
     const response = await POST(request, { params: { id: 'explore-source:42' } })
 
     expect(requireFeedRoute).toHaveBeenCalledWith('api/feeds/explore/sources/[id]/follow', 'POST')
     expect(assertSameOriginMutation).toHaveBeenCalledWith(request)
     expect(limitFeedAction).toHaveBeenCalledWith(expect.any(Object), 'explore-follow', 30, 60)
-    expect(followSource).toHaveBeenCalledWith('reporting-user-1', 'explore-source:42')
+    expect(followSource).toHaveBeenCalledWith('reporting-user-1', 'explore-source:42', 'Cardiology')
     expect(followSource).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ feedUrl: expect.anything() }))
     expect(response.status).toBe(201)
+  })
+
+  it('accepts an explicit uncategorized choice for trusted Follow', async () => {
+    readJsonObject.mockResolvedValueOnce({ topic: null })
+    const { POST } = await import('@/app/api/feeds/explore/sources/[id]/follow/route')
+    const response = await POST(new Request('https://app.test/follow', {
+      method: 'POST',
+      headers: { Origin: 'https://app.test', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: null }),
+    }), { params: { id: 'explore-source:42' } })
+
+    expect(response.status).toBe(201)
+    expect(followSource).toHaveBeenCalledWith('reporting-user-1', 'explore-source:42', null)
   })
 
   it('rejects cross-origin Follow before rate limiting or personal writes', async () => {
@@ -162,7 +176,7 @@ describe('Curated Explore BFF routes', () => {
     expect(followSource).not.toHaveBeenCalled()
   })
 
-  it('rejects browser-supplied source metadata before accessing the personal account', async () => {
+  it('rejects browser-supplied source metadata after authentication and rate limiting', async () => {
     readJsonObject.mockResolvedValueOnce({ feedUrl: 'https://attacker.example/feed.xml' })
     const { POST } = await import('@/app/api/feeds/explore/sources/[id]/follow/route')
     const response = await POST(new Request('https://app.test/follow', {
@@ -172,7 +186,28 @@ describe('Curated Explore BFF routes', () => {
     }), { params: { id: 'explore-source:42' } })
 
     expect(response.status).toBe(400)
-    expect(requireFeedRoute).not.toHaveBeenCalled()
+    expect(requireFeedRoute).toHaveBeenCalledWith('api/feeds/explore/sources/[id]/follow', 'POST')
+    expect(limitFeedAction).toHaveBeenCalledWith(expect.any(Object), 'explore-follow', 30, 60)
+    expect(followSource).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [{ topic: 'x'.repeat(101) }, 'long topic'],
+    [{ topic: 'Cardio\u0000logy' }, 'control character'],
+    [{ topic: 7 }, 'non-string topic'],
+    [{ topic: 'Cardiology', title: 'Injected title' }, 'unknown metadata'],
+  ] as Array<[Record<string, unknown>, string]>)('rejects unsafe trusted Follow input: %s (%s)', async (body) => {
+    readJsonObject.mockResolvedValueOnce(body)
+    const { POST } = await import('@/app/api/feeds/explore/sources/[id]/follow/route')
+    const response = await POST(new Request('https://app.test/follow', {
+      method: 'POST',
+      headers: { Origin: 'https://app.test', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }), { params: { id: 'explore-source:42' } })
+
+    expect(response.status).toBe(400)
+    expect(requireFeedRoute).toHaveBeenCalledWith('api/feeds/explore/sources/[id]/follow', 'POST')
+    expect(limitFeedAction).toHaveBeenCalledWith(expect.any(Object), 'explore-follow', 30, 60)
     expect(followSource).not.toHaveBeenCalled()
   })
 

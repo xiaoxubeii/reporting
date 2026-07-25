@@ -3,15 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { Check, ExternalLink, Loader2, Rss } from 'lucide-react'
+import { ExternalLink, Loader2, Rss } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { FeedsStatePanel } from './state-panel'
+import { FollowCategoryPopover } from './follow-category-popover'
 import {
   feedErrorMessageKey,
   feedsRequest,
   type ExploreCategoryResult,
   type ExploreSourceResult,
+  type FeedCategoryResult,
 } from './api'
 
 interface ExploreSourceCatalogProps {
@@ -20,6 +22,7 @@ interface ExploreSourceCatalogProps {
   personalConnectionLoading: boolean
   personalConnectionError: string | null
   canManageSources: boolean
+  personalCategories: FeedCategoryResult[]
   refreshKey: number
   onRetryConnection: () => void
   onPersonalCatalogInvalidated: () => void
@@ -31,6 +34,7 @@ export function ExploreSourceCatalog({
   personalConnectionLoading,
   personalConnectionError,
   canManageSources,
+  personalCategories,
   refreshKey,
   onRetryConnection,
   onPersonalCatalogInvalidated,
@@ -167,14 +171,14 @@ export function ExploreSourceCatalog({
     router.push(params.size ? `${pathname}?${params.toString()}` : pathname, { scroll: false })
   }
 
-  async function follow(sourceId: string, title: string) {
-    if (!canFollow || pending.has(sourceId)) return
+  async function follow(sourceId: string, title: string, category: string | null): Promise<boolean> {
+    if (!canFollow || pending.has(sourceId)) return false
     setPending(current => new Set(current).add(sourceId))
     setRowError(current => ({ ...current, [sourceId]: '' }))
     try {
       await feedsRequest(`/api/feeds/explore/sources/${encodeURIComponent(sourceId)}/follow`, {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({ topic: category }),
       })
       setFollowedSourceIds(current => {
         const next = new Set(current)
@@ -183,8 +187,10 @@ export function ExploreSourceCatalog({
       })
       setAnnouncement(t('announcements.followed', { title }))
       onPersonalCatalogInvalidated()
+      return true
     } catch (value) {
       setRowError(current => ({ ...current, [sourceId]: feedError(feedErrorMessageKey(value)) }))
+      return false
     } finally {
       setPending(current => {
         const next = new Set(current)
@@ -197,13 +203,10 @@ export function ExploreSourceCatalog({
   return (
     <section className="mt-8" aria-labelledby="explore-sources-heading">
       <p className="sr-only" aria-live="polite">{announcement}</p>
-      <div className="flex items-baseline justify-between gap-4">
+      <div>
         <h2 id="explore-sources-heading" className="text-xl font-semibold tracking-tight">
           {isSearching ? t('searchResults') : t('exploreHeading')}
         </h2>
-        {isSearching && !sourcesLoading && (
-          <span className="text-xs text-muted-foreground">{t('sourceCount', { count: sources.length })}</span>
-        )}
       </div>
 
       {!followingLoading && !personalConnectionLoading && (!personalConnected || followingError || personalConnectionError) && (
@@ -240,19 +243,18 @@ export function ExploreSourceCatalog({
       )}
       {!catalogLoading && !catalogError && !isSearching && (
         categories.length ? (
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {categories.map(category => (
               <button
                 key={category.id}
                 type="button"
                 onClick={() => openCategory(category.id)}
-                className="group min-h-44 rounded-xl border bg-card p-5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="group min-h-36 rounded-xl border bg-card p-5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-xl font-semibold">#{categoryLabel(category.title)}</span>
-                  <span className="text-xs text-muted-foreground">{t('sourceCount', { count: category.sourceCount })}</span>
-                </div>
-                <div className="mt-12 flex items-center gap-3">
+                <span className="text-sm font-normal leading-normal tracking-normal">
+                  #{categoryLabel(category.title)}
+                </span>
+                <div className="mt-8 flex items-center gap-3">
                   <SourceMark title={category.featuredSource.title} />
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">{t('featured')}</p>
@@ -276,6 +278,7 @@ export function ExploreSourceCatalog({
           pending={pending}
           rowError={rowError}
           canFollow={canFollow}
+          personalCategories={personalCategories}
           onFollow={follow}
         />
       )}
@@ -293,7 +296,6 @@ export function ExploreSourceCatalog({
             <h2 className="mt-2 text-3xl font-semibold tracking-tight">
               {selectedCategory ? `#${categoryLabel(selectedCategory.title)}` : t('categorySheet.titleFallback')}
             </h2>
-            {selectedCategory && <p className="mt-3 text-muted-foreground">{t('sourceCount', { count: selectedCategory.sourceCount })}</p>}
             <SourceResults
               sources={sources}
               loading={sourcesLoading}
@@ -304,6 +306,7 @@ export function ExploreSourceCatalog({
               pending={pending}
               rowError={rowError}
               canFollow={canFollow}
+              personalCategories={personalCategories}
               onFollow={follow}
             />
           </div>
@@ -313,7 +316,7 @@ export function ExploreSourceCatalog({
   )
 }
 
-function SourceResults({ sources, loading, error, emptyTitle, emptyDescription, followedSourceIds, pending, rowError, canFollow, onFollow }: {
+function SourceResults({ sources, loading, error, emptyTitle, emptyDescription, followedSourceIds, pending, rowError, canFollow, personalCategories, onFollow }: {
   sources: ExploreSourceResult[]
   loading: boolean
   error: string | null
@@ -323,7 +326,8 @@ function SourceResults({ sources, loading, error, emptyTitle, emptyDescription, 
   pending: Set<string>
   rowError: Record<string, string>
   canFollow: boolean
-  onFollow: (sourceId: string, title: string) => void
+  personalCategories: FeedCategoryResult[]
+  onFollow: (sourceId: string, title: string, category: string | null) => Promise<boolean>
 }) {
   const t = useTranslations('Feeds.sources')
   if (loading) return <div className="flex min-h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
@@ -345,16 +349,13 @@ function SourceResults({ sources, loading, error, emptyTitle, emptyDescription, 
               <p className="mt-1 truncate text-sm text-muted-foreground">#{categoryLabel(source.category.title)}</p>
               {rowError[source.id] && <p className="mt-2 text-sm text-destructive" role="alert">{rowError[source.id]}</p>}
             </div>
-            <Button
-              type="button"
-              variant={following ? 'secondary' : 'outline'}
-              disabled={following || isPending || !canFollow}
-              aria-label={!canFollow && !following ? t('catalog.followUnavailable') : undefined}
-              onClick={() => void onFollow(source.id, source.title)}
-            >
-              {isPending ? <Loader2 className="animate-spin" /> : following ? <Check /> : <Rss />}
-              {isPending ? t('catalog.followingProgress') : following ? t('following') : t('follow')}
-            </Button>
+            <FollowCategoryPopover
+              categories={personalCategories}
+              pending={isPending}
+              disabled={!canFollow}
+              following={following}
+              onFollow={category => onFollow(source.id, source.title, category)}
+            />
           </div>
         )
       })}

@@ -21,3 +21,14 @@
 - [x] 4.1 Pass focused tests, changed-scope lint/type checks, strict OpenSpec validation, and HarnessKit fast; run the targeted gate and record unrelated repository blockers
 - [x] 4.2 Verify the real authenticated desktop and mobile browser flows, including refresh persistence and personal-connection failure independence
 - [x] 4.3 Complete code, accessibility, and security review; resolve in-scope findings and record final evidence
+- [x] 4.4 Align category typography with the supplied reference and remove Explore source counts and the search helper copy
+- [x] 4.5 Match the category label size to the featured source content size
+- [x] 4.6 Use a compact four-column category grid at desktop widths
+- [x] 4.7 Reduce category card height and vertical spacing while preserving source readability
+
+## 5. Personal Category Grouping Follow-up
+
+- [x] 5.1 Add failing service, route, and UI contract tests for category-aware trusted Follow and grouped Following
+- [x] 5.2 Reuse the accessible category picker for curated sources and accept only a bounded personal category choice beside the trusted source reference
+- [x] 5.3 Replace Following topic cards and topic Sheet with non-empty personal category groups and Uncategorized last
+- [x] 5.4 Pass focused tests, changed-scope lint/type checks, strict OpenSpec/HarnessKit verification, reviews, and real desktop/mobile browser flows

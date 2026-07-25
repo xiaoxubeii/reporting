@@ -235,9 +235,10 @@ describe('ExploreFeedService collector boundary', () => {
     const result = await new ExploreFeedService(admin as never).followSource(
       'reporting-user-a',
       'explore-source:42',
+      'Cardiology',
     )
 
-    expect(personalFollow).toHaveBeenCalledWith('reporting-user-a', 'https://trusted.example/feed.xml')
+    expect(personalFollow).toHaveBeenCalledWith('reporting-user-a', 'https://trusted.example/feed.xml', 'Cardiology')
     expect(result).toEqual({ id: 501, externalFeedId: 501 })
     expect(collector.createFeed).not.toHaveBeenCalled()
     expect(collector.createCategory).not.toHaveBeenCalled()
