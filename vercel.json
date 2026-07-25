@@ -34,7 +34,7 @@
     "app/api/cron/affinity-sync/route.ts": {
       "maxDuration": 60
     },
-    "app/api/cron/deal-research/route.ts": {
+    "app/api/cron/background-jobs/route.ts": {
       "maxDuration": 300
     },
     "app/api/cron/heartbeat-backfill/route.ts": {

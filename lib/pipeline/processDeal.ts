@@ -93,7 +93,7 @@ export async function processDeal(params: ProcessDealParams): Promise<ProcessDea
 
   // External research is queued, not run here: a web-search round takes 30-60s
   // and this function runs inside the inbound-email webhook, which would time
-  // out. /api/cron/deal-research drains the queue. Only deals that clear the
+  // out. /api/cron/background-jobs drains the code-registered queue. Only deals that clear the
   // fund's interest bar are queued at all — see lib/deals/research.ts.
   const researchSettings = await loadDealResearchSettings(supabase, fundId)
   const researchStatus = shouldResearchDeal(analysis.thesis_fit_score, researchSettings)

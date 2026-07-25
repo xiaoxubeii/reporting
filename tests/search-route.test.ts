@@ -10,6 +10,11 @@ const loadSearchSourcePolicy = vi.hoisted(() => vi.fn())
 const loadSearchCategoryConfig = vi.hoisted(() => vi.fn())
 const configuredSearxngUrl = vi.hoisted(() => vi.fn(() => null))
 const search = vi.hoisted(() => vi.fn())
+const requireBackgroundExecutionContext = vi.hoisted(() => vi.fn())
+const claimBackgroundJobToolCall = vi.hoisted(() => vi.fn())
+const completeBackgroundJobToolCall = vi.hoisted(() => vi.fn())
+const createPublicSearchRuntime = vi.hoisted(() => vi.fn())
+const createSearchRuntime = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: () => ({ auth: { getUser } }) }))
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient }))
@@ -26,6 +31,13 @@ vi.mock('@/lib/search/categories', async importOriginal => ({
   loadSearchCategoryConfig,
 }))
 vi.mock('@/lib/search/service', () => ({ SearchService: class { search = search } }))
+vi.mock('@/lib/background-jobs/context', () => ({ requireBackgroundExecutionContext }))
+vi.mock('@/lib/background-jobs/store', () => ({ claimBackgroundJobToolCall, completeBackgroundJobToolCall }))
+vi.mock('@/lib/search/runtime', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/search/runtime')>(),
+  createPublicSearchRuntime,
+  createSearchRuntime,
+}))
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -45,6 +57,29 @@ beforeEach(() => {
     }],
   })
   search.mockResolvedValue({ results: [], sources: [{ id: 'web', status: 'empty', resultCount: 0 }], partial: false })
+  requireBackgroundExecutionContext.mockResolvedValue({
+    jobId: '842e532a-b848-457a-9b8e-4d6d8da10caf',
+    attemptId: '1cd393ce-753b-4021-9848-f41d5205a4c8',
+    tokenId: 'call_1',
+    audience: 'reporting-search',
+    scope: 'search:execute',
+    kind: 'deal_research',
+    fundId: 'fund-1',
+    actor: { type: 'system' },
+    payload: { dealId: 'f13aa191-56ac-4fb8-8eaa-bce047791467' },
+    sourceMode: 'public',
+    access: null,
+  })
+  claimBackgroundJobToolCall.mockResolvedValue({ state: 'claimed' })
+  completeBackgroundJobToolCall.mockResolvedValue(true)
+  createPublicSearchRuntime.mockResolvedValue({
+    registry: { ids: () => new Set(['web']) },
+    runnableAdapterIds: new Set(['web']),
+  })
+  createSearchRuntime.mockResolvedValue({
+    registry: { ids: () => new Set(['web']) },
+    runnableAdapterIds: new Set(['web']),
+  })
 })
 
 describe('POST /api/search', () => {
@@ -122,6 +157,90 @@ describe('POST /api/search', () => {
     expect(JSON.stringify(info.mock.calls)).not.toContain('Private merger target')
     info.mockRestore()
   })
+
+  it('treats Authorization as exclusive background mode and never falls back to Session', async () => {
+    const { POST } = await import('@/app/api/search/route')
+    requireBackgroundExecutionContext.mockRejectedValueOnce(new Error('wrong audience or stale attempt'))
+    const response = await POST(backgroundRequest({ query: 'device', toolCallId: 'call_1' }, 'Bearer invalid.token.value'))
+    expect(response.status).toBe(401)
+    expect(getUser).not.toHaveBeenCalled()
+    expect(search).not.toHaveBeenCalled()
+  })
+
+  it('runs mixed cookie/bearer requests only as the restored job and projects server categories', async () => {
+    const { POST } = await import('@/app/api/search/route')
+    const response = await POST(backgroundRequest(
+      { query: 'device', toolCallId: 'call_1' },
+      'Bearer signed.token.value',
+      'session=must-be-ignored',
+    ))
+    expect(response.status).toBe(200)
+    expect(getUser).not.toHaveBeenCalled()
+    expect(requireBackgroundExecutionContext).toHaveBeenCalledWith(expect.objectContaining({
+      audience: 'reporting-search',
+      requiredScope: 'search:execute',
+    }))
+    expect(search).toHaveBeenCalledWith(
+      { query: 'device', categoryIds: ['internet'] },
+      expect.objectContaining({ fundId: 'fund-1' }),
+    )
+    expect(claimBackgroundJobToolCall).toHaveBeenCalledWith(expect.objectContaining({
+      toolCallId: 'call_1', maxCalls: 3,
+    }))
+    expect(completeBackgroundJobToolCall).toHaveBeenCalledWith(expect.objectContaining({ isError: false }))
+    expect(rateLimit).toHaveBeenCalledWith(expect.objectContaining({
+      key: 'search-job:842e532a-b848-457a-9b8e-4d6d8da10caf:1cd393ce-753b-4021-9848-f41d5205a4c8',
+    }))
+  })
+
+  it('charges user-attributed background Search to the normal fund/user limiter', async () => {
+    const { POST } = await import('@/app/api/search/route')
+    requireBackgroundExecutionContext.mockResolvedValueOnce({
+      ...(await requireBackgroundExecutionContext()),
+      actor: { type: 'user', userId: 'user-1' },
+      sourceMode: 'public',
+      access: { role: 'member' },
+    })
+    const response = await POST(backgroundRequest({ query: 'device', toolCallId: 'call_1' }, 'Bearer signed.token.value'))
+    expect(response.status).toBe(200)
+    expect(rateLimit).toHaveBeenCalledWith(expect.objectContaining({ key: 'search:fund-1:user-1' }))
+    expect(createPublicSearchRuntime).toHaveBeenCalled()
+    expect(createSearchRuntime).not.toHaveBeenCalled()
+  })
+
+  it('rejects caller categories/actors and token/tool-call mismatches', async () => {
+    const { POST } = await import('@/app/api/search/route')
+    const controlled = await POST(backgroundRequest(
+      { query: 'device', toolCallId: 'call_1', categoryIds: ['internet'], userId: 'attacker' },
+      'Bearer signed.token.value',
+    ))
+    expect(controlled.status).toBe(400)
+
+    requireBackgroundExecutionContext.mockResolvedValueOnce({
+      ...(await requireBackgroundExecutionContext()), tokenId: 'different_call',
+    })
+    const mismatched = await POST(backgroundRequest({ query: 'device', toolCallId: 'call_1' }, 'Bearer signed.token.value'))
+    expect(mismatched.status).toBe(401)
+    expect(claimBackgroundJobToolCall).not.toHaveBeenCalled()
+  })
+
+  it('returns an idempotently cached tool response without rerunning adapters', async () => {
+    const { POST } = await import('@/app/api/search/route')
+    claimBackgroundJobToolCall.mockResolvedValueOnce({
+      state: 'cached',
+      status: 'completed',
+      response: {
+        httpStatus: 200,
+        body: { success: true, data: { results: [], sources: [], partial: false }, error: null },
+      },
+    })
+    const response = await POST(backgroundRequest({ query: 'device', toolCallId: 'call_1' }, 'Bearer signed.token.value'))
+    expect(response.status).toBe(200)
+    expect(response.headers.get('X-Background-Cache')).toBe('hit')
+    expect(search).not.toHaveBeenCalled()
+    expect(completeBackgroundJobToolCall).not.toHaveBeenCalled()
+    expect(rateLimit).not.toHaveBeenCalled()
+  })
 })
 
 function jsonRequest(body: unknown, origin = 'https://app.test') {
@@ -129,5 +248,17 @@ function jsonRequest(body: unknown, origin = 'https://app.test') {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'application/json', Origin: origin, 'Sec-Fetch-Site': origin === 'https://app.test' ? 'same-origin' : 'cross-site' },
+  })
+}
+
+function backgroundRequest(body: unknown, authorization: string, cookie?: string) {
+  return new Request('https://app.test/api/search', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authorization,
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
   })
 }

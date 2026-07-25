@@ -265,11 +265,24 @@ function SearchResults({ response, loading, onOpenFeed }: {
               {hit.sources.map(source => <Badge key={`${source.id}:${source.label}`} variant="secondary">{source.label}</Badge>)}
               {hit.publishedAt && <time dateTime={hit.publishedAt}>{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(hit.publishedAt))}</time>}
             </div>
-            <h3 className="mt-2 text-base font-semibold leading-6">{hit.title}</h3>
+            <h3 className="mt-2 text-base font-semibold leading-6">
+              {hit.url ? (
+                <a
+                  href={hit.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-sm underline-offset-4 visited:text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {hit.title}
+                  <span className="sr-only"> {t('opensInNewTab')}</span>
+                  <ExternalLink className="ml-1 inline-block h-3.5 w-3.5 align-baseline opacity-50" aria-hidden="true" />
+                </a>
+              ) : hit.title}
+            </h3>
             {hit.snippet && <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{hit.snippet}</p>}
             {hit.identifiers && <p className="mt-2 text-xs text-muted-foreground">{Object.entries(hit.identifiers).map(([key, value]) => `${key.toUpperCase()}: ${value}`).join(' · ')}</p>}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {hit.feedEntryId && (
+            {hit.feedEntryId && (
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   type="button"
                   size="sm"
@@ -278,9 +291,8 @@ function SearchResults({ response, loading, onOpenFeed }: {
                 >
                   <BookOpen />{t('reader')}
                 </Button>
-              )}
-              {hit.url && <Button asChild size="sm" variant="outline"><a href={hit.url} target="_blank" rel="noopener noreferrer"><ExternalLink />{t('open')}</a></Button>}
-            </div>
+              </div>
+            )}
           </article>
         ))}
       </div>

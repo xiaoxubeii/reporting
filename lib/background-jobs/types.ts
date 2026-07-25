@@ -1,0 +1,48 @@
+import type { Domain } from '@/lib/access/domains'
+import type { FeatureKey } from '@/lib/types/features'
+
+export type BackgroundJobKind = string
+export type BackgroundJobActorType = 'user' | 'system'
+export type BackgroundJobAudience = `reporting-${string}`
+export type BackgroundJobScope = `${string}:${string}`
+export type BackgroundJobPayload = Readonly<Record<string, unknown>>
+
+export interface DealResearchPayload extends BackgroundJobPayload {
+  readonly dealId: string
+}
+
+export interface BackgroundJobPayloadByKind {
+  readonly deal_research: DealResearchPayload
+}
+
+export interface BackgroundJobSearchCapability {
+  readonly audience: BackgroundJobAudience
+  readonly scope: BackgroundJobScope
+  readonly maxCalls: number
+  readonly allowPersonalSources: boolean
+}
+
+export interface BackgroundJobPolicy<K extends string = string> {
+  readonly kind: K
+  readonly actors: readonly BackgroundJobActorType[]
+  readonly parsePayload: (value: unknown) => BackgroundJobPayload
+  readonly workerPath: string
+  readonly workerAudience: BackgroundJobAudience
+  readonly workerScope: BackgroundJobScope
+  readonly requiredUserAccess: readonly Readonly<{
+    domain: Domain
+    need: 'read' | 'write'
+    feature?: FeatureKey
+  }>[]
+  readonly search?: BackgroundJobSearchCapability
+  readonly maxAttempts: number
+  readonly leaseSeconds: number
+  readonly requestTimeoutMs: number
+}
+
+export interface VerifiedBackgroundJobToken {
+  readonly jobId: string
+  readonly attemptId: string
+  readonly audience: BackgroundJobAudience
+  readonly tokenId: string
+}

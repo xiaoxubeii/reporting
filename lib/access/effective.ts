@@ -153,17 +153,20 @@ export async function loadAccessContext(
   userId: string,
   role: string,
 ): Promise<AccessContext> {
-  const { data } = await admin.rpc('access_context' as never, { p_user_id: userId } as never)
+  const { data, error } = await admin.rpc('access_context' as never, { p_user_id: userId } as never)
+  if (error) throw error
   const row = (data ?? null) as AccessContextRow | null
+  if (!row || row.fund_id !== fundId || row.role !== role) {
+    throw new Error('Access context no longer matches the live membership')
+  }
 
   return {
-    fundId,
+    fundId: row.fund_id,
     userId,
-    // Prefer what the caller already established; fall back to the RPC.
-    role: normalizeRole(role ?? row?.role),
-    features: { ...DEFAULT_FEATURE_VISIBILITY, ...(row?.features ?? {}) },
-    grants: recordToLevels(row?.grants),
-    defaults: recordToLevels(row?.defaults),
+    role: normalizeRole(row.role),
+    features: { ...DEFAULT_FEATURE_VISIBILITY, ...(row.features ?? {}) },
+    grants: recordToLevels(row.grants),
+    defaults: recordToLevels(row.defaults),
   }
 }
 
@@ -177,7 +180,8 @@ export async function resolveAccessContext(
   client: SupabaseClient,
   userId: string,
 ): Promise<AccessContext | null> {
-  const { data } = await client.rpc('access_context' as never, {} as never)
+  const { data, error } = await client.rpc('access_context' as never, {} as never)
+  if (error) throw error
   const row = (data ?? null) as AccessContextRow | null
   if (!row?.fund_id) return null
 

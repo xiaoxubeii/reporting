@@ -88,6 +88,8 @@ export interface ToolDefinition {
 }
 
 export interface ToolInvocation {
+  /** Provider-issued call identifier, used for idempotent HTTP tool execution. */
+  id?: string
   name: string
   input: Record<string, unknown>
 }
@@ -123,9 +125,12 @@ export interface CreateToolLoopParams extends Omit<CreateMessageParams, 'content
   mcpServers?: McpServerConfig[]
   /** Safety valve: stop after this many model round-trips. Defaults to 6. */
   maxIterations?: number
+  /** Shared caller deadline/cancellation signal for every provider round-trip. */
+  signal?: AbortSignal
 }
 
 export interface ToolCallRecord {
+  id?: string
   name: string
   input: Record<string, unknown>
   /** Truncated — for surfacing "what the assistant looked up", not for replay. */

@@ -138,7 +138,11 @@ describe('SearchPage', () => {
     await user.type(screen.getByLabelText('queryLabel'), 'device')
     await user.click(screen.getByRole('button', { name: 'submit' }))
 
-    expect(await screen.findByText('Web result')).toBeDefined()
+    const resultLink = await screen.findByRole('link', { name: 'Web result opensInNewTab' })
+    expect(resultLink.getAttribute('href')).toBe('https://example.com/result')
+    expect(resultLink.getAttribute('target')).toBe('_blank')
+    expect(resultLink.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(screen.queryByRole('link', { name: 'open' })).toBeNull()
     expect(screen.queryByText('partial')).toBeNull()
     expect(screen.queryByText('Internet:')).toBeNull()
   })

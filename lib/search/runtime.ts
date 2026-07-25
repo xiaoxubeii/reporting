@@ -38,6 +38,18 @@ export async function createSearchRuntime(input: {
   return Object.freeze({ registry, runnableAdapterIds: registry.ids() })
 }
 
+/** System jobs never construct the personal Feed adapter or proxy a member. */
+export async function createPublicSearchRuntime(input: {
+  readonly policy: SearchSourcePolicy
+}): Promise<SearchRuntime> {
+  const searxngUrl = await availableSearxngUrl(input.policy.web)
+  const registry = new AdapterRegistry([
+    ...specializedAdapters(input.policy),
+    ...(searxngUrl ? [new SearxngWebSearchAdapter(searxngUrl)] : []),
+  ])
+  return Object.freeze({ registry, runnableAdapterIds: registry.ids() })
+}
+
 function specializedAdapters(policy: SearchSourcePolicy): readonly SearchAdapter[] {
   const adapters: readonly SearchAdapter[] = [
     ...(policy.specialized.pubmed ? [new PubMedApiAdapter()] : []),

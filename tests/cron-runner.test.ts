@@ -56,8 +56,8 @@ describe('Croner production manifest', () => {
         timezone: 'UTC',
       },
       {
-        name: 'deal-research',
-        path: '/api/cron/deal-research',
+        name: 'background-jobs',
+        path: '/api/cron/background-jobs',
         schedule: '*/10 * * * *',
         timezone: 'UTC',
       },
@@ -74,7 +74,7 @@ describe('Croner production manifest', () => {
   })
 
   it('finds only declared job names', () => {
-    expect(findCronJob('deal-research')?.path).toBe('/api/cron/deal-research')
+    expect(findCronJob('background-jobs')?.path).toBe('/api/cron/background-jobs')
     expect(findCronJob('not-a-job')).toBeNull()
   })
 })
@@ -177,7 +177,7 @@ describe('authenticated cron invocation', () => {
     })
 
     await expect(invokeCronJob(
-      findCronJob('deal-research'),
+      findCronJob('background-jobs'),
       loadCronRunnerConfig(VALID_ENV),
       { fetchImpl, logger },
     )).rejects.toThrow('HTTP 503')
@@ -396,9 +396,9 @@ describe('Croner command entrypoint', () => {
   it('supports recurring, list, and one-shot modes only', () => {
     expect(parseCliArgs([])).toEqual({ mode: 'recurring' })
     expect(parseCliArgs(['--list'])).toEqual({ mode: 'list' })
-    expect(parseCliArgs(['--run', 'deal-research'])).toMatchObject({
+    expect(parseCliArgs(['--run', 'background-jobs'])).toMatchObject({
       mode: 'run',
-      job: { name: 'deal-research' },
+      job: { name: 'background-jobs' },
     })
     expect(() => parseCliArgs(['--run', 'unknown'])).toThrow('Unknown cron job')
     expect(() => parseCliArgs(['--unexpected'])).toThrow('Usage:')

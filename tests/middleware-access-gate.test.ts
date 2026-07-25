@@ -71,12 +71,12 @@ function stubRpc() {
   })
 }
 
-const req = (pathname: string, method = 'GET') =>
+const req = (pathname: string, method = 'GET', authorization?: string) =>
   ({
     nextUrl: { pathname, search: '', clone: () => new URL(`https://x${pathname}`) },
     cookies: { getAll: () => [], set: () => {} },
     method,
-    headers: new Headers(),
+    headers: new Headers(authorization ? { authorization } : undefined),
   }) as unknown as NextRequest
 
 beforeEach(() => {
@@ -153,6 +153,33 @@ describe('middleware API gate — what it must not break', () => {
     expect(getUser).not.toHaveBeenCalled()
     expect(rpc).not.toHaveBeenCalled()
     expect(from).not.toHaveBeenCalled()
+  })
+
+  it('keeps Job Token Search/worker identity exclusive from stray Session and MFA state', async () => {
+    await middleware(req('/api/search', 'POST', 'Bearer job.token.value'))
+    await middleware(req('/api/internal/background-jobs/deal-research/run', 'POST', 'Bearer job.token.value'))
+    expect(getUser).not.toHaveBeenCalled()
+    expect(getAuthenticatorAssuranceLevel).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('bypasses Session only for exact code-registered worker paths', async () => {
+    const response = await middleware(req(
+      '/api/internal/background-jobs/not-registered/run',
+      'POST',
+      'Bearer job.token.value',
+    ))
+    expect(response.status).toBe(404)
+    expect(getUser).toHaveBeenCalledTimes(1)
+  })
+
+  it('bypasses Session for registered workers only on POST', async () => {
+    await middleware(req(
+      '/api/internal/background-jobs/deal-research/run',
+      'GET',
+      'Bearer job.token.value',
+    ))
+    expect(getUser).toHaveBeenCalledTimes(1)
   })
 
   it('lets an admin through everywhere that is switched on', async () => {

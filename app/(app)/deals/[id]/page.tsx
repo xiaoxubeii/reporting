@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { canViewPage, resolvePageAccess } from '@/lib/access/page-gate'
 import { DealDetail } from './deal-detail'
 import { getTranslations } from 'next-intl/server'
 
@@ -16,18 +17,14 @@ export default async function DealPage({ params }: { params: { id: string } }) {
   if (!user) redirect('/auth')
 
   const admin = createAdminClient()
-  const { data: membership } = await admin
-    .from('fund_members')
-    .select('fund_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!membership) redirect('/dashboard')
+  const page = await resolvePageAccess(user.id)
+  if (!page || !canViewPage(page, 'dealflow')) redirect('/dashboard')
 
   const { data: deal } = await admin
     .from('inbound_deals')
     .select('*')
     .eq('id', params.id)
-    .eq('fund_id', membership.fund_id)
+    .eq('fund_id', page.fundId)
     .maybeSingle()
   if (!deal) notFound()
 
