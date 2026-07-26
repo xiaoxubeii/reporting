@@ -176,7 +176,12 @@ export function DiligenceIndex({ initialDeals }: { initialDeals: Deal[]; isAdmin
                   </div>
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     <div>{d.sector || '—'} {d.stage_at_consideration ? `· ${d.stage_at_consideration}` : ''}</div>
-                    <div>{t('stageLabel')}: <span className="font-medium">{stageLabels[d.current_memo_stage]}</span></div>
+                    <div>
+                      {t.rich('stageLabel', {
+                        stage: stageLabels[d.current_memo_stage],
+                        value: chunks => <span className="font-medium">{chunks}</span>,
+                      })}
+                    </div>
                     <div>{t('updated', { date: format.dateTime(new Date(d.updated_at), { dateStyle: 'medium' }) })}</div>
                   </div>
                 </Link>

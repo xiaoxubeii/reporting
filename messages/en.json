@@ -4443,7 +4443,7 @@
       "dealCount": "{count, plural, one {# deal} other {# deals}}",
       "empty": "No diligence deals yet.",
       "noMatches": "No deals match these filters.",
-      "stageLabel": "Stage: {stage}",
+      "stageLabel": "Stage: <value>{stage}</value>",
       "updated": "Updated {date}",
       "statuses": {
         "invested": "Invested",

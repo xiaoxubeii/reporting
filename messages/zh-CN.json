@@ -4421,7 +4421,7 @@
       "dealCount": "{count} 个项目",
       "empty": "还没有尽调项目。",
       "noMatches": "没有符合当前筛选条件的项目。",
-      "stageLabel": "阶段：{stage}",
+      "stageLabel": "阶段：<value>{stage}</value>",
       "updated": "更新于 {date}",
       "statuses": {
         "invested": "已投资",
