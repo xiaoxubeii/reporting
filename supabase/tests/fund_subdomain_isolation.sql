@@ -119,13 +119,16 @@ insert into public.lp_accounts (id, auth_user_id, kind, email, status)
 values
   ('84000000-0000-4000-8000-000000000001', '81000000-0000-4000-8000-000000000001', 'lp', 'lp-one@example.test', 'active'),
   ('84000000-0000-4000-8000-000000000002', '81000000-0000-4000-8000-000000000002', 'authorized_user', 'lp-two@example.test', 'active'),
-  ('84000000-0000-4000-8000-000000000003', null, 'lp', 'principal-alpha@example.test', 'active');
+  ('84000000-0000-4000-8000-000000000003', null, 'lp', 'principal-alpha@example.test', 'active'),
+  ('84000000-0000-4000-8000-000000000004', null, 'authorized_user', 'authorized-beta@example.test', 'active'),
+  ('84000000-0000-4000-8000-000000000005', null, 'lp', 'principal-beta@example.test', 'active');
 
 insert into public.lp_account_links (id, lp_account_id, fund_id, lp_investor_id)
 values
   ('85000000-0000-4000-8000-000000000001', '84000000-0000-4000-8000-000000000001', '82000000-0000-4000-8000-000000000001', '83000000-0000-4000-8000-000000000001'),
   ('85000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000001', '82000000-0000-4000-8000-000000000001', '83000000-0000-4000-8000-000000000002'),
-  ('85000000-0000-4000-8000-000000000003', '84000000-0000-4000-8000-000000000003', '82000000-0000-4000-8000-000000000001', '83000000-0000-4000-8000-000000000001');
+  ('85000000-0000-4000-8000-000000000003', '84000000-0000-4000-8000-000000000003', '82000000-0000-4000-8000-000000000001', '83000000-0000-4000-8000-000000000001'),
+  ('85000000-0000-4000-8000-000000000004', '84000000-0000-4000-8000-000000000005', '82000000-0000-4000-8000-000000000002', '83000000-0000-4000-8000-000000000003');
 
 insert into public.lp_authorized_users (
   id, authorized_user_account_id, principal_lp_account_id, lp_investor_id
@@ -171,8 +174,21 @@ select pg_temp.expect_error(
 select pg_temp.expect_error(
   $sql$insert into public.lp_authorized_users
     (authorized_user_account_id, principal_lp_account_id, lp_investor_id) values
-    ('84000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000003', '83000000-0000-4000-8000-000000000003')$sql$,
+    ('84000000-0000-4000-8000-000000000002', '84000000-0000-4000-8000-000000000005', '83000000-0000-4000-8000-000000000003')$sql$,
   'LP account cannot access more than one Fund'
+);
+
+select pg_temp.expect_error(
+  $sql$insert into public.lp_authorized_users
+    (authorized_user_account_id, principal_lp_account_id, lp_investor_id) values
+    ('84000000-0000-4000-8000-000000000004', '84000000-0000-4000-8000-000000000003', '83000000-0000-4000-8000-000000000003')$sql$,
+  'Delegation principal must own the LP investor'
+);
+
+select pg_temp.expect_error(
+  $sql$delete from public.lp_account_links
+    where id = '85000000-0000-4000-8000-000000000003'$sql$,
+  'LP investor link cannot change while delegations exist'
 );
 
 select set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000001', true);

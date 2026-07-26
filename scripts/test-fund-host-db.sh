@@ -25,6 +25,7 @@ recreate_database() {
   docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" >/dev/null <<'SQL'
 drop trigger if exists fund_members_single_fund on public.fund_members;
 drop trigger if exists lp_account_links_single_fund on public.lp_account_links;
+drop trigger if exists lp_account_links_delegation_integrity on public.lp_account_links;
 drop trigger if exists lp_authorized_users_single_fund on public.lp_authorized_users;
 drop trigger if exists lp_investors_fund_immutable_while_linked on public.lp_investors;
 drop trigger if exists lp_accounts_auth_user_single_fund on public.lp_accounts;
@@ -40,6 +41,7 @@ drop table if exists public.fund_public_sites;
 drop function if exists public.resolve_my_lp_fund();
 drop function if exists public.enforce_fund_member_single_fund();
 drop function if exists public.enforce_lp_account_link_single_fund();
+drop function if exists public.enforce_lp_account_link_delegation_integrity();
 drop function if exists public.enforce_lp_authorized_user_single_fund();
 drop function if exists public.enforce_lp_investor_fund_immutable_while_linked();
 drop function if exists public.enforce_lp_account_auth_user_single_fund();
@@ -88,6 +90,47 @@ if ! grep -q 'Existing auth user can access more than one Fund' "$AUDIT_OUTPUT";
   exit 1
 fi
 rm -f -- "$AUDIT_OUTPUT"
+
+recreate_database
+
+# Prove that an unclaimed LP account cannot already span Funds through a
+# direct link plus an authorized-user delegation. This invariant is about the
+# LP account graph itself, not only accounts that already have auth_user_id.
+docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" >/dev/null <<'SQL'
+insert into auth.users (id, email) values
+  ('91000000-0000-4000-8000-000000000011', 'migration-account-alpha@example.test'),
+  ('91000000-0000-4000-8000-000000000012', 'migration-account-beta@example.test');
+insert into public.funds (id, name, created_by) values
+  ('92000000-0000-4000-8000-000000000011', 'Account Alpha', '91000000-0000-4000-8000-000000000011'),
+  ('92000000-0000-4000-8000-000000000012', 'Account Beta', '91000000-0000-4000-8000-000000000012');
+insert into public.lp_investors (id, fund_id, name) values
+  ('93000000-0000-4000-8000-000000000011', '92000000-0000-4000-8000-000000000011', 'Account Alpha LP'),
+  ('93000000-0000-4000-8000-000000000012', '92000000-0000-4000-8000-000000000012', 'Account Beta LP');
+insert into public.lp_accounts (id, auth_user_id, email, status) values
+  ('94000000-0000-4000-8000-000000000011', null, 'unclaimed@example.test', 'active'),
+  ('94000000-0000-4000-8000-000000000012', null, 'principal-beta@example.test', 'active');
+insert into public.lp_account_links (lp_account_id, fund_id, lp_investor_id) values
+  ('94000000-0000-4000-8000-000000000011', '92000000-0000-4000-8000-000000000011', '93000000-0000-4000-8000-000000000011'),
+  ('94000000-0000-4000-8000-000000000012', '92000000-0000-4000-8000-000000000012', '93000000-0000-4000-8000-000000000012');
+insert into public.lp_authorized_users
+  (authorized_user_account_id, principal_lp_account_id, lp_investor_id) values
+  ('94000000-0000-4000-8000-000000000011', '94000000-0000-4000-8000-000000000012', '93000000-0000-4000-8000-000000000012');
+SQL
+
+readonly ACCOUNT_AUDIT_OUTPUT="$(mktemp -t reporting-fund-account-audit.XXXXXX)"
+if docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \
+  < "$FUND_HOST_TEST_ROOT/supabase/migrations/20260727000000_fund_subdomain_isolation.sql" >"$ACCOUNT_AUDIT_OUTPUT" 2>&1; then
+  echo 'Migration unexpectedly accepted a historical cross-Fund LP account.' >&2
+  rm -f -- "$ACCOUNT_AUDIT_OUTPUT"
+  exit 1
+fi
+if ! grep -q 'Existing LP account can access more than one Fund' "$ACCOUNT_AUDIT_OUTPUT"; then
+  echo 'LP account migration audit failed for an unexpected reason:' >&2
+  sed -n '1,120p' "$ACCOUNT_AUDIT_OUTPUT" >&2
+  rm -f -- "$ACCOUNT_AUDIT_OUTPUT"
+  exit 1
+fi
+rm -f -- "$ACCOUNT_AUDIT_OUTPUT"
 
 recreate_database
 docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \

@@ -153,6 +153,8 @@ do $$
 declare
   conflicting_user uuid;
   conflicting_link uuid;
+  conflicting_account uuid;
+  conflicting_delegation uuid;
 begin
   select links.id
   into conflicting_link
@@ -165,6 +167,45 @@ begin
     raise exception using
       errcode = '23514',
       message = 'Existing LP account link has mismatched Fund and investor';
+  end if;
+
+  select authorized.id
+  into conflicting_delegation
+  from public.lp_authorized_users as authorized
+  join public.lp_investors as investors on investors.id = authorized.lp_investor_id
+  where not exists (
+    select 1
+    from public.lp_account_links as links
+    where links.lp_account_id = authorized.principal_lp_account_id
+      and links.lp_investor_id = authorized.lp_investor_id
+      and links.fund_id = investors.fund_id
+  )
+  limit 1;
+
+  if conflicting_delegation is not null then
+    raise exception using
+      errcode = '23514',
+      message = 'Existing LP delegation principal does not own investor';
+  end if;
+
+  select account_funds.lp_account_id
+  into conflicting_account
+  from (
+    select links.lp_account_id, links.fund_id
+    from public.lp_account_links as links
+    union
+    select authorized.authorized_user_account_id, investors.fund_id
+    from public.lp_authorized_users as authorized
+    join public.lp_investors as investors on investors.id = authorized.lp_investor_id
+  ) as account_funds
+  group by account_funds.lp_account_id
+  having count(distinct account_funds.fund_id) > 1
+  limit 1;
+
+  if conflicting_account is not null then
+    raise exception using
+      errcode = '23514',
+      message = 'Existing LP account can access more than one Fund';
   end if;
 
   select user_funds.user_id
@@ -272,8 +313,24 @@ begin
     raise exception using errcode = '23503', message = 'LP investor does not exist';
   end if;
 
+  if not exists (
+    select 1
+    from public.lp_account_links as links
+    where links.lp_account_id = new.principal_lp_account_id
+      and links.lp_investor_id = new.lp_investor_id
+      and links.fund_id = investor_fund_id
+  ) then
+    raise exception using
+      errcode = '23514',
+      message = 'Delegation principal must own the LP investor';
+  end if;
+
   perform public.assert_lp_account_fund_compatible(
     new.authorized_user_account_id,
+    investor_fund_id
+  );
+  perform public.assert_lp_account_fund_compatible(
+    new.principal_lp_account_id,
     investor_fund_id
   );
 
@@ -293,6 +350,40 @@ create trigger lp_authorized_users_single_fund
   before insert or update of authorized_user_account_id, lp_investor_id
   on public.lp_authorized_users
   for each row execute function public.enforce_lp_authorized_user_single_fund();
+
+create or replace function public.enforce_lp_account_link_delegation_integrity()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+begin
+  if exists (
+    select 1
+    from public.lp_authorized_users as authorized
+    where authorized.principal_lp_account_id = old.lp_account_id
+      and authorized.lp_investor_id = old.lp_investor_id
+  ) and (
+    tg_op = 'DELETE'
+    or new.lp_account_id <> old.lp_account_id
+    or new.lp_investor_id <> old.lp_investor_id
+    or new.fund_id <> old.fund_id
+  ) then
+    raise exception using
+      errcode = '23514',
+      message = 'LP investor link cannot change while delegations exist';
+  end if;
+
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+revoke all on function public.enforce_lp_account_link_delegation_integrity() from public, anon, authenticated;
+
+create trigger lp_account_links_delegation_integrity
+  before delete or update of lp_account_id, fund_id, lp_investor_id
+  on public.lp_account_links
+  for each row execute function public.enforce_lp_account_link_delegation_integrity();
 
 create or replace function public.enforce_lp_investor_fund_immutable_while_linked()
 returns trigger
