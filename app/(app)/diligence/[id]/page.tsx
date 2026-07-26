@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { DealDetail } from './deal-detail'
 import { getTranslations } from 'next-intl/server'
+import { draftHasGeneratedArtifacts } from '@/lib/diligence/draft-artifacts'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Diligence.metadata')
@@ -51,7 +52,7 @@ export default async function DiligenceDealPage({ params }: { params: { id: stri
       .order('uploaded_at', { ascending: false }),
     admin
       .from('diligence_memo_drafts')
-      .select('id, draft_version, agent_version, is_draft, created_at, finalized_at')
+      .select('id, draft_version, agent_version, output_language, source_draft_id, is_draft, created_at, finalized_at')
       .eq('deal_id', params.id)
       .eq('fund_id', fundId)
       .order('created_at', { ascending: false })
@@ -59,11 +60,25 @@ export default async function DiligenceDealPage({ params }: { params: { id: stri
       .maybeSingle(),
   ])
 
+  const latestDraftSummary = latestDraft
+    ? {
+        ...latestDraft,
+        has_generated_artifacts: await draftHasGeneratedArtifacts({
+          admin,
+          fundId,
+          dealId: params.id,
+          draftId: latestDraft.id,
+          isDraft: latestDraft.is_draft,
+          finalizedAt: latestDraft.finalized_at,
+        }),
+      }
+    : null
+
   return (
     <DealDetail
       deal={deal as any}
       initialDocuments={(documents as any) ?? []}
-      latestDraft={latestDraft as any}
+      latestDraft={latestDraftSummary as any}
       isAdmin={(membership as any).role === 'admin'}
       currentUserId={user.id}
     />

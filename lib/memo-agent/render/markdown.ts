@@ -1,6 +1,7 @@
 import yaml from 'js-yaml'
 import type { MemoDraftOutput } from '@/lib/memo-agent/stages/draft'
 import type { DimensionScore } from '@/lib/memo-agent/stages/score'
+import type { DiligenceOutputLanguage } from '@/lib/diligence/output-language'
 import { buildSourceLabels, type SourceLabel, type SourceLabelInput } from './source-labels'
 
 export interface RenderInput {
@@ -10,6 +11,7 @@ export interface RenderInput {
   isDraft: boolean
   dealName: string
   draftVersion: string
+  outputLanguage: DiligenceOutputLanguage
   /** Partner-defined section order/titles (incl. custom sections). Overrides the schema order when set. */
   sectionConfig?: Array<{ id: string; title: string; included?: boolean }>
   /**
@@ -40,6 +42,50 @@ const SECTION_FALLBACK_ORDER = [
   'product_technology',
 ]
 
+const ZH_SECTION_TITLES: Record<string, string> = {
+  executive_summary: '执行摘要',
+  recommendation: '投资建议',
+  company_overview: '公司概览',
+  product: '产品',
+  product_technology: '产品与技术',
+  market: '市场',
+  traction: '业务进展',
+  business_model: '商业模式',
+  team: '团队',
+  competition_moat: '竞争与护城河',
+  outcomes_analysis: '回报情景分析',
+  deal_terms: '交易条款',
+  risks_and_open_questions: '风险与待解问题',
+  scoring_summary: '评分摘要',
+  appendix: '附录与引用',
+}
+
+const DEFAULT_EN_SECTION_TITLES: Record<string, string> = {
+  executive_summary: 'Executive Summary',
+  recommendation: 'Recommendation',
+  company_overview: 'Company Overview',
+  product: 'Product',
+  product_technology: 'Product Technology',
+  market: 'Market',
+  traction: 'Traction & Evidence',
+  business_model: 'Business Model & Financials',
+  team: 'Team',
+  competition_moat: 'Competition & Moat',
+  outcomes_analysis: 'Outcomes Analysis',
+  deal_terms: 'Deal & Terms',
+  risks_and_open_questions: 'Risks & Open Questions',
+  scoring_summary: 'Scoring Summary',
+  appendix: 'Appendix — Sources & Citations',
+}
+
+function localizedSectionTitle(id: string, title: string, language: DiligenceOutputLanguage): string {
+  if (language !== 'zh-CN' || !ZH_SECTION_TITLES[id]) return title
+  const normalized = title.trim().toLocaleLowerCase()
+  const humanized = id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').toLocaleLowerCase()
+  const defaultEnglish = DEFAULT_EN_SECTION_TITLES[id]?.toLocaleLowerCase()
+  return normalized === humanized || normalized === defaultEnglish ? ZH_SECTION_TITLES[id] : title
+}
+
 /**
  * Markdown render of a memo draft.
  *
@@ -50,7 +96,11 @@ const SECTION_FALLBACK_ORDER = [
  */
 export function renderMarkdown(input: RenderInput): string {
   const sections = parseSections(input.memoOutputYaml)
-  const sectionMeta = new Map(sections.map(s => [s.id, s]))
+  const sectionMeta = new Map(sections.map(s => [
+    s.id,
+    { ...s, title: localizedSectionTitle(s.id, s.title, input.outputLanguage) },
+  ]))
+  const zh = input.outputLanguage === 'zh-CN'
 
   // Section order + titles: partner section config when present (authoritative,
   // incl. custom + renamed sections), else the schema order. The structured tail
@@ -79,7 +129,8 @@ export function renderMarkdown(input: RenderInput): string {
   // missing or stale.
   for (const id of sectionOrder) {
     if (!sectionMeta.has(id)) {
-      sectionMeta.set(id, { id, title: id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '), kind: id === 'scoring_summary' || id === 'appendix' ? 'structured' : 'prose' })
+      const fallbackTitle = id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      sectionMeta.set(id, { id, title: localizedSectionTitle(id, fallbackTitle, input.outputLanguage), kind: id === 'scoring_summary' || id === 'appendix' ? 'structured' : 'prose' })
     }
   }
 
@@ -104,7 +155,7 @@ export function renderMarkdown(input: RenderInput): string {
 
   const lines: string[] = []
 
-  if (input.isDraft) lines.push('# DRAFT — not finalized', '')
+  if (input.isDraft) lines.push(zh ? '# 草稿 — 尚未定稿' : '# DRAFT — not finalized', '')
 
   // Header
   const header = input.memo.header ?? {}
@@ -115,10 +166,10 @@ export function renderMarkdown(input: RenderInput): string {
   if (header.round_size) headerBits.push(header.round_size)
   if (headerBits.length) lines.push(`*${headerBits.join(' · ')}*`)
   lines.push('')
-  if (header.deal_lead) lines.push(`Deal lead: ${header.deal_lead}`)
-  else lines.push('Deal lead: *[Partner to complete]*')
-  if (header.memo_date) lines.push(`Date: ${header.memo_date}`)
-  lines.push(`Version: ${input.draftVersion} · Agent: ${header.agent_version ?? 'memo-agent v0.1'}`)
+  if (header.deal_lead) lines.push(`${zh ? '项目负责人' : 'Deal lead'}: ${header.deal_lead}`)
+  else lines.push(zh ? '项目负责人: *[待合伙人填写]*' : 'Deal lead: *[Partner to complete]*')
+  if (header.memo_date) lines.push(`${zh ? '日期' : 'Date'}: ${header.memo_date}`)
+  lines.push(`${zh ? '版本' : 'Version'}: ${input.draftVersion} · ${zh ? '智能体' : 'Agent'}: ${header.agent_version ?? 'memo-agent v0.1'}`)
   lines.push('')
 
   for (const sectionId of sectionOrder) {
@@ -129,14 +180,14 @@ export function renderMarkdown(input: RenderInput): string {
     if (meta.kind === 'structured' && sectionId === 'scoring_summary') {
       lines.push(`## ${meta.title}`)
       lines.push('')
-      lines.push(...renderScoresMarkdown(input.memo.scores ?? []))
+      lines.push(...renderScoresMarkdown(input.memo.scores ?? [], input.outputLanguage))
       lines.push('')
       continue
     }
     if (meta.kind === 'structured' && sectionId === 'appendix') {
       lines.push(`## ${meta.title}`)
       lines.push('')
-      lines.push(...renderCitations(citationKeys, sourceLabels))
+      lines.push(...renderCitations(citationKeys, sourceLabels, input.outputLanguage))
       lines.push('')
       continue
     }
@@ -154,9 +205,9 @@ export function renderMarkdown(input: RenderInput): string {
       .forEach(p => {
         // Inline markers
         const markers: string[] = []
-        if (p.contains_projection) markers.push('[projection]')
-        if (p.contains_unverified_claim) markers.push('⚠ unverified')
-        if (p.contains_contradiction) markers.push('†contradiction')
+        if (p.contains_projection) markers.push(zh ? '[预测]' : '[projection]')
+        if (p.contains_unverified_claim) markers.push(zh ? '⚠ 未验证' : '⚠ unverified')
+        if (p.contains_contradiction) markers.push(zh ? '†存在矛盾' : '†contradiction')
         const markerSuffix = markers.length ? ` *${markers.join(' · ')}*` : ''
 
         let prose = p.prose
@@ -178,22 +229,27 @@ export function renderMarkdown(input: RenderInput): string {
   return lines.join('\n')
 }
 
-function renderScoresMarkdown(scores: DimensionScore[]): string[] {
-  if (scores.length === 0) return ['*No scores yet.*']
+function renderScoresMarkdown(scores: DimensionScore[], language: DiligenceOutputLanguage): string[] {
+  const zh = language === 'zh-CN'
+  if (scores.length === 0) return [zh ? '*暂无评分。*' : '*No scores yet.*']
   const lines: string[] = []
-  lines.push('| Dimension | Mode | Score | Confidence | Rationale |')
+  lines.push(zh ? '| 维度 | 模式 | 评分 | 置信度 | 理由 |' : '| Dimension | Mode | Score | Confidence | Rationale |')
   lines.push('|---|---|---|---|---|')
   for (const s of scores) {
-    const score = s.score === null ? (s.mode === 'partner_only' ? '*[partner]*' : '—') : String(s.score)
-    const conf = s.confidence ?? '—'
+    const score = s.score === null ? (s.mode === 'partner_only' ? (zh ? '*[合伙人]*' : '*[partner]*') : '—') : String(s.score)
+    const mode = zh ? ({ machine: '机器', hybrid: '混合', partner_only: '仅合伙人' }[s.mode] ?? s.mode) : s.mode
+    const conf = zh && s.confidence
+      ? ({ low: '低', medium: '中', high: '高' }[s.confidence] ?? s.confidence)
+      : (s.confidence ?? '—')
     const rationale = (s.rationale ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')
-    lines.push(`| ${s.dimension_id} | ${s.mode} | ${score} | ${conf} | ${rationale} |`)
+    lines.push(`| ${s.dimension_id} | ${mode} | ${score} | ${conf} | ${rationale} |`)
   }
   return lines
 }
 
-function renderCitations(keys: string[], labels: Map<string, SourceLabel>): string[] {
-  if (keys.length === 0) return ['*No citations.*']
+function renderCitations(keys: string[], labels: Map<string, SourceLabel>, language: DiligenceOutputLanguage): string[] {
+  if (keys.length === 0) return [language === 'zh-CN' ? '*暂无引用。*' : '*No citations.*']
+  const zh = language === 'zh-CN'
   const lines: string[] = []
   keys.forEach((key, i) => {
     const [type, ...rest] = key.split(':')
@@ -205,9 +261,15 @@ function renderCitations(keys: string[], labels: Map<string, SourceLabel>): stri
     if (hit) {
       const detail = hit.detail ? ` — ${hit.detail}` : ''
       const link = hit.url ? ` (<${hit.url}>)` : ''
-      lines.push(`${i + 1}. **${hit.label}**${detail}${link} · \`${type}:${id}\``)
+      const label = zh
+        ? ({ Research: '外部研究', 'Founder Q&A': '创始人问答' }[hit.label] ?? hit.label)
+        : hit.label
+      lines.push(`${i + 1}. **${label}**${detail}${link} · \`${type}:${id}\``)
     } else {
-      lines.push(`${i + 1}. **${type}** — \`${id}\``)
+      const displayType = zh
+        ? ({ claim: '数据室材料', finding: '外部研究', qa_answer: '问答', assumption: '假设', gap: '信息缺口' }[type] ?? type)
+        : type
+      lines.push(`${i + 1}. **${displayType}** — \`${type}:${id}\``)
     }
   })
   return lines

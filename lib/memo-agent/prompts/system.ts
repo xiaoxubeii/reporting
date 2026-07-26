@@ -2,6 +2,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureDefaults, getActiveSchemas, type ActiveSchema } from '@/lib/memo-agent/firm-schemas'
 import { buildVoiceSynthesisBlock } from '@/lib/memo-agent/style-anchors'
 import type { SchemaName } from '@/lib/memo-agent/validate'
+import {
+  buildOutputLanguageInstruction,
+  type DiligenceOutputLanguage,
+} from '@/lib/diligence/output-language'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -32,6 +36,7 @@ export async function buildSystemPrompt(params: {
   admin?: Admin
   fundId: string
   stage: StageName
+  outputLanguage: DiligenceOutputLanguage
 }): Promise<SystemPromptResult> {
   const admin = params.admin ?? createAdminClient()
 
@@ -42,6 +47,7 @@ export async function buildSystemPrompt(params: {
 
   const sections: string[] = []
   sections.push(HARD_RULE_PREAMBLE)
+  sections.push(buildOutputLanguageInstruction(params.outputLanguage))
 
   if (schemas.instructions?.yaml_content) {
     sections.push(`=== OPERATING INSTRUCTIONS ===\n${schemas.instructions.yaml_content}`)

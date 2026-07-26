@@ -6,6 +6,8 @@ import { getStageProvider } from '@/lib/memo-agent/stage-provider'
 import { loadDealDocuments } from '@/lib/memo-agent/ingestion/sources'
 import { parseAll, type ParsedFile } from '@/lib/memo-agent/ingestion/parsers'
 import { extractJsonObject } from '@/lib/memo-agent/parse-ai-json'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
+import type { DiligenceOutputLanguage } from '@/lib/diligence/output-language'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -109,7 +111,24 @@ export async function runIngestDocs(params: {
   const parsed = await parseAll(sources)
 
   await note('Building system prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest' })
+  if (params.draftId) {
+    const { data: mutableDraft } = await admin
+      .from('diligence_memo_drafts')
+      .select('id')
+      .eq('id', params.draftId)
+      .eq('deal_id', dealId)
+      .eq('fund_id', fundId)
+      .eq('is_draft', true)
+      .maybeSingle()
+    if (!mutableDraft) throw new Error('Draft not found or already finalized')
+  }
+  const outputLanguage = await loadDiligenceOutputLanguage({
+    admin,
+    fundId,
+    dealId,
+    draftId: params.draftId,
+  })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest', outputLanguage })
 
   await note('Loading deal record…')
   const { data: dealRow } = await admin
@@ -239,7 +258,15 @@ export async function runIngestDocs(params: {
   // previously-stored set by document_id unless this is a fresh full run —
   // continuation batches and failed-doc re-runs must preserve earlier results.
   await note('Writing per-document output to draft…')
-  const draftId = await persistDocsToDraft(admin, fundId, dealId, documents, params.draftId, !replaceExisting)
+  const draftId = await persistDocsToDraft(
+    admin,
+    fundId,
+    dealId,
+    documents,
+    outputLanguage,
+    params.draftId,
+    !replaceExisting,
+  )
 
   await note('Updating document classifications…')
   const successIds = new Set(documents.map(d => d.document_id))
@@ -308,6 +335,7 @@ export async function runIngestSynthesis(params: {
     throw new Error('No draft found to synthesize. Run ingest first.')
   }
   const draftId = draft.id
+  const outputLanguage = await loadDiligenceOutputLanguage({ admin, fundId, dealId, draftId })
   const ingestion = (draft.ingestion_output ?? {}) as Partial<IngestionOutput>
   const documents = Array.isArray(ingestion.documents) ? ingestion.documents : []
 
@@ -324,7 +352,7 @@ export async function runIngestSynthesis(params: {
   }
 
   await note('Building system prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest' })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest', outputLanguage })
 
   await note('Loading deal record…')
   const { data: dealRow } = await admin
@@ -416,6 +444,7 @@ export async function runIngestSynthesis(params: {
     .eq('id', draftId)
     .eq('deal_id', dealId)
     .eq('fund_id', fundId)
+    .eq('is_draft', true)
   if (updateErr) {
     throw new Error(`Failed to write synthesis to draft: ${updateErr.message}`)
   }
@@ -451,6 +480,7 @@ async function persistDocsToDraft(
   fundId: string,
   dealId: string,
   newDocs: IngestionDocumentOutput[],
+  outputLanguage: DiligenceOutputLanguage,
   draftId?: string,
   isPartialRun?: boolean,
 ): Promise<string> {
@@ -479,7 +509,9 @@ async function persistDocsToDraft(
       .eq('id', targetId)
       .eq('deal_id', dealId)
       .eq('fund_id', fundId)
+      .eq('is_draft', true)
       .maybeSingle()
+    if (!row) throw new Error('Draft not found or already finalized')
     existingIngestion = ((row as any)?.ingestion_output ?? {}) as Partial<IngestionOutput>
   }
 
@@ -512,6 +544,7 @@ async function persistDocsToDraft(
       .eq('id', targetId)
       .eq('deal_id', dealId)
       .eq('fund_id', fundId)
+      .eq('is_draft', true)
     if (error) throw new Error(`Failed to update draft: ${error.message}`)
     return targetId
   }
@@ -522,6 +555,7 @@ async function persistDocsToDraft(
     .insert({
       deal_id: dealId,
       fund_id: fundId,
+      output_language: outputLanguage,
       draft_version: version,
       agent_version: 'memo-agent v0.1',
       ingestion_output: mergedOutput as any,
@@ -545,6 +579,7 @@ async function loadDraft(
       .eq('id', draftId)
       .eq('deal_id', dealId)
       .eq('fund_id', fundId)
+      .eq('is_draft', true)
       .maybeSingle()
     return data as { id: string; ingestion_output: unknown } | null
   }

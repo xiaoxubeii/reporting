@@ -20,6 +20,8 @@ import { buildQAChatContext } from '@/lib/diligence/qa-chat-context'
 import { getAffinityKey } from '@/lib/affinity/credentials'
 import { AFFINITY_TOOLS, makeAffinityExecutor, affinityMcpServer } from '@/lib/affinity/tools'
 import type { AIResult } from '@/lib/ai/types'
+import { buildOutputLanguageInstruction } from '@/lib/diligence/output-language'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
 
 export interface QACitation {
   document_id: string
@@ -74,6 +76,7 @@ export async function answerDealQuestion(params: AnswerDealQuestionParams): Prom
     .maybeSingle()
 
   const ctx = await buildQAChatContext({ admin, fundId, dealId })
+  const outputLanguage = await loadDiligenceOutputLanguage({ admin, fundId, dealId })
   const { provider, model, providerType } = await getStageProvider(admin, fundId, 'qa')
 
   // Affinity rides on the asking user's own key — it carries their permissions. No user,
@@ -127,6 +130,8 @@ Output format: return JSON ONLY of the form:
 }
 
 Cite up to 5 documents. Only cite document_ids that actually appear in DATA-ROOM EVIDENCE.
+
+${buildOutputLanguageInstruction(outputLanguage)}
 
 === EVIDENCE ===
 ${ctx.text}`

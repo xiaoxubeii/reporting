@@ -5,6 +5,7 @@ import { buildChecklistAssessmentContent } from '@/lib/memo-agent/prompts/checkl
 import { getStageProvider } from '@/lib/memo-agent/stage-provider'
 import { runBatchedExtraction } from '@/lib/memo-agent/batched-extraction'
 import type { IngestionOutput } from './ingest'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -106,17 +107,26 @@ export async function runChecklistAssessment(params: {
   }
 
   await note('Loading data-room ingest output…')
-  const { data: draftRow } = await (admin as any)
+  let draftQuery = (admin as any)
     .from('diligence_memo_drafts')
     .select('id, ingestion_output')
-    .eq('deal_id', dealId)
-    .eq('fund_id', fundId)
+  draftQuery = params.draftId
+    ? draftQuery.eq('id', params.draftId).eq('deal_id', dealId).eq('fund_id', fundId)
+    : draftQuery.eq('deal_id', dealId).eq('fund_id', fundId)
+  const { data: draftRow } = await draftQuery
     .eq('is_draft', true)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
   const ingestion = ((draftRow as any)?.ingestion_output ?? {}) as Partial<IngestionOutput>
   const docs = Array.isArray(ingestion.documents) ? ingestion.documents : []
+  if (!draftRow) throw new Error('Draft not found or already finalized')
+  const outputLanguage = await loadDiligenceOutputLanguage({
+    admin,
+    fundId,
+    dealId,
+    draftId: (draftRow as { id: string }).id,
+  })
 
   if (docs.length === 0) {
     warnings.push('No ingested data-room documents yet; items will be left as unknown.')
@@ -148,7 +158,7 @@ export async function runChecklistAssessment(params: {
   }
 
   await note('Building system prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest' })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest', outputLanguage })
 
   const { provider, model, providerType } = await getStageProvider(admin, fundId, 'checklist_assessment')
 
@@ -200,28 +210,50 @@ export async function runChecklistAssessment(params: {
 
   await note('Writing checklist assessments…')
   const itemIdSet = new Set(items.map(i => i.id))
+  const persistedAssessments = assessments
+    .filter(entry => itemIdSet.has(entry.id))
+    .map(entry => ({
+      ...entry,
+      evidence: entry.evidence
+        .filter(e => typeof e.document_id === 'string')
+        .slice(0, 3),
+    }))
+
+  const { error: snapshotError } = await admin
+    .from('diligence_memo_drafts')
+    .update({
+      checklist_assessment_output: {
+        output_language: outputLanguage,
+        assessed_at: new Date().toISOString(),
+        items: persistedAssessments,
+        warnings,
+      },
+    })
+    .eq('id', (draftRow as { id: string }).id)
+    .eq('deal_id', dealId)
+    .eq('fund_id', fundId)
+    .eq('is_draft', true)
+  if (snapshotError) throw new Error(`Failed to preserve checklist assessment: ${snapshotError.message}`)
+
   let found = 0, partial = 0, missing = 0, assessed = 0
-  for (const entry of assessments) {
-    if (!itemIdSet.has(entry.id)) continue
+  for (const entry of persistedAssessments) {
     assessed += 1
     if (entry.status === 'found') found += 1
     else if (entry.status === 'partial') partial += 1
     else if (entry.status === 'missing') missing += 1
 
-    const evidence = entry.evidence
-      .filter(e => typeof e.document_id === 'string' && itemIdSet.size > 0)
-      .slice(0, 3)
-    await (admin as any)
+    const { error: itemUpdateError } = await (admin as any)
       .from('diligence_checklist_items')
       .update({
         status: entry.status,
-        evidence: evidence as any,
+        evidence: entry.evidence as any,
         agent_notes: entry.notes || null,
         updated_at: new Date().toISOString(),
       } as any)
       .eq('id', entry.id)
       .eq('deal_id', dealId)
       .eq('fund_id', fundId)
+    if (itemUpdateError) throw new Error(`Failed to update checklist item ${entry.id}: ${itemUpdateError.message}`)
   }
 
   return { items_assessed: assessed, items_found: found, items_partial: partial, items_missing: missing, warnings }

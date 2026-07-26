@@ -15,6 +15,8 @@ import { buildMemoTemplateBlock } from '@/lib/memo-agent/prompts/memo-template'
 import { buildMemoConfigBlock, type MemoTemplateConfig } from '@/lib/memo-agent/prompts/memo-config'
 import type { IngestionOutput } from './ingest'
 import type { ResearchOutput } from './research'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
+import type { DiligenceOutputLanguage } from '@/lib/diligence/output-language'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -120,6 +122,12 @@ export async function runDraft(params: {
   const research = (draft.research_output as ResearchOutput | null) ?? null
   // Partner-excluded Q&A entries are dropped from evaluation entirely.
   const qa_answers = (Array.isArray(draft.qa_answers) ? draft.qa_answers as QARecord[] : []).filter(r => !r.excluded)
+  const outputLanguage = await loadDiligenceOutputLanguage({
+    admin,
+    fundId,
+    dealId,
+    draftId: draft.id,
+  })
 
   const docCount = ingestion.documents?.length ?? 0
   const claimCount = ingestion.documents?.reduce((acc, d) => acc + (d.claims?.length ?? 0), 0) ?? 0
@@ -150,7 +158,7 @@ export async function runDraft(params: {
   }
 
   await note('Building draft prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'draft' })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'draft', outputLanguage })
   const { provider, model, providerType } = await getStageProvider(admin, fundId, 'draft')
   // Fund memo template — first-page exemplar + structural reference from the
   // fund's own sample memos.
@@ -238,7 +246,7 @@ export async function runDraft(params: {
   })
 
   // Force the recommendation section to a partner-only placeholder.
-  paragraphs = enforceRecommendationPlaceholder(paragraphs)
+  paragraphs = enforceRecommendationPlaceholder(paragraphs, outputLanguage)
 
   const parsed: MemoDraftOutput = {
     header: outline.header,
@@ -274,6 +282,9 @@ export async function runDraft(params: {
     .from('diligence_memo_drafts')
     .update({ memo_draft_output: parsed as any })
     .eq('id', draft.id)
+    .eq('deal_id', dealId)
+    .eq('fund_id', fundId)
+    .eq('is_draft', true)
   if (updateErr) throw new Error(`Failed to persist draft: ${updateErr.message}`)
 
   await note('Writing partner attention items…')
@@ -332,6 +343,12 @@ export async function runDraftReview(params: {
   const ingestion = (row.ingestion_output as IngestionOutput | null) ?? { documents: [], gap_analysis: { missing: [], inadequate: [] }, cross_doc_flags: [] }
   const research = (row.research_output as ResearchOutput | null) ?? null
   const qa_answers = (Array.isArray(row.qa_answers) ? row.qa_answers as QARecord[] : []).filter(r => !r.excluded)
+  const outputLanguage = await loadDiligenceOutputLanguage({
+    admin,
+    fundId,
+    dealId,
+    draftId: row.id,
+  })
 
   const reviewable = memo.paragraphs.filter(p => p.origin !== 'partner_only_placeholder')
   if (reviewable.length === 0) {
@@ -348,7 +365,7 @@ export async function runDraftReview(params: {
     .maybeSingle()
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
   const dealStage = (dealRow as { stage_at_consideration: string | null } | null)?.stage_at_consideration ?? null
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'draft' })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'draft', outputLanguage })
   const { provider, model, providerType } = await getStageProvider(admin, fundId, 'draft_review')
 
   // Chunk the reviewable paragraphs so each review call's edit output is
@@ -387,23 +404,29 @@ export async function runDraftReview(params: {
     }
   }))
   const edits = editLists.flat()
-  const byId = new Map(memo.paragraphs.map(p => [p.id, p]))
+  const editById = new Map(edits.map(edit => [edit.paragraph_id, edit]))
   let applied = 0
-  for (const e of edits) {
-    const target = byId.get(e.paragraph_id)
-    if (!target) continue
-    if (target.origin === 'partner_only_placeholder') continue
-    if (!e.revised_prose.trim()) continue
-    target.prose = e.revised_prose
-    applied += 1
-    if (e.reason) warnings.push(`Review edited ${e.paragraph_id}: ${e.reason}`)
+  const reviewedMemo: MemoDraftOutput = {
+    ...memo,
+    paragraphs: memo.paragraphs.map(paragraph => {
+      const edit = editById.get(paragraph.id)
+      if (!edit || paragraph.origin === 'partner_only_placeholder' || !edit.revised_prose.trim()) {
+        return paragraph
+      }
+      applied += 1
+      if (edit.reason) warnings.push(`Review edited ${edit.paragraph_id}: ${edit.reason}`)
+      return { ...paragraph, prose: edit.revised_prose }
+    }),
   }
 
   await note('Writing reviewed draft…')
   const { error: updateErr } = await admin
     .from('diligence_memo_drafts')
-    .update({ memo_draft_output: memo as any })
+    .update({ memo_draft_output: reviewedMemo as any })
     .eq('id', row.id)
+    .eq('deal_id', dealId)
+    .eq('fund_id', fundId)
+    .eq('is_draft', true)
   if (updateErr) throw new Error(`Failed to persist reviewed draft: ${updateErr.message}`)
 
   return { draft_id: row.id, edits_applied: applied, warnings }
@@ -440,7 +463,9 @@ async function loadDraftWithInputs(admin: Admin, fundId: string, dealId: string,
       .from('diligence_memo_drafts')
       .select('id, ingestion_output, research_output, qa_answers')
       .eq('id', draftId)
+      .eq('deal_id', dealId)
       .eq('fund_id', fundId)
+      .eq('is_draft', true)
       .maybeSingle()
     return (data as any) ?? null
   }
@@ -471,7 +496,9 @@ async function loadDraftWithMemo(admin: Admin, fundId: string, dealId: string, d
       .from('diligence_memo_drafts')
       .select(cols)
       .eq('id', draftId)
+      .eq('deal_id', dealId)
       .eq('fund_id', fundId)
+      .eq('is_draft', true)
       .maybeSingle()
     return (data as any) ?? null
   }
@@ -572,13 +599,16 @@ function coerceParagraph(raw: unknown): MemoParagraph | null {
   }
 }
 
-function enforceRecommendationPlaceholder(paragraphs: MemoParagraph[]): MemoParagraph[] {
+function enforceRecommendationPlaceholder(
+  paragraphs: MemoParagraph[],
+  outputLanguage: DiligenceOutputLanguage,
+): MemoParagraph[] {
   const out = paragraphs.filter(p => p.section_id !== 'recommendation')
   out.push({
     id: 'p_recommendation_placeholder',
     section_id: 'recommendation',
     order: 0,
-    prose: '[Partner to complete]',
+    prose: outputLanguage === 'zh-CN' ? '[待合伙人填写]' : '[Partner to complete]',
     sources: [],
     origin: 'partner_only_placeholder',
     confidence: 'n/a',

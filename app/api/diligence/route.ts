@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { safeWebUrl } from '@/lib/deals/submission-validation'
 import { seedDealChecklistFromFundDefault } from '@/lib/diligence/seed-checklist'
+import {
+  DEFAULT_DILIGENCE_OUTPUT_LANGUAGE,
+  parseDiligenceOutputLanguage,
+} from '@/lib/diligence/output-language'
 import { dbError } from '@/lib/api-error'
 
 const VALID_DEAL_STATUSES = ['active', 'passed', 'won', 'lost', 'on_hold'] as const
@@ -29,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   let query = admin
     .from('diligence_deals')
-    .select('id, fund_id, name, sector, stage_at_consideration, deal_status, current_memo_stage, lead_partner_id, promoted_company_id, drive_folder_url, created_at, updated_at')
+    .select('id, fund_id, name, sector, stage_at_consideration, deal_status, current_memo_stage, output_language, lead_partner_id, promoted_company_id, drive_folder_url, created_at, updated_at')
     .eq('fund_id', (membership as any).fund_id)
     .order('updated_at', { ascending: false })
     .limit(limit)
@@ -63,10 +67,17 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: 'name is required' }, { status: 400 })
+  const outputLanguage = body.output_language === undefined
+    ? DEFAULT_DILIGENCE_OUTPUT_LANGUAGE
+    : parseDiligenceOutputLanguage(body.output_language)
+  if (!outputLanguage) {
+    return NextResponse.json({ error: 'output_language must be en or zh-CN' }, { status: 400 })
+  }
 
   const insert: Record<string, unknown> = {
     fund_id: (membership as any).fund_id,
     name,
+    output_language: outputLanguage,
     created_by: user.id,
   }
   if (typeof body.sector === 'string' && body.sector.trim()) insert.sector = body.sector.trim()
@@ -90,7 +101,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin
     .from('diligence_deals')
     .insert(insert as any)
-    .select('id, name, sector, stage_at_consideration, deal_status, current_memo_stage, lead_partner_id, created_at, updated_at')
+    .select('id, name, sector, stage_at_consideration, deal_status, current_memo_stage, output_language, lead_partner_id, created_at, updated_at')
     .single()
 
   if (error) return dbError(error, 'diligence-deals-create')

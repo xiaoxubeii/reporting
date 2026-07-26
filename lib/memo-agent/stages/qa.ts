@@ -7,6 +7,7 @@ import { buildSystemPrompt } from '@/lib/memo-agent/prompts/system'
 import { buildQAUserContent, type QAQuestion, type PriorAnswer } from '@/lib/memo-agent/prompts/qa'
 import type { IngestionOutput } from './ingest'
 import type { ResearchOutput } from './research'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -218,8 +219,11 @@ export async function getNextBatch(params: {
     .from('diligence_memo_drafts')
     .select('ingestion_output, research_output')
     .eq('id', draftId)
+    .eq('deal_id', dealId)
     .eq('fund_id', fundId)
+    .eq('is_draft', true)
     .maybeSingle()
+  if (!draftRow) throw new Error('Draft not found or already finalized')
   const ingestion = (draftRow as any)?.ingestion_output as IngestionOutput | null ?? null
   const research = (draftRow as any)?.research_output as ResearchOutput | null ?? null
 
@@ -238,7 +242,8 @@ export async function getNextBatch(params: {
     .maybeSingle()
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
 
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'qa' })
+  const outputLanguage = await loadDiligenceOutputLanguage({ admin, fundId, dealId, draftId })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'qa', outputLanguage })
   const userContent = buildQAUserContent({
     dealName,
     ingestion,
@@ -370,8 +375,11 @@ export async function finishQA(params: {
     .from('diligence_memo_drafts')
     .select('qa_answers')
     .eq('id', draftId)
+    .eq('deal_id', dealId)
     .eq('fund_id', fundId)
+    .eq('is_draft', true)
     .maybeSingle()
+  if (!draftRow) throw new Error('Draft not found or already finalized')
   const existing = Array.isArray((draftRow as any)?.qa_answers) ? (draftRow as any).qa_answers as any[] : []
   const partnerAuthored = existing.filter(r => typeof r?.question_id === 'string' && r.question_id.startsWith('partner_q_'))
   const merged = [...records, ...partnerAuthored]
@@ -380,7 +388,9 @@ export async function finishQA(params: {
     .from('diligence_memo_drafts')
     .update({ qa_answers: merged as any })
     .eq('id', draftId)
+    .eq('deal_id', dealId)
     .eq('fund_id', fundId)
+    .eq('is_draft', true)
 
   await admin
     .from('diligence_deals')

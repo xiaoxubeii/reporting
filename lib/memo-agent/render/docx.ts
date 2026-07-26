@@ -2,6 +2,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Tabl
 import yaml from 'js-yaml'
 import type { MemoDraftOutput } from '@/lib/memo-agent/stages/draft'
 import type { DimensionScore } from '@/lib/memo-agent/stages/score'
+import type { DiligenceOutputLanguage } from '@/lib/diligence/output-language'
 
 interface RenderInput {
   memo: MemoDraftOutput & { scores?: DimensionScore[] }
@@ -9,6 +10,7 @@ interface RenderInput {
   isDraft: boolean
   dealName: string
   draftVersion: string
+  outputLanguage: DiligenceOutputLanguage
   /** Base font family for the export. Defaults to DM Sans. */
   fontFamily?: string
   /** Base font size in points. Defaults to 11. */
@@ -28,6 +30,50 @@ const FALLBACK_ORDER = [
   'product_technology',
 ]
 
+const ZH_SECTION_TITLES: Record<string, string> = {
+  executive_summary: '执行摘要',
+  recommendation: '投资建议',
+  company_overview: '公司概览',
+  product: '产品',
+  product_technology: '产品与技术',
+  market: '市场',
+  traction: '业务进展',
+  business_model: '商业模式',
+  team: '团队',
+  competition_moat: '竞争与护城河',
+  outcomes_analysis: '回报情景分析',
+  deal_terms: '交易条款',
+  risks_and_open_questions: '风险与待解问题',
+  scoring_summary: '评分摘要',
+  appendix: '附录与引用',
+}
+
+const DEFAULT_EN_SECTION_TITLES: Record<string, string> = {
+  executive_summary: 'Executive Summary',
+  recommendation: 'Recommendation',
+  company_overview: 'Company Overview',
+  product: 'Product',
+  product_technology: 'Product Technology',
+  market: 'Market',
+  traction: 'Traction & Evidence',
+  business_model: 'Business Model & Financials',
+  team: 'Team',
+  competition_moat: 'Competition & Moat',
+  outcomes_analysis: 'Outcomes Analysis',
+  deal_terms: 'Deal & Terms',
+  risks_and_open_questions: 'Risks & Open Questions',
+  scoring_summary: 'Scoring Summary',
+  appendix: 'Appendix — Sources & Citations',
+}
+
+function localizedSectionTitle(id: string, title: string, language: DiligenceOutputLanguage): string {
+  if (language !== 'zh-CN' || !ZH_SECTION_TITLES[id]) return title
+  const normalized = title.trim().toLocaleLowerCase()
+  const humanized = humanizeSectionId(id).toLocaleLowerCase()
+  const defaultEnglish = DEFAULT_EN_SECTION_TITLES[id]?.toLocaleLowerCase()
+  return normalized === humanized || normalized === defaultEnglish ? ZH_SECTION_TITLES[id] : title
+}
+
 /**
  * Word doc render. Reuses the docx library already in package.json (used by
  * lib/lp-letters/export.ts). Returns a Buffer suitable for upload to storage
@@ -35,7 +81,11 @@ const FALLBACK_ORDER = [
  */
 export async function renderDocx(input: RenderInput): Promise<Buffer> {
   const sections = parseSections(input.memoOutputYaml)
-  const sectionMeta = new Map(sections.map(s => [s.id, s]))
+  const sectionMeta = new Map(sections.map(s => [
+    s.id,
+    { ...s, title: localizedSectionTitle(s.id, s.title, input.outputLanguage) },
+  ]))
+  const zh = input.outputLanguage === 'zh-CN'
 
   // Section order + titles: partner section config when present (authoritative,
   // incl. custom + renamed sections), else the schema order. The structured tail
@@ -64,7 +114,7 @@ export async function renderDocx(input: RenderInput): Promise<Buffer> {
   // above — keeps the doc non-empty when the schema is empty or stale.
   for (const id of order) {
     if (!sectionMeta.has(id)) {
-      sectionMeta.set(id, { id, title: humanizeSectionId(id), kind: id === 'scoring_summary' || id === 'appendix' ? 'structured' : 'prose' })
+      sectionMeta.set(id, { id, title: localizedSectionTitle(id, humanizeSectionId(id), input.outputLanguage), kind: id === 'scoring_summary' || id === 'appendix' ? 'structured' : 'prose' })
     }
   }
 
@@ -79,7 +129,7 @@ export async function renderDocx(input: RenderInput): Promise<Buffer> {
   if (input.isDraft) {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: 'DRAFT — not finalized', bold: true, color: 'B8860B', size: 28 })],
+      children: [new TextRun({ text: zh ? '草稿 — 尚未定稿' : 'DRAFT — not finalized', bold: true, color: 'B8860B', size: 28 })],
     }))
     children.push(new Paragraph({ text: '' }))
   }
@@ -98,11 +148,11 @@ export async function renderDocx(input: RenderInput): Promise<Buffer> {
   }
   children.push(new Paragraph({ text: '' }))
   children.push(new Paragraph({
-    children: [new TextRun({ text: `Deal lead: ${header.deal_lead ?? '[Partner to complete]'}` })],
+    children: [new TextRun({ text: `${zh ? '项目负责人' : 'Deal lead'}: ${header.deal_lead ?? (zh ? '[待合伙人填写]' : '[Partner to complete]')}` })],
   }))
-  if (header.memo_date) children.push(new Paragraph({ children: [new TextRun({ text: `Date: ${header.memo_date}` })] }))
+  if (header.memo_date) children.push(new Paragraph({ children: [new TextRun({ text: `${zh ? '日期' : 'Date'}: ${header.memo_date}` })] }))
   children.push(new Paragraph({
-    children: [new TextRun({ text: `Version: ${input.draftVersion} · Agent: ${header.agent_version ?? 'memo-agent v0.1'}`, color: '888888', size: 18 })],
+    children: [new TextRun({ text: `${zh ? '版本' : 'Version'}: ${input.draftVersion} · ${zh ? '智能体' : 'Agent'}: ${header.agent_version ?? 'memo-agent v0.1'}`, color: '888888', size: 18 })],
   }))
   children.push(new Paragraph({ text: '' }))
 
@@ -116,7 +166,7 @@ export async function renderDocx(input: RenderInput): Promise<Buffer> {
 
     if (meta.kind === 'structured' && sectionId === 'scoring_summary') {
       children.push(headingPara(meta.title))
-      children.push(buildScoresTable(input.memo.scores ?? []))
+      children.push(buildScoresTable(input.memo.scores ?? [], input.outputLanguage))
       children.push(new Paragraph({ text: '' }))
       continue
     }
@@ -136,9 +186,9 @@ export async function renderDocx(input: RenderInput): Promise<Buffer> {
         runs.push(new TextRun({ text: p.prose, italics: isPlaceholder }))
 
         const markers: string[] = []
-        if (p.contains_projection) markers.push('projection')
-        if (p.contains_unverified_claim) markers.push('unverified')
-        if (p.contains_contradiction) markers.push('contradiction')
+        if (p.contains_projection) markers.push(zh ? '预测' : 'projection')
+        if (p.contains_unverified_claim) markers.push(zh ? '未验证' : 'unverified')
+        if (p.contains_contradiction) markers.push(zh ? '存在矛盾' : 'contradiction')
         if (markers.length > 0) {
           runs.push(new TextRun({ text: ` (${markers.join(' · ')})`, italics: true, color: 'B8860B', size: 18 }))
         }
@@ -173,9 +223,10 @@ function headingPara(title: string): Paragraph {
   })
 }
 
-function buildScoresTable(scores: DimensionScore[]): Table {
+function buildScoresTable(scores: DimensionScore[], language: DiligenceOutputLanguage): Table {
+  const zh = language === 'zh-CN'
   const headerRow = new TableRow({
-    children: ['Dimension', 'Mode', 'Score', 'Confidence', 'Rationale'].map(t => new TableCell({
+    children: (zh ? ['维度', '模式', '评分', '置信度', '理由'] : ['Dimension', 'Mode', 'Score', 'Confidence', 'Rationale']).map(t => new TableCell({
       children: [new Paragraph({ children: [new TextRun({ text: t, bold: true })] })],
       width: { size: 20, type: WidthType.PERCENTAGE },
     })),
@@ -183,9 +234,9 @@ function buildScoresTable(scores: DimensionScore[]): Table {
   const rows = [headerRow, ...scores.map(s => new TableRow({
     children: [
       new TableCell({ children: [new Paragraph(s.dimension_id)] }),
-      new TableCell({ children: [new Paragraph(s.mode)] }),
-      new TableCell({ children: [new Paragraph(s.score === null ? (s.mode === 'partner_only' ? '[partner]' : '—') : String(s.score))] }),
-      new TableCell({ children: [new Paragraph(s.confidence ?? '—')] }),
+      new TableCell({ children: [new Paragraph(zh ? ({ machine: '机器', hybrid: '混合', partner_only: '仅合伙人' }[s.mode] ?? s.mode) : s.mode)] }),
+      new TableCell({ children: [new Paragraph(s.score === null ? (s.mode === 'partner_only' ? (zh ? '[合伙人]' : '[partner]') : '—') : String(s.score))] }),
+      new TableCell({ children: [new Paragraph(zh && s.confidence ? ({ low: '低', medium: '中', high: '高' }[s.confidence] ?? s.confidence) : (s.confidence ?? '—'))] }),
       new TableCell({ children: [new Paragraph(s.rationale ?? '')] }),
     ],
   }))]

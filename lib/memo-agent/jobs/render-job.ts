@@ -4,6 +4,7 @@ import { renderMarkdown } from '@/lib/memo-agent/render/markdown'
 import { renderDocx } from '@/lib/memo-agent/render/docx'
 import { uploadDocxToDrive } from '@/lib/memo-agent/render/gdoc'
 import { parseDriveFolderUrl } from '@/lib/google/drive'
+import { resolveDraftOutputLanguage } from '@/lib/diligence/output-language'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -35,12 +36,14 @@ export async function runRenderJob(admin: Admin, job: RenderJob): Promise<unknow
   // data-room document behind each claim instead of printing a bare claim id.
   const { data: draft } = await admin
     .from('diligence_memo_drafts')
-    .select('id, draft_version, is_draft, memo_draft_output, ingestion_output, research_output, qa_answers')
+    .select('id, draft_version, is_draft, output_language, memo_draft_output, ingestion_output, research_output, qa_answers')
     .eq('id', draftId)
+    .eq('deal_id', job.deal_id)
     .eq('fund_id', job.fund_id)
     .maybeSingle()
   if (!draft) throw new Error('Draft not found')
   if (!(draft as any).memo_draft_output) throw new Error('Draft has no memo_draft_output — run Stage 4 first.')
+  const outputLanguage = resolveDraftOutputLanguage(draft as { output_language?: unknown })
 
   const { data: docRows } = await admin
     .from('diligence_documents')
@@ -95,6 +98,7 @@ export async function runRenderJob(admin: Admin, job: RenderJob): Promise<unknow
     isDraft: !!(draft as any).is_draft,
     dealName,
     draftVersion: (draft as any).draft_version,
+    outputLanguage,
     fontFamily: fontFamily ?? undefined,
     fontSize: fontSize ?? undefined,
     sectionConfig,
@@ -109,7 +113,7 @@ export async function runRenderJob(admin: Admin, job: RenderJob): Promise<unknow
   // Build docx for both docx and gdoc.
   const buffer = await renderDocx(renderInput)
   const safeDealName = dealName.replace(/[\/\\:*?"<>|]/g, '_').slice(0, 80)
-  const filename = `${safeDealName} memo (${(draft as any).draft_version}).docx`
+  const filename = `${safeDealName} ${outputLanguage === 'zh-CN' ? '投资备忘录' : 'memo'} (${(draft as any).draft_version}).docx`
 
   if (format === 'docx') {
     const storagePath = `${job.deal_id}/renders/${Date.now()}_${filename}`

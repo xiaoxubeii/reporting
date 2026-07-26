@@ -10,8 +10,11 @@ import { AnalystPanel } from '@/components/analyst-panel'
 import { AnalystDomainScope } from '@/components/analyst-scope'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { useFormatter, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
+
+type OutputLanguage = 'en' | 'zh-CN'
 
 interface Deal {
   id: string
@@ -20,6 +23,7 @@ interface Deal {
   stage_at_consideration: string | null
   deal_status: 'active' | 'passed' | 'invested' | 'won' | 'lost' | 'on_hold'
   current_memo_stage: 'not_started' | 'ingest' | 'research' | 'qa' | 'draft' | 'score' | 'render' | 'finalized'
+  output_language: OutputLanguage
   lead_partner_id: string | null
   promoted_company_id: string | null
   created_at: string
@@ -194,15 +198,24 @@ function NewDealDialog({ open, onOpenChange, onCreated }: {
   onCreated: (deal: Deal) => void
 }) {
   const t = useTranslations('Diligence.index.newDeal')
+  const locale = useLocale()
+  const defaultOutputLanguage: OutputLanguage = locale === 'zh-CN' ? 'zh-CN' : 'en'
   const [name, setName] = useState('')
   const [sector, setSector] = useState('')
   const [stage, setStage] = useState('')
+  const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>(defaultOutputLanguage)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function reset() {
-    setName(''); setSector(''); setStage('')
+    setName(''); setSector(''); setStage(''); setOutputLanguage(defaultOutputLanguage)
   }
+
+  useEffect(() => {
+    if (!open) return
+    setOutputLanguage(defaultOutputLanguage)
+    setError(null)
+  }, [defaultOutputLanguage, open])
 
   async function submit() {
     if (!name.trim()) return
@@ -216,6 +229,7 @@ function NewDealDialog({ open, onOpenChange, onCreated }: {
           name,
           sector: sector || undefined,
           stage_at_consideration: stage || undefined,
+          output_language: outputLanguage,
         }),
       })
       if (!res.ok) {
@@ -253,6 +267,26 @@ function NewDealDialog({ open, onOpenChange, onCreated }: {
               <label className="block text-xs font-medium text-muted-foreground mb-1">{t('stage')}</label>
               <Input value={stage} onChange={e => setStage(e.target.value)} placeholder={t('stagePlaceholder')} />
             </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5">
+            <div className="min-w-0">
+              <label id="new-deal-output-language-label" className="block text-xs font-medium">
+                {t('outputLanguage')}
+              </label>
+              <p className="text-[11px] text-muted-foreground">{t('outputLanguageHelp')}</p>
+            </div>
+            <Select value={outputLanguage} onValueChange={value => setOutputLanguage(value as OutputLanguage)}>
+              <SelectTrigger
+                className="h-8 w-32 shrink-0"
+                aria-labelledby="new-deal-output-language-label"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">{t('languages.en')}</SelectItem>
+                <SelectItem value="zh-CN">{t('languages.zh-CN')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <p className="text-[11px] text-muted-foreground">{t('help')}</p>
           {error && <p className="text-sm text-destructive">{error}</p>}

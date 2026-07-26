@@ -8,6 +8,7 @@ import {
   buildResearchFoundersContent,
 } from '@/lib/memo-agent/prompts/research'
 import { extractJsonObject } from '@/lib/memo-agent/parse-ai-json'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
 import type { IngestionOutput } from './ingest'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -95,6 +96,12 @@ export async function runResearch(params: {
   const ingestion = draftRow.ingestion_output as IngestionOutput
   const docCount = ingestion.documents?.length ?? 0
   const claimCount = ingestion.documents?.reduce((acc, d) => acc + (d.claims?.length ?? 0), 0) ?? 0
+  const outputLanguage = await loadDiligenceOutputLanguage({
+    admin,
+    fundId,
+    dealId,
+    draftId: draftRow.id,
+  })
 
   await note('Loading deal record…')
   const { data: dealRow } = await admin
@@ -106,7 +113,7 @@ export async function runResearch(params: {
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
 
   await note('Building research prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'research' })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'research', outputLanguage })
 
   const { provider, model, providerType, webSearchAvailable, webSearchOptIn } = await getStageProvider(admin, fundId, 'research')
   const webSearchEnabled = webSearchAvailable
@@ -257,6 +264,9 @@ export async function runResearch(params: {
     .from('diligence_memo_drafts')
     .update({ research_output: output as any })
     .eq('id', draftRow.id)
+    .eq('deal_id', dealId)
+    .eq('fund_id', fundId)
+    .eq('is_draft', true)
   if (updateErr) throw new Error(`Failed to update draft: ${updateErr.message}`)
 
   // Bump stage if currently at 'research'. Don't regress later stages.
@@ -287,7 +297,9 @@ async function loadDraftWithIngestion(
       .from('diligence_memo_drafts')
       .select('id, ingestion_output')
       .eq('id', draftId)
+      .eq('deal_id', dealId)
       .eq('fund_id', fundId)
+      .eq('is_draft', true)
       .maybeSingle()
     return (data as any) ?? null
   }

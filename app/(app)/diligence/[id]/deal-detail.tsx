@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useConfirm } from '@/components/confirm-dialog'
 import { IngestionSummary } from '@/components/diligence/ingestion-summary'
 import { StageHeader, DiligenceStageBar } from '@/components/diligence/stage-header'
@@ -24,6 +25,8 @@ import { MemoConfigPanel } from '@/components/diligence/memo-config-panel'
 import { ExpertValidationPanel } from '@/components/diligence/expert-validation-panel'
 import { useFormatter, useTranslations } from 'next-intl'
 
+type OutputLanguage = 'en' | 'zh-CN'
+
 interface Deal {
   id: string
   fund_id: string
@@ -32,6 +35,7 @@ interface Deal {
   stage_at_consideration: string | null
   deal_status: 'active' | 'passed' | 'invested' | 'won' | 'lost' | 'on_hold'
   current_memo_stage: string
+  output_language: OutputLanguage
   lead_partner_id: string | null
   promoted_company_id: string | null
   drive_folder_url: string | null
@@ -56,6 +60,9 @@ type LatestDraft = {
   id: string
   draft_version: string
   agent_version: string
+  output_language: OutputLanguage
+  source_draft_id: string | null
+  has_generated_artifacts: boolean
   is_draft: boolean
   created_at: string
   finalized_at: string | null
@@ -82,12 +89,17 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
 }) {
   const t = useTranslations('Diligence.dealDetail')
   const format = useFormatter()
+  const confirm = useConfirm()
   const tabLabels: Record<Tab, string> = {
     Checklist: t('tabs.checklist'), 'Data Room': t('tabs.dataRoom'), Research: t('tabs.research'),
     Founders: t('tabs.founders'), Scoring: t('tabs.scoring'), Memo: t('tabs.memo'), Settings: t('tabs.settings'),
   }
   const router = useRouter()
   const [deal, setDeal] = useState(initial)
+  const [latestDraftSummary, setLatestDraftSummary] = useState(latestDraft)
+  const [changingLanguage, setChangingLanguage] = useState(false)
+  const [languageNotice, setLanguageNotice] = useState<string | null>(null)
+  const [languageError, setLanguageError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('Checklist')
   // Documents live here (not inside Data Room) so the Checklist tab's
   // doc-count gate and the Data Room list stay in sync after an import/upload.
@@ -115,6 +127,113 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
   const [editingMeta, setEditingMeta] = useState(false)
   const [sectorDraft, setSectorDraft] = useState(deal.sector ?? '')
   const [stageDraft, setStageDraft] = useState(deal.stage_at_consideration ?? '')
+
+  useEffect(() => {
+    setLatestDraftSummary(latestDraft)
+  }, [latestDraft])
+
+  async function changeOutputLanguage(nextLanguage: OutputLanguage) {
+    if (nextLanguage === deal.output_language || changingLanguage) return
+
+    const targetLabel = t(`header.languages.${nextLanguage}`)
+    setChangingLanguage(true)
+    setLanguageError(null)
+    setLanguageNotice(null)
+    try {
+      type LanguageChangeResponse = {
+        status?: 'noop' | 'updated' | 'version_created'
+        output_language?: OutputLanguage
+        draft_id?: string | null
+        source_draft_id?: string | null
+        error?: string
+        code?: 'confirmation_required' | 'version_conflict'
+        confirmation_required?: boolean
+        expected_draft_id?: string | null
+      }
+
+      const requestLanguageChange = async (confirmVersion: boolean, expectedDraftId: string | null) => {
+        const response = await fetch(`/api/diligence/${deal.id}/output-language`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            output_language: nextLanguage,
+            confirm_version: confirmVersion,
+            expected_draft_id: expectedDraftId,
+          }),
+        })
+        const result = await response.json().catch(() => ({})) as LanguageChangeResponse
+        return { response, result }
+      }
+
+      let { response, result } = await requestLanguageChange(false, null)
+      if (
+        !response.ok &&
+        result.code === 'confirmation_required' &&
+        result.confirmation_required &&
+        result.expected_draft_id
+      ) {
+        const accepted = await confirm({
+          title: t('header.languageVersionConfirm.title', { language: targetLabel }),
+          description: t('header.languageVersionConfirm.description'),
+          confirmLabel: t('header.languageVersionConfirm.confirm', { language: targetLabel }),
+        })
+        if (!accepted) return
+        const confirmed = await requestLanguageChange(true, result.expected_draft_id)
+        response = confirmed.response
+        result = confirmed.result
+      }
+
+      if (!response.ok || !result.status || !result.output_language) {
+        throw new Error(result.error ?? t('header.languageSwitchFailed'))
+      }
+
+      setDeal(current => ({ ...current, output_language: result.output_language! }))
+      setLatestDraftSummary(current => {
+        if (!current || !result.draft_id) return current
+        if (result.status !== 'version_created') {
+          return { ...current, output_language: result.output_language! }
+        }
+        return {
+          ...current,
+          id: result.draft_id,
+          output_language: result.output_language!,
+          source_draft_id: result.source_draft_id ?? current.id,
+          is_draft: true,
+          finalized_at: null,
+          created_at: new Date().toISOString(),
+          has_generated_artifacts: false,
+        }
+      })
+
+      if (result.status === 'version_created') {
+        setLanguageNotice(t('header.languageVersionCreated', { language: targetLabel }))
+        const ingestResponse = await fetch(`/api/diligence/${deal.id}/agent/ingest`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full: true }),
+        })
+        const ingestResult = await ingestResponse.json().catch(() => ({})) as {
+          error?: string
+          skipped?: boolean
+          message?: string
+        }
+        if (!ingestResponse.ok || ingestResult.skipped) {
+          setLanguageError(t('header.languageRegenerationFailed', {
+            reason: ingestResult.error ?? ingestResult.message ?? t('header.unknownError'),
+          }))
+        } else {
+          setLanguageNotice(t('header.languageRegenerationStarted', { language: targetLabel }))
+        }
+      } else {
+        setLanguageNotice(t('header.languageSaved', { language: targetLabel }))
+      }
+      router.refresh()
+    } catch (error) {
+      setLanguageError(error instanceof Error ? error.message : t('header.languageSwitchFailed'))
+    } finally {
+      setChangingLanguage(false)
+    }
+  }
 
   function cancelMeta() {
     setEditingMeta(false)
@@ -164,7 +283,7 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
         <ArrowLeft className="h-3.5 w-3.5" /> {t('back')}
       </Link>
 
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {editingName ? (
             <Input
@@ -231,10 +350,40 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span id="deal-output-language-label" className="text-xs text-muted-foreground">
+              {t('header.outputLanguage')}
+            </span>
+            <Select
+              value={deal.output_language}
+              onValueChange={value => changeOutputLanguage(value as OutputLanguage)}
+              disabled={changingLanguage}
+            >
+              <SelectTrigger
+                className="h-8 w-32"
+                aria-labelledby="deal-output-language-label"
+              >
+                {changingLanguage
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  : <SelectValue />}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">{t('header.languages.en')}</SelectItem>
+                <SelectItem value="zh-CN">{t('header.languages.zh-CN')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <StatusDropdown value={deal.deal_status} onPick={updateStatus} />
         </div>
       </div>
+
+      {(languageNotice || languageError) && (
+        <div className="mb-4 space-y-1" aria-live="polite">
+          {languageNotice && <p className="text-xs text-muted-foreground">{languageNotice}</p>}
+          {languageError && <p className="text-xs text-destructive" role="alert">{languageError}</p>}
+        </div>
+      )}
 
       {/* Where the deal is in the pipeline, and what's left. Clicking a stage jumps
           to the tab that runs it. */}
@@ -257,7 +406,7 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div className="flex-1 min-w-0 max-w-5xl w-full">
           {activeTab === 'Checklist' && (
-            <ChecklistTab deal={deal} documentCount={documents.length} latestDraft={latestDraft} isAdmin={isAdmin} onJumpToTab={setActiveTab} onJumpToDoc={jumpToDoc} />
+            <ChecklistTab deal={deal} documentCount={documents.length} latestDraft={latestDraftSummary} isAdmin={isAdmin} onJumpToTab={setActiveTab} onJumpToDoc={jumpToDoc} />
           )}
           {activeTab === 'Data Room' && (
             <DealRoomTab dealId={deal.id} dealName={deal.name} documents={documents} setDocuments={setDocuments} initialDriveFolderUrl={deal.drive_folder_url} focusDocId={focusDocId} onFocusConsumed={() => setFocusDocId(null)} />

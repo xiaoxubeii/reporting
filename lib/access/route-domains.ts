@@ -267,6 +267,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/diligence/[id]/expert-validations/[requestId]/retry-materialization': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/[requestId]/select': { domain: 'diligence' },
   'api/diligence/[id]/memo-config': { domain: 'diligence' },
+  'api/diligence/[id]/output-language': { domain: 'diligence' },
   'api/diligence/[id]/notes': { domain: 'diligence' },
   'api/diligence/[id]/notes/[noteId]': { domain: 'diligence' },
   // The Q&A chat reads evidence and answers; it doesn't change the deal.

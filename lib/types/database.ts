@@ -1177,6 +1177,7 @@ export type Database = {
           stage_at_consideration: string | null
           deal_status: string
           current_memo_stage: string
+          output_language: string
           lead_partner_id: string | null
           promoted_company_id: string | null
           drive_folder_url: string | null
@@ -1194,6 +1195,7 @@ export type Database = {
           stage_at_consideration?: string | null
           deal_status?: string
           current_memo_stage?: string
+          output_language?: string
           lead_partner_id?: string | null
           promoted_company_id?: string | null
           drive_folder_url?: string | null
@@ -1211,6 +1213,7 @@ export type Database = {
           stage_at_consideration?: string | null
           deal_status?: string
           current_memo_stage?: string
+          output_language?: string
           lead_partner_id?: string | null
           promoted_company_id?: string | null
           drive_folder_url?: string | null
@@ -1382,8 +1385,11 @@ export type Database = {
           ai_model: string | null
           ingestion_output: Json | null
           research_output: Json | null
+          checklist_assessment_output: Json | null
           qa_answers: Json | null
           memo_draft_output: Json | null
+          output_language: string
+          source_draft_id: string | null
           is_draft: boolean
           finalized_at: string | null
           finalized_by: string | null
@@ -1400,8 +1406,11 @@ export type Database = {
           ai_model?: string | null
           ingestion_output?: Json | null
           research_output?: Json | null
+          checklist_assessment_output?: Json | null
           qa_answers?: Json | null
           memo_draft_output?: Json | null
+          output_language?: string
+          source_draft_id?: string | null
           is_draft?: boolean
           finalized_at?: string | null
           finalized_by?: string | null
@@ -1418,8 +1427,11 @@ export type Database = {
           ai_model?: string | null
           ingestion_output?: Json | null
           research_output?: Json | null
+          checklist_assessment_output?: Json | null
           qa_answers?: Json | null
           memo_draft_output?: Json | null
+          output_language?: string
+          source_draft_id?: string | null
           is_draft?: boolean
           finalized_at?: string | null
           finalized_by?: string | null
@@ -3120,6 +3132,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      change_diligence_output_language: {
+        Args: {
+          p_confirm_version: boolean
+          p_deal_id: string
+          p_expected_draft_id: string | null
+          p_fund_id: string
+          p_output_language: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       background_job_claim_due: {
         Args: { p_kinds: string[]; p_limit?: number }
         Returns: Database["public"]["Tables"]["background_jobs"]["Row"][]

@@ -810,3 +810,51 @@ unmerged worktrees intact if a merge or verification fails.
 - Merge order used: current main was integrated into `codex/add-feeds-product`; that combined Feeds/Explore branch is then fast-forwarded into main with autostash preserving local user edits.
 - Final verification: after current-main integration, 77 conflict-focused tests, 56 access/CSP tests, TypeScript, strict OpenSpec validations, and `next build --no-lint` passed; normal build remains blocked by pre-existing repository-wide ESLint debt.
 - Remaining risks: Miniflux and local Supabase must remain available at runtime; the project-wide Next.js advisory and repository lint debt remain separate maintenance issues.
+
+### Feature: diligence-output-language
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible, contract-changing feature across persistence, asynchronous jobs, AI prompts, and finalized investment artifacts.
+- Change: `openspec/changes/add-diligence-output-language`
+- Classification: `single-feature`, serial-required because the draft snapshot contract must land before pipeline and UI consumers
+
+#### Acceptance
+
+- A deal has one `en` / `zh-CN` diligence language, defaulted from the validated UI locale for interactive creation and from English for omitted/service creation.
+- Every draft snapshots that language and every queued, resumed, or retried generation stage reads the snapshot rather than browser state.
+- Natural-language artifacts follow the snapshot while structured keys, enums, IDs, citations, proper nouns, and verbatim evidence remain stable.
+- A pre-generation change updates in place; a post-generation or finalized change creates a linked new draft version without modifying prior artifacts.
+- One accessible deal-level selector controls the full workflow; stage pages do not repeat the choice.
+
+#### Allowed Change Scope
+
+- `supabase/migrations/`, `lib/types/database.ts`, diligence domain/API modules, memo-agent stages/jobs/prompts, expert-validation generation, diligence creation/detail UI, locale catalogs, focused tests, and browser evidence.
+- Existing unrelated untracked evidence, demo deliverables, and scripts remain untouched.
+
+#### Shared Contract Changes
+
+- Adds constrained `output_language` data to deals and drafts plus nullable draft lineage.
+- Adds one authorized language update/version endpoint and extends existing diligence DTOs with language metadata.
+- Extends `buildSystemPrompt` with a required per-draft language contract without changing output JSON schemas.
+
+#### Verification Plan
+
+- Contract-first tests for language parsing, prompt directives, snapshot behavior, route validation, and version preservation.
+- Focused stage/job integration tests, generated database types, TypeScript, changed-file lint, strict OpenSpec, and `git diff --check`.
+- Authenticated browser verification for creation defaults, in-place selection, Chinese generation, and non-destructive post-generation switching.
+
+#### Review Required
+
+- Correctness review for stage coverage, retry determinism, and finalized immutability.
+- Database/security review for constraints, authorization, concurrency, and cross-fund isolation.
+- UX/accessibility review for concise labels, confirmation semantics, keyboard use, and responsive containment.
+
+#### Progress / Evidence
+
+- status: complete
+- branch: `codex/diligence-output-language`
+- planning: OpenSpec proposal, design, spec, and task plan created; strict validation passed before implementation
+- verification: 1,447 tests, TypeScript, executable database contract, strict OpenSpec validation, and authenticated English/Chinese browser flows passed; production compilation succeeds before the repository-wide pre-existing lint gate
+- workspace: unrelated pre-existing untracked screenshots, evidence, deliverables, and demo scripts are excluded from the feature scope

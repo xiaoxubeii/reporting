@@ -3,6 +3,8 @@ import { logAIUsage } from '@/lib/ai/usage'
 import { extractJsonObject } from '@/lib/memo-agent/parse-ai-json'
 import { EXPERT_LIMITS, type GeneratedValidationInputs } from './types'
 import { requiredString } from './validation'
+import { buildOutputLanguageInstruction } from '@/lib/diligence/output-language'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
 
 type Admin = Parameters<typeof createFundAIProvider>[0]
 
@@ -23,11 +25,16 @@ export async function generateValidationInputs(params: {
   sourceKind: 'research_gap' | 'contradiction'
   sourceSnapshot: Record<string, unknown>
 }): Promise<GeneratedValidationInputs> {
+  const outputLanguage = await loadDiligenceOutputLanguage({
+    admin: params.admin,
+    fundId: params.fundId,
+    dealId: params.dealId,
+  })
   const { provider, model, providerType } = await createFundAIProvider(params.admin, params.fundId)
   const result = await provider.createMessage({
     model,
     maxTokens: 1200,
-    system: SYSTEM,
+    system: `${SYSTEM}\n\n${buildOutputLanguageInstruction(outputLanguage)}`,
     content: JSON.stringify({ source_kind: params.sourceKind, source: params.sourceSnapshot }),
   })
   void logAIUsage(params.admin as never, {

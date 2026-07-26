@@ -9,6 +9,7 @@ import { runBatchedExtraction } from '@/lib/memo-agent/batched-extraction'
 import type { IngestionOutput } from './ingest'
 import type { ResearchOutput } from './research'
 import type { MemoDraftOutput } from './draft'
+import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -57,7 +58,9 @@ export async function runScore(params: {
     .from('diligence_memo_drafts')
     .select('id, ingestion_output, research_output, qa_answers, memo_draft_output')
     .eq('id', draftId)
+    .eq('deal_id', dealId)
     .eq('fund_id', fundId)
+    .eq('is_draft', true)
     .maybeSingle()
   if (!draft) throw new Error('Draft not found')
   // Scoring is INDEPENDENT of the memo: it judges the evidence base (ingestion +
@@ -72,6 +75,7 @@ export async function runScore(params: {
   // Partner-excluded Q&A entries are dropped from evaluation entirely.
   const qa_answers = (Array.isArray((draft as any).qa_answers) ? (draft as any).qa_answers as QARecord[] : []).filter((r: QARecord) => !r.excluded)
   const memo = ((draft as any).memo_draft_output as MemoDraftOutput | null) ?? null
+  const outputLanguage = await loadDiligenceOutputLanguage({ admin, fundId, dealId, draftId })
 
   // Seed-on-demand for funds that never visited the Schemas editor.
   await ensureDefaults(fundId, admin)
@@ -90,7 +94,7 @@ export async function runScore(params: {
   const dealStage = (dealRow as { stage_at_consideration: string | null } | null)?.stage_at_consideration ?? null
 
   await note('Building score prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'score' })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'score', outputLanguage })
 
   const memoSummary = memo ? summarizeMemoForScoring(memo) : null
 
@@ -150,7 +154,9 @@ export async function runScore(params: {
         mode: d.mode as DimensionScore['mode'],
         score: null,
         confidence: null,
-        rationale: 'No score produced for this dimension.',
+        rationale: outputLanguage === 'zh-CN'
+          ? '该维度未生成评分。'
+          : 'No score produced for this dimension.',
         supporting_evidence: [],
       })
     }
@@ -164,8 +170,12 @@ export async function runScore(params: {
     .map(s => ({
       dimension_id: s.dimension_id,
       reason: s.score === null
-        ? 'No confident score could be assigned from the available evidence.'
-        : 'Scored with low confidence — partner review recommended.',
+        ? outputLanguage === 'zh-CN'
+          ? '现有证据不足以得出可信评分。'
+          : 'No confident score could be assigned from the available evidence.'
+        : outputLanguage === 'zh-CN'
+          ? '评分置信度较低，建议合伙人复核。'
+          : 'Scored with low confidence — partner review recommended.',
     }))
 
   const output: ScoreOutput = { scores, low_confidence_attention }
@@ -184,6 +194,9 @@ export async function runScore(params: {
     .from('diligence_memo_drafts')
     .update({ memo_draft_output: merged as any })
     .eq('id', draftId)
+    .eq('deal_id', dealId)
+    .eq('fund_id', fundId)
+    .eq('is_draft', true)
 
   // Surface low-confidence dimensions as attention items for the partner.
   if (low_confidence_attention.length > 0) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbError } from '@/lib/api-error'
+import { draftHasGeneratedArtifacts } from '@/lib/diligence/draft-artifacts'
 
 // 'invested' is the current label for a closed/won deal; 'won'/'lost'/'on_hold'
 // are retained for back-compat with rows written before the relabel.
@@ -31,17 +32,31 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // Latest draft summary, if any.
   const { data: latestDraft } = await admin
     .from('diligence_memo_drafts')
-    .select('id, draft_version, agent_version, is_draft, created_at, finalized_at')
+    .select('id, draft_version, agent_version, output_language, source_draft_id, is_draft, created_at, finalized_at')
     .eq('deal_id', params.id)
     .eq('fund_id', fundId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
+  const latestDraftSummary = latestDraft
+    ? {
+        ...latestDraft,
+        has_generated_artifacts: await draftHasGeneratedArtifacts({
+          admin,
+          fundId,
+          dealId: params.id,
+          draftId: latestDraft.id,
+          isDraft: latestDraft.is_draft,
+          finalizedAt: latestDraft.finalized_at,
+        }),
+      }
+    : null
+
   return NextResponse.json({
     deal,
     documentCount: documentCount ?? 0,
-    latestDraft,
+    latestDraft: latestDraftSummary,
   })
 }
 

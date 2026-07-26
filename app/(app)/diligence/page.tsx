@@ -34,7 +34,7 @@ export default async function DiligencePage() {
 
   const { data: deals } = await admin
     .from('diligence_deals')
-    .select('id, name, sector, stage_at_consideration, deal_status, current_memo_stage, lead_partner_id, promoted_company_id, created_at, updated_at')
+    .select('id, name, sector, stage_at_consideration, deal_status, current_memo_stage, output_language, lead_partner_id, promoted_company_id, created_at, updated_at')
     .eq('fund_id', (membership as any).fund_id)
     .order('updated_at', { ascending: false })
     .limit(200)

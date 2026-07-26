@@ -4371,7 +4371,7 @@
       "sectionEditor": { "label": "章节", "add": "添加章节", "drag": "拖动排序", "included": "已包含", "omitted": "已省略", "depthHelp": "本章节的深度与篇幅", "depthFor": "{title} 的深度", "custom": "自定义", "remove": "移除章节", "coverPlaceholder": "智能体应在本章节涵盖什么？", "help": "拖动排序，取消勾选可省略章节，并可单独设置章节深度。" }, "schema": { "title": "基础备忘录架构", "description": "起草时使用的章节结构、指引和来源规则。" }
     },
     "dealDetail": {
-      "back": "返回尽职调查", "comingSoon": "将在 {phase} 推出。", "tabs": { "checklist": "清单", "dataRoom": "资料室", "research": "研究", "founders": "创始人", "scoring": "评分", "memo": "投资备忘录", "settings": "设置" }, "statuses": { "invested": "已投资", "active": "进行中", "passed": "已放弃" }, "common": { "save": "保存", "cancel": "取消", "edit": "编辑", "delete": "删除" }, "header": { "rename": "重命名项目", "sectorPlaceholder": "行业/类型", "stagePlaceholder": "阶段", "created": "创建于 {date}", "editMeta": "编辑行业和阶段" },
+      "back": "返回尽职调查", "comingSoon": "将在 {phase} 推出。", "tabs": { "checklist": "清单", "dataRoom": "资料室", "research": "研究", "founders": "创始人", "scoring": "评分", "memo": "投资备忘录", "settings": "设置" }, "statuses": { "invested": "已投资", "active": "进行中", "passed": "已放弃" }, "common": { "save": "保存", "cancel": "取消", "edit": "编辑", "delete": "删除" }, "header": { "rename": "重命名项目", "sectorPlaceholder": "行业/类型", "stagePlaceholder": "阶段", "created": "创建于 {date}", "editMeta": "编辑行业和阶段", "outputLanguage": "投研语言", "languages": { "en": "英语", "zh-CN": "简体中文" }, "languageVersionConfirm": { "title": "生成{language}版本？", "description": "当前版本及其证据会完整保留。系统将创建新版本，并按所选语言重新运行尽调流程。", "confirm": "生成{language}版本" }, "languageVersionCreated": "已保留原版本，并关联新的{language}版本。", "languageRegenerationStarted": "已创建新的{language}版本，并开始完整分析。", "languageRegenerationFailed": "新语言版本已保留，但未能启动重新生成：{reason}", "languageSaved": "投研语言已切换为{language}。", "languageSwitchFailed": "无法切换投研语言。", "unknownError": "未知错误" },
       "checklist": {
         "common": { "save": "保存", "cancel": "取消", "edit": "编辑", "delete": "删除" }, "loading": "正在加载清单…", "empty": "本项目还没有尽调清单。", "emptyHelp": "应用基金默认清单，或粘贴您自己的清单。", "hideCompleted": "隐藏已完成项", "applyDefault": "应用基金默认清单", "resetDefault": "按基金默认值重置", "queued": "排队中…", "errors": { "addSection": "无法添加章节。", "assessment": "无法将评估加入队列。" },
         "deleteSection": { "title": "删除章节？", "withItems": "将从本项目删除该章节及其中的 {count} 个项目。", "empty": "将从本项目删除该章节。" }, "deleteItem": { "title": "删除项目？", "description": "仅从本项目删除此行。", "confirm": "删除" }, "assessment": { "queued": "已排队，工作进程通常会在一分钟内开始", "running": "AI 评估进行中", "failed": "AI 评估失败", "noDetail": "未记录错误详情，请检查工作进程日志。", "retry": "重试", "typical": "通常约需 {duration}" },
@@ -4446,6 +4446,9 @@
         "sectorPlaceholder": "例如：企业软件",
         "stage": "轮次",
         "stagePlaceholder": "例如：种子轮",
+        "outputLanguage": "投研语言",
+        "outputLanguageHelp": "研究、评分和备忘录等生成内容均使用此语言。",
+        "languages": { "en": "英语", "zh-CN": "简体中文" },
         "help": "创建后可继续添加材料、外部研究和评分标准。",
         "cancel": "取消",
         "create": "创建项目",
