@@ -2,6 +2,7 @@
 
 ## Current Focus
 
+- Completed feature: `add-expert-directory-discovery`; Reporting now has platform-certified experts, fund-confirmed manual experts, and fund-private source-backed discovery candidates. Confirmed experts carry trust/provenance snapshots into Diligence selection.
 - Completed feature: `add-background-job-http-context`. All background execution is HTTP-only: Croner authenticates the generic dispatcher, the dispatcher issues one attempt-scoped Job Token per registered worker hop, and every receiver restores live user/system authority from the persisted job. Search is an optional registered tool capability rather than an Anthropic-only path.
 - Completed feature follow-up: `externalize-devctl-service-dependencies`; devctl manages only Web and Croner, while Miniflux, SearXNG, and Supabase are status-only external dependencies.
 - Current task: implementation, tests, and real CLI verification complete; independent review is recorded below.
@@ -27,6 +28,7 @@
 
 ## Verification
 
+- Expert Directory Discovery: strict OpenSpec, database migration/concurrency tests, TypeScript, 32-file changed-scope ESLint, `git diff --check`, and `next build --no-lint` passed. Full Vitest passed 186 files/1426 tests with 3 files/5 environment-gated tests skipped. Authenticated desktop/mobile browser acceptance passed manual create/deactivate/reactivate, live PubMed/ClinicalTrials.gov discovery, explicit confirmation, fund visibility, and Diligence selection; mobile horizontal overflow was 0. Correctness/security review found no remaining MEDIUM/HIGH/CRITICAL. Evidence: `.harnesskit/evidence/add-expert-directory-discovery/`. HarnessKit targeted/full and normal build remain blocked by unrelated repository-wide lint debt.
 - Background Job HTTP context: strict OpenSpec, HarnessKit fast, `git diff --check`, generated-state parsing, TypeScript, and the current feature-focused 18-file/131-test suite pass. The current full Vitest run passes 177 files/1389 tests; its only failure is an unrelated devctl test unable to bind port 5000 because the running Next server owns it, while excluding that environmental test yields 177 files/1384 tests passing. The generalized upgrade migration is installed on local Supabase; database introspection confirms the generic claim/finalize functions and domain trigger are present. The running Croner successfully invokes `background-jobs`; a persisted user-attributed job records three HTTP Worker attempts, one worker claim, and nine completed `/api/search` tool calls. Invalid provider citations were rejected at the provenance boundary, and a freshly signed terminal-attempt token was rejected live by `/api/search`. Final correctness/security re-reviews found no remaining MEDIUM/HIGH/CRITICAL. HarnessKit targeted remains blocked by existing repository-wide lint debt; file-level lint of the touched Anthropic provider reports six pre-existing `any` usages outside this change's diff. A prior `next build --no-lint` passed.
 - Devctl external dependencies: 32/32 focused tests and the full 179-file/1398-test Vitest suite passed. Changed-scope ESLint, repository TypeScript, Bash/Node syntax, strict OpenSpec, HarnessKit fast, and `git diff --check` passed. HarnessKit targeted remains blocked by existing repository-wide lint debt outside this change.
 - Devctl real CLI: a real Web/Cron restart produced runtime state with only Web/Cron records plus a v1-readable rollback envelope and reported external Miniflux 8085, SearXNG 8086, and Supabase 8000 as running. Docker IDs, status, and start timestamps for both operator-owned services and the legacy duplicate 5002/5003 containers were unchanged before and after restart; the duplicates remain an explicit operator cleanup item.
@@ -72,6 +74,7 @@
 
 ## Decisions
 
+- Expert discovery candidates are not a third trusted pool: they are a fund-private staging resource that becomes a fund-confirmed expert only after explicit administrator review.
 - Feature plan is the source of truth for execution shape.
 - OpenSpec is the source of truth for change intent and task scope when required.
 - `.harnesskit/state/feature_list.json` is the machine-readable execution state.

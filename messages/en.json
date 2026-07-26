@@ -33,6 +33,7 @@
     "diligence": "Diligence",
     "inbox": "Inbox",
     "analytics": "Analytics",
+    "experts": "Expert Directory",
     "portfolio": "Portfolio",
     "import": "Import",
     "investments": "Investments",
@@ -6051,6 +6052,17 @@
         "emptyDescription": "This curated category does not currently contain an available source."
       }
     }
+  },
+  "ExpertDirectory": {
+    "title": "Expert Directory",
+    "subtitle": "Manage platform-certified and fund-owned expert resources, and discover candidates from trusted professional sources.",
+    "directorySearch": "Search experts",
+    "tabs": { "platform": "Platform Certified", "fund": "Fund Experts", "discovery": "Discover Candidates" },
+    "badges": { "platform": "Platform certified", "fundManual": "Fund confirmed · Manual", "fundDiscovery": "Fund confirmed · Discovery", "pending": "Pending fund review", "confirmed": "Confirmed", "rejected": "Rejected", "inactive": "Inactive" },
+    "manual": { "add": "Add expert manually", "edit": "Manage", "cancel": "Cancel", "name": "Name", "email": "Work email", "title": "Title / role", "organization": "Organization", "profile": "Specialty and experience", "save": "Save as fund expert", "update": "Save changes", "inactive": "Inactive" },
+    "discovery": { "query": "Discovery query", "sources": "Professional sources", "placeholder": "Disease, technology, device, or clinical question", "search": "Discover experts", "searching": "Searching…", "hint": "Candidates never become experts or receive invitations automatically. A fund admin must verify the identity and provide an email before adding the person to the fund directory.", "partial": "Some sources were unavailable; results from available sources are still shown.", "noOrganization": "Organization not supplied", "email": "Fund-verified work email", "confirm": "Confirm and add to fund experts", "confirmedNotice": "The candidate is now a fund expert and can be used in Diligence.", "viewFundExperts": "View fund experts", "reject": "Reject", "rejectConfirm": "Reject this candidate? The decision remains in the review history.", "disclaimer": "Confirmed by your fund; not platform certified.", "status": "Status", "allStatuses": "All statuses" },
+    "empty": { "platform": "No active platform-certified experts are available.", "fund": "No fund experts yet. Add one manually or use Discover Candidates to review external professionals.", "candidates": "No pending candidates. Enter a query to discover experts from professional sources." },
+    "errors": { "discovery": "Discovery failed", "add": "Could not add expert", "confirm": "Could not confirm candidate", "reject": "Could not reject candidate" }
   },
   "Support": {
     "metadata": {

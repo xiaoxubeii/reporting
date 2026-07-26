@@ -3,6 +3,30 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "expert-directory-discovery",
+      "title": "Platform and fund expert directory with source-backed discovery",
+      "status": "passing",
+      "current_task": "Implementation and merge verification complete",
+      "definition_of_done": [
+        "Platform-certified and fund-confirmed experts have distinct trust and ownership boundaries",
+        "Fund admins can manually manage fund experts and confirm or reject private discovery candidates",
+        "PubMed and ClinicalTrials.gov discovery returns bounded source-backed evidence without inventing contact details",
+        "Normal fund members have read-only access to formal expert pools and cannot manage candidates",
+        "Only eligible active platform and current-fund experts can be selected or auto-matched in Diligence",
+        "Focused database, API, UI, authorization, security, and authenticated browser verification pass"
+      ],
+      "evidence": [
+        "OpenSpec add-expert-directory-discovery is complete and passes strict validation",
+        "Full Vitest passed 186 files/1426 tests; database migration and concurrency tests passed",
+        "TypeScript and 32-file changed-scope ESLint passed",
+        "next build --no-lint passed; normal build remains blocked by unrelated repository-wide lint debt",
+        "Authenticated desktop and 390px mobile browser flows passed manual lifecycle, live discovery, confirmation, fund visibility, and Diligence selection",
+        "Correctness and security review found no remaining medium, high, or critical issue"
+      ],
+      "blocked_by": [],
+      "notes": "Discovery candidates remain fund-private and non-matchable until an administrator explicitly confirms identity and supplies an email address. Evidence is stored under .harnesskit/evidence/add-expert-directory-discovery/."
+    },
+    {
       "id": "background-job-http-context",
       "title": "HTTP-only background execution context and provider Search tool",
       "status": "passing",

@@ -758,6 +758,61 @@ contract for self-check, review, testing, and merge.
 - baseline: OpenSpec strict, HarnessKit fast, TypeScript, Compose validation, changed-file ESLint, full Vitest, and `next build --no-lint` pass; HarnessKit targeted/full stop on repository-wide pre-existing ESLint errors outside Search
 - risks: category configuration must remain fund-scoped and data-only; unknown adapter IDs fail closed; external API/engine availability and website parser drift remain operational partial-result states
 
+### Feature: expert-directory-discovery
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this adds a browser-visible, fund-scoped resource workflow across persistence, external discovery, expert matching, and authorization.
+- Change: `openspec/changes/add-expert-directory-discovery`
+- Classification: `single-feature`, serial-required because the candidate and certification contracts must land before API and UI consumers
+
+#### Acceptance
+
+- Reporting exposes one authenticated Expert Directory with separate Platform Certified, Fund Experts, and Fund Discovery views.
+- Platform experts remain globally visible and platform-managed; fund experts remain visible only to their fund and record whether they were manually added or promoted from discovery.
+- Fund admins can discover candidates from approved medical sources, inspect source-backed evidence, confirm a candidate into a fund expert, and reject candidates; unconfirmed candidates never participate in Research matching or invitations.
+- Existing Diligence expert validation lists and auto-matches active platform experts plus the current fund's confirmed experts, with origin and verification badges.
+- Discovery is bounded, input-validated, rate-limited, fund-isolated, and never invents email addresses or automatically sends invitations.
+
+#### Allowed Change Scope
+
+- `supabase/migrations/`, generated database types, expert-validation and expert-discovery domain modules, Expert APIs, Diligence expert selector, sidebar/access contracts, locale catalogs, `/experts` UI, focused tests, and browser evidence.
+- Existing unrelated worktrees, demo data scripts, screenshots, and diligence-language changes remain untouched.
+
+#### Shared Contract Changes
+
+- Adds fund-scoped expert candidate persistence and explicit source/verification metadata for formal experts.
+- Adds authorized discovery/list/confirm/reject routes and extends Expert Directory DTOs with certification and provenance.
+- Reuses Reporting Search's approved-source policy and bounded API transport; expert-specific discovery adapters normalize people while promotion remains an expert-domain concern.
+
+#### Verification Plan
+
+- Contract-first tests for schema constraints, fund isolation, candidate normalization/deduplication, promotion idempotency, permissions, and exclusion from matching.
+- Targeted service/API/UI tests, generated database types, TypeScript, changed-file lint, strict OpenSpec, and `git diff --check`.
+- Authenticated desktop/mobile browser verification for all directory tabs, manual creation, discovery, confirmation, and selection in an existing Diligence expert-validation request.
+
+#### Review Required
+
+- planner: yes, architecture and contract review before implementation
+- reviewer: yes, candidate lifecycle, promotion idempotency, reuse of Search adapters, and UI integration
+- security-reviewer: yes, external inputs, fund isolation, privileged global writes, rate limiting, and contact-data handling
+- browser/QA: yes, directory and Diligence integration are user-visible
+
+#### Progress / Evidence
+
+- status: complete
+- branch: `codex/add-expert-directory-discovery`
+- worktree: `/home/ubuntu/workspace/reporting.worktrees/add-expert-directory-discovery`
+- owner: main-agent
+- implementation: two formal expert pools plus a fund-private candidate queue; admin-only manual/discovery management; PubMed and ClinicalTrials.gov discovery adapters; atomic fund confirmation; trust snapshots; and Diligence selection are complete
+- authorization: normal members have read-only access to the two expert pools; fund admins manage only their fund; platform writes require the configured operations fund; candidate RPCs require service role plus a live fund-admin membership and force fund-confirmed scope
+- tests: full Vitest passes with 186 files and 1426 tests (3 files/5 tests skipped); database migration/concurrency tests, TypeScript, 32-file changed-scope ESLint, strict OpenSpec, and `git diff --check` pass
+- browser: authenticated desktop flow passed manual create/deactivate/reactivate, live discovery, explicit confirmation, fund visibility, and Diligence selection; 390px mobile Expert Directory has zero horizontal overflow
+- security: fixed HTTPS upstreams, bounded API transport, same-origin mutation checks, fail-closed rate limits, strict input limits, RLS/service-role grants, atomic row locking, cross-fund tests, safe browser errors, and a 52-file secret scan produced no medium/high/critical finding
+- baseline: `next build --no-lint` passes; regular build and HarnessKit targeted/full stop on repository-wide pre-existing ESLint errors outside this change. `npm audit` cannot run against the current invalid package tree and unchanged lockfile
+- evidence: `.harnesskit/evidence/add-expert-directory-discovery/`
+
 ## Parallelization Decision
 
 Classify every feature before assigning workers:

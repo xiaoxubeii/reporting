@@ -1297,6 +1297,9 @@ export type Database = {
           expert_name: string | null
           expert_email: string | null
           expert_snapshot: Json | null
+          expert_verification_type: string | null
+          expert_source_type: string | null
+          expert_verified_at: string | null
           token_hash: string | null
           expires_at: string | null
           invited_at: string | null
@@ -1327,6 +1330,9 @@ export type Database = {
           expert_name?: string | null
           expert_email?: string | null
           expert_snapshot?: Json | null
+          expert_verification_type?: string | null
+          expert_source_type?: string | null
+          expert_verified_at?: string | null
           token_hash?: string | null
           expires_at?: string | null
           invited_at?: string | null
@@ -1357,6 +1363,9 @@ export type Database = {
           expert_name?: string | null
           expert_email?: string | null
           expert_snapshot?: Json | null
+          expert_verification_type?: string | null
+          expert_source_type?: string | null
+          expert_verified_at?: string | null
           token_hash?: string | null
           expires_at?: string | null
           invited_at?: string | null
@@ -1832,6 +1841,11 @@ export type Database = {
           status: string
           embedding: string | null
           embedding_model: string | null
+          verification_type: string
+          source_type: string
+          verified_at: string | null
+          verified_by: string | null
+          provenance_snapshot: Json
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1848,6 +1862,11 @@ export type Database = {
           status?: string
           embedding?: string | null
           embedding_model?: string | null
+          verification_type: string
+          source_type: string
+          verified_at?: string | null
+          verified_by?: string | null
+          provenance_snapshot?: Json
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -1864,9 +1883,78 @@ export type Database = {
           status?: string
           embedding?: string | null
           embedding_model?: string | null
+          verification_type?: string
+          source_type?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          provenance_snapshot?: Json
           created_by?: string | null
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      expert_candidates: {
+        Row: {
+          id: string
+          fund_id: string
+          identity_fingerprint: string
+          discovery_query: string
+          name: string
+          email: string | null
+          title: string | null
+          organization: string | null
+          profile_text: string
+          source_evidence: Json
+          status: string
+          discovered_by: string
+          reviewed_by: string | null
+          reviewed_at: string | null
+          rejection_reason: string | null
+          confirmed_expert_id: string | null
+          created_at: string
+          updated_at: string
+          last_seen_at: string
+        }
+        Insert: {
+          id?: string
+          fund_id: string
+          identity_fingerprint: string
+          discovery_query: string
+          name: string
+          title?: string | null
+          organization?: string | null
+          profile_text: string
+          source_evidence?: Json
+          status?: string
+          discovered_by: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          rejection_reason?: string | null
+          confirmed_expert_id?: string | null
+          created_at?: string
+          updated_at?: string
+          last_seen_at?: string
+        }
+        Update: {
+          id?: string
+          fund_id?: string
+          identity_fingerprint?: string
+          discovery_query?: string
+          name?: string
+          title?: string | null
+          organization?: string | null
+          profile_text?: string
+          source_evidence?: Json
+          status?: string
+          discovered_by?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          rejection_reason?: string | null
+          confirmed_expert_id?: string | null
+          created_at?: string
+          updated_at?: string
+          last_seen_at?: string
         }
         Relationships: []
       }
@@ -3250,8 +3338,33 @@ export type Database = {
           title: string | null
           organization: string | null
           profile_text: string
+          verification_type: string
+          source_type: string
+          verified_at: string | null
           similarity: number
         }[]
+      }
+      confirm_expert_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_fund_id: string
+          p_user_id: string
+          p_email: string
+          p_name: string
+          p_title: string
+          p_organization: string
+          p_profile_text: string
+        }
+        Returns: string
+      }
+      merge_expert_candidates: {
+        Args: {
+          p_fund_id: string
+          p_user_id: string
+          p_query: string
+          p_candidates: Json
+        }
+        Returns: undefined
       }
     }
     Enums: {

@@ -26,6 +26,20 @@ export async function issueInvitation(params: {
   if (loadError) throw loadError
   const existing = current
   if (!existing || !existing.expert_id || !existing.expert_email) throw new Error('Selected expert request not found')
+  const { data: eligibleExpert, error: expertError } = await admin
+    .from('experts')
+    .select('id, scope, fund_id, status, verification_type, source_type, verified_at, verified_by')
+    .eq('id', existing.expert_id)
+    .maybeSingle()
+  if (expertError) throw expertError
+  const eligible = eligibleExpert?.status === 'active' && (
+    (eligibleExpert.scope === 'global' && eligibleExpert.verification_type === 'platform_certified'
+      && eligibleExpert.source_type === 'platform' && Boolean(eligibleExpert.verified_at))
+    || (eligibleExpert.scope === 'fund' && eligibleExpert.fund_id === fundId
+      && eligibleExpert.verification_type === 'fund_confirmed'
+      && Boolean(eligibleExpert.verified_at) && Boolean(eligibleExpert.verified_by))
+  )
+  if (!eligible) throw new Error('Selected expert is no longer eligible for invitation')
   const expertEmail = existing.expert_email
   const expertName = existing.expert_name ?? 'Expert'
   if (existing.status === 'submitted') throw new Error('Expert response has already been submitted')
