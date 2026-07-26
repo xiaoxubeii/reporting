@@ -27,6 +27,34 @@
       "notes": "Discovery candidates remain fund-private and non-matchable until an administrator explicitly confirms identity and supplies an email address. Evidence is stored under .harnesskit/evidence/add-expert-directory-discovery/."
     },
     {
+      "id": "multi-tenant-resend-mail",
+      "title": "Platform and per-Fund BYOK Resend mail",
+      "status": "passing",
+      "current_task": "Local implementation and verification complete; operator-owned live delivery is explicitly blocked",
+      "definition_of_done": [
+        "Platform and Fund Resend credentials are isolated with no fallback across trust boundaries",
+        "Each Fund has one immutable exact mail subdomain, reserved mailboxes, and optional Fund-scoped user mailbox identities",
+        "Fund outbound email persists server-derived From and tokenized Reply-To routing with stable idempotency and RFC thread headers",
+        "Inbound Resend webhooks resolve the Fund before parsing, verify exact raw bytes, deduplicate atomically, and fail closed on unsafe content",
+        "Pitch mail enters the existing Deal screening boundary and expert replies remain email thread messages rather than expert submissions",
+        "Admin and user Settings are bilingual, Session-derived, secret-free on reads, and never accept caller-selected identity headers",
+        "Focused, integration, type, lint, build, OpenSpec, HarnessKit, security review, and authenticated browser verification pass"
+      ],
+      "evidence": [
+        "OpenSpec implementation is 33 of 33 complete and passes strict validation",
+        "Platform/Fund isolation, encrypted BYOK credentials, durable outbound threads, signed inbound routing, Pitch intake, expert invitation, bilingual Settings, and deployment documentation are implemented",
+        "Full Vitest passed 254 files/1788 tests; focused provider and concurrency regressions passed",
+        "TypeScript, added-line ESLint, secret/marker/diff checks, local RPC verification, and next build --no-lint passed",
+        "Authenticated English/Chinese desktop and Chinese 390px mobile Settings passed with a real 200 API response and no product runtime errors",
+        "Final correctness and security review found no remaining medium, high, or critical issue",
+        "HarnessKit fast/full stop on the unrelated feed-discovery state value; targeted stops on pre-existing repository-wide ESLint debt"
+      ],
+      "blocked_by": [
+        "External DNS and live Resend delivery/reply verification requires user-owned Resend credentials and a suitable expert invitation fixture"
+      ],
+      "notes": "Local implementation and verification are complete. Evidence is stored under .harnesskit/evidence/add-multi-tenant-resend-mail/. The external provider exercise is explicitly recorded as blocked rather than passed."
+    },
+    {
       "id": "background-job-http-context",
       "title": "HTTP-only background execution context and provider Search tool",
       "status": "passing",

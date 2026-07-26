@@ -264,6 +264,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/diligence/[id]/expert-validations': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/generate': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/[requestId]/invite': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations/[requestId]/email-thread': { domain: 'diligence', level: 'read' },
   'api/diligence/[id]/expert-validations/[requestId]/match': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/[requestId]/retry-materialization': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/[requestId]/select': { domain: 'diligence' },
@@ -310,6 +311,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/settings/dropbox': { domain: 'admin' },
   'api/settings/dropbox/folders': { domain: 'admin' },
   'api/settings/heartbeat': { domain: 'admin' },
+  'api/settings/fund-email': { domain: 'admin', level: 'any' },
   'api/settings/senders': { domain: 'admin' },
   'api/settings/senders/[id]': { domain: 'admin' },
   'api/settings/search-categories': { domain: 'admin' },
@@ -430,6 +432,7 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/webhooks/transcription/[secret]': 'Inbound webhook: path secret.',
   'api/inbound-email': 'Inbound email webhook.',
   'api/inbound-email/mailgun': 'Inbound email webhook (Mailgun).',
+  'api/inbound-email/resend/[routeToken]': 'Inbound Resend webhook: high-entropy Fund path token plus verified Svix signature.',
   'api/public/submit/[token]': 'Public deal-submission form; path token.',
 
   // A separate identity model: LP portal accounts, scoped per investor entity by resolveLpAccess.

@@ -55,7 +55,7 @@ export interface DealAnalysis {
 }
 
 export interface AnalyzeDealLogParams {
-  admin: { from: (table: string) => any }
+  admin: Parameters<typeof logAIUsage>[0]
   fundId: string
 }
 
@@ -75,15 +75,16 @@ export async function analyzeDeal(params: {
   providerType: string
   model: string
   log?: AnalyzeDealLogParams
+  signal?: AbortSignal
 }): Promise<DealAnalysis> {
   const { system, userContent } = buildMessage(params)
 
-  const first = await call(params.provider, params.providerType, system, userContent, params.model, params.log)
+  const first = await call(params.provider, params.providerType, system, userContent, params.model, params.log, params.signal)
   const parsed = tryParse(first)
   if (parsed) return parsed
 
   const strictContent = appendStrictSuffix(userContent)
-  const second = await call(params.provider, params.providerType, system, strictContent, params.model, params.log)
+  const second = await call(params.provider, params.providerType, system, strictContent, params.model, params.log, params.signal)
   const reparsed = tryParse(second)
   if (reparsed) return reparsed
 
@@ -188,13 +189,15 @@ async function call(
   system: string,
   userContent: ContentBlock[],
   model: string,
-  log?: AnalyzeDealLogParams
+  log?: AnalyzeDealLogParams,
+  signal?: AbortSignal,
 ): Promise<string> {
   const { text, usage } = await provider.createMessage({
     model,
     maxTokens: 4096,
     system,
     content: userContent,
+    signal,
   })
 
   if (log) {

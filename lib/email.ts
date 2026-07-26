@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sendPlatformEmail } from '@/lib/email/system'
 
 export interface EmailAttachment {
   filename: string
@@ -6,17 +7,29 @@ export interface EmailAttachment {
   contentType: string
 }
 
+export interface EmailTag {
+  name: string
+  value: string
+}
+
 export interface EmailParams {
   to: string
   from?: string
   subject: string
   html: string
+  text?: string
   cc?: string
+  bcc?: string
+  replyTo?: string
+  headers?: Record<string, string>
+  tags?: EmailTag[]
+  idempotencyKey?: string
   attachments?: EmailAttachment[]
 }
 
 export interface OutboundConfig {
   provider: 'resend' | 'postmark' | 'gmail' | 'mailgun'
+  from?: string
   apiKey?: string       // resend or mailgun
   serverToken?: string  // postmark
   mailgunDomain?: string // mailgun sending domain
@@ -25,18 +38,66 @@ export interface OutboundConfig {
   fundId?: string
 }
 
+const EMAIL_HEADER_CONTROL = /[\r\n\0]/
+
+function assertSafeOutboundField(
+  value: string | undefined,
+  label: string,
+  maxLength: number,
+): void {
+  if (value === undefined) return
+  if (!value || value.length > maxLength || EMAIL_HEADER_CONTROL.test(value)) {
+    throw new Error(`Invalid email header: ${label}`)
+  }
+}
+
+function assertSafeOutboundParams(params: EmailParams): void {
+  assertSafeOutboundField(params.from, 'from', 1024)
+  assertSafeOutboundField(params.to, 'to', 1024)
+  assertSafeOutboundField(params.cc, 'cc', 1024)
+  assertSafeOutboundField(params.bcc, 'bcc', 1024)
+  assertSafeOutboundField(params.replyTo, 'reply-to', 1024)
+  assertSafeOutboundField(params.subject, 'subject', 998)
+  assertSafeOutboundField(params.idempotencyKey, 'idempotency key', 256)
+
+  for (const [name, value] of Object.entries(params.headers ?? {})) {
+    assertSafeOutboundField(name, 'header name', 128)
+    assertSafeOutboundField(value, 'header value', 4096)
+  }
+  for (const tag of params.tags ?? []) {
+    assertSafeOutboundField(tag.name, 'tag name', 256)
+    assertSafeOutboundField(tag.value, 'tag value', 256)
+  }
+  for (const attachment of params.attachments ?? []) {
+    assertSafeOutboundField(attachment.filename, 'attachment filename', 255)
+    assertSafeOutboundField(attachment.contentType, 'attachment content type', 255)
+  }
+}
+
 async function sendViaResend(apiKey: string, params: EmailParams) {
+  if (!params.from) throw new Error('Resend requires an explicit sender')
   const { Resend } = await import('resend')
   const resend = new Resend(apiKey)
   const result = await resend.emails.send({
-    from: params.from || process.env.EMAIL_FROM || 'onboarding@resend.dev',
+    from: params.from,
     to: params.to,
     cc: params.cc || undefined,
+    bcc: params.bcc || undefined,
+    replyTo: params.replyTo || undefined,
     subject: params.subject,
     html: params.html,
-    attachments: params.attachments?.map(a => ({ filename: a.filename, content: a.content })),
-  })
-  return { id: result.data?.id }
+    text: params.text,
+    headers: params.headers,
+    tags: params.tags,
+    attachments: params.attachments?.map(a => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType,
+    })),
+  }, params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : undefined)
+  if (result.error) throw new Error('Resend rejected the email')
+  if (!result.data?.id) throw new Error('Resend did not return a message ID')
+  return { id: result.data.id }
 }
 
 async function sendViaPostmark(serverToken: string, params: EmailParams) {
@@ -110,22 +171,25 @@ async function sendViaGmail(admin: SupabaseClient, fundId: string, params: Email
  * Throws on failure — callers decide how to handle errors.
  */
 export async function sendOutboundEmail(config: OutboundConfig, params: EmailParams): Promise<{ id?: string }> {
-  console.log(`[outbound-email] Sending via ${config.provider} to=${params.to} subject="${params.subject}"`)
+  console.log(`[outbound-email] Sending via ${config.provider}`)
   let result: { id?: string }
+  const from = params.from ?? config.from
+  const effectiveParams = from ? { ...params, from } : params
+  assertSafeOutboundParams(effectiveParams)
 
   if (config.provider === 'resend') {
     if (!config.apiKey) throw new Error('Resend API key not configured')
-    result = await sendViaResend(config.apiKey, params)
+    result = await sendViaResend(config.apiKey, effectiveParams)
   } else if (config.provider === 'postmark') {
     if (!config.serverToken) throw new Error('Postmark server token not configured')
-    result = await sendViaPostmark(config.serverToken, params)
+    result = await sendViaPostmark(config.serverToken, effectiveParams)
   } else if (config.provider === 'mailgun') {
     if (!config.apiKey) throw new Error('Mailgun API key not configured')
     if (!config.mailgunDomain) throw new Error('Mailgun sending domain not configured')
-    result = await sendViaMailgun(config.apiKey, config.mailgunDomain, params)
+    result = await sendViaMailgun(config.apiKey, config.mailgunDomain, effectiveParams)
   } else if (config.provider === 'gmail') {
     if (!config.admin || !config.fundId) throw new Error('Gmail requires admin client and fundId')
-    result = await sendViaGmail(config.admin, config.fundId, params)
+    result = await sendViaGmail(config.admin, config.fundId, effectiveParams)
   } else {
     throw new Error(`Unknown provider: ${config.provider}`)
   }
@@ -145,7 +209,7 @@ export async function getOutboundConfig(
 ): Promise<OutboundConfig | null> {
   const { data: settings, error: settingsError } = await admin
     .from('fund_settings')
-    .select('outbound_email_provider, asks_email_provider, resend_api_key_encrypted, postmark_server_token_encrypted, mailgun_api_key_encrypted, mailgun_sending_domain, encryption_key_encrypted')
+    .select('outbound_email_provider, asks_email_provider, resend_api_key_encrypted, postmark_server_token_encrypted, mailgun_api_key_encrypted, mailgun_sending_domain, encryption_key_encrypted, system_email_from_name, system_email_from_address')
     .eq('fund_id', fundId)
     .single()
 
@@ -164,10 +228,14 @@ export async function getOutboundConfig(
   }
 
   const provider = selectedProvider as 'resend' | 'postmark' | 'gmail' | 'mailgun'
+  const from = configuredSender(
+    settings.system_email_from_name,
+    settings.system_email_from_address,
+  )
   console.log(`[outbound-email] Using provider "${provider}" for purpose "${purpose}" (fund ${fundId})`)
 
   if (provider === 'gmail') {
-    return { provider, admin, fundId }
+    return { provider, admin, fundId, from }
   }
 
   // Decrypt the relevant secret
@@ -189,7 +257,7 @@ export async function getOutboundConfig(
       console.warn(`[outbound-email] Resend selected but no API key stored for fund ${fundId}`)
       return null
     }
-    return { provider, apiKey: decrypt(settings.resend_api_key_encrypted, dek) }
+    return { provider, apiKey: decrypt(settings.resend_api_key_encrypted, dek), from }
   }
 
   if (provider === 'postmark') {
@@ -197,7 +265,7 @@ export async function getOutboundConfig(
       console.warn(`[outbound-email] Postmark selected but no server token stored for fund ${fundId}`)
       return null
     }
-    return { provider, serverToken: decrypt(settings.postmark_server_token_encrypted, dek) }
+    return { provider, serverToken: decrypt(settings.postmark_server_token_encrypted, dek), from }
   }
 
   if (provider === 'mailgun') {
@@ -209,14 +277,22 @@ export async function getOutboundConfig(
       provider,
       apiKey: decrypt(settings.mailgun_api_key_encrypted, dek),
       mailgunDomain: settings.mailgun_sending_domain,
+      from,
     }
   }
 
   return null
 }
 
+function configuredSender(name: string | null, address: string | null): string | undefined {
+  const cleanAddress = address?.trim()
+  if (!cleanAddress || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanAddress)) return undefined
+  const cleanName = (name ?? '').replace(/[\r\n"<>]/g, ' ').trim()
+  return cleanName ? `${cleanName} <${cleanAddress}>` : cleanAddress
+}
+
 /**
- * Send the approval notification email using the fund's configured outbound provider.
+ * Send the approval notification email using the platform-owned Resend account.
  * Fails silently — never throws.
  */
 export const DEFAULT_APPROVAL_SUBJECT = "You've been approved to join {{fundName}}"
@@ -256,15 +332,9 @@ export async function sendApprovalEmail(
   fundName: string,
 ) {
   try {
-    const config = await getOutboundConfig(admin, fundId)
-    if (!config) {
-      console.warn('[approval-email] No system email provider configured for fund', fundId)
-      return
-    }
-
     const { data: settings } = await admin
       .from('fund_settings')
-      .select('approval_email_subject, approval_email_body, system_email_from_name, system_email_from_address')
+      .select('approval_email_subject, approval_email_body')
       .eq('fund_id', fundId)
       .single()
 
@@ -276,17 +346,9 @@ export async function sendApprovalEmail(
     const subject = interpolate(settings?.approval_email_subject || DEFAULT_APPROVAL_SUBJECT)
     const html = interpolate(settings?.approval_email_body || DEFAULT_APPROVAL_BODY)
 
-    let from: string | undefined
-    if (settings?.system_email_from_address) {
-      from = settings.system_email_from_name
-        ? `${settings.system_email_from_name} <${settings.system_email_from_address}>`
-        : settings.system_email_from_address
-    }
-
-    console.log(`[approval-email] Sending to ${to} for fund "${fundName}" via ${config.provider}`)
-    await sendOutboundEmail(config, { to, from, subject, html })
-    console.log(`[approval-email] Sent successfully to ${to}`)
+    await sendPlatformEmail({ to, subject, html })
+    console.log('[approval-email] Sent successfully via platform email')
   } catch (error) {
-    console.error(`[approval-email] Failed to send to ${to}:`, error)
+    console.error('[approval-email] Platform delivery failed:', error instanceof Error ? error.message : 'unknown error')
   }
 }

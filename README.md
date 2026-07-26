@@ -70,6 +70,8 @@ See [LICENSE](./LICENSE.md) for full terms.
 
 Full deployment guide with detailed steps, optional services, and local development setup: [DOCS](./DOCS.md)
 
+Platform and per-Fund Resend setup, DNS, webhook rotation, and rollback: [FundWorkspace Resend email deployment](./docs/fund-email-resend.md)
+
 ## Local development
 
 Use the repository service manager to run the application processes:

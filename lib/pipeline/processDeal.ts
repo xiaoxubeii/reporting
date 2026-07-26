@@ -1,12 +1,19 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AIProvider } from '@/lib/ai/types'
-import type { IntroSource } from '@/lib/types/database'
+import type { Database, IntroSource, Json } from '@/lib/types/database'
 import type { ExtractionResult } from '@/lib/parsing/extractAttachmentText'
 import type { PostmarkPayload } from '@/lib/pipeline/processEmail'
 import { analyzeDeal, DEFAULT_SCREENING_PROMPT, type DealAnalysis } from '@/lib/claude/analyzeDeal'
 import { loadDealResearchSettings, shouldResearchDeal } from '@/lib/deals/research'
 
 type Supabase = ReturnType<typeof createAdminClient>
+type InboundDealInsert = Database['public']['Tables']['inbound_deals']['Insert']
+
+export interface PersistedInboundDeal {
+  id: string
+  thesisFitScore: string | null
+  reused: boolean
+}
 
 export interface ProcessDealParams {
   supabase: Supabase
@@ -17,6 +24,8 @@ export interface ProcessDealParams {
   provider: AIProvider
   providerType: string
   model: string
+  /** Shared deadline for every provider call made while screening this email. */
+  signal?: AbortSignal
   /**
    * Pin `intro_source` instead of letting the analyzer infer it, for ingestion
    * paths where the channel is a fact rather than a guess: a thread that arrived
@@ -46,7 +55,7 @@ export interface ProcessDealResult {
  *   5. Flag in parsing_reviews when critical fields are missing.
  */
 export async function processDeal(params: ProcessDealParams): Promise<ProcessDealResult> {
-  const { supabase, emailId, fundId, payload, extracted, provider, providerType, model, introSourceOverride } = params
+  const { supabase, emailId, fundId, payload, extracted, provider, providerType, model, introSourceOverride, signal } = params
 
   const settings = await loadSettings(supabase, fundId)
   const thesis = settings?.deal_thesis ?? ''
@@ -77,6 +86,7 @@ export async function processDeal(params: ProcessDealParams): Promise<ProcessDea
     providerType,
     model,
     log: { admin: supabase, fundId },
+    signal,
   })
 
   // Dedupe: find a prior deal from the same founder/company.
@@ -100,9 +110,7 @@ export async function processDeal(params: ProcessDealParams): Promise<ProcessDea
     ? 'pending'
     : 'skipped'
 
-  const insertResult = await supabase
-    .from('inbound_deals')
-    .insert({
+  const persisted = await insertInboundDealIdempotently(supabase, {
       email_id: emailId,
       fund_id: fundId,
       research_status: researchStatus,
@@ -111,7 +119,7 @@ export async function processDeal(params: ProcessDealParams): Promise<ProcessDea
       company_domain: companyDomain,
       founder_name: analysis.founder_name,
       founder_email: founderEmail,
-      co_founders: analysis.co_founders as any,
+      co_founders: analysis.co_founders as unknown as Json,
       intro_source: introSourceOverride ?? analysis.intro_source,
       referrer_name: analysis.referrer_name,
       referrer_email: analysis.referrer_email,
@@ -123,21 +131,59 @@ export async function processDeal(params: ProcessDealParams): Promise<ProcessDea
       thesis_fit_score: analysis.thesis_fit_score,
       status,
       prior_deal_id: priorDealId,
-    })
-    .select('id')
-    .single()
+  })
 
-  if (insertResult.error || !insertResult.data) {
-    console.error('[processDeal] insert failed:', insertResult.error)
+  if (!persisted) {
+    console.error('[processDeal] insert failed')
     return { dealId: null, lowFit: false, reviewFlagged: false }
   }
 
-  const dealId = (insertResult.data as { id: string }).id
+  const dealId = persisted.id
+  if (persisted.reused) {
+    return {
+      dealId,
+      lowFit: isLowFitScore(persisted.thesisFitScore),
+      reviewFlagged: false,
+    }
+  }
 
   // Flag missing critical fields for human review.
   const reviewFlagged = await maybeFlagForReview(supabase, fundId, emailId, dealId, analysis)
 
   return { dealId, lowFit, reviewFlagged }
+}
+
+export async function insertInboundDealIdempotently(
+  supabase: Supabase,
+  row: InboundDealInsert,
+): Promise<PersistedInboundDeal | null> {
+  const inserted = await supabase
+    .from('inbound_deals')
+    .insert(row)
+    .select('id,thesis_fit_score')
+    .single()
+
+  if (!inserted.error && inserted.data) {
+    return {
+      id: inserted.data.id,
+      thesisFitScore: inserted.data.thesis_fit_score,
+      reused: false,
+    }
+  }
+  if (inserted.error?.code !== '23505') return null
+
+  const existing = await supabase
+    .from('inbound_deals')
+    .select('id,thesis_fit_score')
+    .eq('email_id', row.email_id)
+    .eq('fund_id', row.fund_id)
+    .maybeSingle()
+  if (existing.error || !existing.data) return null
+  return {
+    id: existing.data.id,
+    thesisFitScore: existing.data.thesis_fit_score,
+    reused: true,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -233,4 +279,8 @@ function deriveDomain(email: string | null): string | null {
   // Filter out generic personal domains — they don't represent the company.
   const personal = new Set(['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'me.com', 'protonmail.com'])
   return personal.has(domain) ? null : domain
+}
+
+function isLowFitScore(value: string | null): boolean {
+  return value === 'out_of_thesis' || value === 'spam'
 }

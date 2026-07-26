@@ -61,3 +61,4 @@ supabase/.temp
 
 # Internal planning + thinking. Kept locally, not published.
 /plans/
+.gstack/

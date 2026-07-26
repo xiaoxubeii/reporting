@@ -15,6 +15,7 @@ dependency and ownership checks.
 
 | Feature ID | Goal | Lane | OpenSpec | Acceptance | Parallel Class | Dependencies | Owner | Worktree | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| multi-tenant-resend-mail | Add isolated FundWorkspace platform mail and per-Fund BYOK Resend business mail with secure outbound threads, tokenized replies, inbound routing, Pitch intake, and expert invitations | feature-planning | `openspec/changes/add-multi-tenant-resend-mail` | Platform and Fund credentials never cross; each Fund has an exact derived subdomain and Fund-scoped mailboxes; signed/idempotent Resend inbound routes deterministic replies; Pitch enters Deal screening; expert replies remain thread mail; Settings, focused tests, security review, and real local flows pass | serial-required | current email adapters, Fund envelope encryption, Supabase Auth SMTP operations, Deal intake, expert validation, local Supabase | main-agent | current checkout | in_progress |
 | background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
 | investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
 | expert-validation | Close the Research gap/contradiction → expert answer → industry_expert → existing evidence pipeline loop | feature-planning | `openspec/changes/add-expert-validation` | Real internal and public browser flow works; one immutable submitted answer is materialized and enqueued with the documented security boundaries | single-feature | existing Diligence, email, AI, storage, job pipeline | main-agent | current checkout | in_progress |
@@ -35,6 +36,56 @@ dependency and ownership checks.
 
 Copy this block for each planned feature. Keep it short; it is the shared
 contract for self-check, review, testing, and merge.
+
+### Feature: multi-tenant-resend-mail
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this changes security-sensitive tenant credentials, outbound identity, inbound webhook authentication, email persistence, Deal intake, expert invitations, and Settings contracts.
+- Change: `openspec/changes/add-multi-tenant-resend-mail`
+- Task: implement serially from service-only persistence and credential boundaries through outbound threads, signed inbound routing, business workflows, Settings, and real verification.
+
+#### Acceptance
+
+- Platform Resend configuration is environment-only and never falls back to a Fund connection; Fund business mail uses only that Fund's encrypted BYOK credentials.
+- Each Fund has one immutable DNS-safe mail slug, exact derived subdomain, reserved shared mailboxes, and optional user-owned local parts unique within the Fund.
+- Outbound From and Reply-To identities are server-derived; messages, RFC headers, stable idempotency keys, and hashed high-entropy reply routes are durable before provider submission.
+- Resend inbound resolves the Fund by a hashed route token, verifies exact raw Svix bytes, atomically deduplicates events/provider messages, retrieves bounded content with the selected Fund key, and quarantines ambiguous or unsafe input.
+- Public `pitch@` mail creates one Fund-scoped Deal screening record without automatic Diligence evidence; expert email replies remain thread mail while the secure expert-response link stays authoritative.
+- Bilingual Settings exposes only status and provider-managed webhook setup state; no API returns plaintext/ciphertext credentials or accepts caller-selected Fund, user, From, or Reply-To.
+- Resend is a conditional branch of the existing outbound/inbound provider selectors, never a parallel settings card: outbound reuses `fund_settings` and its existing Resend key, while a Full Access receiving key causes the server to create/recreate the Resend webhook and persist its returned signing secret without a manual secret field.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-multi-tenant-resend-mail/**`, focused HarnessKit plan/progress/evidence.
+- New forward-only Supabase migrations, generated database types, server environment and operations documentation.
+- `lib/email*`, focused inbound pipeline adapters, connection/mailbox/thread services, access registry.
+- Fund email Settings APIs/UI, Pitch intake integration, expert invitation service/routes, focused tests.
+
+#### Verification Plan
+
+- smoke: migration security contracts, strict OpenSpec, HarnessKit fast, secret scan, diff check.
+- targeted: credentials/AAD, domain/mailbox validation, outbound identity/idempotency, raw-body webhook verification, event fencing, routing conflicts, Pitch and expert regressions, Settings authorization/localization.
+- full: opt-in local Supabase concurrency suite, TypeScript, changed-scope lint, production build, correctness/security review, authenticated local Settings and expert invitation browser paths.
+- external: one user-owned platform/Fund Resend DNS, send, inbound webhook, and reply test; if credentials are unavailable, record this operational gate explicitly without weakening code verification.
+
+#### Review Required
+
+- planner/architect: completed before implementation.
+- reviewer: required after implementation for persistence, provider error semantics, routing, and workflow compatibility.
+- security-reviewer: required for secrets, tenant resolution, raw webhook verification, replay/idempotency, headers, attachments, SSRF, PII, and authorization.
+- browser/QA: required for bilingual Settings and the existing expert invitation flow.
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `main` in the current checkout; unrelated evidence, demo seed, and image artifacts are preserved.
+- planning: the four OpenSpec artifacts are complete and `openspec validate add-multi-tenant-resend-mail --strict` passed before implementation.
+- implementation: schema, isolated credentials, outbound/inbound adapters, Pitch intake, expert invitation, Settings API/UI, and operator documentation are implemented.
+- verification: 20 focused files/103 tests, 2 live local-Supabase integration tests, TypeScript, changed-scope ESLint, strict OpenSpec, HarnessKit fast, secret/marker/diff checks, and `next build --no-lint` pass.
+- browser: authenticated English/Chinese desktop and Chinese 390px mobile Settings pass with `/api/settings/fund-email` returning 200 and no product runtime errors; evidence is under `.harnesskit/evidence/add-multi-tenant-resend-mail/`.
+- remaining: an independent final review plus a real expert-invitation/provider send/inbound/reply exercise require operator-owned Fund Resend credentials, DNS, and suitable local workflow data. HarnessKit targeted/full stop on pre-existing repository-wide ESLint debt outside this feature.
 
 ### Feature: background-job-http-context
 

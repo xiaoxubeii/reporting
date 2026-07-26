@@ -6,6 +6,7 @@ import { Loader2, RefreshCw, Search, Send, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ExpertEmailThread } from '@/components/diligence/expert-email-thread'
 import type { ResearchOutput } from '@/lib/memo-agent/stages/research'
 import type { ExpertDirectoryEntry, ExpertMatch, ExpertValidationRequest } from '@/lib/expert-validation/types'
 import { useFormatter, useTranslations } from 'next-intl'
@@ -207,6 +208,8 @@ export function ExpertValidationPanel({
     </div>}
 
     {active && active.status !== 'draft' && <div className="space-y-2 text-sm"><div><strong>{t('status')}:</strong> {t(`statuses.${active.status}`)}</div><div><strong>{t('expert')}:</strong> {active.expertSnapshot?.name}</div>{invitationUrl && <div className="flex gap-2"><Input readOnly value={invitationUrl} /><Button variant="outline" onClick={() => navigator.clipboard.writeText(invitationUrl)}>{t('copyLink')}</Button></div>}{active.status === 'invited' && <Button variant="outline" onClick={() => invite(true)}>{t('reissue')}</Button>}</div>}
+
+    {active?.emailThreadId && <ExpertEmailThread dealId={dealId} requestId={active.id} />}
 
     {requests.length > 0 && <div className="border-t pt-4"><div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">{t('requests')}</div><div className="divide-y">{requests.map(request => <div key={request.id} className="w-full py-2 flex gap-3 text-xs hover:bg-muted/40"><button type="button" onClick={() => { setActive(request); setSource(null); setInvitationUrl(null); if (request.status === 'draft') void loadExperts('') }} className="flex flex-1 gap-3 text-left min-w-0"><span className="w-20 font-medium">{t(`statuses.${request.status}`)}</span><span className="flex-1 truncate">{request.question}</span><span className="text-muted-foreground">{request.expertSnapshot?.name ?? t('noExpert')}</span>{request.evidenceStatus && <span className="text-muted-foreground">{t('evidence.status', { status: request.evidenceStatus })}</span>}</button>{request.status === 'submitted' && (!request.documentId || request.materializationError) && <button type="button" onClick={() => void retryEvidence(request)} className="text-amber-700">{t('evidence.retry')}</button>}</div>)}</div></div>}
   </div>

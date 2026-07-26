@@ -62,6 +62,7 @@ export interface ExpertValidationRequest {
   invitedAt: string | null
   expiresAt: string | null
   emailProviderAcceptedAt: string | null
+  emailThreadId: string | null
   emailErrorMessage: string | null
   submittedAt: string | null
   documentId: string | null

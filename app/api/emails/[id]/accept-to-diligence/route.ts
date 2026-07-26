@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveEmailAttachmentStorageLocation } from '@/lib/security/email-attachment-storage'
 import { classifyDocumentHeuristic } from '@/lib/memo-agent/heuristic-classify'
 import { enqueueIngestForDocuments } from '@/lib/diligence/enqueue-ingest'
 import type { PostmarkPayload } from '@/lib/pipeline/processEmail'
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .maybeSingle()
   if (!email) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  if ((email as any).diligence_intake_status === 'accepted') {
+  if (email.diligence_intake_status === 'accepted') {
     return NextResponse.json({ error: 'This email has already been added to a data room.' }, { status: 409 })
   }
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // approval step.
   const dealId = typeof body.deal_id === 'string' && body.deal_id
     ? body.deal_id
-    : (email as any).diligence_deal_id as string | null
+    : email.diligence_deal_id
   if (!dealId) {
     return NextResponse.json({ error: 'deal_id is required — no deal was matched for this email.' }, { status: 400 })
   }
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .maybeSingle()
   if (!deal) return NextResponse.json({ error: 'Diligence deal not found' }, { status: 404 })
 
-  const payload = ((email as any).raw_payload ?? {}) as PostmarkPayload
+  const payload = (email.raw_payload ?? {}) as unknown as PostmarkPayload
   const attachments = payload.Attachments ?? []
 
   // Default: take everything. An explicit list lets the reviewer drop signatures,
@@ -81,14 +82,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // --- The email text itself ------------------------------------------------
   if (includeBody) {
-    const md = renderEmailAsMarkdown(email as any, payload)
+    const md = renderEmailAsMarkdown(email, payload)
     const bytes = Buffer.from(md, 'utf-8')
-    const dateStr = ((email as any).received_at ?? '').slice(0, 10) || 'undated'
-    const subjectSafe = ((email as any).subject ?? 'No subject')
+    const dateStr = (email.received_at ?? '').slice(0, 10) || 'undated'
+    const subjectSafe = (email.subject ?? 'No subject')
       .replace(/[\x00-\x1f\x7f\/\\:*?"<>|]/g, '_')
       .slice(0, 80)
     const fileName = `Email ${dateStr} — ${subjectSafe}.md`
-    const storagePath = `${dealId}/${Date.now()}_email_${(email as any).id.slice(0, 8)}.md`
+    const storagePath = `${dealId}/${Date.now()}_email_${email.id.slice(0, 8)}.md`
 
     const { error: upErr } = await admin.storage
       .from('diligence-documents')
@@ -111,9 +112,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           type_confidence: 'low',
           parse_status: 'pending',
           source_kind: 'email',
-          source_email_id: (email as any).id,
+          source_email_id: email.id,
           uploaded_by: userId,
-        } as any)
+        })
         .select('id')
         .single()
 
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         await admin.storage.from('diligence-documents').remove([storagePath]).catch(() => {})
         skipped.push({ item: fileName, reason: insErr.message })
       } else {
-        documentIds.push((row as any).id as string)
+        documentIds.push(row.id)
         imported.push(fileName)
       }
     }
@@ -139,9 +140,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       // base64 — handle both.
       let bytes: Buffer | null = null
       if (att.StoragePath) {
+        const location = resolveEmailAttachmentStorageLocation(att.StoragePath, {
+          expectedEmailId: params.id,
+          expectedFundId: fundId,
+        })
+        if (!location) {
+          skipped.push({ item: label, reason: 'attachment storage path mismatch' })
+          continue
+        }
         const { data, error } = await admin.storage
-          .from('email-attachments')
-          .download(att.StoragePath)
+          .from(location.bucket)
+          .download(location.objectPath)
         if (error || !data) {
           skipped.push({ item: label, reason: 'could not download from storage' })
           continue
@@ -192,9 +201,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           type_confidence: confidence,
           parse_status: 'pending',
           source_kind: 'email',
-          source_email_id: (email as any).id,
+          source_email_id: email.id,
           uploaded_by: userId,
-        } as any)
+        })
         .select('id')
         .single()
 
@@ -204,7 +213,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         continue
       }
 
-      documentIds.push((row as any).id as string)
+      documentIds.push(row.id)
       imported.push(safeName)
 
       // A recording needs transcription before it's usable as evidence — same
@@ -223,9 +232,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             fund_id: fundId,
             deal_id: dealId,
             kind: 'transcribe',
-            payload: { document_id: (row as any).id },
+            payload: { document_id: row.id },
             enqueued_by: userId,
-          } as any)
+          })
         }
       }
     } catch (err) {
@@ -250,7 +259,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       diligence_accepted_at: new Date().toISOString(),
       diligence_accepted_by: userId,
       processing_status: 'success',
-    } as any)
+    })
     .eq('id', params.id)
 
   await admin
@@ -268,7 +277,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   return NextResponse.json({
     accepted: true,
-    deal: { id: dealId, name: (deal as any).name },
+    deal: { id: dealId, name: deal.name },
     imported,
     skipped,
     document_ids: documentIds,
@@ -295,7 +304,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     .update({
       diligence_intake_status: 'rejected',
       processing_status: 'not_processed',
-    } as any)
+    })
     .eq('id', params.id)
 
   await admin
@@ -366,5 +375,5 @@ async function ensureMember() {
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return { error: NextResponse.json({ error: 'No fund found' }, { status: 403 }) }
-  return { admin, fundId: (membership as any).fund_id as string, userId: user.id }
+  return { admin, fundId: membership.fund_id, userId: user.id }
 }

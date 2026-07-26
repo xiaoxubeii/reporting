@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveEmailAttachmentStorageLocation } from '@/lib/security/email-attachment-storage'
 
 /**
  * Download an attachment from an inbound email. Linked from the deal-detail
@@ -29,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
 
   const idx = Number.parseInt(params.index, 10)
   if (!Number.isInteger(idx) || idx < 0 || idx > 99) {
@@ -44,19 +45,27 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
     .maybeSingle()
   if (!email) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const attachments = ((email as any).raw_payload?.Attachments ?? []) as Array<{
+  const payload = (email.raw_payload ?? {}) as {
+    Attachments?: Array<{
     Name?: string
     ContentType?: string
     StoragePath?: string
-  }>
+    }>
+  }
+  const attachments = payload.Attachments ?? []
   const att = attachments[idx]
   if (!att?.StoragePath) {
     return NextResponse.json({ error: 'Attachment not found' }, { status: 404 })
   }
 
-  // The StoragePath was set at email-ingest time and must live under the
-  // email's folder. Re-verify to catch any drift.
-  if (!att.StoragePath.startsWith(`${params.id}/`)) {
+  // Legacy objects live under the inbound email UUID. Fund Resend objects live
+  // in a service-only bucket under the owning Fund UUID. Re-derive the bucket
+  // and enforce the matching owner before signing a URL.
+  const location = resolveEmailAttachmentStorageLocation(att.StoragePath, {
+    expectedEmailId: params.id,
+    expectedFundId: fundId,
+  })
+  if (!location) {
     return NextResponse.json({ error: 'Storage path mismatch' }, { status: 400 })
   }
 
@@ -65,8 +74,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
   // header verbatim, so sanitize it to plain ASCII-safe characters.
   const downloadName = (att.Name ?? 'attachment').replace(/[^\w.\-]/g, '_').slice(0, 200)
   const { data: signed, error } = await admin.storage
-    .from('email-attachments')
-    .createSignedUrl(att.StoragePath, 60, { download: downloadName })
+    .from(location.bucket)
+    .createSignedUrl(location.objectPath, 60, { download: downloadName })
   if (error || !signed) {
     return NextResponse.json({ error: error?.message ?? 'Failed to sign URL' }, { status: 500 })
   }

@@ -3,6 +3,7 @@ import JSZip from 'jszip'
 import * as XLSX from 'xlsx'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { scanFile } from '@/lib/security/scan-file'
+import { resolveEmailAttachmentStorageLocation } from '@/lib/security/email-attachment-storage'
 
 const MAX_CHARS = 50_000
 
@@ -12,7 +13,7 @@ interface PostmarkAttachment {
   ContentType: string
   Content?: string // base64-encoded — absent when stored in Storage
   ContentLength: number
-  StoragePath?: string // path in email-attachments bucket
+  StoragePath?: string // allowlisted bucket/path reference assigned by the server
 }
 
 // Postmark inbound payload (fields relevant to extraction)
@@ -25,7 +26,7 @@ export interface PostmarkPayload {
 /**
  * Reconstitute full attachment content by downloading from Supabase Storage.
  * - If `Content` is already present (legacy data) → kept as-is
- * - If `StoragePath` is present → download from `email-attachments` bucket, base64-encode
+ * - If `StoragePath` is present → resolve an allowlisted private bucket and base64-encode
  * Returns a new payload with Content populated on every attachment.
  */
 export async function hydrateAttachments(
@@ -42,9 +43,15 @@ export async function hydrateAttachments(
       if (att.Content) return att
       if (!att.StoragePath) return att
 
+      const location = resolveEmailAttachmentStorageLocation(att.StoragePath)
+      if (!location) {
+        console.error('[hydrateAttachments] Rejected invalid attachment storage path')
+        return att
+      }
+
       const { data, error } = await admin.storage
-        .from('email-attachments')
-        .download(att.StoragePath)
+        .from(location.bucket)
+        .download(location.objectPath)
 
       if (error || !data) {
         console.error(`[hydrateAttachments] Failed to download ${att.StoragePath}:`, error)

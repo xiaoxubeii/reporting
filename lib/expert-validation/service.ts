@@ -52,6 +52,7 @@ export function toExpertRequest(row: RequestRow): ExpertValidationRequest {
     invitedAt: row.invited_at ?? null,
     expiresAt: row.expires_at ?? null,
     emailProviderAcceptedAt: row.email_provider_accepted_at ?? null,
+    emailThreadId: row.email_thread_id ?? null,
     emailErrorMessage: row.email_error_message ?? null,
     submittedAt: row.submitted_at ?? null,
     documentId: row.document_id ?? null,
