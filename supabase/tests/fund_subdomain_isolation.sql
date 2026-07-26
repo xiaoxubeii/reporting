@@ -139,6 +139,13 @@ insert into public.lp_authorized_users (
   '83000000-0000-4000-8000-000000000001'
 );
 
+select pg_temp.expect_error(
+  $sql$update public.lp_authorized_users
+    set principal_lp_account_id = '84000000-0000-4000-8000-000000000005'
+    where id = '86000000-0000-4000-8000-000000000001'$sql$,
+  'Delegation principal must own the LP investor'
+);
+
 insert into public.fund_members (id, fund_id, user_id)
 values (
   '87000000-0000-4000-8000-000000000001',

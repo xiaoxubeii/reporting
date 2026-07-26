@@ -135,6 +135,61 @@ rm -f -- "$ACCOUNT_AUDIT_OUTPUT"
 recreate_database
 docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \
   < "$FUND_HOST_TEST_ROOT/supabase/migrations/20260727000000_fund_subdomain_isolation.sql" >/dev/null
+
+# Prove delegation creation and principal-link removal serialize on the same
+# LP-account lock. Without that coordination, each transaction can observe the
+# other's uncommitted absence and commit an orphaned delegation.
+docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" >/dev/null <<'SQL'
+insert into auth.users (id, email) values
+  ('91000000-0000-4000-8000-000000000021', 'concurrency-creator@example.test');
+insert into public.funds (id, name, created_by) values
+  ('92000000-0000-4000-8000-000000000021', 'Concurrency Fund', '91000000-0000-4000-8000-000000000021');
+insert into public.lp_investors (id, fund_id, name) values
+  ('93000000-0000-4000-8000-000000000021', '92000000-0000-4000-8000-000000000021', 'Concurrency LP');
+insert into public.lp_accounts (id, auth_user_id, email, status) values
+  ('94000000-0000-4000-8000-000000000021', null, 'concurrency-principal@example.test', 'active'),
+  ('94000000-0000-4000-8000-000000000022', null, 'concurrency-authorized@example.test', 'active');
+insert into public.lp_account_links (id, lp_account_id, fund_id, lp_investor_id) values
+  ('95000000-0000-4000-8000-000000000021', '94000000-0000-4000-8000-000000000021', '92000000-0000-4000-8000-000000000021', '93000000-0000-4000-8000-000000000021');
+SQL
+
+readonly DELEGATION_OUTPUT="$(mktemp -t reporting-fund-delegation-insert.XXXXXX)"
+readonly LINK_DELETE_OUTPUT="$(mktemp -t reporting-fund-link-delete.XXXXXX)"
+docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \
+  >"$DELEGATION_OUTPUT" 2>&1 <<'SQL' &
+begin;
+insert into public.lp_authorized_users
+  (authorized_user_account_id, principal_lp_account_id, lp_investor_id) values
+  ('94000000-0000-4000-8000-000000000022', '94000000-0000-4000-8000-000000000021', '93000000-0000-4000-8000-000000000021');
+select pg_sleep(1);
+commit;
+SQL
+readonly DELEGATION_PID=$!
+sleep 0.2
+
+if docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \
+  >"$LINK_DELETE_OUTPUT" 2>&1 <<'SQL'
+delete from public.lp_account_links
+where id = '95000000-0000-4000-8000-000000000021';
+SQL
+then
+  wait "$DELEGATION_PID"
+  echo 'Concurrent principal-link deletion unexpectedly succeeded.' >&2
+  rm -f -- "$DELEGATION_OUTPUT" "$LINK_DELETE_OUTPUT"
+  exit 1
+fi
+wait "$DELEGATION_PID"
+if ! grep -q 'LP investor link cannot change while delegations exist' "$LINK_DELETE_OUTPUT"; then
+  echo 'Concurrent principal-link deletion failed for an unexpected reason:' >&2
+  sed -n '1,120p' "$LINK_DELETE_OUTPUT" >&2
+  rm -f -- "$DELEGATION_OUTPUT" "$LINK_DELETE_OUTPUT"
+  exit 1
+fi
+rm -f -- "$DELEGATION_OUTPUT" "$LINK_DELETE_OUTPUT"
+
+recreate_database
+docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \
+  < "$FUND_HOST_TEST_ROOT/supabase/migrations/20260727000000_fund_subdomain_isolation.sql" >/dev/null
 docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \
   < "$FUND_HOST_TEST_ROOT/supabase/tests/fund_subdomain_isolation.sql" >/dev/null
 docker exec -i "$FUND_HOST_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$FUND_HOST_TEST_DATABASE" \

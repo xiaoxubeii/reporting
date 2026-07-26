@@ -313,6 +313,10 @@ begin
     raise exception using errcode = '23503', message = 'LP investor does not exist';
   end if;
 
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('lp-account:' || new.principal_lp_account_id::text, 0)
+  );
+
   if not exists (
     select 1
     from public.lp_account_links as links
@@ -347,7 +351,7 @@ end;
 $$;
 
 create trigger lp_authorized_users_single_fund
-  before insert or update of authorized_user_account_id, lp_investor_id
+  before insert or update of authorized_user_account_id, principal_lp_account_id, lp_investor_id
   on public.lp_authorized_users
   for each row execute function public.enforce_lp_authorized_user_single_fund();
 
@@ -358,6 +362,10 @@ security definer
 set search_path = pg_catalog, public
 as $$
 begin
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('lp-account:' || old.lp_account_id::text, 0)
+  );
+
   if exists (
     select 1
     from public.lp_authorized_users as authorized
