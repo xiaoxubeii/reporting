@@ -14,11 +14,15 @@ const root = process.cwd()
 const migration = readFileSync(path.join(root, 'supabase/migrations/20260722010000_expert_validation.sql'), 'utf8')
 const publicSubmit = readFileSync(path.join(root, 'lib/expert-validation/public.ts'), 'utf8')
 const enqueueIngest = readFileSync(path.join(root, 'lib/diligence/enqueue-ingest.ts'), 'utf8')
+const expertCreateRoute = readFileSync(path.join(root, 'app/api/experts/route.ts'), 'utf8')
+const expertUpdateRoute = readFileSync(path.join(root, 'app/api/experts/[expertId]/route.ts'), 'utf8')
+const candidateConfirmRoute = readFileSync(path.join(root, 'app/api/experts/discovery/[candidateId]/confirm/route.ts'), 'utf8')
+const candidateRejectRoute = readFileSync(path.join(root, 'app/api/experts/discovery/[candidateId]/reject/route.ts'), 'utf8')
 
 describe('expert validation persistence contract', () => {
-  it('keeps one minimal lifecycle with no review or candidate persistence', () => {
+  it('keeps the validation request lifecycle separate from discovery review', () => {
     expect(migration).toContain("status in ('draft', 'invited', 'submitted')")
-    expect(migration).not.toMatch(/create table public\.(expert_candidates|expert_matching_runs|expert_reviews)/)
+    expect(migration).not.toMatch(/create table public\.(expert_matching_runs|expert_reviews)/)
     expect(migration).not.toMatch(/review_status|reviewed_at|reviewed_by|rejected_at|approval_status/)
   })
 
@@ -41,6 +45,17 @@ describe('expert validation persistence contract', () => {
     expect(publicSubmit).toContain(".eq('status', 'invited')")
     expect(publicSubmit).toContain(".gt('expires_at', now)")
     expect(publicSubmit).toContain(".is('response_markdown', null)")
+  })
+
+  it('protects every expert mutation with same-origin JSON checks and bounded rate limits', () => {
+    for (const route of [expertCreateRoute, expertUpdateRoute, candidateConfirmRoute, candidateRejectRoute]) {
+      expect(route).toContain('assertSameOriginSearchRequest')
+      expect(route).toContain('readSearchJson')
+      expect(route).toContain('rateLimit')
+      expect(route).toContain("databaseFailure: 'deny'")
+    }
+    expect(candidateConfirmRoute).toContain('error.status')
+    expect(candidateRejectRoute).toContain('error.status')
   })
 })
 

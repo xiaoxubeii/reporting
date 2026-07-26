@@ -7,6 +7,8 @@ export type ExpertSourceKind = typeof EXPERT_SOURCE_KINDS[number]
 export type ExpertSelectionMethod = 'manual' | 'auto_match'
 export type ExpertScope = 'global' | 'fund'
 export type ExpertStatus = 'active' | 'inactive'
+export type ExpertVerificationType = 'platform_certified' | 'fund_confirmed'
+export type ExpertSourceType = 'platform' | 'manual' | 'discovery'
 
 export interface ExpertSourceRef {
   draftId: string
@@ -25,6 +27,9 @@ export interface ExpertDirectoryEntry {
   profileText: string
   status: ExpertStatus
   hasEmbedding: boolean
+  verificationType: ExpertVerificationType
+  sourceType: ExpertSourceType
+  verifiedAt: string | null
 }
 
 export interface ExpertMatch extends ExpertDirectoryEntry {
@@ -36,6 +41,9 @@ export interface ExpertIdentitySnapshot {
   title: string | null
   organization: string | null
   profileText: string
+  verificationType: ExpertVerificationType
+  sourceType: ExpertSourceType
+  verifiedAt: string | null
 }
 
 export interface ExpertValidationRequest {
@@ -54,6 +62,7 @@ export interface ExpertValidationRequest {
   invitedAt: string | null
   expiresAt: string | null
   emailProviderAcceptedAt: string | null
+  emailThreadId: string | null
   emailErrorMessage: string | null
   submittedAt: string | null
   documentId: string | null

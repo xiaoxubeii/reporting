@@ -11,6 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string;
     const result = await issueInvitation({
       admin: context.admin as never,
       fundId: context.gate.fundId,
+      actorUserId: context.gate.userId,
       dealId: params.id,
       requestId: params.requestId,
       reissue: body.reissue === true,

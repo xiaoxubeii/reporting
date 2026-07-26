@@ -52,18 +52,19 @@ values
   ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', 'Deal Two');
 
 insert into public.experts
-  (id, scope, fund_id, name, email, profile_text, status, embedding, embedding_model)
+  (id, scope, fund_id, name, email, profile_text, status, embedding, embedding_model,
+   verification_type, source_type, verified_at, verified_by, created_by)
 values
-  ('30000000-0000-0000-0000-000000000001', 'global', null, 'Global Best', 'global@example.test', 'Global operator', 'active', pg_temp.test_vector(1, 0), 'test-model'),
-  ('30000000-0000-0000-0000-000000000002', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One A', 'a@example.test', 'A operator', 'active', pg_temp.test_vector(.99, .01), 'test-model'),
-  ('30000000-0000-0000-0000-000000000003', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One B', 'b@example.test', 'B operator', 'active', pg_temp.test_vector(.95, .05), 'test-model'),
-  ('30000000-0000-0000-0000-000000000004', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One C', 'c@example.test', 'C operator', 'active', pg_temp.test_vector(.90, .10), 'test-model'),
-  ('30000000-0000-0000-0000-000000000005', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One D', 'd@example.test', 'D operator', 'active', pg_temp.test_vector(.80, .20), 'test-model'),
-  ('30000000-0000-0000-0000-000000000006', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One E', 'e@example.test', 'E operator', 'active', pg_temp.test_vector(.70, .30), 'test-model'),
-  ('30000000-0000-0000-0000-000000000007', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One F', 'f@example.test', 'F operator', 'active', pg_temp.test_vector(.60, .40), 'test-model'),
-  ('30000000-0000-0000-0000-000000000008', 'fund', '10000000-0000-0000-0000-000000000002', 'Other Fund', 'other@example.test', 'Other fund operator', 'active', pg_temp.test_vector(1, 0), 'test-model'),
-  ('30000000-0000-0000-0000-000000000009', 'fund', '10000000-0000-0000-0000-000000000001', 'Inactive', 'inactive@example.test', 'Inactive operator', 'inactive', pg_temp.test_vector(1, 0), 'test-model'),
-  ('30000000-0000-0000-0000-000000000010', 'fund', '10000000-0000-0000-0000-000000000001', 'No Vector', 'novector@example.test', 'No vector operator', 'active', null, null);
+  ('30000000-0000-0000-0000-000000000001', 'global', null, 'Global Best', 'global@example.test', 'Global operator', 'active', pg_temp.test_vector(1, 0), 'test-model', 'platform_certified', 'platform', now(), null, '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000002', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One A', 'a@example.test', 'A operator', 'active', pg_temp.test_vector(.99, .01), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000003', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One B', 'b@example.test', 'B operator', 'active', pg_temp.test_vector(.95, .05), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000004', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One C', 'c@example.test', 'C operator', 'active', pg_temp.test_vector(.90, .10), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000005', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One D', 'd@example.test', 'D operator', 'active', pg_temp.test_vector(.80, .20), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000006', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One E', 'e@example.test', 'E operator', 'active', pg_temp.test_vector(.70, .30), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000007', 'fund', '10000000-0000-0000-0000-000000000001', 'Fund One F', 'f@example.test', 'F operator', 'active', pg_temp.test_vector(.60, .40), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000008', 'fund', '10000000-0000-0000-0000-000000000002', 'Other Fund', 'other@example.test', 'Other fund operator', 'active', pg_temp.test_vector(1, 0), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002'),
+  ('30000000-0000-0000-0000-000000000009', 'fund', '10000000-0000-0000-0000-000000000001', 'Inactive', 'inactive@example.test', 'Inactive operator', 'inactive', pg_temp.test_vector(1, 0), 'test-model', 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001'),
+  ('30000000-0000-0000-0000-000000000010', 'fund', '10000000-0000-0000-0000-000000000001', 'No Vector', 'novector@example.test', 'No vector operator', 'active', null, null, 'fund_confirmed', 'manual', now(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001');
 
 do $$
 declare
@@ -76,7 +77,7 @@ begin
     '10000000-0000-0000-0000-000000000001',
     pg_temp.test_vector(1, 0),
     20
-  ) with ordinality as m(id, scope, name, title, organization, profile_text, similarity, ordinality);
+  ) with ordinality as m(id, scope, name, title, organization, profile_text, verification_type, source_type, verified_at, similarity, ordinality);
 
   perform pg_temp.assert_true(cardinality(matched_ids) = 5, 'matching must clamp results to Top 5');
   perform pg_temp.assert_true(matched_ids[1] = '30000000-0000-0000-0000-000000000001', 'exact cosine must put the identical global vector first');
@@ -89,7 +90,8 @@ begin
   perform pg_temp.assert_true(position('email' in lower(result_signature)) = 0, 'matching result must not expose email');
   perform pg_temp.assert_true(not has_table_privilege('authenticated', 'public.experts', 'select'), 'authenticated clients must not read expert emails directly');
   perform pg_temp.assert_true(not has_function_privilege('authenticated', 'public.match_experts(uuid,extensions.vector,integer)', 'execute'), 'authenticated clients must not invoke matching directly');
-  perform pg_temp.assert_true(to_regclass('public.expert_candidates') is null, 'candidate persistence is out of scope');
+  perform pg_temp.assert_true(to_regclass('public.expert_candidates') is not null, 'candidate persistence must be separate from formal experts');
+  perform pg_temp.assert_true(not has_table_privilege('authenticated', 'public.expert_candidates', 'select'), 'authenticated clients must not read expert candidates directly');
   perform pg_temp.assert_true(to_regclass('public.expert_matching_runs') is null, 'matching-run persistence is out of scope');
 end;
 $$;
@@ -98,14 +100,16 @@ select pg_temp.expect_error(
   $sql$
     insert into public.diligence_expert_requests
       (fund_id, deal_id, source_kind, source_ref, question, expert_profile, context_snapshot,
-       expert_id, selection_method, expert_name, expert_email, expert_snapshot)
+       expert_id, selection_method, expert_name, expert_email, expert_snapshot,
+       expert_verification_type, expert_source_type, expert_verified_at)
     values
       ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
        'research_gap', '{"draftId":"draft-1","kind":"research_gap","index":0,"snapshot":{}}',
        'Cross-fund question?', 'Operator', 'Sanitized context',
-       '30000000-0000-0000-0000-000000000008', 'manual', 'Other Fund', 'other@example.test', '{}')
+       '30000000-0000-0000-0000-000000000008', 'manual', 'Other Fund', 'other@example.test', '{}',
+       'fund_confirmed', 'manual', now())
   $sql$,
-  'selected expert is outside the request fund scope'
+  'selected expert is not eligible'
 );
 
 select pg_temp.expect_error(
@@ -122,16 +126,19 @@ select pg_temp.expect_error(
 
 insert into public.diligence_expert_requests
   (id, fund_id, deal_id, source_kind, source_ref, question, expert_profile, context_snapshot,
-   expert_id, selection_method, expert_name, expert_email, expert_snapshot)
+   expert_id, selection_method, expert_name, expert_email, expert_snapshot,
+   expert_verification_type, expert_source_type, expert_verified_at)
 values
   ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
    'research_gap', '{"draftId":"draft-1","kind":"research_gap","index":0,"snapshot":{"gap":"yield"}}',
    'What yield is achievable?', 'Factory operator', 'Sanitized yield context',
-   '30000000-0000-0000-0000-000000000002', 'manual', 'Fund One A', 'a@example.test', '{"profileText":"A operator"}'),
+   '30000000-0000-0000-0000-000000000002', 'manual', 'Fund One A', 'a@example.test', '{"profileText":"A operator"}',
+   'fund_confirmed', 'manual', (select verified_at from public.experts where id = '30000000-0000-0000-0000-000000000002')),
   ('40000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
    'contradiction', '{"draftId":"draft-1","kind":"contradiction","index":0,"snapshot":{"claim":"margin"}}',
    'Which margin claim is credible?', 'Market operator', 'Sanitized margin context',
-   '30000000-0000-0000-0000-000000000003', 'auto_match', 'Fund One B', 'b@example.test', '{"profileText":"B operator"}');
+   '30000000-0000-0000-0000-000000000003', 'auto_match', 'Fund One B', 'b@example.test', '{"profileText":"B operator"}',
+   'fund_confirmed', 'manual', (select verified_at from public.experts where id = '30000000-0000-0000-0000-000000000003'));
 
 select pg_temp.expect_error(
   $sql$

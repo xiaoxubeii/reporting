@@ -24,8 +24,25 @@ export function createSupabaseBackgroundJobResourceValidator(
       await validateDealResearchAuthority(admin, input)
       return
     }
+    if (input.kind === 'feed_discovery') {
+      await validateFeedDiscoveryAuthority(admin, input)
+      return
+    }
     throw new Error('Unsupported background job authority adapter')
   }
+}
+
+async function validateFeedDiscoveryAuthority(
+  admin: SupabaseClient,
+  input: BackgroundJobResourceAuthority,
+): Promise<void> {
+  const { data, error } = await admin
+    .from('fund_settings')
+    .select('fund_id')
+    .eq('fund_id', input.fundId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data || data.fund_id !== input.fundId) throw new Error('Feed Discovery fund is unavailable')
 }
 
 async function validateDealResearchAuthority(

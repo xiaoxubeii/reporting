@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Tables } from '@/lib/types/database'
-import { getOutboundConfig, sendOutboundEmail } from '@/lib/email'
+import { getOutboundConfig, sendOutboundEmail, type EmailParams } from '@/lib/email'
+import { sendFundThreadEmail } from '@/lib/email/fund-outbound'
 import { createInvitationToken, invitationExpiry, invitationUrl } from './token'
 import { sanitizeProviderError } from './validation'
 import { toExpertRequest } from './service'
@@ -12,6 +13,7 @@ type RequestRow = Tables<'diligence_expert_requests'>
 export async function issueInvitation(params: {
   admin: Admin
   fundId: string
+  actorUserId: string
   dealId: string
   requestId: string
   reissue?: boolean
@@ -27,6 +29,20 @@ export async function issueInvitation(params: {
   if (loadError) throw loadError
   const existing = current
   if (!existing || !existing.expert_id || !existing.expert_email) throw new Error('Selected expert request not found')
+  const { data: eligibleExpert, error: expertError } = await admin
+    .from('experts')
+    .select('id, scope, fund_id, status, verification_type, source_type, verified_at, verified_by')
+    .eq('id', existing.expert_id)
+    .maybeSingle()
+  if (expertError) throw expertError
+  const eligible = eligibleExpert?.status === 'active' && (
+    (eligibleExpert.scope === 'global' && eligibleExpert.verification_type === 'platform_certified'
+      && eligibleExpert.source_type === 'platform' && Boolean(eligibleExpert.verified_at))
+    || (eligibleExpert.scope === 'fund' && eligibleExpert.fund_id === fundId
+      && eligibleExpert.verification_type === 'fund_confirmed'
+      && Boolean(eligibleExpert.verified_at) && Boolean(eligibleExpert.verified_by))
+  )
+  if (!eligible) throw new Error('Selected expert is no longer eligible for invitation')
   const expertEmail = existing.expert_email
   const expertName = existing.expert_name ?? 'Expert'
   if (existing.status === 'submitted') throw new Error('Expert response has already been submitted')
@@ -45,6 +61,7 @@ export async function issueInvitation(params: {
       invited_at: new Date().toISOString(),
       email_provider_accepted_at: null,
       email_message_id: null,
+      email_thread_id: null,
       email_error_code: null,
       email_error_message: null,
     })
@@ -68,11 +85,10 @@ export async function issueInvitation(params: {
   const { data: fund } = await admin.from('funds').select('name').eq('id', fundId).maybeSingle()
   const invitationParty = fund?.name ?? 'the investment team'
   let emailAccepted = false
+  let acceptedThreadId: string | null = null
   let warning: string | undefined
   try {
-    const config = await getOutboundConfig(admin, fundId, 'system')
-    if (!config) throw new Error('Outbound email is not configured')
-    const result = await sendOutboundEmail(config, {
+    const message: EmailParams = {
       to: expertEmail,
       subject: 'Invitation to provide an expert perspective',
       html: invitationHtml({
@@ -81,15 +97,42 @@ export async function issueInvitation(params: {
         expiresAt,
         invitationUrl: url,
       }),
-    })
+    }
+    const provider = await getOutboundConfig(admin, fundId, 'asks')
+    if (!provider) throw new Error('Asks email provider is not configured')
+
+    let acceptedMessageId: string | null = null
+    if (provider.provider === 'resend') {
+      const result = await sendFundThreadEmail(admin, {
+        fundId,
+        actorUserId: params.actorUserId,
+        operationId: `expert-invitation:${requestId}:${credential.tokenHash}`,
+        fallbackMailbox: 'expert',
+        purpose: 'expert_invitation',
+        contextType: 'diligence_expert_request',
+        contextId: requestId,
+        ...message,
+      })
+      acceptedMessageId = result.id
+      acceptedThreadId = result.threadId
+    } else {
+      const result = await sendOutboundEmail(provider, message)
+      acceptedMessageId = result.id ?? null
+    }
     emailAccepted = true
-    await admin.from('diligence_expert_requests').update({
+    const acceptanceUpdate = await admin.from('diligence_expert_requests').update({
       email_provider_accepted_at: new Date().toISOString(),
-      email_message_id: result.id?.slice(0, 500) ?? null,
-    }).eq('id', requestId).eq('token_hash', credential.tokenHash)
+      email_message_id: acceptedMessageId?.slice(0, 500) ?? null,
+      email_thread_id: acceptedThreadId,
+    }).eq('id', requestId).eq('token_hash', credential.tokenHash).select('id').maybeSingle()
+    if (acceptanceUpdate.error || !acceptanceUpdate.data) {
+      throw new Error('Invitation email tracking state could not be saved')
+    }
   } catch (error) {
     const safe = sanitizeProviderError(error)
-    warning = 'The invitation link was issued, but the email provider did not accept the message. Copy the link and send it manually.'
+    warning = emailAccepted
+      ? 'The email provider accepted the invitation, but its tracking state could not be saved. Do not resend it until delivery has been checked.'
+      : 'The invitation link was issued, but the email provider did not accept the message. Copy the link and send it manually.'
     await admin.from('diligence_expert_requests').update({
       email_error_code: safe.code,
       email_error_message: safe.message,
@@ -97,7 +140,11 @@ export async function issueInvitation(params: {
   }
 
   const { data: finalRow } = await admin.from('diligence_expert_requests').select('*').eq('id', requestId).single()
-  return { request: toExpertRequest((finalRow ?? issued) as RequestRow), invitationUrl: url, emailAccepted, warning }
+  const storedRequest = toExpertRequest((finalRow ?? issued) as RequestRow)
+  const request = acceptedThreadId && !storedRequest.emailThreadId
+    ? { ...storedRequest, emailThreadId: acceptedThreadId }
+    : storedRequest
+  return { request, invitationUrl: url, emailAccepted, warning }
 }
 
 export function invitationHtml(params: {

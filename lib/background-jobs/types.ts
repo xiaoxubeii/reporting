@@ -11,8 +11,11 @@ export interface DealResearchPayload extends BackgroundJobPayload {
   readonly dealId: string
 }
 
+export type FeedDiscoveryPayload = Readonly<Record<never, never>>
+
 export interface BackgroundJobPayloadByKind {
   readonly deal_research: DealResearchPayload
+  readonly feed_discovery: FeedDiscoveryPayload
 }
 
 export interface BackgroundJobSearchCapability {

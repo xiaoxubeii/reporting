@@ -36,6 +36,10 @@ docker exec "$EXPERT_TEST_CONTAINER" pg_dump -U postgres -d postgres --schema-on
 # never touched.
 docker exec -i "$EXPERT_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$EXPERT_TEST_DATABASE" >/dev/null <<'SQL'
 drop function if exists public.match_experts(uuid, extensions.vector, integer);
+drop function if exists public.guard_diligence_expert_eligibility() cascade;
+drop function if exists public.confirm_expert_candidate(uuid, uuid, uuid, text, text, text, text, text);
+drop function if exists public.merge_expert_candidates(uuid, uuid, text, jsonb);
+drop table if exists public.expert_candidates cascade;
 drop table if exists public.diligence_expert_requests cascade;
 drop table if exists public.experts cascade;
 drop function if exists public.guard_diligence_expert_request_write();
@@ -48,7 +52,11 @@ SQL
 docker exec -i "$EXPERT_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$EXPERT_TEST_DATABASE" \
   < "$EXPERT_TEST_ROOT/supabase/migrations/20260722010000_expert_validation.sql" >/dev/null
 docker exec -i "$EXPERT_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$EXPERT_TEST_DATABASE" \
+  < "$EXPERT_TEST_ROOT/supabase/migrations/20260725020000_expert_directory_discovery.sql" >/dev/null
+docker exec -i "$EXPERT_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$EXPERT_TEST_DATABASE" \
   < "$EXPERT_TEST_ROOT/supabase/tests/expert_validation.sql" >/dev/null
+docker exec -i "$EXPERT_TEST_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d "$EXPERT_TEST_DATABASE" \
+  < "$EXPERT_TEST_ROOT/supabase/tests/expert_directory_discovery.sql" >/dev/null
 
 run_competing_update() {
   local sql="$1"

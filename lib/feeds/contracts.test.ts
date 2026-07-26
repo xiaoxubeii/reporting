@@ -41,6 +41,7 @@ describe('normalizeMinifluxEntry', () => {
       imageUrl: 'https://cdn.example.com/hero.jpg',
       publishedAt: '2026-07-22T10:00:00.000Z',
       createdAt: '2026-07-22T10:02:00.000Z',
+      changedAt: null,
       readingTimeMinutes: 3,
       isRead: true,
       isSaved: true,

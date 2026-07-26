@@ -1,0 +1,148 @@
+## ADDED Requirements
+
+### Requirement: Platform mail is isolated from Fund mail
+The system SHALL send FundWorkspace authentication and platform notifications only with platform-owned Resend configuration, and SHALL send Fund business mail only with the selected Fund's enabled BYOK Resend connection. Neither path SHALL fall back to the other path's credentials.
+
+#### Scenario: Platform notification
+- **WHEN** the system sends a member approval or platform contact notification
+- **THEN** it uses the platform Resend key and an exact `fundworkspace.com` sender without querying a Fund connection
+
+#### Scenario: Missing Fund connection
+- **WHEN** a Fund business action attempts email without a complete enabled Fund connection
+- **THEN** the action reports an email-provider failure or documented copy-link fallback and does not use the platform key
+
+#### Scenario: Authentication email
+- **WHEN** Supabase Auth sends confirmation, recovery, invitation, or one-time-code mail in production
+- **THEN** the deployment uses the platform Resend SMTP account and `fundworkspace.com` sender configured outside the application HTTP mail client
+
+### Requirement: Fund Resend connections are exact, encrypted, and service-only
+The system SHALL allow only a current Fund administrator to configure or rotate one Resend connection for that Fund's exact derived `<slug>.fundworkspace.com` domain. API keys, webhook secrets, and route tokens SHALL never be returned after their one-time creation, stored in plaintext, exposed through authenticated database access, or logged.
+
+#### Scenario: Administrator configures outbound first
+- **WHEN** a Fund administrator selects Resend in the existing outbound provider selector and submits a valid immutable mail slug and Resend sending-only key
+- **THEN** the server stores the selected provider and encrypted key through the existing `fund_settings` outbound contract, derives the exact domain, creates or updates service-only connection metadata and reserved mailboxes, and does not require inbound credentials or write a second active sending-key copy
+
+#### Scenario: Administrator configures inbound first or later
+- **WHEN** a Fund administrator selects Resend in the existing inbound provider selector and submits the same valid immutable mail slug when needed and a Resend Full Access key
+- **THEN** the server stores `resend` as the existing inbound provider, validates the public HTTPS webhook origin, creates an `email.received` webhook through Resend, encrypts the receiving key and returned signing secret with Fund-bound AAD, atomically stores the hashed route token and provider webhook ID, and never asks the administrator to paste or view the signing secret
+
+#### Scenario: Existing provider settings remain authoritative
+- **WHEN** an administrator views email settings or switches among Resend, Postmark, Mailgun, Gmail, or no provider
+- **THEN** outbound and inbound each use their pre-existing provider selector and section, Resend-specific fields appear only inside the selected provider branch, other providers retain their current behavior, and no standalone Fund Resend provider card or duplicate sending-key field is rendered
+
+#### Scenario: Administrator recreates inbound webhook
+- **WHEN** a Fund administrator supplies a Full Access key and requests inbound webhook recreation
+- **THEN** the server updates the managed Resend endpoint in place and retrieves its signing secret, or adopts a matching legacy endpoint by its hashed route token, so a Free-plan account never needs a second webhook slot; a newly created endpoint is removed if initial local persistence fails, and plaintext keys, signing secrets, and route tokens stay out of responses and logs
+
+#### Scenario: Administrator disconnects Fund email safely
+- **WHEN** a Fund administrator disconnects a Fund email connection and the provider webhook was already removed or the connection changes concurrently
+- **THEN** the server atomically disables the local route using the connection revision and provider webhook ID, treats provider not-found as an idempotent success, and finalizes deletion only against the deletion revision, so a concurrent recreation is never deleted or restored after the provider endpoint is removed
+
+#### Scenario: Non-administrator configures BYOK
+- **WHEN** a member without Fund administration permission submits connection data
+- **THEN** the request is rejected without changing or disclosing any connection
+
+#### Scenario: Cross-Fund or arbitrary domain input
+- **WHEN** a caller supplies another Fund ID, an unrelated domain, a wildcard, the base domain, or a reserved/invalid slug
+- **THEN** the server rejects it and does not select configuration from caller-supplied tenant data
+
+### Requirement: Mailbox identities are Fund-scoped
+The system SHALL map a normalized local part to at most one mailbox inside a Fund while permitting the same local part in different Funds. From addresses SHALL be generated by the server from an owned or authorized mailbox on the connection's exact domain.
+
+#### Scenario: User configures a mailbox
+- **WHEN** Alice selects the available local part `alice` in Fund CCI
+- **THEN** the system maps `alice@cci.fundworkspace.com` to Alice only within CCI
+
+#### Scenario: Same username in another Fund
+- **WHEN** a user in Fund ABC selects `alice`
+- **THEN** `alice@abc.fundworkspace.com` is valid and does not collide with CCI
+
+#### Scenario: Forged sender
+- **WHEN** a client submits a foreign mailbox, arbitrary From/Reply-To address, control characters, or another Fund's identity
+- **THEN** the server rejects the request before calling Resend
+
+### Requirement: Fund outbound messages have durable routing
+The system SHALL persist an outbound Fund message and a high-entropy, same-Fund reply route before provider submission, pass Reply-To and RFC thread headers to Resend, use a stable provider idempotency key, and handle a Resend error response as failure even when the SDK does not throw.
+
+#### Scenario: New expert invitation
+- **WHEN** Alice sends an authorized expert invitation for a CCI Diligence request
+- **THEN** the recipient sees `Alice <alice@cci.fundworkspace.com>`, Reply selects an `r_<token>@cci.fundworkspace.com` address bound to the invitation thread, and the existing secure response link remains the only expert-submission mechanism
+
+#### Scenario: Provider retry
+- **WHEN** an outbound request is retried after an ambiguous timeout
+- **THEN** the server reuses the message and provider idempotency key rather than creating a second invitation or reply route
+
+#### Scenario: Subsequent thread message
+- **WHEN** the system sends another message on an existing thread
+- **THEN** it includes valid `In-Reply-To` and `References` headers derived from that same Fund's stored messages
+
+### Requirement: Resend inbound webhooks are authenticated before content is trusted
+The system SHALL resolve one connection from a high-entropy path token, verify the exact bounded raw body with that connection's Svix secret, and only then parse an `email.received` event or trust its recipients. It SHALL retrieve complete content only through the selected connection's Resend client.
+
+#### Scenario: Valid received email
+- **WHEN** Resend sends a correctly signed event to the matching Fund route and the fetched email includes the configured exact domain
+- **THEN** the system atomically claims the event/email, retrieves and validates content, routes it within that Fund, and acknowledges the webhook
+
+#### Scenario: Invalid or unknown route
+- **WHEN** a request has an unknown route token, missing/invalid/expired signature, modified raw body, mismatched event and fetched email, or a different Fund domain
+- **THEN** it is rejected or quarantined without cross-Fund lookup, content retrieval, message insertion, or business processing
+
+#### Scenario: Duplicate or retry
+- **WHEN** Resend repeats the same Svix event or sends another event ID for the same provider email
+- **THEN** database uniqueness and attempt fencing ensure only one active processor and one stored message while a failed or expired lease remains retryable
+
+### Requirement: Replies route deterministically without granting authority
+The system SHALL route inbound mail in order by a valid same-Fund reply token, unambiguous same-Fund RFC references, then an exact known mailbox. A reply token SHALL be routing metadata only and SHALL never authenticate a user or authorize a business state change.
+
+#### Scenario: Tokenized reply
+- **WHEN** an external recipient clicks Reply and the message arrives at a valid unexpired `r_<token>` address for the configured domain
+- **THEN** it is appended to the token's Fund thread and mailbox
+
+#### Scenario: Header fallback
+- **WHEN** no reply token is present but `In-Reply-To` or `References` identifies one same-Fund thread
+- **THEN** the message is appended to that thread
+
+#### Scenario: Conflicting routing evidence
+- **WHEN** a valid reply token and RFC headers identify different threads, or the token is unknown, revoked, expired, or belongs to another Fund/domain
+- **THEN** the message is quarantined or unroutable and no thread or business action is selected by guesswork
+
+### Requirement: Pitch and general inbound mail follow explicit trust policies
+The system SHALL accept arbitrary external senders for the reserved `pitch` mailbox into the existing Deal screening boundary, while general/user/expert mailboxes SHALL store thread mail without automatically importing attachments into Diligence or converting an email reply into an expert response.
+
+#### Scenario: Public pitch
+- **WHEN** an external founder emails `pitch@cci.fundworkspace.com`
+- **THEN** the email creates one Fund-scoped inbound Deal candidate through the existing screening path and does not become Diligence evidence automatically
+
+#### Scenario: Expert email reply
+- **WHEN** an invited expert replies to the invitation email
+- **THEN** the message appears on the invitation email thread but the expert request remains unsubmitted until the existing secure response endpoint accepts an answer
+
+#### Scenario: Unknown local part
+- **WHEN** mail arrives for an unregistered local part
+- **THEN** it is acknowledged as unroutable without falling back to another user's mailbox or running a business pipeline
+
+### Requirement: Inbound content and attachments fail closed
+The system SHALL treat all inbound HTML, headers, text, and attachments as untrusted; enforce bounded counts and bytes; prevent arbitrary network fetching; scan before private storage; and expose safe plain text rather than executable HTML in the first-version mailbox response.
+
+#### Scenario: Safe attachment
+- **WHEN** a bounded attachment is retrieved from the allowed Resend endpoint, passes type and malware checks, and private storage succeeds
+- **THEN** only its private storage metadata is attached to the message
+
+#### Scenario: Unsafe or failed attachment
+- **WHEN** an attachment is oversized, corrupt, mismatched, unsafe, redirected, served from a disallowed host, or cannot be stored
+- **THEN** the message/attachment is quarantined and the application does not retain base64 content in JSON or fetch an arbitrary URL
+
+#### Scenario: Hostile HTML
+- **WHEN** inbound HTML contains scripts, forms, event handlers, or remote tracking resources
+- **THEN** no browser or server executes or automatically fetches that content and the API returns a safe plain-text representation
+
+### Requirement: Mail APIs preserve live Fund authorization and privacy
+The system SHALL derive Fund and user identity from the current Session, re-check membership and feature permission for each mutation/read, scope every service-role query by `fund_id`, and avoid logging or returning addresses, subjects, bodies, routing tokens, credentials, or unsanitized provider errors.
+
+#### Scenario: Authorized thread access
+- **WHEN** a current Fund member reads a shared thread or a thread assigned to their mailbox under the configured access policy
+- **THEN** the API returns only that Fund's safe message representation
+
+#### Scenario: Revoked or cross-Fund access
+- **WHEN** membership has been removed, permissions are insufficient, or an object ID belongs to another Fund
+- **THEN** the API fails closed without revealing whether the foreign object exists

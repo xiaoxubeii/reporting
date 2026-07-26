@@ -36,6 +36,26 @@ describe('background job registry', () => {
     expect(Object.isFrozen(policy.search)).toBe(true)
   })
 
+  it('registers system-only Feed Discovery with an empty payload and fixed worker authority', () => {
+    const policy = backgroundJobPolicy('feed_discovery')
+
+    expect(policy).toMatchObject({
+      kind: 'feed_discovery',
+      actors: ['system'],
+      workerPath: '/api/internal/background-jobs/feed-discovery/run',
+      workerAudience: 'reporting-feed-discovery-worker',
+      workerScope: 'feed-discovery:execute',
+      requiredUserAccess: [],
+      maxAttempts: 3,
+    })
+    expect(policy.search).toBeUndefined()
+    expect(policy.requestTimeoutMs).toBeLessThan(policy.leaseSeconds * 1000)
+    expect(parseBackgroundJobPayload('feed_discovery', {})).toEqual({})
+    for (const payload of [null, [], { fundId: DEAL_ID }, { userId: DEAL_ID }]) {
+      expect(() => parseBackgroundJobPayload('feed_discovery', payload)).toThrow('Invalid feed_discovery payload')
+    }
+  })
+
   it('enumerates one immutable code-owned policy per registered kind and derives audiences from it', () => {
     const policies = listBackgroundJobPolicies()
     expect(policies.map(policy => policy.kind)).toEqual([...BACKGROUND_JOB_KINDS])
@@ -48,6 +68,7 @@ describe('background job registry', () => {
       allowPersonalSources: false,
     })
     expect(isBackgroundJobAudience('reporting-deal-research-worker')).toBe(true)
+    expect(isBackgroundJobAudience('reporting-feed-discovery-worker')).toBe(true)
     expect(isBackgroundJobAudience('reporting-search')).toBe(true)
     expect(isBackgroundJobAudience('reporting-attacker')).toBe(false)
   })

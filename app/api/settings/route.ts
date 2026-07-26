@@ -6,7 +6,6 @@ import { assertWriteAccess } from '@/lib/api-helpers'
 import { APP_VERSION } from '@/lib/version'
 import { getUpdateAvailable } from '@/lib/cache/layout'
 import { encrypt } from '@/lib/crypto'
-import { randomBytes } from 'crypto'
 import { dbError } from '@/lib/api-error'
 import { logActivity } from '@/lib/activity'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
@@ -20,6 +19,8 @@ import {
   type CustomAIProviderRequestParameters,
 } from '@/lib/ai/custom-provider'
 import type { FeatureKey, FeatureVisibility, FeatureVisibilityMap } from '@/lib/types/features'
+import { createFundDekResolver } from '@/lib/email/fund-dek'
+import { createSupabaseFundEmailCredentialStore } from '@/lib/email/fund-credentials'
 
 // GET — returns fund settings (safe fields only)
 export async function GET() {
@@ -333,6 +334,33 @@ export async function PATCH(req: NextRequest) {
 
   // Update fund_settings
   const settingsUpdates: Record<string, unknown> = {}
+  let authoritativeResendKeyEncrypted: string | null = null
+  const encryptedSecretRequested = [
+    claudeApiKey,
+    googleClientSecret,
+    resendApiKey,
+    postmarkServerToken,
+    mailgunSigningKey,
+    mailgunApiKey,
+    dropboxAppSecret,
+    openaiApiKey,
+    geminiApiKey,
+    openrouterApiKey,
+  ].some((value) => typeof value === 'string' && value.trim())
+  const kek = process.env.ENCRYPTION_KEY
+  if (encryptedSecretRequested && !kek) {
+    return NextResponse.json(
+      { error: 'Server misconfiguration: ENCRYPTION_KEY not set' },
+      { status: 500 },
+    )
+  }
+  const resolveFundDek = kek
+    ? createFundDekResolver(
+        createSupabaseFundEmailCredentialStore(admin),
+        membership.fund_id,
+        kek,
+      )
+    : null
 
   if (postmarkInboundAddress !== undefined) {
     settingsUpdates.postmark_inbound_address = postmarkInboundAddress?.trim() || null
@@ -356,11 +384,7 @@ export async function PATCH(req: NextRequest) {
 
   // Update Claude API key with envelope encryption
   if (claudeApiKey !== undefined && claudeApiKey.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const dek = randomBytes(32).toString('hex')
-    settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
+    const dek = await resolveFundDek!()
     settingsUpdates.claude_api_key_encrypted = encrypt(claudeApiKey.trim(), dek)
   }
 
@@ -373,24 +397,7 @@ export async function PATCH(req: NextRequest) {
       // Clear the secret
       settingsUpdates.google_client_secret_encrypted = null
     } else {
-      const kek = process.env.ENCRYPTION_KEY
-      if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-      // Ensure we have an encryption key; reuse existing or create new
-      const { data: existing } = await admin
-        .from('fund_settings')
-        .select('encryption_key_encrypted')
-        .eq('fund_id', membership.fund_id)
-        .single()
-
-      let dek: string
-      if (existing?.encryption_key_encrypted) {
-        const { decrypt } = await import('@/lib/crypto')
-        dek = decrypt(existing.encryption_key_encrypted, kek)
-      } else {
-        dek = randomBytes(32).toString('hex')
-        settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-      }
+      const dek = await resolveFundDek!()
       settingsUpdates.google_client_secret_encrypted = encrypt(googleClientSecret.trim(), dek)
     }
   }
@@ -423,45 +430,13 @@ export async function PATCH(req: NextRequest) {
 
   // Update Resend API key
   if (resendApiKey !== undefined && resendApiKey.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
-    settingsUpdates.resend_api_key_encrypted = encrypt(resendApiKey.trim(), dek)
+    const dek = await resolveFundDek!()
+    authoritativeResendKeyEncrypted = encrypt(resendApiKey.trim(), dek)
   }
 
   // Update Postmark server token
   if (postmarkServerToken !== undefined && postmarkServerToken.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
+    const dek = await resolveFundDek!()
     settingsUpdates.postmark_server_token_encrypted = encrypt(postmarkServerToken.trim(), dek)
   }
 
@@ -482,45 +457,13 @@ export async function PATCH(req: NextRequest) {
 
   // Update Mailgun signing key (encrypted)
   if (mailgunSigningKey !== undefined && mailgunSigningKey.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
+    const dek = await resolveFundDek!()
     settingsUpdates.mailgun_signing_key_encrypted = encrypt(mailgunSigningKey.trim(), dek)
   }
 
   // Update Mailgun API key (encrypted)
   if (mailgunApiKey !== undefined && mailgunApiKey.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
+    const dek = await resolveFundDek!()
     settingsUpdates.mailgun_api_key_encrypted = encrypt(mailgunApiKey.trim(), dek)
   }
 
@@ -536,45 +479,13 @@ export async function PATCH(req: NextRequest) {
 
   // Update Dropbox app secret (encrypted)
   if (dropboxAppSecret !== undefined && dropboxAppSecret.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
+    const dek = await resolveFundDek!()
     settingsUpdates.dropbox_app_secret_encrypted = encrypt(dropboxAppSecret.trim(), dek)
   }
 
   // Update OpenAI API key with envelope encryption
   if (openaiApiKey !== undefined && openaiApiKey.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
+    const dek = await resolveFundDek!()
     settingsUpdates.openai_api_key_encrypted = encrypt(openaiApiKey.trim(), dek)
   }
 
@@ -585,23 +496,7 @@ export async function PATCH(req: NextRequest) {
 
   // Update Gemini API key with envelope encryption
   if (geminiApiKey !== undefined && geminiApiKey.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
+    const dek = await resolveFundDek!()
     settingsUpdates.gemini_api_key_encrypted = encrypt(geminiApiKey.trim(), dek)
   }
 
@@ -628,21 +523,7 @@ export async function PATCH(req: NextRequest) {
   // Internal storage keeps the historical OpenRouter names for backward compatibility;
   // the user-facing capability is one generic OpenAI-compatible provider.
   if (openrouterApiKey !== undefined && openrouterApiKey.trim()) {
-    const kek = process.env.ENCRYPTION_KEY
-    if (!kek) return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-    const { data: existing } = await admin
-      .from('fund_settings')
-      .select('encryption_key_encrypted')
-      .eq('fund_id', membership.fund_id)
-      .single()
-    let dek: string
-    if (existing?.encryption_key_encrypted) {
-      const { decrypt } = await import('@/lib/crypto')
-      dek = decrypt(existing.encryption_key_encrypted, kek)
-    } else {
-      dek = randomBytes(32).toString('hex')
-      settingsUpdates.encryption_key_encrypted = encrypt(dek, kek)
-    }
+    const dek = await resolveFundDek!()
     settingsUpdates.openrouter_api_key_encrypted = encrypt(openrouterApiKey.trim(), dek)
   }
   if (openrouterModel !== undefined) {
@@ -757,6 +638,11 @@ export async function PATCH(req: NextRequest) {
     settingsUpdates.feature_visibility = merged
   }
 
+  if (authoritativeResendKeyEncrypted) {
+    delete settingsUpdates.outbound_email_provider
+    delete settingsUpdates.asks_email_provider
+  }
+
   if (Object.keys(settingsUpdates).length > 0) {
     const { error } = await admin
       .from('fund_settings')
@@ -764,6 +650,20 @@ export async function PATCH(req: NextRequest) {
       .eq('fund_id', membership.fund_id)
 
     if (error) return dbError(error, 'settings')
+  }
+
+  if (authoritativeResendKeyEncrypted) {
+    const { data, error } = await admin.rpc('fund_email_set_authoritative_resend_key', {
+      p_fund_id: membership.fund_id,
+      p_resend_api_key_encrypted: authoritativeResendKeyEncrypted,
+      p_update_outbound_provider: outboundEmailProvider !== undefined,
+      p_outbound_email_provider: outboundEmailProvider || null,
+      p_update_asks_provider: asksEmailProvider !== undefined,
+      p_asks_email_provider: asksEmailProvider || null,
+    })
+    if (error || data !== true) {
+      return dbError(error ?? new Error('Resend key was not saved'), 'settings')
+    }
   }
 
   logActivity(admin, membership.fund_id, user.id, 'settings.update', {})

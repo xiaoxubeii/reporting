@@ -62,6 +62,12 @@ describe('Croner production manifest', () => {
         timezone: 'UTC',
       },
       {
+        name: 'feeds-discovery',
+        path: '/api/cron/feeds-discovery',
+        schedule: '*/15 * * * *',
+        timezone: 'UTC',
+      },
+      {
         name: 'heartbeat-backfill',
         path: '/api/cron/heartbeat-backfill',
         schedule: '0 * * * *',
@@ -239,7 +245,7 @@ describe('persistent Croner service lifecycle', () => {
     })
     const snapshot = service.start()
 
-    expect(instances).toHaveLength(5)
+    expect(instances).toHaveLength(6)
     expect(instances.map(instance => ({
       pattern: instance.pattern,
       name: instance.options.name,
@@ -251,7 +257,7 @@ describe('persistent Croner service lifecycle', () => {
       timezone: 'UTC',
       hasProtection: true,
     })))
-    expect(snapshot).toMatchObject({ ready: true, shuttingDown: false, jobCount: 5 })
+    expect(snapshot).toMatchObject({ ready: true, shuttingDown: false, jobCount: 6 })
 
     instances[0].options.protect?.()
     expect(logger).toHaveBeenCalledWith(expect.objectContaining({
@@ -351,7 +357,7 @@ describe('Croner health contract', () => {
     const handler = createHealthHandler(() => ({
       ready: true,
       shuttingDown: false,
-      jobCount: 5,
+      jobCount: 6,
       activeRequests: 1,
       secret: VALID_ENV.CRON_SECRET,
       baseUrl: VALID_ENV.CRON_RUNNER_BASE_URL,

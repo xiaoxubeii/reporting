@@ -48,6 +48,7 @@ describe('Feeds access contract', () => {
       'api/feeds/entries/[id]',
       'api/feeds/entries/[id]/state',
       'api/feeds/explore/categories',
+      'api/feeds/explore/discovery',
       'api/feeds/explore/entries',
       'api/feeds/explore/entries/[id]',
       'api/feeds/explore/following',
@@ -71,6 +72,7 @@ describe('Feeds access contract', () => {
     const exploreRoutes = Object.keys(ROUTE_DOMAINS).filter(key => key.startsWith('api/feeds/explore/'))
     expect(exploreRoutes.sort()).toEqual([
       'api/feeds/explore/categories',
+      'api/feeds/explore/discovery',
       'api/feeds/explore/entries',
       'api/feeds/explore/entries/[id]',
       'api/feeds/explore/following',

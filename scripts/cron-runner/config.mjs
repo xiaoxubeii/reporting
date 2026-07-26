@@ -30,6 +30,13 @@ const jobs = [
     timeoutMs: 360_000,
   },
   {
+    name: 'feeds-discovery',
+    path: '/api/cron/feeds-discovery',
+    schedule: '*/15 * * * *',
+    timezone: 'UTC',
+    timeoutMs: 360_000,
+  },
+  {
     name: 'heartbeat-backfill',
     path: '/api/cron/heartbeat-backfill',
     schedule: '0 * * * *',

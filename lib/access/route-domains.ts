@@ -206,6 +206,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/feeds/entries/[id]': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/entries/[id]/state': { domain: 'dealflow', feature: 'feeds', level: { PATCH: 'read' } },
   'api/feeds/explore/categories': { domain: 'dealflow', feature: 'feeds' },
+  'api/feeds/explore/discovery': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries/[id]': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/following': { domain: 'dealflow', feature: 'feeds' },
@@ -263,6 +264,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/diligence/[id]/expert-validations': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/generate': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/[requestId]/invite': { domain: 'diligence' },
+  'api/diligence/[id]/expert-validations/[requestId]/email-thread': { domain: 'diligence', level: 'read' },
   'api/diligence/[id]/expert-validations/[requestId]/match': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/[requestId]/retry-materialization': { domain: 'diligence' },
   'api/diligence/[id]/expert-validations/[requestId]/select': { domain: 'diligence' },
@@ -281,6 +283,10 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/diligence/prompts': { domain: 'diligence' },
   'api/experts': { domain: 'diligence' },
   'api/experts/[expertId]': { domain: 'diligence' },
+  'api/experts/discovery': { domain: 'diligence' },
+  'api/experts/discovery/search': { domain: 'diligence' },
+  'api/experts/discovery/[candidateId]/confirm': { domain: 'diligence' },
+  'api/experts/discovery/[candidateId]/reject': { domain: 'diligence' },
   // The memo agent's firm-wide configuration: house style, schemas, defaults.
   'api/firm/memo-agent-defaults': { domain: 'diligence' },
   'api/firm/schemas': { domain: 'diligence' },
@@ -305,6 +311,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/settings/dropbox': { domain: 'admin' },
   'api/settings/dropbox/folders': { domain: 'admin' },
   'api/settings/heartbeat': { domain: 'admin' },
+  'api/settings/fund-email': { domain: 'admin', level: 'any' },
   'api/settings/senders': { domain: 'admin' },
   'api/settings/senders/[id]': { domain: 'admin' },
   'api/settings/search-categories': { domain: 'admin' },
@@ -417,15 +424,18 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/cron/affinity-sync': 'Cron: CRON_SECRET.',
   'api/cron/background-jobs': 'Cron: CRON_SECRET; dispatches only code-registered background workers.',
   'api/cron/deals-digest': 'Cron: CRON_SECRET.',
+  'api/cron/feeds-discovery': 'Cron: CRON_SECRET; refreshes deployment-owned public Explore discovery data.',
   'api/cron/heartbeat-backfill': 'Cron: CRON_SECRET.',
   'api/cron/memo-agent-worker': 'Cron: CRON_SECRET.',
   'api/internal/background-jobs/deal-research/run': 'Internal HTTP worker: exact-audience, attempt-bound Job Token and live context restoration.',
+  'api/internal/background-jobs/feed-discovery/run': 'Internal system worker: exact-audience, attempt-bound Job Token and verified persisted fund context.',
 
   // Inbound from third parties, authenticated by a token in the path or a provider signature.
   'api/webhooks/heartbeat/[token]': 'Inbound webhook: high-entropy path token.',
   'api/webhooks/transcription/[secret]': 'Inbound webhook: path secret.',
   'api/inbound-email': 'Inbound email webhook.',
   'api/inbound-email/mailgun': 'Inbound email webhook (Mailgun).',
+  'api/inbound-email/resend/[routeToken]': 'Inbound Resend webhook: high-entropy Fund path token plus verified Svix signature.',
   'api/public/submit/[token]': 'Public deal-submission form; path token.',
 
   // A separate identity model: LP portal accounts, scoped per investor entity by resolveLpAccess.

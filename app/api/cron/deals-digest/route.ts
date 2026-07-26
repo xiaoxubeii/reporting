@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getOutboundConfig, sendOutboundEmail } from '@/lib/email'
+import { sendPlatformEmail } from '@/lib/email/system'
 
 /**
  * Weekly digest of deals auto-archived as out_of_thesis. Sent to fund admins.
@@ -78,12 +78,6 @@ export async function GET(req: NextRequest) {
       continue
     }
 
-    const config = await getOutboundConfig(admin, fundId, 'system')
-    if (!config) {
-      results.push({ fund_id: fundId, archivedCount: archived.length, sent: false, error: 'no outbound config' })
-      continue
-    }
-
     const html = renderDigest(archived, await canonicalFundOriginForId(admin as never, fundId))
     const subject = `Out-of-thesis deals (${archived.length}), last 7 days`
 
@@ -91,7 +85,7 @@ export async function GET(req: NextRequest) {
     let lastErr: string | undefined
     for (const to of adminEmails) {
       try {
-        await sendOutboundEmail(config, { to, subject, html })
+        await sendPlatformEmail({ to, subject, html })
         sent++
       } catch (err) {
         lastErr = err instanceof Error ? err.message : 'send failed'

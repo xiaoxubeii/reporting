@@ -224,6 +224,7 @@ async function resolveFund(
   const { data: fundSettings } = await supabase
     .from('fund_settings')
     .select('fund_id, postmark_webhook_token, postmark_webhook_token_encrypted, encryption_key_encrypted')
+    .eq('inbound_email_provider', 'postmark')
     .eq('postmark_inbound_address', toAddress)
     .maybeSingle()
 
@@ -282,12 +283,22 @@ async function resolveFund(
 
   if (!senders || senders.length === 0) return null
 
-  if (senders.length > 1) {
+  const candidateFundIds = Array.from(
+    new Set(senders.map((sender) => sender.fund_id)),
+  )
+  const { data: postmarkFunds, error: providerError } = await supabase
+    .from('fund_settings')
+    .select('fund_id')
+    .in('fund_id', candidateFundIds)
+    .eq('inbound_email_provider', 'postmark')
+  if (providerError || !postmarkFunds || postmarkFunds.length === 0) return null
+
+  if (postmarkFunds.length > 1) {
     console.error(
       `[inbound-email] Ambiguous routing: ${fromAddress} is an authorized sender for multiple funds`
     )
     return null
   }
 
-  return { fundId: senders[0].fund_id, isGlobal: true }
+  return { fundId: postmarkFunds[0].fund_id, isGlobal: true }
 }

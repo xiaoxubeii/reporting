@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import React from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { AlertCircle, Rss } from 'lucide-react'
 import { useTranslations } from 'next-intl'

@@ -166,3 +166,55 @@ export interface ExploreEntriesPayload {
   total: number
   nextOffset: number | null
 }
+
+export interface DiscoverySourceResult {
+  entryId: number
+  title: string
+  url: string
+  sourceTitle: string
+  publishedAt: string | null
+}
+
+export interface TrendingDiscoveryResult {
+  kind: 'trending'
+  id: string
+  label: string
+  summary: string
+  score: number
+  metrics: {
+    articleCount: number
+    sourceCount: number
+    priorArticleCount: number
+    growth: number
+    freshness: number
+    currentWindowHours: 24
+    baselineWindowDays: 7
+  }
+  sources: DiscoverySourceResult[]
+  generatedAt: string
+}
+
+export interface DealSignalDiscoveryResult {
+  kind: 'deal_signal'
+  id: string
+  companyName: string
+  companyDomain: string | null
+  stage: string | null
+  amount: string | null
+  eventDate: string | null
+  confidence: number
+  evidence: string[]
+  sources: DiscoverySourceResult[]
+  generatedAt: string
+  existingDealId: string | null
+}
+
+export interface DiscoveryPayload<T extends TrendingDiscoveryResult | DealSignalDiscoveryResult> {
+  items: T[]
+  generationId: string | null
+  generatedAt: string | null
+  isStale: boolean
+  total: number
+  limit: number
+  offset: number
+}

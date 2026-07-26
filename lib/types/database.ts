@@ -4,3391 +4,4890 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
+    PostgrestVersion: "14.1";
+  };
   public: {
     Tables: {
       ai_usage_logs: {
         Row: {
-          created_at: string
-          feature: string
-          fund_id: string
-          id: string
-          input_tokens: number
-          model: string
-          output_tokens: number
-          provider: string
-          user_id: string | null
-        }
+          created_at: string;
+          feature: string;
+          fund_id: string;
+          id: string;
+          input_tokens: number;
+          model: string;
+          output_tokens: number;
+          provider: string;
+          user_id: string | null;
+        };
         Insert: {
-          created_at?: string
-          feature: string
-          fund_id: string
-          id?: string
-          input_tokens?: number
-          model: string
-          output_tokens?: number
-          provider: string
-          user_id?: string | null
-        }
+          created_at?: string;
+          feature: string;
+          fund_id: string;
+          id?: string;
+          input_tokens?: number;
+          model: string;
+          output_tokens?: number;
+          provider: string;
+          user_id?: string | null;
+        };
         Update: {
-          created_at?: string
-          feature?: string
-          fund_id?: string
-          id?: string
-          input_tokens?: number
-          model?: string
-          output_tokens?: number
-          provider?: string
-          user_id?: string | null
-        }
+          created_at?: string;
+          feature?: string;
+          fund_id?: string;
+          id?: string;
+          input_tokens?: number;
+          model?: string;
+          output_tokens?: number;
+          provider?: string;
+          user_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "ai_usage_logs_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "ai_usage_logs_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       allowed_signups: {
         Row: {
-          created_at: string | null
-          email_pattern: string
-          id: string
-        }
+          created_at: string | null;
+          email_pattern: string;
+          id: string;
+        };
         Insert: {
-          created_at?: string | null
-          email_pattern: string
-          id?: string
-        }
+          created_at?: string | null;
+          email_pattern: string;
+          id?: string;
+        };
         Update: {
-          created_at?: string | null
-          email_pattern?: string
-          id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string | null;
+          email_pattern?: string;
+          id?: string;
+        };
+        Relationships: [];
+      };
       analyst_conversations: {
         Row: {
-          company_id: string | null
-          created_at: string
-          deal_id: string | null
-          fund_id: string
-          id: string
-          message_count: number
-          messages: Json
-          scope: string | null
-          summary: string | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
+          company_id: string | null;
+          created_at: string;
+          deal_id: string | null;
+          fund_id: string;
+          id: string;
+          message_count: number;
+          messages: Json;
+          scope: string | null;
+          summary: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          company_id?: string | null
-          created_at?: string
-          deal_id?: string | null
-          fund_id: string
-          id?: string
-          message_count?: number
-          messages?: Json
-          scope?: string | null
-          summary?: string | null
-          title?: string
-          updated_at?: string
-          user_id: string
-        }
+          company_id?: string | null;
+          created_at?: string;
+          deal_id?: string | null;
+          fund_id: string;
+          id?: string;
+          message_count?: number;
+          messages?: Json;
+          scope?: string | null;
+          summary?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          company_id?: string | null
-          created_at?: string
-          deal_id?: string | null
-          fund_id?: string
-          id?: string
-          message_count?: number
-          messages?: Json
-          scope?: string | null
-          summary?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
+          company_id?: string | null;
+          created_at?: string;
+          deal_id?: string | null;
+          fund_id?: string;
+          id?: string;
+          message_count?: number;
+          messages?: Json;
+          scope?: string | null;
+          summary?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "analyst_conversations_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "analyst_conversations_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "analyst_conversations_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "analyst_conversations_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       app_settings: {
         Row: {
-          created_at: string | null
-          github_stars: number | null
-          github_stars_checked_at: string | null
-          global_inbound_address: string | null
-          global_inbound_token: string | null
-          global_inbound_token_encrypted: string | null
-          id: string
-          installation_id: string
-          updated_at: string | null
-        }
+          created_at: string | null;
+          github_stars: number | null;
+          github_stars_checked_at: string | null;
+          global_inbound_address: string | null;
+          global_inbound_token: string | null;
+          global_inbound_token_encrypted: string | null;
+          id: string;
+          installation_id: string;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          github_stars?: number | null
-          github_stars_checked_at?: string | null
-          global_inbound_address?: string | null
-          global_inbound_token?: string | null
-          global_inbound_token_encrypted?: string | null
-          id?: string
-          installation_id?: string
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          github_stars?: number | null;
+          github_stars_checked_at?: string | null;
+          global_inbound_address?: string | null;
+          global_inbound_token?: string | null;
+          global_inbound_token_encrypted?: string | null;
+          id?: string;
+          installation_id?: string;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          github_stars?: number | null
-          github_stars_checked_at?: string | null
-          global_inbound_address?: string | null
-          global_inbound_token?: string | null
-          global_inbound_token_encrypted?: string | null
-          id?: string
-          installation_id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+          created_at?: string | null;
+          github_stars?: number | null;
+          github_stars_checked_at?: string | null;
+          global_inbound_address?: string | null;
+          global_inbound_token?: string | null;
+          global_inbound_token_encrypted?: string | null;
+          id?: string;
+          installation_id?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
       authorized_senders: {
         Row: {
-          created_at: string | null
-          email: string
-          fund_id: string
-          id: string
-          label: string | null
-        }
+          created_at: string | null;
+          email: string;
+          fund_id: string;
+          id: string;
+          label: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          email: string
-          fund_id: string
-          id?: string
-          label?: string | null
-        }
+          created_at?: string | null;
+          email: string;
+          fund_id: string;
+          id?: string;
+          label?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          email?: string
-          fund_id?: string
-          id?: string
-          label?: string | null
-        }
+          created_at?: string | null;
+          email?: string;
+          fund_id?: string;
+          id?: string;
+          label?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "authorized_senders_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "authorized_senders_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       companies: {
         Row: {
-          aliases: string[] | null
-          contact_email: string[] | null
-          created_at: string | null
-          current_update: string | null
-          dropbox_folder_path: string | null
-          founded_year: number | null
-          founders: string | null
-          fund_id: string
-          google_drive_folder_id: string | null
-          google_drive_folder_name: string | null
-          id: string
-          industry: string[] | null
-          name: string
-          notes: string | null
-          overview: string | null
-          portfolio_group: string[] | null
-          stage: string | null
-          status: string | null
-          tags: string[] | null
-          updated_at: string | null
-          why_invested: string | null
-        }
+          aliases: string[] | null;
+          contact_email: string[] | null;
+          created_at: string | null;
+          current_update: string | null;
+          dropbox_folder_path: string | null;
+          founded_year: number | null;
+          founders: string | null;
+          fund_id: string;
+          google_drive_folder_id: string | null;
+          google_drive_folder_name: string | null;
+          id: string;
+          industry: string[] | null;
+          name: string;
+          notes: string | null;
+          overview: string | null;
+          portfolio_group: string[] | null;
+          stage: string | null;
+          status: string | null;
+          tags: string[] | null;
+          updated_at: string | null;
+          why_invested: string | null;
+        };
         Insert: {
-          aliases?: string[] | null
-          contact_email?: string[] | null
-          created_at?: string | null
-          current_update?: string | null
-          dropbox_folder_path?: string | null
-          founded_year?: number | null
-          founders?: string | null
-          fund_id: string
-          google_drive_folder_id?: string | null
-          google_drive_folder_name?: string | null
-          id?: string
-          industry?: string[] | null
-          name: string
-          notes?: string | null
-          overview?: string | null
-          portfolio_group?: string[] | null
-          stage?: string | null
-          status?: string | null
-          tags?: string[] | null
-          updated_at?: string | null
-          why_invested?: string | null
-        }
+          aliases?: string[] | null;
+          contact_email?: string[] | null;
+          created_at?: string | null;
+          current_update?: string | null;
+          dropbox_folder_path?: string | null;
+          founded_year?: number | null;
+          founders?: string | null;
+          fund_id: string;
+          google_drive_folder_id?: string | null;
+          google_drive_folder_name?: string | null;
+          id?: string;
+          industry?: string[] | null;
+          name: string;
+          notes?: string | null;
+          overview?: string | null;
+          portfolio_group?: string[] | null;
+          stage?: string | null;
+          status?: string | null;
+          tags?: string[] | null;
+          updated_at?: string | null;
+          why_invested?: string | null;
+        };
         Update: {
-          aliases?: string[] | null
-          contact_email?: string[] | null
-          created_at?: string | null
-          current_update?: string | null
-          dropbox_folder_path?: string | null
-          founded_year?: number | null
-          founders?: string | null
-          fund_id?: string
-          google_drive_folder_id?: string | null
-          google_drive_folder_name?: string | null
-          id?: string
-          industry?: string[] | null
-          name?: string
-          notes?: string | null
-          overview?: string | null
-          portfolio_group?: string[] | null
-          stage?: string | null
-          status?: string | null
-          tags?: string[] | null
-          updated_at?: string | null
-          why_invested?: string | null
-        }
+          aliases?: string[] | null;
+          contact_email?: string[] | null;
+          created_at?: string | null;
+          current_update?: string | null;
+          dropbox_folder_path?: string | null;
+          founded_year?: number | null;
+          founders?: string | null;
+          fund_id?: string;
+          google_drive_folder_id?: string | null;
+          google_drive_folder_name?: string | null;
+          id?: string;
+          industry?: string[] | null;
+          name?: string;
+          notes?: string | null;
+          overview?: string | null;
+          portfolio_group?: string[] | null;
+          stage?: string | null;
+          status?: string | null;
+          tags?: string[] | null;
+          updated_at?: string | null;
+          why_invested?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "companies_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "companies_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       company_documents: {
         Row: {
-          company_id: string
-          created_at: string | null
-          extracted_text: string | null
-          file_size: number
-          file_type: string
-          filename: string
-          fund_id: string
-          has_native_content: boolean | null
-          id: string
-          storage_path: string | null
-          uploaded_by: string | null
-        }
+          company_id: string;
+          created_at: string | null;
+          extracted_text: string | null;
+          file_size: number;
+          file_type: string;
+          filename: string;
+          fund_id: string;
+          has_native_content: boolean | null;
+          id: string;
+          storage_path: string | null;
+          uploaded_by: string | null;
+        };
         Insert: {
-          company_id: string
-          created_at?: string | null
-          extracted_text?: string | null
-          file_size: number
-          file_type: string
-          filename: string
-          fund_id: string
-          has_native_content?: boolean | null
-          id?: string
-          storage_path?: string | null
-          uploaded_by?: string | null
-        }
+          company_id: string;
+          created_at?: string | null;
+          extracted_text?: string | null;
+          file_size: number;
+          file_type: string;
+          filename: string;
+          fund_id: string;
+          has_native_content?: boolean | null;
+          id?: string;
+          storage_path?: string | null;
+          uploaded_by?: string | null;
+        };
         Update: {
-          company_id?: string
-          created_at?: string | null
-          extracted_text?: string | null
-          file_size?: number
-          file_type?: string
-          filename?: string
-          fund_id?: string
-          has_native_content?: boolean | null
-          id?: string
-          storage_path?: string | null
-          uploaded_by?: string | null
-        }
+          company_id?: string;
+          created_at?: string | null;
+          extracted_text?: string | null;
+          file_size?: number;
+          file_type?: string;
+          filename?: string;
+          fund_id?: string;
+          has_native_content?: boolean | null;
+          id?: string;
+          storage_path?: string | null;
+          uploaded_by?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "company_documents_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "company_documents_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "company_documents_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "company_documents_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       compliance_deadlines: {
         Row: {
-          id: string
-          fund_id: string
-          compliance_item_id: string
-          title: string
-          due_date: string
-          status: string
-          notes: string | null
-          created_at: string
-          updated_at: string
-        }
+          id: string;
+          fund_id: string;
+          compliance_item_id: string;
+          title: string;
+          due_date: string;
+          status: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          compliance_item_id: string
-          title: string
-          due_date: string
-          status?: string
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
-        }
+          id?: string;
+          fund_id: string;
+          compliance_item_id: string;
+          title: string;
+          due_date: string;
+          status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          compliance_item_id?: string
-          title?: string
-          due_date?: string
-          status?: string
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
-        }
+          id?: string;
+          fund_id?: string;
+          compliance_item_id?: string;
+          title?: string;
+          due_date?: string;
+          status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "compliance_deadlines_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "compliance_deadlines_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       compliance_fund_settings: {
         Row: {
-          id: string
-          fund_id: string
-          compliance_item_id: string
-          applies: string
-          dismissed: boolean
-          dismissed_reason: string | null
-          dismissed_by: string | null
-          dismissed_at: string | null
-          notes: string | null
-          updated_at: string
-        }
+          id: string;
+          fund_id: string;
+          compliance_item_id: string;
+          applies: string;
+          dismissed: boolean;
+          dismissed_reason: string | null;
+          dismissed_by: string | null;
+          dismissed_at: string | null;
+          notes: string | null;
+          updated_at: string;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          compliance_item_id: string
-          applies?: string
-          dismissed?: boolean
-          dismissed_reason?: string | null
-          dismissed_by?: string | null
-          dismissed_at?: string | null
-          notes?: string | null
-          updated_at?: string
-        }
+          id?: string;
+          fund_id: string;
+          compliance_item_id: string;
+          applies?: string;
+          dismissed?: boolean;
+          dismissed_reason?: string | null;
+          dismissed_by?: string | null;
+          dismissed_at?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          compliance_item_id?: string
-          applies?: string
-          dismissed?: boolean
-          dismissed_reason?: string | null
-          dismissed_by?: string | null
-          dismissed_at?: string | null
-          notes?: string | null
-          updated_at?: string
-        }
+          id?: string;
+          fund_id?: string;
+          compliance_item_id?: string;
+          applies?: string;
+          dismissed?: boolean;
+          dismissed_reason?: string | null;
+          dismissed_by?: string | null;
+          dismissed_at?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "compliance_fund_settings_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "compliance_fund_settings_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       compliance_items: {
         Row: {
-          id: string
-          category: string
-          title: string
-          description: string | null
-          frequency: string | null
-          sort_order: number
-          created_at: string
-        }
+          id: string;
+          category: string;
+          title: string;
+          description: string | null;
+          frequency: string | null;
+          sort_order: number;
+          created_at: string;
+        };
         Insert: {
-          id?: string
-          category: string
-          title: string
-          description?: string | null
-          frequency?: string | null
-          sort_order?: number
-          created_at?: string
-        }
+          id?: string;
+          category: string;
+          title: string;
+          description?: string | null;
+          frequency?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
         Update: {
-          id?: string
-          category?: string
-          title?: string
-          description?: string | null
-          frequency?: string | null
-          sort_order?: number
-          created_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          category?: string;
+          title?: string;
+          description?: string | null;
+          frequency?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       company_notes: {
         Row: {
-          company_id: string | null
-          content: string
-          created_at: string
-          fund_id: string
-          id: string
-          mentioned_company_ids: string[] | null
-          mentioned_groups: string[] | null
-          mentioned_user_ids: string[] | null
-          updated_at: string
-          user_id: string
-        }
+          company_id: string | null;
+          content: string;
+          created_at: string;
+          fund_id: string;
+          id: string;
+          mentioned_company_ids: string[] | null;
+          mentioned_groups: string[] | null;
+          mentioned_user_ids: string[] | null;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          company_id?: string | null
-          content: string
-          created_at?: string
-          fund_id: string
-          id?: string
-          mentioned_company_ids?: string[] | null
-          mentioned_groups?: string[] | null
-          mentioned_user_ids?: string[] | null
-          updated_at?: string
-          user_id: string
-        }
+          company_id?: string | null;
+          content: string;
+          created_at?: string;
+          fund_id: string;
+          id?: string;
+          mentioned_company_ids?: string[] | null;
+          mentioned_groups?: string[] | null;
+          mentioned_user_ids?: string[] | null;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          company_id?: string | null
-          content?: string
-          created_at?: string
-          fund_id?: string
-          id?: string
-          mentioned_company_ids?: string[] | null
-          mentioned_groups?: string[] | null
-          mentioned_user_ids?: string[] | null
-          updated_at?: string
-          user_id?: string
-        }
+          company_id?: string | null;
+          content?: string;
+          created_at?: string;
+          fund_id?: string;
+          id?: string;
+          mentioned_company_ids?: string[] | null;
+          mentioned_groups?: string[] | null;
+          mentioned_user_ids?: string[] | null;
+          updated_at?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "company_notes_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "company_notes_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "company_notes_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "company_notes_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       company_summaries: {
         Row: {
-          company_id: string
-          created_at: string
-          fund_id: string
-          id: string
-          period_label: string | null
-          summary_text: string
-        }
+          company_id: string;
+          created_at: string;
+          fund_id: string;
+          id: string;
+          period_label: string | null;
+          summary_text: string;
+        };
         Insert: {
-          company_id: string
-          created_at?: string
-          fund_id: string
-          id?: string
-          period_label?: string | null
-          summary_text: string
-        }
+          company_id: string;
+          created_at?: string;
+          fund_id: string;
+          id?: string;
+          period_label?: string | null;
+          summary_text: string;
+        };
         Update: {
-          company_id?: string
-          created_at?: string
-          fund_id?: string
-          id?: string
-          period_label?: string | null
-          summary_text?: string
-        }
+          company_id?: string;
+          created_at?: string;
+          fund_id?: string;
+          id?: string;
+          period_label?: string | null;
+          summary_text?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "company_summaries_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "company_summaries_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "company_summaries_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "company_summaries_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       email_requests: {
         Row: {
-          body_html: string
-          created_at: string
-          fund_id: string
-          id: string
-          quarter_label: string | null
-          recipients: Json
-          send_results: Json | null
-          sent_at: string | null
-          sent_by: string
-          status: string
-          subject: string
-          updated_at: string
-        }
+          body_html: string;
+          created_at: string;
+          fund_id: string;
+          id: string;
+          quarter_label: string | null;
+          recipients: Json;
+          send_results: Json | null;
+          sent_at: string | null;
+          sent_by: string;
+          status: string;
+          subject: string;
+          updated_at: string;
+        };
         Insert: {
-          body_html: string
-          created_at?: string
-          fund_id: string
-          id?: string
-          quarter_label?: string | null
-          recipients?: Json
-          send_results?: Json | null
-          sent_at?: string | null
-          sent_by: string
-          status?: string
-          subject: string
-          updated_at?: string
-        }
+          body_html: string;
+          created_at?: string;
+          fund_id: string;
+          id?: string;
+          quarter_label?: string | null;
+          recipients?: Json;
+          send_results?: Json | null;
+          sent_at?: string | null;
+          sent_by: string;
+          status?: string;
+          subject: string;
+          updated_at?: string;
+        };
         Update: {
-          body_html?: string
-          created_at?: string
-          fund_id?: string
-          id?: string
-          quarter_label?: string | null
-          recipients?: Json
-          send_results?: Json | null
-          sent_at?: string | null
-          sent_by?: string
-          status?: string
-          subject?: string
-          updated_at?: string
-        }
+          body_html?: string;
+          created_at?: string;
+          fund_id?: string;
+          id?: string;
+          quarter_label?: string | null;
+          recipients?: Json;
+          send_results?: Json | null;
+          sent_at?: string | null;
+          sent_by?: string;
+          status?: string;
+          subject?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "email_requests_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "email_requests_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_cash_flows: {
         Row: {
-          amount: number
-          created_at: string | null
-          flow_date: string
-          flow_type: string
-          fund_id: string
-          id: string
-          notes: string | null
-          portfolio_group: string
-          updated_at: string | null
-        }
+          amount: number;
+          created_at: string | null;
+          flow_date: string;
+          flow_type: string;
+          fund_id: string;
+          id: string;
+          notes: string | null;
+          portfolio_group: string;
+          updated_at: string | null;
+        };
         Insert: {
-          amount: number
-          created_at?: string | null
-          flow_date: string
-          flow_type: string
-          fund_id: string
-          id?: string
-          notes?: string | null
-          portfolio_group: string
-          updated_at?: string | null
-        }
+          amount: number;
+          created_at?: string | null;
+          flow_date: string;
+          flow_type: string;
+          fund_id: string;
+          id?: string;
+          notes?: string | null;
+          portfolio_group: string;
+          updated_at?: string | null;
+        };
         Update: {
-          amount?: number
-          created_at?: string | null
-          flow_date?: string
-          flow_type?: string
-          fund_id?: string
-          id?: string
-          notes?: string | null
-          portfolio_group?: string
-          updated_at?: string | null
-        }
+          amount?: number;
+          created_at?: string | null;
+          flow_date?: string;
+          flow_type?: string;
+          fund_id?: string;
+          id?: string;
+          notes?: string | null;
+          portfolio_group?: string;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_cash_flows_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_cash_flows_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_compliance_profile: {
         Row: {
-          id: string
-          fund_id: string
-          registration_status: string | null
-          aum_range: string | null
-          fund_structure: string | null
-          fundraising_status: string | null
-          reg_d_exemption: string | null
-          investor_state_count: string | null
-          california_nexus: string[] | null
-          public_equity: string | null
-          cftc_activity: string | null
-          access_person_count: string | null
-          has_foreign_entities: string | null
-          completed_at: string | null
-          updated_at: string
-          updated_by: string | null
-        }
+          id: string;
+          fund_id: string;
+          registration_status: string | null;
+          aum_range: string | null;
+          fund_structure: string | null;
+          fundraising_status: string | null;
+          reg_d_exemption: string | null;
+          investor_state_count: string | null;
+          california_nexus: string[] | null;
+          public_equity: string | null;
+          cftc_activity: string | null;
+          access_person_count: string | null;
+          has_foreign_entities: string | null;
+          completed_at: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          registration_status?: string | null
-          aum_range?: string | null
-          fund_structure?: string | null
-          fundraising_status?: string | null
-          reg_d_exemption?: string | null
-          investor_state_count?: string | null
-          california_nexus?: string[] | null
-          public_equity?: string | null
-          cftc_activity?: string | null
-          access_person_count?: string | null
-          has_foreign_entities?: string | null
-          completed_at?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
+          id?: string;
+          fund_id: string;
+          registration_status?: string | null;
+          aum_range?: string | null;
+          fund_structure?: string | null;
+          fundraising_status?: string | null;
+          reg_d_exemption?: string | null;
+          investor_state_count?: string | null;
+          california_nexus?: string[] | null;
+          public_equity?: string | null;
+          cftc_activity?: string | null;
+          access_person_count?: string | null;
+          has_foreign_entities?: string | null;
+          completed_at?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          registration_status?: string | null
-          aum_range?: string | null
-          fund_structure?: string | null
-          fundraising_status?: string | null
-          reg_d_exemption?: string | null
-          investor_state_count?: string | null
-          california_nexus?: string[] | null
-          public_equity?: string | null
-          cftc_activity?: string | null
-          access_person_count?: string | null
-          has_foreign_entities?: string | null
-          completed_at?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
+          id?: string;
+          fund_id?: string;
+          registration_status?: string | null;
+          aum_range?: string | null;
+          fund_structure?: string | null;
+          fundraising_status?: string | null;
+          reg_d_exemption?: string | null;
+          investor_state_count?: string | null;
+          california_nexus?: string[] | null;
+          public_equity?: string | null;
+          cftc_activity?: string | null;
+          access_person_count?: string | null;
+          has_foreign_entities?: string | null;
+          completed_at?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_compliance_profile_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: true
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_compliance_profile_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: true;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_group_config: {
         Row: {
-          carry_rate: number
-          cash_on_hand: number
-          created_at: string | null
-          fund_id: string
-          gp_commit_pct: number
-          id: string
-          portfolio_group: string
-          updated_at: string | null
-          vintage: number | null
-        }
+          carry_rate: number;
+          cash_on_hand: number;
+          created_at: string | null;
+          fund_id: string;
+          gp_commit_pct: number;
+          id: string;
+          portfolio_group: string;
+          updated_at: string | null;
+          vintage: number | null;
+        };
         Insert: {
-          carry_rate?: number
-          cash_on_hand?: number
-          created_at?: string | null
-          fund_id: string
-          gp_commit_pct?: number
-          id?: string
-          portfolio_group: string
-          updated_at?: string | null
-          vintage?: number | null
-        }
+          carry_rate?: number;
+          cash_on_hand?: number;
+          created_at?: string | null;
+          fund_id: string;
+          gp_commit_pct?: number;
+          id?: string;
+          portfolio_group: string;
+          updated_at?: string | null;
+          vintage?: number | null;
+        };
         Update: {
-          carry_rate?: number
-          cash_on_hand?: number
-          created_at?: string | null
-          fund_id?: string
-          gp_commit_pct?: number
-          id?: string
-          portfolio_group?: string
-          updated_at?: string | null
-          vintage?: number | null
-        }
+          carry_rate?: number;
+          cash_on_hand?: number;
+          created_at?: string | null;
+          fund_id?: string;
+          gp_commit_pct?: number;
+          id?: string;
+          portfolio_group?: string;
+          updated_at?: string | null;
+          vintage?: number | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_group_config_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_group_config_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_join_requests: {
         Row: {
-          approval_claim_id: string | null
-          approval_claimed_at: string | null
-          created_at: string | null
-          email: string
-          fund_id: string
-          id: string
-          reviewed_by: string | null
-          status: string
-          updated_at: string | null
-          user_id: string
-        }
+          approval_claim_id: string | null;
+          approval_claimed_at: string | null;
+          created_at: string | null;
+          email: string;
+          fund_id: string;
+          id: string;
+          reviewed_by: string | null;
+          status: string;
+          updated_at: string | null;
+          user_id: string;
+        };
         Insert: {
-          approval_claim_id?: string | null
-          approval_claimed_at?: string | null
-          created_at?: string | null
-          email: string
-          fund_id: string
-          id?: string
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string | null
-          user_id: string
-        }
+          approval_claim_id?: string | null;
+          approval_claimed_at?: string | null;
+          created_at?: string | null;
+          email: string;
+          fund_id: string;
+          id?: string;
+          reviewed_by?: string | null;
+          status?: string;
+          updated_at?: string | null;
+          user_id: string;
+        };
         Update: {
-          approval_claim_id?: string | null
-          approval_claimed_at?: string | null
-          created_at?: string | null
-          email?: string
-          fund_id?: string
-          id?: string
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string | null
-          user_id?: string
-        }
+          approval_claim_id?: string | null;
+          approval_claimed_at?: string | null;
+          created_at?: string | null;
+          email?: string;
+          fund_id?: string;
+          id?: string;
+          reviewed_by?: string | null;
+          status?: string;
+          updated_at?: string | null;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_join_requests_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_join_requests_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_domain_defaults: {
         Row: {
-          domain: string
-          fund_id: string
-          level: string
-          updated_at: string
-          updated_by: string | null
-        }
+          domain: string;
+          fund_id: string;
+          level: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
         Insert: {
-          domain: string
-          fund_id: string
-          level: string
-          updated_at?: string
-          updated_by?: string | null
-        }
+          domain: string;
+          fund_id: string;
+          level: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Update: {
-          domain?: string
-          fund_id?: string
-          level?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
+          domain?: string;
+          fund_id?: string;
+          level?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_domain_defaults_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_domain_defaults_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_member_access: {
         Row: {
-          domain: string
-          fund_id: string
-          level: string
-          updated_at: string
-          updated_by: string | null
-          user_id: string
-        }
+          domain: string;
+          fund_id: string;
+          level: string;
+          updated_at: string;
+          updated_by: string | null;
+          user_id: string;
+        };
         Insert: {
-          domain: string
-          fund_id: string
-          level: string
-          updated_at?: string
-          updated_by?: string | null
-          user_id: string
-        }
+          domain: string;
+          fund_id: string;
+          level: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          user_id: string;
+        };
         Update: {
-          domain?: string
-          fund_id?: string
-          level?: string
-          updated_at?: string
-          updated_by?: string | null
-          user_id?: string
-        }
+          domain?: string;
+          fund_id?: string;
+          level?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_member_access_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_member_access_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_members: {
         Row: {
-          created_at: string | null
-          display_name: string | null
-          fund_id: string
-          id: string
-          invited_by: string | null
-          role: string
-          user_id: string
-        }
+          created_at: string | null;
+          display_name: string | null;
+          fund_id: string;
+          id: string;
+          invited_by: string | null;
+          role: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string | null
-          display_name?: string | null
-          fund_id: string
-          id?: string
-          invited_by?: string | null
-          role?: string
-          user_id: string
-        }
+          created_at?: string | null;
+          display_name?: string | null;
+          fund_id: string;
+          id?: string;
+          invited_by?: string | null;
+          role?: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string | null
-          display_name?: string | null
-          fund_id?: string
-          id?: string
-          invited_by?: string | null
-          role?: string
-          user_id?: string
-        }
+          created_at?: string | null;
+          display_name?: string | null;
+          fund_id?: string;
+          id?: string;
+          invited_by?: string | null;
+          role?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_members_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_members_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       fund_settings: {
         Row: {
-          ai_summary_prompt: string | null
-          analytics_custom_head_script: string | null
-          analytics_fathom_site_id: string | null
-          analytics_ga_measurement_id: string | null
-          approval_email_body: string | null
-          approval_email_subject: string | null
-          asks_email_provider: string | null
-          claude_api_key_encrypted: string | null
-          claude_model: string
-          created_at: string | null
-          currency: string
-          deal_intake_enabled: boolean
-          deal_research_enabled: boolean
-          deal_research_min_fit: string
-          deal_screening_prompt: string | null
-          deal_submission_token: string | null
-          deal_thesis: string | null
-          default_ai_provider: string
-          memo_agent_monthly_token_cap: number | null
-          memo_agent_per_deal_token_cap: number | null
-          memo_agent_stage_models: Json | null
-          memo_agent_web_search_enabled: boolean
-          disable_user_tracking: boolean
-          dropbox_app_key: string | null
-          dropbox_app_secret_encrypted: string | null
-          dropbox_folder_path: string | null
-          dropbox_refresh_token_encrypted: string | null
-          encryption_key_encrypted: string | null
-          feature_visibility: Json | null
-          search_category_config: Json
-          search_source_config: Json
-          file_storage_provider: string | null
-          fund_id: string
-          gemini_api_key_encrypted: string | null
-          gemini_model: string
-          google_client_id: string | null
-          google_client_secret_encrypted: string | null
-          google_drive_folder_id: string | null
-          google_drive_folder_name: string | null
-          google_refresh_token_encrypted: string | null
-          id: string
-          inbound_email_provider: string | null
-          mailgun_api_key_encrypted: string | null
-          mailgun_inbound_domain: string | null
-          mailgun_sending_domain: string | null
-          mailgun_signing_key_encrypted: string | null
-          ollama_base_url: string | null
-          ollama_model: string
-          openai_api_key_encrypted: string | null
-          openai_model: string
-          openrouter_request_parameters: Json
-          outbound_email_provider: string | null
-          postmark_inbound_address: string | null
-          postmark_server_token_encrypted: string | null
-          postmark_webhook_token: string | null
-          postmark_webhook_token_encrypted: string | null
-          resend_api_key_encrypted: string | null
-          resolved_reviews_ttl_days: number | null
-          retain_resolved_reviews: boolean | null
-          routing_confidence_threshold: number | null
-          routing_model: string | null
-          system_email_from_address: string | null
-          system_email_from_name: string | null
-          updated_at: string | null
-        }
+          affinity_mcp_enabled: boolean;
+          agent_api_enabled: boolean;
+          ai_feature_models: Json | null;
+          ai_summary_prompt: string | null;
+          analytics_custom_head_script: string | null;
+          analytics_fathom_site_id: string | null;
+          analytics_ga_measurement_id: string | null;
+          approval_email_body: string | null;
+          approval_email_subject: string | null;
+          asks_email_provider: string | null;
+          claude_api_key_encrypted: string | null;
+          claude_model: string;
+          created_at: string | null;
+          currency: string;
+          deal_intake_enabled: boolean;
+          deal_research_enabled: boolean;
+          deal_research_min_fit: string;
+          deal_screening_prompt: string | null;
+          deal_submission_token: string | null;
+          deal_thesis: string | null;
+          default_ai_provider: string;
+          diligence_checklist_template: string;
+          disable_user_tracking: boolean;
+          dropbox_app_key: string | null;
+          dropbox_app_secret_encrypted: string | null;
+          dropbox_folder_path: string | null;
+          dropbox_refresh_token_encrypted: string | null;
+          encryption_key_encrypted: string | null;
+          feature_visibility: Json | null;
+          file_storage_provider: string | null;
+          fund_id: string;
+          gemini_api_key_encrypted: string | null;
+          gemini_model: string;
+          google_client_id: string | null;
+          google_client_secret_encrypted: string | null;
+          google_drive_folder_id: string | null;
+          google_drive_folder_name: string | null;
+          google_refresh_token_encrypted: string | null;
+          id: string;
+          inbound_email_provider: string | null;
+          lp_portal_enabled: boolean;
+          lp_report_description: string | null;
+          lp_report_footer: string | null;
+          mailgun_api_key_encrypted: string | null;
+          mailgun_inbound_domain: string | null;
+          mailgun_sending_domain: string | null;
+          mailgun_signing_key_encrypted: string | null;
+          memo_agent_monthly_token_cap: number | null;
+          memo_agent_per_deal_token_cap: number | null;
+          memo_agent_stage_models: Json | null;
+          memo_agent_web_search_enabled: boolean;
+          memo_export_font_family: string | null;
+          memo_export_font_size: number | null;
+          memo_first_page_anchor_id: string | null;
+          ollama_base_url: string | null;
+          ollama_model: string;
+          openai_api_key_encrypted: string | null;
+          openai_model: string;
+          openrouter_api_key_encrypted: string | null;
+          openrouter_base_url: string | null;
+          openrouter_model: string | null;
+          openrouter_request_parameters: Json;
+          outbound_email_provider: string | null;
+          postmark_inbound_address: string | null;
+          postmark_server_token_encrypted: string | null;
+          postmark_webhook_token: string | null;
+          postmark_webhook_token_encrypted: string | null;
+          resend_api_key_encrypted: string | null;
+          resolved_reviews_ttl_days: number | null;
+          retain_resolved_reviews: boolean | null;
+          routing_confidence_threshold: number | null;
+          routing_model: string | null;
+          search_category_config: Json;
+          search_source_config: Json;
+          system_email_from_address: string | null;
+          system_email_from_name: string | null;
+          theme: Json | null;
+          updated_at: string | null;
+        };
         Insert: {
-          ai_summary_prompt?: string | null
-          analytics_custom_head_script?: string | null
-          analytics_fathom_site_id?: string | null
-          analytics_ga_measurement_id?: string | null
-          approval_email_body?: string | null
-          approval_email_subject?: string | null
-          asks_email_provider?: string | null
-          claude_api_key_encrypted?: string | null
-          claude_model?: string
-          created_at?: string | null
-          currency?: string
-          deal_intake_enabled?: boolean
-          deal_research_enabled?: boolean
-          deal_research_min_fit?: string
-          deal_screening_prompt?: string | null
-          deal_submission_token?: string | null
-          deal_thesis?: string | null
-          default_ai_provider?: string
-          memo_agent_monthly_token_cap?: number | null
-          memo_agent_per_deal_token_cap?: number | null
-          memo_agent_stage_models?: Json | null
-          memo_agent_web_search_enabled?: boolean
-          disable_user_tracking?: boolean
-          dropbox_app_key?: string | null
-          dropbox_app_secret_encrypted?: string | null
-          dropbox_folder_path?: string | null
-          dropbox_refresh_token_encrypted?: string | null
-          encryption_key_encrypted?: string | null
-          feature_visibility?: Json | null
-          search_category_config?: Json
-          search_source_config?: Json
-          file_storage_provider?: string | null
-          fund_id: string
-          gemini_api_key_encrypted?: string | null
-          gemini_model?: string
-          google_client_id?: string | null
-          google_client_secret_encrypted?: string | null
-          google_drive_folder_id?: string | null
-          google_drive_folder_name?: string | null
-          google_refresh_token_encrypted?: string | null
-          id?: string
-          inbound_email_provider?: string | null
-          mailgun_api_key_encrypted?: string | null
-          mailgun_inbound_domain?: string | null
-          mailgun_sending_domain?: string | null
-          mailgun_signing_key_encrypted?: string | null
-          ollama_base_url?: string | null
-          ollama_model?: string
-          openai_api_key_encrypted?: string | null
-          openai_model?: string
-          openrouter_request_parameters?: Json
-          outbound_email_provider?: string | null
-          postmark_inbound_address?: string | null
-          postmark_server_token_encrypted?: string | null
-          postmark_webhook_token?: string | null
-          postmark_webhook_token_encrypted?: string | null
-          resend_api_key_encrypted?: string | null
-          resolved_reviews_ttl_days?: number | null
-          retain_resolved_reviews?: boolean | null
-          routing_confidence_threshold?: number | null
-          routing_model?: string | null
-          system_email_from_address?: string | null
-          system_email_from_name?: string | null
-          updated_at?: string | null
-        }
+          affinity_mcp_enabled?: boolean;
+          agent_api_enabled?: boolean;
+          ai_feature_models?: Json | null;
+          ai_summary_prompt?: string | null;
+          analytics_custom_head_script?: string | null;
+          analytics_fathom_site_id?: string | null;
+          analytics_ga_measurement_id?: string | null;
+          approval_email_body?: string | null;
+          approval_email_subject?: string | null;
+          asks_email_provider?: string | null;
+          claude_api_key_encrypted?: string | null;
+          claude_model?: string;
+          created_at?: string | null;
+          currency?: string;
+          deal_intake_enabled?: boolean;
+          deal_research_enabled?: boolean;
+          deal_research_min_fit?: string;
+          deal_screening_prompt?: string | null;
+          deal_submission_token?: string | null;
+          deal_thesis?: string | null;
+          default_ai_provider?: string;
+          diligence_checklist_template?: string;
+          disable_user_tracking?: boolean;
+          dropbox_app_key?: string | null;
+          dropbox_app_secret_encrypted?: string | null;
+          dropbox_folder_path?: string | null;
+          dropbox_refresh_token_encrypted?: string | null;
+          encryption_key_encrypted?: string | null;
+          feature_visibility?: Json | null;
+          file_storage_provider?: string | null;
+          fund_id: string;
+          gemini_api_key_encrypted?: string | null;
+          gemini_model?: string;
+          google_client_id?: string | null;
+          google_client_secret_encrypted?: string | null;
+          google_drive_folder_id?: string | null;
+          google_drive_folder_name?: string | null;
+          google_refresh_token_encrypted?: string | null;
+          id?: string;
+          inbound_email_provider?: string | null;
+          lp_portal_enabled?: boolean;
+          lp_report_description?: string | null;
+          lp_report_footer?: string | null;
+          mailgun_api_key_encrypted?: string | null;
+          mailgun_inbound_domain?: string | null;
+          mailgun_sending_domain?: string | null;
+          mailgun_signing_key_encrypted?: string | null;
+          memo_agent_monthly_token_cap?: number | null;
+          memo_agent_per_deal_token_cap?: number | null;
+          memo_agent_stage_models?: Json | null;
+          memo_agent_web_search_enabled?: boolean;
+          memo_export_font_family?: string | null;
+          memo_export_font_size?: number | null;
+          memo_first_page_anchor_id?: string | null;
+          ollama_base_url?: string | null;
+          ollama_model?: string;
+          openai_api_key_encrypted?: string | null;
+          openai_model?: string;
+          openrouter_api_key_encrypted?: string | null;
+          openrouter_base_url?: string | null;
+          openrouter_model?: string | null;
+          openrouter_request_parameters?: Json;
+          outbound_email_provider?: string | null;
+          postmark_inbound_address?: string | null;
+          postmark_server_token_encrypted?: string | null;
+          postmark_webhook_token?: string | null;
+          postmark_webhook_token_encrypted?: string | null;
+          resend_api_key_encrypted?: string | null;
+          resolved_reviews_ttl_days?: number | null;
+          retain_resolved_reviews?: boolean | null;
+          routing_confidence_threshold?: number | null;
+          routing_model?: string | null;
+          search_category_config?: Json;
+          search_source_config?: Json;
+          system_email_from_address?: string | null;
+          system_email_from_name?: string | null;
+          theme?: Json | null;
+          updated_at?: string | null;
+        };
         Update: {
-          ai_summary_prompt?: string | null
-          analytics_custom_head_script?: string | null
-          analytics_fathom_site_id?: string | null
-          analytics_ga_measurement_id?: string | null
-          approval_email_body?: string | null
-          approval_email_subject?: string | null
-          asks_email_provider?: string | null
-          claude_api_key_encrypted?: string | null
-          claude_model?: string
-          created_at?: string | null
-          currency?: string
-          deal_intake_enabled?: boolean
-          deal_research_enabled?: boolean
-          deal_research_min_fit?: string
-          deal_screening_prompt?: string | null
-          deal_submission_token?: string | null
-          deal_thesis?: string | null
-          default_ai_provider?: string
-          memo_agent_monthly_token_cap?: number | null
-          memo_agent_per_deal_token_cap?: number | null
-          memo_agent_stage_models?: Json | null
-          memo_agent_web_search_enabled?: boolean
-          disable_user_tracking?: boolean
-          dropbox_app_key?: string | null
-          dropbox_app_secret_encrypted?: string | null
-          dropbox_folder_path?: string | null
-          dropbox_refresh_token_encrypted?: string | null
-          encryption_key_encrypted?: string | null
-          feature_visibility?: Json | null
-          search_category_config?: Json
-          search_source_config?: Json
-          file_storage_provider?: string | null
-          fund_id?: string
-          gemini_api_key_encrypted?: string | null
-          gemini_model?: string
-          google_client_id?: string | null
-          google_client_secret_encrypted?: string | null
-          google_drive_folder_id?: string | null
-          google_drive_folder_name?: string | null
-          google_refresh_token_encrypted?: string | null
-          id?: string
-          inbound_email_provider?: string | null
-          mailgun_api_key_encrypted?: string | null
-          mailgun_inbound_domain?: string | null
-          mailgun_sending_domain?: string | null
-          mailgun_signing_key_encrypted?: string | null
-          ollama_base_url?: string | null
-          ollama_model?: string
-          openai_api_key_encrypted?: string | null
-          openai_model?: string
-          openrouter_request_parameters?: Json
-          outbound_email_provider?: string | null
-          postmark_inbound_address?: string | null
-          postmark_server_token_encrypted?: string | null
-          postmark_webhook_token?: string | null
-          postmark_webhook_token_encrypted?: string | null
-          resend_api_key_encrypted?: string | null
-          resolved_reviews_ttl_days?: number | null
-          retain_resolved_reviews?: boolean | null
-          routing_confidence_threshold?: number | null
-          routing_model?: string | null
-          system_email_from_address?: string | null
-          system_email_from_name?: string | null
-          updated_at?: string | null
-        }
+          affinity_mcp_enabled?: boolean;
+          agent_api_enabled?: boolean;
+          ai_feature_models?: Json | null;
+          ai_summary_prompt?: string | null;
+          analytics_custom_head_script?: string | null;
+          analytics_fathom_site_id?: string | null;
+          analytics_ga_measurement_id?: string | null;
+          approval_email_body?: string | null;
+          approval_email_subject?: string | null;
+          asks_email_provider?: string | null;
+          claude_api_key_encrypted?: string | null;
+          claude_model?: string;
+          created_at?: string | null;
+          currency?: string;
+          deal_intake_enabled?: boolean;
+          deal_research_enabled?: boolean;
+          deal_research_min_fit?: string;
+          deal_screening_prompt?: string | null;
+          deal_submission_token?: string | null;
+          deal_thesis?: string | null;
+          default_ai_provider?: string;
+          diligence_checklist_template?: string;
+          disable_user_tracking?: boolean;
+          dropbox_app_key?: string | null;
+          dropbox_app_secret_encrypted?: string | null;
+          dropbox_folder_path?: string | null;
+          dropbox_refresh_token_encrypted?: string | null;
+          encryption_key_encrypted?: string | null;
+          feature_visibility?: Json | null;
+          file_storage_provider?: string | null;
+          fund_id?: string;
+          gemini_api_key_encrypted?: string | null;
+          gemini_model?: string;
+          google_client_id?: string | null;
+          google_client_secret_encrypted?: string | null;
+          google_drive_folder_id?: string | null;
+          google_drive_folder_name?: string | null;
+          google_refresh_token_encrypted?: string | null;
+          id?: string;
+          inbound_email_provider?: string | null;
+          lp_portal_enabled?: boolean;
+          lp_report_description?: string | null;
+          lp_report_footer?: string | null;
+          mailgun_api_key_encrypted?: string | null;
+          mailgun_inbound_domain?: string | null;
+          mailgun_sending_domain?: string | null;
+          mailgun_signing_key_encrypted?: string | null;
+          memo_agent_monthly_token_cap?: number | null;
+          memo_agent_per_deal_token_cap?: number | null;
+          memo_agent_stage_models?: Json | null;
+          memo_agent_web_search_enabled?: boolean;
+          memo_export_font_family?: string | null;
+          memo_export_font_size?: number | null;
+          memo_first_page_anchor_id?: string | null;
+          ollama_base_url?: string | null;
+          ollama_model?: string;
+          openai_api_key_encrypted?: string | null;
+          openai_model?: string;
+          openrouter_api_key_encrypted?: string | null;
+          openrouter_base_url?: string | null;
+          openrouter_model?: string | null;
+          openrouter_request_parameters?: Json;
+          outbound_email_provider?: string | null;
+          postmark_inbound_address?: string | null;
+          postmark_server_token_encrypted?: string | null;
+          postmark_webhook_token?: string | null;
+          postmark_webhook_token_encrypted?: string | null;
+          resend_api_key_encrypted?: string | null;
+          resolved_reviews_ttl_days?: number | null;
+          retain_resolved_reviews?: boolean | null;
+          routing_confidence_threshold?: number | null;
+          routing_model?: string | null;
+          search_category_config?: Json;
+          search_source_config?: Json;
+          system_email_from_address?: string | null;
+          system_email_from_name?: string | null;
+          theme?: Json | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_settings_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: true
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_settings_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: true;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+          {
+            foreignKeyName: "fund_settings_memo_first_page_anchor_id_fkey";
+            columns: ["memo_first_page_anchor_id"];
+            isOneToOne: false;
+            referencedRelation: "style_anchor_memos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       fund_public_sites: {
         Row: {
-          fund_id: string
-          draft_template_key: string
-          draft_content: Json
-          draft_revision: number
-          lifecycle_revision: number
-          published_template_key: string | null
-          published_content: Json | null
-          published_version: number
-          published_from_draft_revision: number | null
-          is_published: boolean
-          published_at: string | null
-          published_by: string | null
-          updated_at: string
-          updated_by: string | null
-        }
+          fund_id: string;
+          draft_template_key: string;
+          draft_content: Json;
+          draft_revision: number;
+          lifecycle_revision: number;
+          published_template_key: string | null;
+          published_content: Json | null;
+          published_version: number;
+          published_from_draft_revision: number | null;
+          is_published: boolean;
+          published_at: string | null;
+          published_by: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
         Insert: {
-          fund_id: string
-          draft_template_key?: string
-          draft_content: Json
-          draft_revision?: number
-          lifecycle_revision?: number
-          published_template_key?: string | null
-          published_content?: Json | null
-          published_version?: number
-          published_from_draft_revision?: number | null
-          is_published?: boolean
-          published_at?: string | null
-          published_by?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
+          fund_id: string;
+          draft_template_key?: string;
+          draft_content: Json;
+          draft_revision?: number;
+          lifecycle_revision?: number;
+          published_template_key?: string | null;
+          published_content?: Json | null;
+          published_version?: number;
+          published_from_draft_revision?: number | null;
+          is_published?: boolean;
+          published_at?: string | null;
+          published_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Update: {
-          fund_id?: string
-          draft_template_key?: string
-          draft_content?: Json
-          draft_revision?: number
-          lifecycle_revision?: number
-          published_template_key?: string | null
-          published_content?: Json | null
-          published_version?: number
-          published_from_draft_revision?: number | null
-          is_published?: boolean
-          published_at?: string | null
-          published_by?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
+          fund_id?: string;
+          draft_template_key?: string;
+          draft_content?: Json;
+          draft_revision?: number;
+          lifecycle_revision?: number;
+          published_template_key?: string | null;
+          published_content?: Json | null;
+          published_version?: number;
+          published_from_draft_revision?: number | null;
+          is_published?: boolean;
+          published_at?: string | null;
+          published_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "fund_public_sites_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: true
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "fund_public_sites_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: true;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       firm_schemas: {
         Row: {
-          id: string
-          fund_id: string
-          schema_name: string
-          schema_version: string
-          yaml_content: string
-          parsed_content: Json | null
-          is_active: boolean
-          edit_note: string | null
-          edited_by: string | null
-          edited_at: string
-          created_at: string
-        }
+          id: string;
+          fund_id: string;
+          schema_name: string;
+          schema_version: string;
+          yaml_content: string;
+          parsed_content: Json | null;
+          is_active: boolean;
+          edit_note: string | null;
+          edited_by: string | null;
+          edited_at: string;
+          created_at: string;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          schema_name: string
-          schema_version: string
-          yaml_content: string
-          parsed_content?: Json | null
-          is_active?: boolean
-          edit_note?: string | null
-          edited_by?: string | null
-          edited_at?: string
-          created_at?: string
-        }
+          id?: string;
+          fund_id: string;
+          schema_name: string;
+          schema_version: string;
+          yaml_content: string;
+          parsed_content?: Json | null;
+          is_active?: boolean;
+          edit_note?: string | null;
+          edited_by?: string | null;
+          edited_at?: string;
+          created_at?: string;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          schema_name?: string
-          schema_version?: string
-          yaml_content?: string
-          parsed_content?: Json | null
-          is_active?: boolean
-          edit_note?: string | null
-          edited_by?: string | null
-          edited_at?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          fund_id?: string;
+          schema_name?: string;
+          schema_version?: string;
+          yaml_content?: string;
+          parsed_content?: Json | null;
+          is_active?: boolean;
+          edit_note?: string | null;
+          edited_by?: string | null;
+          edited_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       diligence_deals: {
         Row: {
-          id: string
-          fund_id: string
-          name: string
-          aliases: string[] | null
-          sector: string | null
-          stage_at_consideration: string | null
-          deal_status: string
-          current_memo_stage: string
-          output_language: string
-          lead_partner_id: string | null
-          promoted_company_id: string | null
-          drive_folder_url: string | null
-          notes_summary: string | null
-          created_at: string
-          updated_at: string
-          created_by: string | null
-        }
+          id: string;
+          fund_id: string;
+          name: string;
+          aliases: string[] | null;
+          sector: string | null;
+          stage_at_consideration: string | null;
+          deal_status: string;
+          current_memo_stage: string;
+          output_language: string;
+          lead_partner_id: string | null;
+          promoted_company_id: string | null;
+          drive_folder_url: string | null;
+          notes_summary: string | null;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          name: string
-          aliases?: string[] | null
-          sector?: string | null
-          stage_at_consideration?: string | null
-          deal_status?: string
-          current_memo_stage?: string
-          output_language?: string
-          lead_partner_id?: string | null
-          promoted_company_id?: string | null
-          drive_folder_url?: string | null
-          notes_summary?: string | null
-          created_at?: string
-          updated_at?: string
-          created_by?: string | null
-        }
+          id?: string;
+          fund_id: string;
+          name: string;
+          aliases?: string[] | null;
+          sector?: string | null;
+          stage_at_consideration?: string | null;
+          deal_status?: string;
+          current_memo_stage?: string;
+          output_language?: string;
+          lead_partner_id?: string | null;
+          promoted_company_id?: string | null;
+          drive_folder_url?: string | null;
+          notes_summary?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          name?: string
-          aliases?: string[] | null
-          sector?: string | null
-          stage_at_consideration?: string | null
-          deal_status?: string
-          current_memo_stage?: string
-          output_language?: string
-          lead_partner_id?: string | null
-          promoted_company_id?: string | null
-          drive_folder_url?: string | null
-          notes_summary?: string | null
-          created_at?: string
-          updated_at?: string
-          created_by?: string | null
-        }
-        Relationships: []
-      }
+          id?: string;
+          fund_id?: string;
+          name?: string;
+          aliases?: string[] | null;
+          sector?: string | null;
+          stage_at_consideration?: string | null;
+          deal_status?: string;
+          current_memo_stage?: string;
+          output_language?: string;
+          lead_partner_id?: string | null;
+          promoted_company_id?: string | null;
+          drive_folder_url?: string | null;
+          notes_summary?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [];
+      };
       diligence_documents: {
         Row: {
-          id: string
-          deal_id: string
-          fund_id: string
-          storage_path: string
-          file_name: string
-          file_format: string
-          file_size_bytes: number | null
-          detected_type: string | null
-          type_confidence: string | null
-          parse_status: string
-          parse_notes: string | null
-          drive_file_id: string | null
-          drive_source_url: string | null
-          source_kind: string | null
-          uploaded_by: string | null
-          uploaded_at: string
-        }
+          id: string;
+          deal_id: string;
+          fund_id: string;
+          storage_path: string;
+          file_name: string;
+          file_format: string;
+          file_size_bytes: number | null;
+          detected_type: string | null;
+          type_confidence: string | null;
+          parse_status: string;
+          parse_notes: string | null;
+          drive_file_id: string | null;
+          drive_source_url: string | null;
+          source_kind: string | null;
+          uploaded_by: string | null;
+          uploaded_at: string;
+        };
         Insert: {
-          id?: string
-          deal_id: string
-          fund_id: string
-          storage_path: string
-          file_name: string
-          file_format: string
-          file_size_bytes?: number | null
-          detected_type?: string | null
-          type_confidence?: string | null
-          parse_status?: string
-          parse_notes?: string | null
-          drive_file_id?: string | null
-          drive_source_url?: string | null
-          source_kind?: string | null
-          uploaded_by?: string | null
-          uploaded_at?: string
-        }
+          id?: string;
+          deal_id: string;
+          fund_id: string;
+          storage_path: string;
+          file_name: string;
+          file_format: string;
+          file_size_bytes?: number | null;
+          detected_type?: string | null;
+          type_confidence?: string | null;
+          parse_status?: string;
+          parse_notes?: string | null;
+          drive_file_id?: string | null;
+          drive_source_url?: string | null;
+          source_kind?: string | null;
+          uploaded_by?: string | null;
+          uploaded_at?: string;
+        };
         Update: {
-          id?: string
-          deal_id?: string
-          fund_id?: string
-          storage_path?: string
-          file_name?: string
-          file_format?: string
-          file_size_bytes?: number | null
-          detected_type?: string | null
-          type_confidence?: string | null
-          parse_status?: string
-          parse_notes?: string | null
-          drive_file_id?: string | null
-          drive_source_url?: string | null
-          source_kind?: string | null
-          uploaded_by?: string | null
-          uploaded_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          deal_id?: string;
+          fund_id?: string;
+          storage_path?: string;
+          file_name?: string;
+          file_format?: string;
+          file_size_bytes?: number | null;
+          detected_type?: string | null;
+          type_confidence?: string | null;
+          parse_status?: string;
+          parse_notes?: string | null;
+          drive_file_id?: string | null;
+          drive_source_url?: string | null;
+          source_kind?: string | null;
+          uploaded_by?: string | null;
+          uploaded_at?: string;
+        };
+        Relationships: [];
+      };
       diligence_expert_requests: {
         Row: {
-          id: string
-          fund_id: string
-          deal_id: string
-          created_by: string | null
-          source_kind: string
-          source_ref: Json
-          question: string
-          expert_profile: string
-          context_snapshot: string
-          expert_id: string | null
-          selection_method: string | null
-          expert_name: string | null
-          expert_email: string | null
-          expert_snapshot: Json | null
-          token_hash: string | null
-          expires_at: string | null
-          invited_at: string | null
-          email_provider_accepted_at: string | null
-          email_message_id: string | null
-          email_error_code: string | null
-          email_error_message: string | null
-          response_markdown: string | null
-          submitted_at: string | null
-          document_id: string | null
-          materialization_error: string | null
-          status: string
-          created_at: string
-          updated_at: string
-        }
+          context_snapshot: string;
+          created_at: string;
+          created_by: string | null;
+          deal_id: string;
+          document_id: string | null;
+          email_error_code: string | null;
+          email_error_message: string | null;
+          email_message_id: string | null;
+          email_provider_accepted_at: string | null;
+          email_thread_id: string | null;
+          expert_email: string | null;
+          expert_id: string | null;
+          expert_name: string | null;
+          expert_profile: string;
+          expert_snapshot: Json | null;
+          expert_source_type: string | null;
+          expert_verification_type: string | null;
+          expert_verified_at: string | null;
+          expires_at: string | null;
+          fund_id: string;
+          id: string;
+          invited_at: string | null;
+          materialization_error: string | null;
+          question: string;
+          response_markdown: string | null;
+          selection_method: string | null;
+          source_kind: string;
+          source_ref: Json;
+          status: string;
+          submitted_at: string | null;
+          token_hash: string | null;
+          updated_at: string;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          deal_id: string
-          created_by?: string | null
-          source_kind: string
-          source_ref: Json
-          question: string
-          expert_profile: string
-          context_snapshot: string
-          expert_id?: string | null
-          selection_method?: string | null
-          expert_name?: string | null
-          expert_email?: string | null
-          expert_snapshot?: Json | null
-          token_hash?: string | null
-          expires_at?: string | null
-          invited_at?: string | null
-          email_provider_accepted_at?: string | null
-          email_message_id?: string | null
-          email_error_code?: string | null
-          email_error_message?: string | null
-          response_markdown?: string | null
-          submitted_at?: string | null
-          document_id?: string | null
-          materialization_error?: string | null
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
+          context_snapshot: string;
+          created_at?: string;
+          created_by?: string | null;
+          deal_id: string;
+          document_id?: string | null;
+          email_error_code?: string | null;
+          email_error_message?: string | null;
+          email_message_id?: string | null;
+          email_provider_accepted_at?: string | null;
+          email_thread_id?: string | null;
+          expert_email?: string | null;
+          expert_id?: string | null;
+          expert_name?: string | null;
+          expert_profile: string;
+          expert_snapshot?: Json | null;
+          expert_source_type?: string | null;
+          expert_verification_type?: string | null;
+          expert_verified_at?: string | null;
+          expires_at?: string | null;
+          fund_id: string;
+          id?: string;
+          invited_at?: string | null;
+          materialization_error?: string | null;
+          question: string;
+          response_markdown?: string | null;
+          selection_method?: string | null;
+          source_kind: string;
+          source_ref: Json;
+          status?: string;
+          submitted_at?: string | null;
+          token_hash?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          deal_id?: string
-          created_by?: string | null
-          source_kind?: string
-          source_ref?: Json
-          question?: string
-          expert_profile?: string
-          context_snapshot?: string
-          expert_id?: string | null
-          selection_method?: string | null
-          expert_name?: string | null
-          expert_email?: string | null
-          expert_snapshot?: Json | null
-          token_hash?: string | null
-          expires_at?: string | null
-          invited_at?: string | null
-          email_provider_accepted_at?: string | null
-          email_message_id?: string | null
-          email_error_code?: string | null
-          email_error_message?: string | null
-          response_markdown?: string | null
-          submitted_at?: string | null
-          document_id?: string | null
-          materialization_error?: string | null
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          context_snapshot?: string;
+          created_at?: string;
+          created_by?: string | null;
+          deal_id?: string;
+          document_id?: string | null;
+          email_error_code?: string | null;
+          email_error_message?: string | null;
+          email_message_id?: string | null;
+          email_provider_accepted_at?: string | null;
+          email_thread_id?: string | null;
+          expert_email?: string | null;
+          expert_id?: string | null;
+          expert_name?: string | null;
+          expert_profile?: string;
+          expert_snapshot?: Json | null;
+          expert_source_type?: string | null;
+          expert_verification_type?: string | null;
+          expert_verified_at?: string | null;
+          expires_at?: string | null;
+          fund_id?: string;
+          id?: string;
+          invited_at?: string | null;
+          materialization_error?: string | null;
+          question?: string;
+          response_markdown?: string | null;
+          selection_method?: string | null;
+          source_kind?: string;
+          source_ref?: Json;
+          status?: string;
+          submitted_at?: string | null;
+          token_hash?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "diligence_expert_request_deal_scope_fkey";
+            columns: ["deal_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "diligence_deals";
+            referencedColumns: ["id", "fund_id"];
+          },
+          {
+            foreignKeyName: "diligence_expert_request_document_scope_fkey";
+            columns: ["document_id", "deal_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "diligence_documents";
+            referencedColumns: ["id", "deal_id", "fund_id"];
+          },
+          {
+            foreignKeyName: "diligence_expert_requests_deal_id_fkey";
+            columns: ["deal_id"];
+            isOneToOne: false;
+            referencedRelation: "diligence_deals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diligence_expert_requests_document_id_fkey";
+            columns: ["document_id"];
+            isOneToOne: false;
+            referencedRelation: "diligence_documents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diligence_expert_requests_email_thread_fund_fkey";
+            columns: ["email_thread_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_threads";
+            referencedColumns: ["id", "fund_id"];
+          },
+          {
+            foreignKeyName: "diligence_expert_requests_expert_id_fkey";
+            columns: ["expert_id"];
+            isOneToOne: false;
+            referencedRelation: "experts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diligence_expert_requests_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       diligence_memo_drafts: {
         Row: {
-          id: string
-          deal_id: string
-          fund_id: string
-          draft_version: string
-          agent_version: string
-          ai_provider: string | null
-          ai_model: string | null
-          ingestion_output: Json | null
-          research_output: Json | null
-          checklist_assessment_output: Json | null
-          qa_answers: Json | null
-          memo_draft_output: Json | null
-          output_language: string
-          source_draft_id: string | null
-          is_draft: boolean
-          finalized_at: string | null
-          finalized_by: string | null
-          created_at: string
-          created_by: string | null
-        }
+          id: string;
+          deal_id: string;
+          fund_id: string;
+          draft_version: string;
+          agent_version: string;
+          ai_provider: string | null;
+          ai_model: string | null;
+          ingestion_output: Json | null;
+          research_output: Json | null;
+          checklist_assessment_output: Json | null;
+          qa_answers: Json | null;
+          memo_draft_output: Json | null;
+          output_language: string;
+          source_draft_id: string | null;
+          is_draft: boolean;
+          finalized_at: string | null;
+          finalized_by: string | null;
+          created_at: string;
+          created_by: string | null;
+        };
         Insert: {
-          id?: string
-          deal_id: string
-          fund_id: string
-          draft_version: string
-          agent_version: string
-          ai_provider?: string | null
-          ai_model?: string | null
-          ingestion_output?: Json | null
-          research_output?: Json | null
-          checklist_assessment_output?: Json | null
-          qa_answers?: Json | null
-          memo_draft_output?: Json | null
-          output_language?: string
-          source_draft_id?: string | null
-          is_draft?: boolean
-          finalized_at?: string | null
-          finalized_by?: string | null
-          created_at?: string
-          created_by?: string | null
-        }
+          id?: string;
+          deal_id: string;
+          fund_id: string;
+          draft_version: string;
+          agent_version: string;
+          ai_provider?: string | null;
+          ai_model?: string | null;
+          ingestion_output?: Json | null;
+          research_output?: Json | null;
+          checklist_assessment_output?: Json | null;
+          qa_answers?: Json | null;
+          memo_draft_output?: Json | null;
+          output_language?: string;
+          source_draft_id?: string | null;
+          is_draft?: boolean;
+          finalized_at?: string | null;
+          finalized_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+        };
         Update: {
-          id?: string
-          deal_id?: string
-          fund_id?: string
-          draft_version?: string
-          agent_version?: string
-          ai_provider?: string | null
-          ai_model?: string | null
-          ingestion_output?: Json | null
-          research_output?: Json | null
-          checklist_assessment_output?: Json | null
-          qa_answers?: Json | null
-          memo_draft_output?: Json | null
-          output_language?: string
-          source_draft_id?: string | null
-          is_draft?: boolean
-          finalized_at?: string | null
-          finalized_by?: string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Relationships: []
-      }
+          id?: string;
+          deal_id?: string;
+          fund_id?: string;
+          draft_version?: string;
+          agent_version?: string;
+          ai_provider?: string | null;
+          ai_model?: string | null;
+          ingestion_output?: Json | null;
+          research_output?: Json | null;
+          checklist_assessment_output?: Json | null;
+          qa_answers?: Json | null;
+          memo_draft_output?: Json | null;
+          output_language?: string;
+          source_draft_id?: string | null;
+          is_draft?: boolean;
+          finalized_at?: string | null;
+          finalized_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [];
+      };
       diligence_attention_items: {
         Row: {
-          id: string
-          deal_id: string
-          draft_id: string | null
-          fund_id: string
-          kind: string
-          urgency: string
-          body: string
-          links: Json | null
-          status: string
-          resolution_note: string | null
-          resolved_by: string | null
-          resolved_at: string | null
-          created_at: string
-        }
+          id: string;
+          deal_id: string;
+          draft_id: string | null;
+          fund_id: string;
+          kind: string;
+          urgency: string;
+          body: string;
+          links: Json | null;
+          status: string;
+          resolution_note: string | null;
+          resolved_by: string | null;
+          resolved_at: string | null;
+          created_at: string;
+        };
         Insert: {
-          id?: string
-          deal_id: string
-          draft_id?: string | null
-          fund_id: string
-          kind: string
-          urgency: string
-          body: string
-          links?: Json | null
-          status?: string
-          resolution_note?: string | null
-          resolved_by?: string | null
-          resolved_at?: string | null
-          created_at?: string
-        }
+          id?: string;
+          deal_id: string;
+          draft_id?: string | null;
+          fund_id: string;
+          kind: string;
+          urgency: string;
+          body: string;
+          links?: Json | null;
+          status?: string;
+          resolution_note?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          created_at?: string;
+        };
         Update: {
-          id?: string
-          deal_id?: string
-          draft_id?: string | null
-          fund_id?: string
-          kind?: string
-          urgency?: string
-          body?: string
-          links?: Json | null
-          status?: string
-          resolution_note?: string | null
-          resolved_by?: string | null
-          resolved_at?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          deal_id?: string;
+          draft_id?: string | null;
+          fund_id?: string;
+          kind?: string;
+          urgency?: string;
+          body?: string;
+          links?: Json | null;
+          status?: string;
+          resolution_note?: string | null;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       diligence_agent_sessions: {
         Row: {
-          id: string
-          deal_id: string
-          fund_id: string
-          stage: string | null
-          title: string | null
-          messages: Json
-          ai_provider: string | null
-          ai_model: string | null
-          created_at: string
-          updated_at: string
-          created_by: string | null
-        }
+          id: string;
+          deal_id: string;
+          fund_id: string;
+          stage: string | null;
+          title: string | null;
+          messages: Json;
+          ai_provider: string | null;
+          ai_model: string | null;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+        };
         Insert: {
-          id?: string
-          deal_id: string
-          fund_id: string
-          stage?: string | null
-          title?: string | null
-          messages?: Json
-          ai_provider?: string | null
-          ai_model?: string | null
-          created_at?: string
-          updated_at?: string
-          created_by?: string | null
-        }
+          id?: string;
+          deal_id: string;
+          fund_id: string;
+          stage?: string | null;
+          title?: string | null;
+          messages?: Json;
+          ai_provider?: string | null;
+          ai_model?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
         Update: {
-          id?: string
-          deal_id?: string
-          fund_id?: string
-          stage?: string | null
-          title?: string | null
-          messages?: Json
-          ai_provider?: string | null
-          ai_model?: string | null
-          created_at?: string
-          updated_at?: string
-          created_by?: string | null
-        }
-        Relationships: []
-      }
+          id?: string;
+          deal_id?: string;
+          fund_id?: string;
+          stage?: string | null;
+          title?: string | null;
+          messages?: Json;
+          ai_provider?: string | null;
+          ai_model?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [];
+      };
       background_job_tool_calls: {
         Row: {
-          attempt_id: string
-          created_at: string
-          id: string
-          job_id: string
-          request_hash: string
-          response: Json | null
-          status: string
-          tool_call_id: string
-          tool_name: string
-          updated_at: string
-        }
+          attempt_id: string;
+          created_at: string;
+          id: string;
+          job_id: string;
+          request_hash: string;
+          response: Json | null;
+          status: string;
+          tool_call_id: string;
+          tool_name: string;
+          updated_at: string;
+        };
         Insert: {
-          attempt_id: string
-          created_at?: string
-          id?: string
-          job_id: string
-          request_hash: string
-          response?: Json | null
-          status?: string
-          tool_call_id: string
-          tool_name: string
-          updated_at?: string
-        }
+          attempt_id: string;
+          created_at?: string;
+          id?: string;
+          job_id: string;
+          request_hash: string;
+          response?: Json | null;
+          status?: string;
+          tool_call_id: string;
+          tool_name: string;
+          updated_at?: string;
+        };
         Update: {
-          attempt_id?: string
-          created_at?: string
-          id?: string
-          job_id?: string
-          request_hash?: string
-          response?: Json | null
-          status?: string
-          tool_call_id?: string
-          tool_name?: string
-          updated_at?: string
-        }
+          attempt_id?: string;
+          created_at?: string;
+          id?: string;
+          job_id?: string;
+          request_hash?: string;
+          response?: Json | null;
+          status?: string;
+          tool_call_id?: string;
+          tool_name?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "background_job_tool_calls_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "background_jobs"
-            referencedColumns: ["id"]
+            foreignKeyName: "background_job_tool_calls_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "background_jobs";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       background_jobs: {
         Row: {
-          actor_type: string
-          actor_user_id: string | null
-          attempts: number
-          attempt_id: string | null
-          available_at: string
-          created_at: string
-          dedupe_key: string
-          fund_id: string
-          id: string
-          kind: string
-          last_error: string | null
-          lease_expires_at: string | null
-          lease_seconds: number
-          max_attempts: number
-          payload: Json
-          status: string
-          updated_at: string
-          worker_claimed_attempt_id: string | null
-        }
+          actor_type: string;
+          actor_user_id: string | null;
+          attempts: number;
+          attempt_id: string | null;
+          available_at: string;
+          created_at: string;
+          dedupe_key: string;
+          fund_id: string;
+          id: string;
+          kind: string;
+          last_error: string | null;
+          lease_expires_at: string | null;
+          lease_seconds: number;
+          max_attempts: number;
+          payload: Json;
+          status: string;
+          updated_at: string;
+          worker_claimed_attempt_id: string | null;
+        };
         Insert: {
-          actor_type: string
-          actor_user_id?: string | null
-          attempts?: number
-          attempt_id?: string | null
-          available_at?: string
-          created_at?: string
-          dedupe_key: string
-          fund_id: string
-          id?: string
-          kind: string
-          last_error?: string | null
-          lease_expires_at?: string | null
-          lease_seconds?: number
-          max_attempts?: number
-          payload?: Json
-          status?: string
-          updated_at?: string
-          worker_claimed_attempt_id?: string | null
-        }
+          actor_type: string;
+          actor_user_id?: string | null;
+          attempts?: number;
+          attempt_id?: string | null;
+          available_at?: string;
+          created_at?: string;
+          dedupe_key: string;
+          fund_id: string;
+          id?: string;
+          kind: string;
+          last_error?: string | null;
+          lease_expires_at?: string | null;
+          lease_seconds?: number;
+          max_attempts?: number;
+          payload?: Json;
+          status?: string;
+          updated_at?: string;
+          worker_claimed_attempt_id?: string | null;
+        };
         Update: {
-          actor_type?: string
-          actor_user_id?: string | null
-          attempts?: number
-          attempt_id?: string | null
-          available_at?: string
-          created_at?: string
-          dedupe_key?: string
-          fund_id?: string
-          id?: string
-          kind?: string
-          last_error?: string | null
-          lease_expires_at?: string | null
-          lease_seconds?: number
-          max_attempts?: number
-          payload?: Json
-          status?: string
-          updated_at?: string
-          worker_claimed_attempt_id?: string | null
-        }
+          actor_type?: string;
+          actor_user_id?: string | null;
+          attempts?: number;
+          attempt_id?: string | null;
+          available_at?: string;
+          created_at?: string;
+          dedupe_key?: string;
+          fund_id?: string;
+          id?: string;
+          kind?: string;
+          last_error?: string | null;
+          lease_expires_at?: string | null;
+          lease_seconds?: number;
+          max_attempts?: number;
+          payload?: Json;
+          status?: string;
+          updated_at?: string;
+          worker_claimed_attempt_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "background_jobs_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "background_jobs_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       memo_agent_jobs: {
         Row: {
-          id: string
-          fund_id: string
-          deal_id: string
-          draft_id: string | null
-          kind: string
-          status: string
-          payload: Json | null
-          result: Json | null
-          progress_message: string | null
-          error: string | null
-          attempts: number
-          enqueued_at: string
-          started_at: string | null
-          finished_at: string | null
-          enqueued_by: string | null
-          lock_version: number
-        }
+          id: string;
+          fund_id: string;
+          deal_id: string;
+          draft_id: string | null;
+          kind: string;
+          status: string;
+          payload: Json | null;
+          result: Json | null;
+          progress_message: string | null;
+          error: string | null;
+          attempts: number;
+          enqueued_at: string;
+          started_at: string | null;
+          finished_at: string | null;
+          enqueued_by: string | null;
+          lock_version: number;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          deal_id: string
-          draft_id?: string | null
-          kind: string
-          status?: string
-          payload?: Json | null
-          result?: Json | null
-          progress_message?: string | null
-          error?: string | null
-          attempts?: number
-          enqueued_at?: string
-          started_at?: string | null
-          finished_at?: string | null
-          enqueued_by?: string | null
-          lock_version?: number
-        }
+          id?: string;
+          fund_id: string;
+          deal_id: string;
+          draft_id?: string | null;
+          kind: string;
+          status?: string;
+          payload?: Json | null;
+          result?: Json | null;
+          progress_message?: string | null;
+          error?: string | null;
+          attempts?: number;
+          enqueued_at?: string;
+          started_at?: string | null;
+          finished_at?: string | null;
+          enqueued_by?: string | null;
+          lock_version?: number;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          deal_id?: string
-          draft_id?: string | null
-          kind?: string
-          status?: string
-          payload?: Json | null
-          result?: Json | null
-          progress_message?: string | null
-          error?: string | null
-          attempts?: number
-          enqueued_at?: string
-          started_at?: string | null
-          finished_at?: string | null
-          enqueued_by?: string | null
-          lock_version?: number
-        }
-        Relationships: []
-      }
+          id?: string;
+          fund_id?: string;
+          deal_id?: string;
+          draft_id?: string | null;
+          kind?: string;
+          status?: string;
+          payload?: Json | null;
+          result?: Json | null;
+          progress_message?: string | null;
+          error?: string | null;
+          attempts?: number;
+          enqueued_at?: string;
+          started_at?: string | null;
+          finished_at?: string | null;
+          enqueued_by?: string | null;
+          lock_version?: number;
+        };
+        Relationships: [];
+      };
       diligence_notes: {
         Row: {
-          id: string
-          deal_id: string
-          fund_id: string
-          body: string
-          author_id: string | null
-          created_at: string
-          updated_at: string
-        }
+          id: string;
+          deal_id: string;
+          fund_id: string;
+          body: string;
+          author_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          id?: string
-          deal_id: string
-          fund_id: string
-          body: string
-          author_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
+          id?: string;
+          deal_id: string;
+          fund_id: string;
+          body: string;
+          author_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          deal_id?: string
-          fund_id?: string
-          body?: string
-          author_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          deal_id?: string;
+          fund_id?: string;
+          body?: string;
+          author_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       style_anchor_memos: {
         Row: {
-          id: string
-          fund_id: string
-          storage_path: string
-          file_name: string
-          file_format: string
-          file_size_bytes: number | null
-          title: string | null
-          anonymized: boolean
-          vintage_year: number | null
-          vintage_quarter: string | null
-          sector: string | null
-          deal_stage_at_writing: string | null
-          outcome: string | null
-          conviction_at_writing: string | null
-          voice_representativeness: string
-          authorship: string | null
-          author_initials: string | null
-          focus_attention_on: Json | null
-          deprioritize_in_this_memo: Json | null
-          partner_notes: string | null
-          extracted_text: string | null
-          extracted_at: string | null
-          uploaded_by: string | null
-          uploaded_at: string
-          updated_at: string
-        }
+          id: string;
+          fund_id: string;
+          storage_path: string;
+          file_name: string;
+          file_format: string;
+          file_size_bytes: number | null;
+          title: string | null;
+          anonymized: boolean;
+          vintage_year: number | null;
+          vintage_quarter: string | null;
+          sector: string | null;
+          deal_stage_at_writing: string | null;
+          outcome: string | null;
+          conviction_at_writing: string | null;
+          voice_representativeness: string;
+          authorship: string | null;
+          author_initials: string | null;
+          focus_attention_on: Json | null;
+          deprioritize_in_this_memo: Json | null;
+          partner_notes: string | null;
+          extracted_text: string | null;
+          extracted_at: string | null;
+          uploaded_by: string | null;
+          uploaded_at: string;
+          updated_at: string;
+        };
         Insert: {
-          id?: string
-          fund_id: string
-          storage_path: string
-          file_name: string
-          file_format: string
-          file_size_bytes?: number | null
-          title?: string | null
-          anonymized?: boolean
-          vintage_year?: number | null
-          vintage_quarter?: string | null
-          sector?: string | null
-          deal_stage_at_writing?: string | null
-          outcome?: string | null
-          conviction_at_writing?: string | null
-          voice_representativeness?: string
-          authorship?: string | null
-          author_initials?: string | null
-          focus_attention_on?: Json | null
-          deprioritize_in_this_memo?: Json | null
-          partner_notes?: string | null
-          extracted_text?: string | null
-          extracted_at?: string | null
-          uploaded_by?: string | null
-          uploaded_at?: string
-          updated_at?: string
-        }
+          id?: string;
+          fund_id: string;
+          storage_path: string;
+          file_name: string;
+          file_format: string;
+          file_size_bytes?: number | null;
+          title?: string | null;
+          anonymized?: boolean;
+          vintage_year?: number | null;
+          vintage_quarter?: string | null;
+          sector?: string | null;
+          deal_stage_at_writing?: string | null;
+          outcome?: string | null;
+          conviction_at_writing?: string | null;
+          voice_representativeness?: string;
+          authorship?: string | null;
+          author_initials?: string | null;
+          focus_attention_on?: Json | null;
+          deprioritize_in_this_memo?: Json | null;
+          partner_notes?: string | null;
+          extracted_text?: string | null;
+          extracted_at?: string | null;
+          uploaded_by?: string | null;
+          uploaded_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          fund_id?: string
-          storage_path?: string
-          file_name?: string
-          file_format?: string
-          file_size_bytes?: number | null
-          title?: string | null
-          anonymized?: boolean
-          vintage_year?: number | null
-          vintage_quarter?: string | null
-          sector?: string | null
-          deal_stage_at_writing?: string | null
-          outcome?: string | null
-          conviction_at_writing?: string | null
-          voice_representativeness?: string
-          authorship?: string | null
-          author_initials?: string | null
-          focus_attention_on?: Json | null
-          deprioritize_in_this_memo?: Json | null
-          partner_notes?: string | null
-          extracted_text?: string | null
-          extracted_at?: string | null
-          uploaded_by?: string | null
-          uploaded_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          fund_id?: string;
+          storage_path?: string;
+          file_name?: string;
+          file_format?: string;
+          file_size_bytes?: number | null;
+          title?: string | null;
+          anonymized?: boolean;
+          vintage_year?: number | null;
+          vintage_quarter?: string | null;
+          sector?: string | null;
+          deal_stage_at_writing?: string | null;
+          outcome?: string | null;
+          conviction_at_writing?: string | null;
+          voice_representativeness?: string;
+          authorship?: string | null;
+          author_initials?: string | null;
+          focus_attention_on?: Json | null;
+          deprioritize_in_this_memo?: Json | null;
+          partner_notes?: string | null;
+          extracted_text?: string | null;
+          extracted_at?: string | null;
+          uploaded_by?: string | null;
+          uploaded_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       experts: {
         Row: {
-          id: string
-          scope: string
-          fund_id: string | null
-          name: string
-          email: string
-          title: string | null
-          organization: string | null
-          profile_text: string
-          status: string
-          embedding: string | null
-          embedding_model: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
+          id: string;
+          scope: string;
+          fund_id: string | null;
+          name: string;
+          email: string;
+          title: string | null;
+          organization: string | null;
+          profile_text: string;
+          status: string;
+          embedding: string | null;
+          embedding_model: string | null;
+          verification_type: string;
+          source_type: string;
+          verified_at: string | null;
+          verified_by: string | null;
+          provenance_snapshot: Json;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          id?: string
-          scope: string
-          fund_id?: string | null
-          name: string
-          email: string
-          title?: string | null
-          organization?: string | null
-          profile_text: string
-          status?: string
-          embedding?: string | null
-          embedding_model?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
+          id?: string;
+          scope: string;
+          fund_id?: string | null;
+          name: string;
+          email: string;
+          title?: string | null;
+          organization?: string | null;
+          profile_text: string;
+          status?: string;
+          embedding?: string | null;
+          embedding_model?: string | null;
+          verification_type: string;
+          source_type: string;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          provenance_snapshot?: Json;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          scope?: string
-          fund_id?: string | null
-          name?: string
-          email?: string
-          title?: string | null
-          organization?: string | null
-          profile_text?: string
-          status?: string
-          embedding?: string | null
-          embedding_model?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          id?: string;
+          scope?: string;
+          fund_id?: string | null;
+          name?: string;
+          email?: string;
+          title?: string | null;
+          organization?: string | null;
+          profile_text?: string;
+          status?: string;
+          embedding?: string | null;
+          embedding_model?: string | null;
+          verification_type?: string;
+          source_type?: string;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          provenance_snapshot?: Json;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      expert_candidates: {
+        Row: {
+          id: string;
+          fund_id: string;
+          identity_fingerprint: string;
+          discovery_query: string;
+          name: string;
+          email: string | null;
+          title: string | null;
+          organization: string | null;
+          profile_text: string;
+          source_evidence: Json;
+          status: string;
+          discovered_by: string;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          rejection_reason: string | null;
+          confirmed_expert_id: string | null;
+          created_at: string;
+          updated_at: string;
+          last_seen_at: string;
+        };
+        Insert: {
+          id?: string;
+          fund_id: string;
+          identity_fingerprint: string;
+          discovery_query: string;
+          name: string;
+          title?: string | null;
+          organization?: string | null;
+          profile_text: string;
+          source_evidence?: Json;
+          status?: string;
+          discovered_by: string;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
+          confirmed_expert_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          last_seen_at?: string;
+        };
+        Update: {
+          id?: string;
+          fund_id?: string;
+          identity_fingerprint?: string;
+          discovery_query?: string;
+          name?: string;
+          title?: string | null;
+          organization?: string | null;
+          profile_text?: string;
+          source_evidence?: Json;
+          status?: string;
+          discovered_by?: string;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          rejection_reason?: string | null;
+          confirmed_expert_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          last_seen_at?: string;
+        };
+        Relationships: [];
+      };
       funds: {
         Row: {
-          address: string | null
-          created_at: string | null
-          created_by: string
-          currency: string
-          email_domain: string | null
-          id: string
-          logo_url: string | null
-          name: string
-          slug: string
-          updated_at: string | null
-        }
+          address: string | null;
+          created_at: string | null;
+          created_by: string;
+          currency: string;
+          email_domain: string | null;
+          email_subdomain: string | null;
+          id: string;
+          logo_url: string | null;
+          name: string;
+          slug: string;
+          updated_at: string | null;
+        };
         Insert: {
-          address?: string | null
-          created_at?: string | null
-          created_by: string
-          currency?: string
-          email_domain?: string | null
-          id?: string
-          logo_url?: string | null
-          name: string
-          slug?: string
-          updated_at?: string | null
-        }
+          address?: string | null;
+          created_at?: string | null;
+          created_by: string;
+          currency?: string;
+          email_domain?: string | null;
+          email_subdomain?: string | null;
+          id?: string;
+          logo_url?: string | null;
+          name: string;
+          slug?: string;
+          updated_at?: string | null;
+        };
         Update: {
-          address?: string | null
-          created_at?: string | null
-          created_by?: string
-          currency?: string
-          email_domain?: string | null
-          id?: string
-          logo_url?: string | null
-          name?: string
-          slug?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+          address?: string | null;
+          created_at?: string | null;
+          created_by?: string;
+          currency?: string;
+          email_domain?: string | null;
+          email_subdomain?: string | null;
+          id?: string;
+          logo_url?: string | null;
+          name?: string;
+          slug?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
       inbound_deals: {
         Row: {
-          assigned_to: string | null
-          co_founders: Json | null
-          company_domain: string | null
-          company_name: string | null
-          company_summary: string | null
-          company_url: string | null
-          created_at: string | null
-          email_id: string
-          extracted_data: Json | null
-          founder_email: string | null
-          founder_name: string | null
-          fund_id: string
-          id: string
-          industry: string | null
-          intro_source: string | null
-          prior_deal_id: string | null
-          promoted_diligence_id: string | null
-          raise_amount: string | null
-          referrer_email: string | null
-          referrer_name: string | null
-          research_error: string | null
-          research_findings: Json | null
-          research_sources: Json | null
-          research_status: string | null
-          research_summary: string | null
-          researched_at: string | null
-          stage: string | null
-          status: string
-          thesis_fit_analysis: string | null
-          thesis_fit_score: string | null
-          updated_at: string | null
-        }
+          assigned_to: string | null;
+          co_founders: Json | null;
+          company_domain: string | null;
+          company_name: string | null;
+          company_summary: string | null;
+          company_url: string | null;
+          created_at: string | null;
+          email_id: string;
+          extracted_data: Json | null;
+          founder_email: string | null;
+          founder_name: string | null;
+          fund_id: string;
+          id: string;
+          industry: string | null;
+          intro_source: string | null;
+          prior_deal_id: string | null;
+          promoted_diligence_id: string | null;
+          raise_amount: string | null;
+          referrer_email: string | null;
+          referrer_name: string | null;
+          research_error: string | null;
+          research_findings: Json | null;
+          research_sources: Json | null;
+          research_status: string | null;
+          research_summary: string | null;
+          researched_at: string | null;
+          stage: string | null;
+          status: string;
+          thesis_fit_analysis: string | null;
+          thesis_fit_score: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          assigned_to?: string | null
-          co_founders?: Json | null
-          company_domain?: string | null
-          company_name?: string | null
-          company_summary?: string | null
-          company_url?: string | null
-          created_at?: string | null
-          email_id: string
-          extracted_data?: Json | null
-          founder_email?: string | null
-          founder_name?: string | null
-          fund_id: string
-          id?: string
-          industry?: string | null
-          intro_source?: string | null
-          prior_deal_id?: string | null
-          promoted_diligence_id?: string | null
-          raise_amount?: string | null
-          referrer_email?: string | null
-          referrer_name?: string | null
-          research_error?: string | null
-          research_findings?: Json | null
-          research_sources?: Json | null
-          research_status?: string | null
-          research_summary?: string | null
-          researched_at?: string | null
-          stage?: string | null
-          status?: string
-          thesis_fit_analysis?: string | null
-          thesis_fit_score?: string | null
-          updated_at?: string | null
-        }
+          assigned_to?: string | null;
+          co_founders?: Json | null;
+          company_domain?: string | null;
+          company_name?: string | null;
+          company_summary?: string | null;
+          company_url?: string | null;
+          created_at?: string | null;
+          email_id: string;
+          extracted_data?: Json | null;
+          founder_email?: string | null;
+          founder_name?: string | null;
+          fund_id: string;
+          id?: string;
+          industry?: string | null;
+          intro_source?: string | null;
+          prior_deal_id?: string | null;
+          promoted_diligence_id?: string | null;
+          raise_amount?: string | null;
+          referrer_email?: string | null;
+          referrer_name?: string | null;
+          research_error?: string | null;
+          research_findings?: Json | null;
+          research_sources?: Json | null;
+          research_status?: string | null;
+          research_summary?: string | null;
+          researched_at?: string | null;
+          stage?: string | null;
+          status?: string;
+          thesis_fit_analysis?: string | null;
+          thesis_fit_score?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          assigned_to?: string | null
-          co_founders?: Json | null
-          company_domain?: string | null
-          company_name?: string | null
-          company_summary?: string | null
-          company_url?: string | null
-          created_at?: string | null
-          email_id?: string
-          extracted_data?: Json | null
-          founder_email?: string | null
-          founder_name?: string | null
-          fund_id?: string
-          id?: string
-          industry?: string | null
-          intro_source?: string | null
-          prior_deal_id?: string | null
-          promoted_diligence_id?: string | null
-          raise_amount?: string | null
-          referrer_email?: string | null
-          referrer_name?: string | null
-          research_error?: string | null
-          research_findings?: Json | null
-          research_sources?: Json | null
-          research_status?: string | null
-          research_summary?: string | null
-          researched_at?: string | null
-          stage?: string | null
-          status?: string
-          thesis_fit_analysis?: string | null
-          thesis_fit_score?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
+          assigned_to?: string | null;
+          co_founders?: Json | null;
+          company_domain?: string | null;
+          company_name?: string | null;
+          company_summary?: string | null;
+          company_url?: string | null;
+          created_at?: string | null;
+          email_id?: string;
+          extracted_data?: Json | null;
+          founder_email?: string | null;
+          founder_name?: string | null;
+          fund_id?: string;
+          id?: string;
+          industry?: string | null;
+          intro_source?: string | null;
+          prior_deal_id?: string | null;
+          promoted_diligence_id?: string | null;
+          raise_amount?: string | null;
+          referrer_email?: string | null;
+          referrer_name?: string | null;
+          research_error?: string | null;
+          research_findings?: Json | null;
+          research_sources?: Json | null;
+          research_status?: string | null;
+          research_summary?: string | null;
+          researched_at?: string | null;
+          stage?: string | null;
+          status?: string;
+          thesis_fit_analysis?: string | null;
+          thesis_fit_score?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
       known_referrers: {
         Row: {
-          added_by: string | null
-          created_at: string | null
-          email: string
-          fund_id: string
-          id: string
-          name: string | null
-          notes: string | null
-        }
+          added_by: string | null;
+          created_at: string | null;
+          email: string;
+          fund_id: string;
+          id: string;
+          name: string | null;
+          notes: string | null;
+        };
         Insert: {
-          added_by?: string | null
-          created_at?: string | null
-          email: string
-          fund_id: string
-          id?: string
-          name?: string | null
-          notes?: string | null
-        }
+          added_by?: string | null;
+          created_at?: string | null;
+          email: string;
+          fund_id: string;
+          id?: string;
+          name?: string | null;
+          notes?: string | null;
+        };
         Update: {
-          added_by?: string | null
-          created_at?: string | null
-          email?: string
-          fund_id?: string
-          id?: string
-          name?: string | null
-          notes?: string | null
-        }
-        Relationships: []
-      }
+          added_by?: string | null;
+          created_at?: string | null;
+          email?: string;
+          fund_id?: string;
+          id?: string;
+          name?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
       routing_corrections: {
         Row: {
-          corrected_by: string | null
-          corrected_label: string
-          created_at: string | null
-          email_id: string
-          fund_id: string
-          id: string
-          original_label: string
-        }
+          corrected_by: string | null;
+          corrected_label: string;
+          created_at: string | null;
+          email_id: string;
+          fund_id: string;
+          id: string;
+          original_label: string;
+        };
         Insert: {
-          corrected_by?: string | null
-          corrected_label: string
-          created_at?: string | null
-          email_id: string
-          fund_id: string
-          id?: string
-          original_label: string
-        }
+          corrected_by?: string | null;
+          corrected_label: string;
+          created_at?: string | null;
+          email_id: string;
+          fund_id: string;
+          id?: string;
+          original_label: string;
+        };
         Update: {
-          corrected_by?: string | null
-          corrected_label?: string
-          created_at?: string | null
-          email_id?: string
-          fund_id?: string
-          id?: string
-          original_label?: string
-        }
-        Relationships: []
-      }
+          corrected_by?: string | null;
+          corrected_label?: string;
+          created_at?: string | null;
+          email_id?: string;
+          fund_id?: string;
+          id?: string;
+          original_label?: string;
+        };
+        Relationships: [];
+      };
       inbound_emails: {
         Row: {
-          attachments_count: number | null
-          claude_response: Json | null
-          company_id: string | null
-          created_at: string | null
-          email_type: string
-          from_address: string
-          fund_id: string
-          id: string
-          metrics_extracted: number | null
-          processing_error: string | null
-          processing_status: string | null
-          raw_payload: Json | null
-          received_at: string | null
-          routed_to: string | null
-          routing_confidence: number | null
-          routing_label: string | null
-          routing_reasoning: string | null
-          routing_secondary_label: string | null
-          subject: string | null
-        }
+          attachments_count: number | null;
+          claude_response: Json | null;
+          company_id: string | null;
+          created_at: string | null;
+          diligence_accepted_at: string | null;
+          diligence_accepted_by: string | null;
+          diligence_deal_id: string | null;
+          diligence_intake_status: string | null;
+          email_fingerprint: string | null;
+          email_thread_id: string | null;
+          email_type: string;
+          from_address: string;
+          fund_id: string;
+          id: string;
+          in_reply_to: string | null;
+          internet_message_id: string | null;
+          message_references: string[];
+          metrics_extracted: number | null;
+          processing_error: string | null;
+          processing_status: string | null;
+          provider: string | null;
+          provider_email_id: string | null;
+          raw_payload: Json | null;
+          received_at: string | null;
+          routed_to: string | null;
+          routing_confidence: number | null;
+          routing_label: string | null;
+          routing_reasoning: string | null;
+          routing_secondary_label: string | null;
+          subject: string | null;
+          to_address: string | null;
+        };
         Insert: {
-          attachments_count?: number | null
-          claude_response?: Json | null
-          company_id?: string | null
-          created_at?: string | null
-          email_type?: string
-          from_address: string
-          fund_id: string
-          id?: string
-          metrics_extracted?: number | null
-          processing_error?: string | null
-          processing_status?: string | null
-          raw_payload?: Json | null
-          received_at?: string | null
-          routed_to?: string | null
-          routing_confidence?: number | null
-          routing_label?: string | null
-          routing_reasoning?: string | null
-          routing_secondary_label?: string | null
-          subject?: string | null
-        }
+          attachments_count?: number | null;
+          claude_response?: Json | null;
+          company_id?: string | null;
+          created_at?: string | null;
+          diligence_accepted_at?: string | null;
+          diligence_accepted_by?: string | null;
+          diligence_deal_id?: string | null;
+          diligence_intake_status?: string | null;
+          email_fingerprint?: string | null;
+          email_thread_id?: string | null;
+          email_type?: string;
+          from_address: string;
+          fund_id: string;
+          id?: string;
+          in_reply_to?: string | null;
+          internet_message_id?: string | null;
+          message_references?: string[];
+          metrics_extracted?: number | null;
+          processing_error?: string | null;
+          processing_status?: string | null;
+          provider?: string | null;
+          provider_email_id?: string | null;
+          raw_payload?: Json | null;
+          received_at?: string | null;
+          routed_to?: string | null;
+          routing_confidence?: number | null;
+          routing_label?: string | null;
+          routing_reasoning?: string | null;
+          routing_secondary_label?: string | null;
+          subject?: string | null;
+          to_address?: string | null;
+        };
         Update: {
-          attachments_count?: number | null
-          claude_response?: Json | null
-          company_id?: string | null
-          created_at?: string | null
-          email_type?: string
-          from_address?: string
-          fund_id?: string
-          id?: string
-          metrics_extracted?: number | null
-          processing_error?: string | null
-          processing_status?: string | null
-          raw_payload?: Json | null
-          received_at?: string | null
-          routed_to?: string | null
-          routing_confidence?: number | null
-          routing_label?: string | null
-          routing_reasoning?: string | null
-          routing_secondary_label?: string | null
-          subject?: string | null
-        }
+          attachments_count?: number | null;
+          claude_response?: Json | null;
+          company_id?: string | null;
+          created_at?: string | null;
+          diligence_accepted_at?: string | null;
+          diligence_accepted_by?: string | null;
+          diligence_deal_id?: string | null;
+          diligence_intake_status?: string | null;
+          email_fingerprint?: string | null;
+          email_thread_id?: string | null;
+          email_type?: string;
+          from_address?: string;
+          fund_id?: string;
+          id?: string;
+          in_reply_to?: string | null;
+          internet_message_id?: string | null;
+          message_references?: string[];
+          metrics_extracted?: number | null;
+          processing_error?: string | null;
+          processing_status?: string | null;
+          provider?: string | null;
+          provider_email_id?: string | null;
+          raw_payload?: Json | null;
+          received_at?: string | null;
+          routed_to?: string | null;
+          routing_confidence?: number | null;
+          routing_label?: string | null;
+          routing_reasoning?: string | null;
+          routing_secondary_label?: string | null;
+          subject?: string | null;
+          to_address?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "inbound_emails_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "inbound_emails_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "inbound_emails_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "inbound_emails_diligence_deal_id_fkey";
+            columns: ["diligence_deal_id"];
+            isOneToOne: false;
+            referencedRelation: "diligence_deals";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+          {
+            foreignKeyName: "inbound_emails_email_thread_fund_fkey";
+            columns: ["email_thread_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_threads";
+            referencedColumns: ["id", "fund_id"];
+          },
+          {
+            foreignKeyName: "inbound_emails_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       interactions: {
         Row: {
-          body_preview: string | null
-          company_id: string | null
-          created_at: string
-          email_id: string | null
-          fund_id: string
-          id: string
-          interaction_date: string
-          intro_contacts: Json | null
-          subject: string | null
-          summary: string | null
-          tags: string[]
-          user_id: string
-        }
+          body_preview: string | null;
+          company_id: string | null;
+          created_at: string;
+          email_id: string | null;
+          fund_id: string;
+          id: string;
+          interaction_date: string;
+          intro_contacts: Json | null;
+          subject: string | null;
+          summary: string | null;
+          tags: string[];
+          user_id: string;
+        };
         Insert: {
-          body_preview?: string | null
-          company_id?: string | null
-          created_at?: string
-          email_id?: string | null
-          fund_id: string
-          id?: string
-          interaction_date?: string
-          intro_contacts?: Json | null
-          subject?: string | null
-          summary?: string | null
-          tags?: string[]
-          user_id: string
-        }
+          body_preview?: string | null;
+          company_id?: string | null;
+          created_at?: string;
+          email_id?: string | null;
+          fund_id: string;
+          id?: string;
+          interaction_date?: string;
+          intro_contacts?: Json | null;
+          subject?: string | null;
+          summary?: string | null;
+          tags?: string[];
+          user_id: string;
+        };
         Update: {
-          body_preview?: string | null
-          company_id?: string | null
-          created_at?: string
-          email_id?: string | null
-          fund_id?: string
-          id?: string
-          interaction_date?: string
-          intro_contacts?: Json | null
-          subject?: string | null
-          summary?: string | null
-          tags?: string[]
-          user_id?: string
-        }
+          body_preview?: string | null;
+          company_id?: string | null;
+          created_at?: string;
+          email_id?: string | null;
+          fund_id?: string;
+          id?: string;
+          interaction_date?: string;
+          intro_contacts?: Json | null;
+          subject?: string | null;
+          summary?: string | null;
+          tags?: string[];
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "interactions_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "interactions_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "interactions_email_id_fkey"
-            columns: ["email_id"]
-            isOneToOne: true
-            referencedRelation: "inbound_emails"
-            referencedColumns: ["id"]
+            foreignKeyName: "interactions_email_id_fkey";
+            columns: ["email_id"];
+            isOneToOne: true;
+            referencedRelation: "inbound_emails";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "interactions_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "interactions_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       investment_transactions: {
         Row: {
-          company_id: string
-          converts_from_txn_id: string | null
-          cost_basis_exited: number | null
-          created_at: string | null
-          current_share_price: number | null
-          exit_valuation: number | null
-          fund_id: string
-          fx_rate: number | null
-          fx_value_change: number | null
-          id: string
-          interest_converted: number | null
-          investment_cost: number | null
-          latest_postmoney_valuation: number | null
-          notes: string | null
-          original_currency: string | null
-          original_current_share_price: number | null
-          original_exit_valuation: number | null
-          original_investment_cost: number | null
-          original_latest_postmoney_valuation: number | null
-          original_position_value: number | null
-          original_postmoney_valuation: number | null
-          original_proceeds_per_share: number | null
-          original_proceeds_received: number | null
-          original_share_price: number | null
-          original_unrealized_value_change: number | null
-          ownership_pct: number | null
-          portfolio_group: string | null
-          postmoney_valuation: number | null
-          prior_fx_rate: number | null
-          proceeds_escrow: number | null
-          proceeds_per_share: number | null
-          proceeds_received: number | null
-          proceeds_written_off: number | null
-          round_name: string | null
-          security_type: string | null
-          share_price: number | null
-          shares_acquired: number | null
-          transaction_date: string | null
-          transaction_type: string
-          unrealized_value_change: number | null
-          updated_at: string | null
-          valuation_change_source: string | null
-        }
+          company_id: string;
+          converts_from_txn_id: string | null;
+          cost_basis_exited: number | null;
+          created_at: string | null;
+          current_share_price: number | null;
+          exit_valuation: number | null;
+          fund_id: string;
+          fx_rate: number | null;
+          fx_value_change: number | null;
+          id: string;
+          interest_converted: number | null;
+          investment_cost: number | null;
+          latest_postmoney_valuation: number | null;
+          notes: string | null;
+          original_currency: string | null;
+          original_current_share_price: number | null;
+          original_exit_valuation: number | null;
+          original_investment_cost: number | null;
+          original_latest_postmoney_valuation: number | null;
+          original_position_value: number | null;
+          original_postmoney_valuation: number | null;
+          original_proceeds_per_share: number | null;
+          original_proceeds_received: number | null;
+          original_share_price: number | null;
+          original_unrealized_value_change: number | null;
+          ownership_pct: number | null;
+          portfolio_group: string | null;
+          postmoney_valuation: number | null;
+          prior_fx_rate: number | null;
+          proceeds_escrow: number | null;
+          proceeds_per_share: number | null;
+          proceeds_received: number | null;
+          proceeds_written_off: number | null;
+          round_name: string | null;
+          security_type: string | null;
+          share_price: number | null;
+          shares_acquired: number | null;
+          transaction_date: string | null;
+          transaction_type: string;
+          unrealized_value_change: number | null;
+          updated_at: string | null;
+          valuation_change_source: string | null;
+        };
         Insert: {
-          company_id: string
-          converts_from_txn_id?: string | null
-          cost_basis_exited?: number | null
-          created_at?: string | null
-          current_share_price?: number | null
-          exit_valuation?: number | null
-          fund_id: string
-          fx_rate?: number | null
-          fx_value_change?: number | null
-          id?: string
-          interest_converted?: number | null
-          investment_cost?: number | null
-          latest_postmoney_valuation?: number | null
-          notes?: string | null
-          original_currency?: string | null
-          original_current_share_price?: number | null
-          original_exit_valuation?: number | null
-          original_investment_cost?: number | null
-          original_latest_postmoney_valuation?: number | null
-          original_position_value?: number | null
-          original_postmoney_valuation?: number | null
-          original_proceeds_per_share?: number | null
-          original_proceeds_received?: number | null
-          original_share_price?: number | null
-          original_unrealized_value_change?: number | null
-          ownership_pct?: number | null
-          portfolio_group?: string | null
-          postmoney_valuation?: number | null
-          prior_fx_rate?: number | null
-          proceeds_escrow?: number | null
-          proceeds_per_share?: number | null
-          proceeds_received?: number | null
-          proceeds_written_off?: number | null
-          round_name?: string | null
-          security_type?: string | null
-          share_price?: number | null
-          shares_acquired?: number | null
-          transaction_date?: string | null
-          transaction_type: string
-          unrealized_value_change?: number | null
-          updated_at?: string | null
-          valuation_change_source?: string | null
-        }
+          company_id: string;
+          converts_from_txn_id?: string | null;
+          cost_basis_exited?: number | null;
+          created_at?: string | null;
+          current_share_price?: number | null;
+          exit_valuation?: number | null;
+          fund_id: string;
+          fx_rate?: number | null;
+          fx_value_change?: number | null;
+          id?: string;
+          interest_converted?: number | null;
+          investment_cost?: number | null;
+          latest_postmoney_valuation?: number | null;
+          notes?: string | null;
+          original_currency?: string | null;
+          original_current_share_price?: number | null;
+          original_exit_valuation?: number | null;
+          original_investment_cost?: number | null;
+          original_latest_postmoney_valuation?: number | null;
+          original_position_value?: number | null;
+          original_postmoney_valuation?: number | null;
+          original_proceeds_per_share?: number | null;
+          original_proceeds_received?: number | null;
+          original_share_price?: number | null;
+          original_unrealized_value_change?: number | null;
+          ownership_pct?: number | null;
+          portfolio_group?: string | null;
+          postmoney_valuation?: number | null;
+          prior_fx_rate?: number | null;
+          proceeds_escrow?: number | null;
+          proceeds_per_share?: number | null;
+          proceeds_received?: number | null;
+          proceeds_written_off?: number | null;
+          round_name?: string | null;
+          security_type?: string | null;
+          share_price?: number | null;
+          shares_acquired?: number | null;
+          transaction_date?: string | null;
+          transaction_type: string;
+          unrealized_value_change?: number | null;
+          updated_at?: string | null;
+          valuation_change_source?: string | null;
+        };
         Update: {
-          company_id?: string
-          converts_from_txn_id?: string | null
-          cost_basis_exited?: number | null
-          created_at?: string | null
-          current_share_price?: number | null
-          exit_valuation?: number | null
-          fund_id?: string
-          fx_rate?: number | null
-          fx_value_change?: number | null
-          id?: string
-          interest_converted?: number | null
-          investment_cost?: number | null
-          latest_postmoney_valuation?: number | null
-          notes?: string | null
-          original_currency?: string | null
-          original_current_share_price?: number | null
-          original_exit_valuation?: number | null
-          original_investment_cost?: number | null
-          original_latest_postmoney_valuation?: number | null
-          original_position_value?: number | null
-          original_postmoney_valuation?: number | null
-          original_proceeds_per_share?: number | null
-          original_proceeds_received?: number | null
-          original_share_price?: number | null
-          original_unrealized_value_change?: number | null
-          ownership_pct?: number | null
-          portfolio_group?: string | null
-          postmoney_valuation?: number | null
-          prior_fx_rate?: number | null
-          proceeds_escrow?: number | null
-          proceeds_per_share?: number | null
-          proceeds_received?: number | null
-          proceeds_written_off?: number | null
-          round_name?: string | null
-          security_type?: string | null
-          share_price?: number | null
-          shares_acquired?: number | null
-          transaction_date?: string | null
-          transaction_type?: string
-          unrealized_value_change?: number | null
-          updated_at?: string | null
-          valuation_change_source?: string | null
-        }
+          company_id?: string;
+          converts_from_txn_id?: string | null;
+          cost_basis_exited?: number | null;
+          created_at?: string | null;
+          current_share_price?: number | null;
+          exit_valuation?: number | null;
+          fund_id?: string;
+          fx_rate?: number | null;
+          fx_value_change?: number | null;
+          id?: string;
+          interest_converted?: number | null;
+          investment_cost?: number | null;
+          latest_postmoney_valuation?: number | null;
+          notes?: string | null;
+          original_currency?: string | null;
+          original_current_share_price?: number | null;
+          original_exit_valuation?: number | null;
+          original_investment_cost?: number | null;
+          original_latest_postmoney_valuation?: number | null;
+          original_position_value?: number | null;
+          original_postmoney_valuation?: number | null;
+          original_proceeds_per_share?: number | null;
+          original_proceeds_received?: number | null;
+          original_share_price?: number | null;
+          original_unrealized_value_change?: number | null;
+          ownership_pct?: number | null;
+          portfolio_group?: string | null;
+          postmoney_valuation?: number | null;
+          prior_fx_rate?: number | null;
+          proceeds_escrow?: number | null;
+          proceeds_per_share?: number | null;
+          proceeds_received?: number | null;
+          proceeds_written_off?: number | null;
+          round_name?: string | null;
+          security_type?: string | null;
+          share_price?: number | null;
+          shares_acquired?: number | null;
+          transaction_date?: string | null;
+          transaction_type?: string;
+          unrealized_value_change?: number | null;
+          updated_at?: string | null;
+          valuation_change_source?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "investment_transactions_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "investment_transactions_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "investment_transactions_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "investment_transactions_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       lp_entities: {
         Row: {
-          created_at: string | null
-          entity_name: string
-          fund_id: string
-          id: string
-          investor_id: string
-        }
+          created_at: string | null;
+          entity_name: string;
+          fund_id: string;
+          id: string;
+          investor_id: string;
+        };
         Insert: {
-          created_at?: string | null
-          entity_name: string
-          fund_id: string
-          id?: string
-          investor_id: string
-        }
+          created_at?: string | null;
+          entity_name: string;
+          fund_id: string;
+          id?: string;
+          investor_id: string;
+        };
         Update: {
-          created_at?: string | null
-          entity_name?: string
-          fund_id?: string
-          id?: string
-          investor_id?: string
-        }
+          created_at?: string | null;
+          entity_name?: string;
+          fund_id?: string;
+          id?: string;
+          investor_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "lp_entities_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_entities_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "lp_entities_investor_id_fkey"
-            columns: ["investor_id"]
-            isOneToOne: false
-            referencedRelation: "lp_investors"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_entities_investor_id_fkey";
+            columns: ["investor_id"];
+            isOneToOne: false;
+            referencedRelation: "lp_investors";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       lp_investments: {
         Row: {
-          called_capital: number | null
-          commitment: number | null
-          created_at: string | null
-          distributions: number | null
-          dpi: number | null
-          entity_id: string
-          fund_id: string
-          id: string
-          irr: number | null
-          nav: number | null
-          outstanding_balance: number | null
-          paid_in_capital: number | null
-          portfolio_group: string
-          rvpi: number | null
-          snapshot_id: string | null
-          total_value: number | null
-          tvpi: number | null
-          updated_at: string | null
-        }
+          called_capital: number | null;
+          commitment: number | null;
+          created_at: string | null;
+          distributions: number | null;
+          dpi: number | null;
+          entity_id: string;
+          fund_id: string;
+          id: string;
+          irr: number | null;
+          nav: number | null;
+          outstanding_balance: number | null;
+          paid_in_capital: number | null;
+          portfolio_group: string;
+          rvpi: number | null;
+          snapshot_id: string | null;
+          total_value: number | null;
+          tvpi: number | null;
+          updated_at: string | null;
+        };
         Insert: {
-          called_capital?: number | null
-          commitment?: number | null
-          created_at?: string | null
-          distributions?: number | null
-          dpi?: number | null
-          entity_id: string
-          fund_id: string
-          id?: string
-          irr?: number | null
-          nav?: number | null
-          outstanding_balance?: number | null
-          paid_in_capital?: number | null
-          portfolio_group: string
-          rvpi?: number | null
-          snapshot_id?: string | null
-          total_value?: number | null
-          tvpi?: number | null
-          updated_at?: string | null
-        }
+          called_capital?: number | null;
+          commitment?: number | null;
+          created_at?: string | null;
+          distributions?: number | null;
+          dpi?: number | null;
+          entity_id: string;
+          fund_id: string;
+          id?: string;
+          irr?: number | null;
+          nav?: number | null;
+          outstanding_balance?: number | null;
+          paid_in_capital?: number | null;
+          portfolio_group: string;
+          rvpi?: number | null;
+          snapshot_id?: string | null;
+          total_value?: number | null;
+          tvpi?: number | null;
+          updated_at?: string | null;
+        };
         Update: {
-          called_capital?: number | null
-          commitment?: number | null
-          created_at?: string | null
-          distributions?: number | null
-          dpi?: number | null
-          entity_id?: string
-          fund_id?: string
-          id?: string
-          irr?: number | null
-          nav?: number | null
-          outstanding_balance?: number | null
-          paid_in_capital?: number | null
-          portfolio_group?: string
-          rvpi?: number | null
-          snapshot_id?: string | null
-          total_value?: number | null
-          tvpi?: number | null
-          updated_at?: string | null
-        }
+          called_capital?: number | null;
+          commitment?: number | null;
+          created_at?: string | null;
+          distributions?: number | null;
+          dpi?: number | null;
+          entity_id?: string;
+          fund_id?: string;
+          id?: string;
+          irr?: number | null;
+          nav?: number | null;
+          outstanding_balance?: number | null;
+          paid_in_capital?: number | null;
+          portfolio_group?: string;
+          rvpi?: number | null;
+          snapshot_id?: string | null;
+          total_value?: number | null;
+          tvpi?: number | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "lp_investments_entity_id_fkey"
-            columns: ["entity_id"]
-            isOneToOne: false
-            referencedRelation: "lp_entities"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_investments_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "lp_entities";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "lp_investments_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_investments_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "lp_investments_snapshot_id_fkey"
-            columns: ["snapshot_id"]
-            isOneToOne: false
-            referencedRelation: "lp_snapshots"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_investments_snapshot_id_fkey";
+            columns: ["snapshot_id"];
+            isOneToOne: false;
+            referencedRelation: "lp_snapshots";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       lp_investors: {
         Row: {
-          created_at: string | null
-          fund_id: string
-          id: string
-          name: string
-          parent_id: string | null
-          updated_at: string | null
-        }
+          created_at: string | null;
+          fund_id: string;
+          id: string;
+          name: string;
+          parent_id: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          fund_id: string
-          id?: string
-          name: string
-          parent_id?: string | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          fund_id: string;
+          id?: string;
+          name: string;
+          parent_id?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          fund_id?: string
-          id?: string
-          name?: string
-          parent_id?: string | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          fund_id?: string;
+          id?: string;
+          name?: string;
+          parent_id?: string | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "lp_investors_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_investors_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "lp_investors_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "lp_investors"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_investors_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "lp_investors";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       lp_letter_templates: {
         Row: {
-          created_at: string | null
-          fund_id: string
-          id: string
-          is_default: boolean
-          name: string
-          source_filename: string | null
-          source_format: string | null
-          source_text: string | null
-          source_type: string | null
-          style_guide: string | null
-          updated_at: string | null
-        }
+          created_at: string | null;
+          fund_id: string;
+          id: string;
+          is_default: boolean;
+          name: string;
+          source_filename: string | null;
+          source_format: string | null;
+          source_text: string | null;
+          source_type: string | null;
+          style_guide: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          fund_id: string
-          id?: string
-          is_default?: boolean
-          name?: string
-          source_filename?: string | null
-          source_format?: string | null
-          source_text?: string | null
-          source_type?: string | null
-          style_guide?: string | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          fund_id: string;
+          id?: string;
+          is_default?: boolean;
+          name?: string;
+          source_filename?: string | null;
+          source_format?: string | null;
+          source_text?: string | null;
+          source_type?: string | null;
+          style_guide?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          fund_id?: string
-          id?: string
-          is_default?: boolean
-          name?: string
-          source_filename?: string | null
-          source_format?: string | null
-          source_text?: string | null
-          source_type?: string | null
-          style_guide?: string | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          fund_id?: string;
+          id?: string;
+          is_default?: boolean;
+          name?: string;
+          source_filename?: string | null;
+          source_format?: string | null;
+          source_text?: string | null;
+          source_type?: string | null;
+          style_guide?: string | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "lp_letter_templates_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_letter_templates_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       lp_letters: {
         Row: {
-          company_narratives: Json | null
-          company_prompts: Json | null
-          created_at: string | null
-          created_by: string | null
-          full_draft: string | null
-          fund_id: string
-          generation_error: string | null
-          generation_prompt: string | null
-          id: string
-          is_year_end: boolean
-          period_label: string
-          period_quarter: number
-          period_year: number
-          portfolio_group: string
-          portfolio_summary: Json | null
-          portfolio_table_html: string | null
-          status: string
-          template_id: string | null
-          updated_at: string | null
-        }
+          company_narratives: Json | null;
+          company_prompts: Json | null;
+          created_at: string | null;
+          created_by: string | null;
+          full_draft: string | null;
+          fund_id: string;
+          generation_error: string | null;
+          generation_prompt: string | null;
+          id: string;
+          is_year_end: boolean;
+          period_label: string;
+          period_quarter: number;
+          period_year: number;
+          portfolio_group: string;
+          portfolio_summary: Json | null;
+          portfolio_table_html: string | null;
+          status: string;
+          template_id: string | null;
+          updated_at: string | null;
+        };
         Insert: {
-          company_narratives?: Json | null
-          company_prompts?: Json | null
-          created_at?: string | null
-          created_by?: string | null
-          full_draft?: string | null
-          fund_id: string
-          generation_error?: string | null
-          generation_prompt?: string | null
-          id?: string
-          is_year_end?: boolean
-          period_label: string
-          period_quarter: number
-          period_year: number
-          portfolio_group: string
-          portfolio_summary?: Json | null
-          portfolio_table_html?: string | null
-          status?: string
-          template_id?: string | null
-          updated_at?: string | null
-        }
+          company_narratives?: Json | null;
+          company_prompts?: Json | null;
+          created_at?: string | null;
+          created_by?: string | null;
+          full_draft?: string | null;
+          fund_id: string;
+          generation_error?: string | null;
+          generation_prompt?: string | null;
+          id?: string;
+          is_year_end?: boolean;
+          period_label: string;
+          period_quarter: number;
+          period_year: number;
+          portfolio_group: string;
+          portfolio_summary?: Json | null;
+          portfolio_table_html?: string | null;
+          status?: string;
+          template_id?: string | null;
+          updated_at?: string | null;
+        };
         Update: {
-          company_narratives?: Json | null
-          company_prompts?: Json | null
-          created_at?: string | null
-          created_by?: string | null
-          full_draft?: string | null
-          fund_id?: string
-          generation_error?: string | null
-          generation_prompt?: string | null
-          id?: string
-          is_year_end?: boolean
-          period_label?: string
-          period_quarter?: number
-          period_year?: number
-          portfolio_group?: string
-          portfolio_summary?: Json | null
-          portfolio_table_html?: string | null
-          status?: string
-          template_id?: string | null
-          updated_at?: string | null
-        }
+          company_narratives?: Json | null;
+          company_prompts?: Json | null;
+          created_at?: string | null;
+          created_by?: string | null;
+          full_draft?: string | null;
+          fund_id?: string;
+          generation_error?: string | null;
+          generation_prompt?: string | null;
+          id?: string;
+          is_year_end?: boolean;
+          period_label?: string;
+          period_quarter?: number;
+          period_year?: number;
+          portfolio_group?: string;
+          portfolio_summary?: Json | null;
+          portfolio_table_html?: string | null;
+          status?: string;
+          template_id?: string | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "lp_letters_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_letters_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "lp_letters_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "lp_letter_templates"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_letters_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "lp_letter_templates";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       lp_snapshots: {
         Row: {
-          as_of_date: string | null
-          created_at: string | null
-          description: string | null
-          fund_id: string
-          id: string
-          name: string
-          updated_at: string | null
-        }
+          as_of_date: string | null;
+          created_at: string | null;
+          description: string | null;
+          fund_id: string;
+          id: string;
+          name: string;
+          updated_at: string | null;
+        };
         Insert: {
-          as_of_date?: string | null
-          created_at?: string | null
-          description?: string | null
-          fund_id: string
-          id?: string
-          name: string
-          updated_at?: string | null
-        }
+          as_of_date?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          fund_id: string;
+          id?: string;
+          name: string;
+          updated_at?: string | null;
+        };
         Update: {
-          as_of_date?: string | null
-          created_at?: string | null
-          description?: string | null
-          fund_id?: string
-          id?: string
-          name?: string
-          updated_at?: string | null
-        }
+          as_of_date?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          fund_id?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "lp_snapshots_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "lp_snapshots_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       metric_values: {
         Row: {
-          company_id: string
-          confidence: string | null
-          created_at: string | null
-          fund_id: string
-          id: string
-          is_manually_entered: boolean | null
-          metric_id: string
-          notes: string | null
-          period_label: string
-          period_month: number | null
-          period_quarter: number | null
-          period_year: number
-          source_email_id: string | null
-          updated_at: string | null
-          value_number: number | null
-          value_text: string | null
-        }
+          company_id: string;
+          confidence: string | null;
+          created_at: string | null;
+          fund_id: string;
+          id: string;
+          is_manually_entered: boolean | null;
+          metric_id: string;
+          notes: string | null;
+          period_label: string;
+          period_month: number | null;
+          period_quarter: number | null;
+          period_year: number;
+          source_email_id: string | null;
+          updated_at: string | null;
+          value_number: number | null;
+          value_text: string | null;
+        };
         Insert: {
-          company_id: string
-          confidence?: string | null
-          created_at?: string | null
-          fund_id: string
-          id?: string
-          is_manually_entered?: boolean | null
-          metric_id: string
-          notes?: string | null
-          period_label: string
-          period_month?: number | null
-          period_quarter?: number | null
-          period_year: number
-          source_email_id?: string | null
-          updated_at?: string | null
-          value_number?: number | null
-          value_text?: string | null
-        }
+          company_id: string;
+          confidence?: string | null;
+          created_at?: string | null;
+          fund_id: string;
+          id?: string;
+          is_manually_entered?: boolean | null;
+          metric_id: string;
+          notes?: string | null;
+          period_label: string;
+          period_month?: number | null;
+          period_quarter?: number | null;
+          period_year: number;
+          source_email_id?: string | null;
+          updated_at?: string | null;
+          value_number?: number | null;
+          value_text?: string | null;
+        };
         Update: {
-          company_id?: string
-          confidence?: string | null
-          created_at?: string | null
-          fund_id?: string
-          id?: string
-          is_manually_entered?: boolean | null
-          metric_id?: string
-          notes?: string | null
-          period_label?: string
-          period_month?: number | null
-          period_quarter?: number | null
-          period_year?: number
-          source_email_id?: string | null
-          updated_at?: string | null
-          value_number?: number | null
-          value_text?: string | null
-        }
+          company_id?: string;
+          confidence?: string | null;
+          created_at?: string | null;
+          fund_id?: string;
+          id?: string;
+          is_manually_entered?: boolean | null;
+          metric_id?: string;
+          notes?: string | null;
+          period_label?: string;
+          period_month?: number | null;
+          period_quarter?: number | null;
+          period_year?: number;
+          source_email_id?: string | null;
+          updated_at?: string | null;
+          value_number?: number | null;
+          value_text?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "metric_values_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "metric_values_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "metric_values_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "metric_values_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "metric_values_metric_id_fkey"
-            columns: ["metric_id"]
-            isOneToOne: false
-            referencedRelation: "metrics"
-            referencedColumns: ["id"]
+            foreignKeyName: "metric_values_metric_id_fkey";
+            columns: ["metric_id"];
+            isOneToOne: false;
+            referencedRelation: "metrics";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "metric_values_source_email_id_fkey"
-            columns: ["source_email_id"]
-            isOneToOne: false
-            referencedRelation: "inbound_emails"
-            referencedColumns: ["id"]
+            foreignKeyName: "metric_values_source_email_id_fkey";
+            columns: ["source_email_id"];
+            isOneToOne: false;
+            referencedRelation: "inbound_emails";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       metrics: {
         Row: {
-          company_id: string
-          created_at: string | null
-          currency: string | null
-          description: string | null
-          display_order: number | null
-          fund_id: string
-          id: string
-          is_active: boolean | null
-          name: string
-          reporting_cadence: string | null
-          slug: string
-          unit: string | null
-          unit_position: string | null
-          value_type: string | null
-        }
+          company_id: string;
+          created_at: string | null;
+          currency: string | null;
+          description: string | null;
+          display_order: number | null;
+          fund_id: string;
+          id: string;
+          is_active: boolean | null;
+          name: string;
+          reporting_cadence: string | null;
+          slug: string;
+          unit: string | null;
+          unit_position: string | null;
+          value_type: string | null;
+        };
         Insert: {
-          company_id: string
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          display_order?: number | null
-          fund_id: string
-          id?: string
-          is_active?: boolean | null
-          name: string
-          reporting_cadence?: string | null
-          slug: string
-          unit?: string | null
-          unit_position?: string | null
-          value_type?: string | null
-        }
+          company_id: string;
+          created_at?: string | null;
+          currency?: string | null;
+          description?: string | null;
+          display_order?: number | null;
+          fund_id: string;
+          id?: string;
+          is_active?: boolean | null;
+          name: string;
+          reporting_cadence?: string | null;
+          slug: string;
+          unit?: string | null;
+          unit_position?: string | null;
+          value_type?: string | null;
+        };
         Update: {
-          company_id?: string
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          display_order?: number | null
-          fund_id?: string
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          reporting_cadence?: string | null
-          slug?: string
-          unit?: string | null
-          unit_position?: string | null
-          value_type?: string | null
-        }
+          company_id?: string;
+          created_at?: string | null;
+          currency?: string | null;
+          description?: string | null;
+          display_order?: number | null;
+          fund_id?: string;
+          id?: string;
+          is_active?: boolean | null;
+          name?: string;
+          reporting_cadence?: string | null;
+          slug?: string;
+          unit?: string | null;
+          unit_position?: string | null;
+          value_type?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "metrics_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "metrics_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "metrics_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "metrics_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       note_company_subscriptions: {
         Row: {
-          company_id: string
-          created_at: string
-          fund_id: string
-          id: string
-          user_id: string
-        }
+          company_id: string;
+          created_at: string;
+          fund_id: string;
+          id: string;
+          user_id: string;
+        };
         Insert: {
-          company_id: string
-          created_at?: string
-          fund_id: string
-          id?: string
-          user_id: string
-        }
+          company_id: string;
+          created_at?: string;
+          fund_id: string;
+          id?: string;
+          user_id: string;
+        };
         Update: {
-          company_id?: string
-          created_at?: string
-          fund_id?: string
-          id?: string
-          user_id?: string
-        }
+          company_id?: string;
+          created_at?: string;
+          fund_id?: string;
+          id?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "note_company_subscriptions_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "note_company_subscriptions_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "note_company_subscriptions_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "note_company_subscriptions_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       note_notification_preferences: {
         Row: {
-          created_at: string
-          fund_id: string
-          id: string
-          level: string
-          updated_at: string
-          user_id: string
-        }
+          created_at: string;
+          fund_id: string;
+          id: string;
+          level: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          fund_id: string
-          id?: string
-          level?: string
-          updated_at?: string
-          user_id: string
-        }
+          created_at?: string;
+          fund_id: string;
+          id?: string;
+          level?: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          fund_id?: string
-          id?: string
-          level?: string
-          updated_at?: string
-          user_id?: string
-        }
+          created_at?: string;
+          fund_id?: string;
+          id?: string;
+          level?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "note_notification_preferences_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "note_notification_preferences_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       note_reads: {
         Row: {
-          note_id: string
-          read_at: string
-          user_id: string
-        }
+          note_id: string;
+          read_at: string;
+          user_id: string;
+        };
         Insert: {
-          note_id: string
-          read_at?: string
-          user_id: string
-        }
+          note_id: string;
+          read_at?: string;
+          user_id: string;
+        };
         Update: {
-          note_id?: string
-          read_at?: string
-          user_id?: string
-        }
+          note_id?: string;
+          read_at?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "note_reads_note_id_fkey"
-            columns: ["note_id"]
-            isOneToOne: false
-            referencedRelation: "company_notes"
-            referencedColumns: ["id"]
+            foreignKeyName: "note_reads_note_id_fkey";
+            columns: ["note_id"];
+            isOneToOne: false;
+            referencedRelation: "company_notes";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       parsing_reviews: {
         Row: {
-          company_id: string | null
-          context_snippet: string | null
-          created_at: string | null
-          email_id: string
-          extracted_value: string | null
-          fund_id: string
-          id: string
-          issue_type: string
-          metric_id: string | null
-          resolution: string | null
-          resolved_at: string | null
-          resolved_value: string | null
-        }
+          company_id: string | null;
+          context_snippet: string | null;
+          created_at: string | null;
+          email_id: string;
+          extracted_value: string | null;
+          fund_id: string;
+          id: string;
+          issue_type: string;
+          metric_id: string | null;
+          resolution: string | null;
+          resolved_at: string | null;
+          resolved_value: string | null;
+        };
         Insert: {
-          company_id?: string | null
-          context_snippet?: string | null
-          created_at?: string | null
-          email_id: string
-          extracted_value?: string | null
-          fund_id: string
-          id?: string
-          issue_type: string
-          metric_id?: string | null
-          resolution?: string | null
-          resolved_at?: string | null
-          resolved_value?: string | null
-        }
+          company_id?: string | null;
+          context_snippet?: string | null;
+          created_at?: string | null;
+          email_id: string;
+          extracted_value?: string | null;
+          fund_id: string;
+          id?: string;
+          issue_type: string;
+          metric_id?: string | null;
+          resolution?: string | null;
+          resolved_at?: string | null;
+          resolved_value?: string | null;
+        };
         Update: {
-          company_id?: string | null
-          context_snippet?: string | null
-          created_at?: string | null
-          email_id?: string
-          extracted_value?: string | null
-          fund_id?: string
-          id?: string
-          issue_type?: string
-          metric_id?: string | null
-          resolution?: string | null
-          resolved_at?: string | null
-          resolved_value?: string | null
-        }
+          company_id?: string | null;
+          context_snippet?: string | null;
+          created_at?: string | null;
+          email_id?: string;
+          extracted_value?: string | null;
+          fund_id?: string;
+          id?: string;
+          issue_type?: string;
+          metric_id?: string | null;
+          resolution?: string | null;
+          resolved_at?: string | null;
+          resolved_value?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "parsing_reviews_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
+            foreignKeyName: "parsing_reviews_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "parsing_reviews_email_id_fkey"
-            columns: ["email_id"]
-            isOneToOne: false
-            referencedRelation: "inbound_emails"
-            referencedColumns: ["id"]
+            foreignKeyName: "parsing_reviews_email_id_fkey";
+            columns: ["email_id"];
+            isOneToOne: false;
+            referencedRelation: "inbound_emails";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "parsing_reviews_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "parsing_reviews_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "parsing_reviews_metric_id_fkey"
-            columns: ["metric_id"]
-            isOneToOne: false
-            referencedRelation: "metrics"
-            referencedColumns: ["id"]
+            foreignKeyName: "parsing_reviews_metric_id_fkey";
+            columns: ["metric_id"];
+            isOneToOne: false;
+            referencedRelation: "metrics";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       portfolio_group_metrics: {
         Row: {
-          created_at: string | null
-          dpi: number | null
-          fund_id: string
-          id: string
-          net_irr: number | null
-          portfolio_group: string
-          report_date: string
-          rvpi: number | null
-          tvpi: number | null
-          updated_at: string | null
-        }
+          created_at: string | null;
+          dpi: number | null;
+          fund_id: string;
+          id: string;
+          net_irr: number | null;
+          portfolio_group: string;
+          report_date: string;
+          rvpi: number | null;
+          tvpi: number | null;
+          updated_at: string | null;
+        };
         Insert: {
-          created_at?: string | null
-          dpi?: number | null
-          fund_id: string
-          id?: string
-          net_irr?: number | null
-          portfolio_group: string
-          report_date: string
-          rvpi?: number | null
-          tvpi?: number | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          dpi?: number | null;
+          fund_id: string;
+          id?: string;
+          net_irr?: number | null;
+          portfolio_group: string;
+          report_date: string;
+          rvpi?: number | null;
+          tvpi?: number | null;
+          updated_at?: string | null;
+        };
         Update: {
-          created_at?: string | null
-          dpi?: number | null
-          fund_id?: string
-          id?: string
-          net_irr?: number | null
-          portfolio_group?: string
-          report_date?: string
-          rvpi?: number | null
-          tvpi?: number | null
-          updated_at?: string | null
-        }
+          created_at?: string | null;
+          dpi?: number | null;
+          fund_id?: string;
+          id?: string;
+          net_irr?: number | null;
+          portfolio_group?: string;
+          report_date?: string;
+          rvpi?: number | null;
+          tvpi?: number | null;
+          updated_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "portfolio_group_metrics_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "portfolio_group_metrics_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
+      explore_article_enrichments: {
+        Row: {
+          canonical_url: string | null;
+          category_ref: string | null;
+          changed_at: string | null;
+          collector_entry_id: number;
+          collector_entry_ref: string;
+          content_hash: string;
+          created_at: string;
+          expires_at: string;
+          failure_code: string | null;
+          fund_id: string;
+          id: string;
+          input_tokens: number | null;
+          output_tokens: number | null;
+          processed_at: string | null;
+          processing_status: string;
+          published_at: string | null;
+          retry_after: string | null;
+          retry_count: number;
+          semantic_model: string | null;
+          semantic_payload: Json | null;
+          semantic_provider: string | null;
+          semantic_version: string;
+          source_ref: string;
+          source_title: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          canonical_url?: string | null;
+          category_ref?: string | null;
+          changed_at?: string | null;
+          collector_entry_id: number;
+          collector_entry_ref: string;
+          content_hash: string;
+          created_at?: string;
+          expires_at: string;
+          failure_code?: string | null;
+          fund_id: string;
+          id?: string;
+          input_tokens?: number | null;
+          output_tokens?: number | null;
+          processed_at?: string | null;
+          processing_status?: string;
+          published_at?: string | null;
+          retry_after?: string | null;
+          retry_count?: number;
+          semantic_model?: string | null;
+          semantic_payload?: Json | null;
+          semantic_provider?: string | null;
+          semantic_version: string;
+          source_ref: string;
+          source_title: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          canonical_url?: string | null;
+          category_ref?: string | null;
+          changed_at?: string | null;
+          collector_entry_id?: number;
+          collector_entry_ref?: string;
+          content_hash?: string;
+          created_at?: string;
+          expires_at?: string;
+          failure_code?: string | null;
+          fund_id?: string;
+          id?: string;
+          input_tokens?: number | null;
+          output_tokens?: number | null;
+          processed_at?: string | null;
+          processing_status?: string;
+          published_at?: string | null;
+          retry_after?: string | null;
+          retry_count?: number;
+          semantic_model?: string | null;
+          semantic_payload?: Json | null;
+          semantic_provider?: string | null;
+          semantic_version?: string;
+          source_ref?: string;
+          source_title?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "explore_article_enrichments_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      explore_article_deal_classifications: {
+        Row: {
+          classification_payload: Json | null;
+          classification_status: string;
+          classified_at: string | null;
+          classifier_model: string | null;
+          classifier_provider: string | null;
+          classifier_version: string;
+          content_hash: string;
+          created_at: string;
+          enrichment_id: string;
+          expires_at: string;
+          failure_code: string | null;
+          fund_id: string;
+          id: string;
+          input_tokens: number | null;
+          output_tokens: number | null;
+          retry_after: string | null;
+          retry_count: number;
+          updated_at: string;
+        };
+        Insert: {
+          classification_payload?: Json | null;
+          classification_status?: string;
+          classified_at?: string | null;
+          classifier_model?: string | null;
+          classifier_provider?: string | null;
+          classifier_version: string;
+          content_hash: string;
+          created_at?: string;
+          enrichment_id: string;
+          expires_at: string;
+          failure_code?: string | null;
+          fund_id: string;
+          id?: string;
+          input_tokens?: number | null;
+          output_tokens?: number | null;
+          retry_after?: string | null;
+          retry_count?: number;
+          updated_at?: string;
+        };
+        Update: {
+          classification_payload?: Json | null;
+          classification_status?: string;
+          classified_at?: string | null;
+          classifier_model?: string | null;
+          classifier_provider?: string | null;
+          classifier_version?: string;
+          content_hash?: string;
+          created_at?: string;
+          enrichment_id?: string;
+          expires_at?: string;
+          failure_code?: string | null;
+          fund_id?: string;
+          id?: string;
+          input_tokens?: number | null;
+          output_tokens?: number | null;
+          retry_after?: string | null;
+          retry_count?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "explore_article_deal_classifications_fund_enrichment_fkey";
+            columns: ["fund_id", "enrichment_id"];
+            isOneToOne: false;
+            referencedRelation: "explore_article_enrichments";
+            referencedColumns: ["fund_id", "id"];
+          },
+          {
+            foreignKeyName: "explore_article_deal_classifications_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      explore_discovery_items: {
+        Row: {
+          evidence_json: Json;
+          expires_at: string;
+          fund_id: string;
+          generation_id: string;
+          generated_at: string;
+          id: string;
+          kind: string;
+          metadata_json: Json;
+          result_key: string;
+          score: number;
+          source_entry_refs: Json;
+          strategy_version: string;
+          summary: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          evidence_json?: Json;
+          expires_at: string;
+          fund_id: string;
+          generation_id: string;
+          generated_at: string;
+          id?: string;
+          kind: string;
+          metadata_json?: Json;
+          result_key: string;
+          score: number;
+          source_entry_refs: Json;
+          strategy_version: string;
+          summary?: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          evidence_json?: Json;
+          expires_at?: string;
+          fund_id?: string;
+          generation_id?: string;
+          generated_at?: string;
+          id?: string;
+          kind?: string;
+          metadata_json?: Json;
+          result_key?: string;
+          score?: number;
+          source_entry_refs?: Json;
+          strategy_version?: string;
+          summary?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "explore_discovery_items_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      explore_discovery_refresh_state: {
+        Row: {
+          active_generation_id: string | null;
+          fund_id: string;
+          last_attempt_at: string | null;
+          last_error_code: string | null;
+          last_success_at: string | null;
+          lease_expires_at: string | null;
+          lease_id: string | null;
+          scope: string;
+          target_classifier_version: string | null;
+          target_semantic_version: string | null;
+          updated_at: string;
+          watermark_changed_at: string | null;
+          watermark_changed_entry_id: number;
+          watermark_changed_scan_cutoff: string | null;
+          watermark_entry_id: number;
+        };
+        Insert: {
+          active_generation_id?: string | null;
+          fund_id: string;
+          last_attempt_at?: string | null;
+          last_error_code?: string | null;
+          last_success_at?: string | null;
+          lease_expires_at?: string | null;
+          lease_id?: string | null;
+          scope?: string;
+          target_classifier_version?: string | null;
+          target_semantic_version?: string | null;
+          updated_at?: string;
+          watermark_changed_at?: string | null;
+          watermark_changed_entry_id?: number;
+          watermark_changed_scan_cutoff?: string | null;
+          watermark_entry_id?: number;
+        };
+        Update: {
+          active_generation_id?: string | null;
+          fund_id?: string;
+          last_attempt_at?: string | null;
+          last_error_code?: string | null;
+          last_success_at?: string | null;
+          lease_expires_at?: string | null;
+          lease_id?: string | null;
+          scope?: string;
+          target_classifier_version?: string | null;
+          target_semantic_version?: string | null;
+          updated_at?: string;
+          watermark_changed_at?: string | null;
+          watermark_changed_entry_id?: number;
+          watermark_changed_scan_cutoff?: string | null;
+          watermark_entry_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "explore_discovery_refresh_state_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      explore_discovery_schedule_state: {
+        Row: {
+          cursor_fund_id: string | null;
+          scope: string;
+          updated_at: string;
+        };
+        Insert: {
+          cursor_fund_id?: string | null;
+          scope?: string;
+          updated_at?: string;
+        };
+        Update: {
+          cursor_fund_id?: string | null;
+          scope?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "explore_discovery_schedule_state_cursor_fund_id_fkey";
+            columns: ["cursor_fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       rate_limit_entries: {
         Row: {
-          created_at: string
-          id: string
-          key: string
-        }
+          created_at: string;
+          id: string;
+          key: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          key: string
-        }
+          created_at?: string;
+          id?: string;
+          key: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          key?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          key?: string;
+        };
+        Relationships: [];
+      };
       user_activity_logs: {
         Row: {
-          action: string
-          created_at: string
-          fund_id: string
-          id: string
-          metadata: Json | null
-          user_id: string
-        }
+          action: string;
+          created_at: string;
+          fund_id: string;
+          id: string;
+          metadata: Json | null;
+          user_id: string;
+        };
         Insert: {
-          action: string
-          created_at?: string
-          fund_id: string
-          id?: string
-          metadata?: Json | null
-          user_id: string
-        }
+          action: string;
+          created_at?: string;
+          fund_id: string;
+          id?: string;
+          metadata?: Json | null;
+          user_id: string;
+        };
         Update: {
-          action?: string
-          created_at?: string
-          fund_id?: string
-          id?: string
-          metadata?: Json | null
-          user_id?: string
-        }
+          action?: string;
+          created_at?: string;
+          fund_id?: string;
+          id?: string;
+          metadata?: Json | null;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "user_activity_logs_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "funds"
-            referencedColumns: ["id"]
+            foreignKeyName: "user_activity_logs_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
           },
-        ]
-      }
-    }
+        ];
+      };
+      fund_email_mailboxes: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          display_name: string;
+          fund_id: string;
+          id: string;
+          kind: string;
+          local_part: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          display_name: string;
+          fund_id: string;
+          id?: string;
+          kind: string;
+          local_part: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          display_name?: string;
+          fund_id?: string;
+          id?: string;
+          kind?: string;
+          local_part?: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_email_mailboxes_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "fund_email_mailboxes_fund_id_user_id_fkey";
+            columns: ["fund_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_members";
+            referencedColumns: ["fund_id", "user_id"];
+          },
+        ];
+      };
+      fund_email_messages: {
+        Row: {
+          attachment_metadata: Json;
+          bcc_addresses: string[];
+          cc_addresses: string[];
+          created_at: string;
+          direction: string;
+          from_address: string;
+          fund_id: string;
+          html_body_untrusted: string | null;
+          id: string;
+          idempotency_key: string | null;
+          in_reply_to: string | null;
+          inbound_email_id: string | null;
+          internet_message_id: string | null;
+          mailbox_id: string;
+          message_references: string[];
+          provider: string;
+          provider_message_id: string | null;
+          provider_submitted_at: string | null;
+          received_at: string | null;
+          reply_to_address: string | null;
+          routing_status: string;
+          subject: string | null;
+          text_body: string | null;
+          thread_id: string;
+          to_addresses: string[];
+          updated_at: string;
+        };
+        Insert: {
+          attachment_metadata?: Json;
+          bcc_addresses?: string[];
+          cc_addresses?: string[];
+          created_at?: string;
+          direction: string;
+          from_address: string;
+          fund_id: string;
+          html_body_untrusted?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          in_reply_to?: string | null;
+          inbound_email_id?: string | null;
+          internet_message_id?: string | null;
+          mailbox_id: string;
+          message_references?: string[];
+          provider?: string;
+          provider_message_id?: string | null;
+          provider_submitted_at?: string | null;
+          received_at?: string | null;
+          reply_to_address?: string | null;
+          routing_status?: string;
+          subject?: string | null;
+          text_body?: string | null;
+          thread_id: string;
+          to_addresses: string[];
+          updated_at?: string;
+        };
+        Update: {
+          attachment_metadata?: Json;
+          bcc_addresses?: string[];
+          cc_addresses?: string[];
+          created_at?: string;
+          direction?: string;
+          from_address?: string;
+          fund_id?: string;
+          html_body_untrusted?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          in_reply_to?: string | null;
+          inbound_email_id?: string | null;
+          internet_message_id?: string | null;
+          mailbox_id?: string;
+          message_references?: string[];
+          provider?: string;
+          provider_message_id?: string | null;
+          provider_submitted_at?: string | null;
+          received_at?: string | null;
+          reply_to_address?: string | null;
+          routing_status?: string;
+          subject?: string | null;
+          text_body?: string | null;
+          thread_id?: string;
+          to_addresses?: string[];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_email_messages_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "fund_email_messages_inbound_email_id_fund_id_fkey";
+            columns: ["inbound_email_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "inbound_emails";
+            referencedColumns: ["id", "fund_id"];
+          },
+          {
+            foreignKeyName: "fund_email_messages_mailbox_id_fund_id_fkey";
+            columns: ["mailbox_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_mailboxes";
+            referencedColumns: ["id", "fund_id"];
+          },
+          {
+            foreignKeyName: "fund_email_messages_thread_id_fund_id_fkey";
+            columns: ["thread_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_threads";
+            referencedColumns: ["id", "fund_id"];
+          },
+        ];
+      };
+      fund_email_provider_credentials: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          dns_records: Json;
+          domain: string;
+          domain_status: string;
+          fund_id: string;
+          id: string;
+          last_error_code: string | null;
+          last_verified_at: string | null;
+          previous_route_expires_at: string | null;
+          previous_route_token_hash: string | null;
+          provider: string;
+          provider_domain_id: string | null;
+          provider_webhook_id: string | null;
+          receiving_api_key_encrypted: string | null;
+          receiving_status: string;
+          route_token_hash: string | null;
+          sending_api_key_encrypted: string | null;
+          sending_status: string;
+          status: string;
+          updated_at: string;
+          updated_by: string | null;
+          webhook_secret_encrypted: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          dns_records?: Json;
+          domain: string;
+          domain_status?: string;
+          fund_id: string;
+          id?: string;
+          last_error_code?: string | null;
+          last_verified_at?: string | null;
+          previous_route_expires_at?: string | null;
+          previous_route_token_hash?: string | null;
+          provider?: string;
+          provider_domain_id?: string | null;
+          provider_webhook_id?: string | null;
+          receiving_api_key_encrypted?: string | null;
+          receiving_status?: string;
+          route_token_hash?: string | null;
+          sending_api_key_encrypted?: string | null;
+          sending_status?: string;
+          status?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          webhook_secret_encrypted?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          dns_records?: Json;
+          domain?: string;
+          domain_status?: string;
+          fund_id?: string;
+          id?: string;
+          last_error_code?: string | null;
+          last_verified_at?: string | null;
+          previous_route_expires_at?: string | null;
+          previous_route_token_hash?: string | null;
+          provider?: string;
+          provider_domain_id?: string | null;
+          provider_webhook_id?: string | null;
+          receiving_api_key_encrypted?: string | null;
+          receiving_status?: string;
+          route_token_hash?: string | null;
+          sending_api_key_encrypted?: string | null;
+          sending_status?: string;
+          status?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          webhook_secret_encrypted?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_email_provider_credentials_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: true;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      fund_email_reply_routes: {
+        Row: {
+          created_at: string;
+          expires_at: string | null;
+          fund_id: string;
+          id: string;
+          mailbox_id: string;
+          revoked_at: string | null;
+          thread_id: string;
+          token_hash: string;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at?: string | null;
+          fund_id: string;
+          id?: string;
+          mailbox_id: string;
+          revoked_at?: string | null;
+          thread_id: string;
+          token_hash: string;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string | null;
+          fund_id?: string;
+          id?: string;
+          mailbox_id?: string;
+          revoked_at?: string | null;
+          thread_id?: string;
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_email_reply_routes_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "fund_email_reply_routes_mailbox_id_fund_id_fkey";
+            columns: ["mailbox_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_mailboxes";
+            referencedColumns: ["id", "fund_id"];
+          },
+          {
+            foreignKeyName: "fund_email_reply_routes_thread_id_fund_id_fkey";
+            columns: ["thread_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_threads";
+            referencedColumns: ["id", "fund_id"];
+          },
+        ];
+      };
+      fund_email_threads: {
+        Row: {
+          context_id: string | null;
+          context_type: string | null;
+          created_at: string;
+          external_participant_address: string | null;
+          fund_id: string;
+          id: string;
+          mailbox_id: string;
+          purpose: string;
+          status: string;
+          subject: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          context_id?: string | null;
+          context_type?: string | null;
+          created_at?: string;
+          external_participant_address?: string | null;
+          fund_id: string;
+          id?: string;
+          mailbox_id: string;
+          purpose: string;
+          status?: string;
+          subject?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          context_id?: string | null;
+          context_type?: string | null;
+          created_at?: string;
+          external_participant_address?: string | null;
+          fund_id?: string;
+          id?: string;
+          mailbox_id?: string;
+          purpose?: string;
+          status?: string;
+          subject?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_email_threads_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "fund_email_threads_mailbox_id_fund_id_fkey";
+            columns: ["mailbox_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_mailboxes";
+            referencedColumns: ["id", "fund_id"];
+          },
+        ];
+      };
+      fund_email_webhook_events: {
+        Row: {
+          attempt_id: string;
+          attempts: number;
+          completed_at: string | null;
+          connection_id: string;
+          created_at: string;
+          disposition: string | null;
+          fund_id: string;
+          id: string;
+          last_error_code: string | null;
+          lease_expires_at: string;
+          provider_email_id: string;
+          status: string;
+          svix_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempt_id?: string;
+          attempts?: number;
+          completed_at?: string | null;
+          connection_id: string;
+          created_at?: string;
+          disposition?: string | null;
+          fund_id: string;
+          id?: string;
+          last_error_code?: string | null;
+          lease_expires_at?: string;
+          provider_email_id: string;
+          status?: string;
+          svix_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempt_id?: string;
+          attempts?: number;
+          completed_at?: string | null;
+          connection_id?: string;
+          created_at?: string;
+          disposition?: string | null;
+          fund_id?: string;
+          id?: string;
+          last_error_code?: string | null;
+          lease_expires_at?: string;
+          provider_email_id?: string;
+          status?: string;
+          svix_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_email_webhook_events_connection_id_fund_id_fkey";
+            columns: ["connection_id", "fund_id"];
+            isOneToOne: false;
+            referencedRelation: "fund_email_provider_credentials";
+            referencedColumns: ["id", "fund_id"];
+          },
+          {
+            foreignKeyName: "fund_email_webhook_events_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
+      fund_email_set_user_mailbox: {
+        Args: {
+          p_display_name: string;
+          p_fund_id: string;
+          p_local_part: string;
+          p_user_id: string;
+        };
+        Returns: {
+          active: boolean;
+          created_at: string;
+          display_name: string;
+          fund_id: string;
+          id: string;
+          kind: string;
+          local_part: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_mailboxes";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+
+      fund_email_mark_outbound_submitted: {
+        Args: {
+          p_connection_id: string;
+          p_fund_id: string;
+          p_message_id: string;
+          p_provider_message_id: string;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_prepare_outbound_message: {
+        Args: {
+          p_bcc_addresses: string[];
+          p_cc_addresses: string[];
+          p_context_id: string | null;
+          p_context_type: string | null;
+          p_external_participant_address: string;
+          p_from_address: string;
+          p_fund_id: string;
+          p_html_body_untrusted: string | null;
+          p_idempotency_key: string;
+          p_internet_message_id: string;
+          p_mailbox_id: string;
+          p_purpose: string;
+          p_reply_token_hash: string;
+          p_subject: string;
+          p_text_body: string | null;
+          p_to_addresses: string[];
+        };
+        Returns: {
+          idempotency_key: string;
+          internet_message_id: string;
+          message_id: string;
+          prior_internet_message_ids: string[];
+          provider_message_id: string;
+          thread_id: string;
+        }[];
+      };
+
+      fund_email_fail_webhook_event: {
+        Args: {
+          p_attempt_id: string;
+          p_error_code: string;
+          p_event_id: string;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_complete_webhook_event: {
+        Args: {
+          p_attempt_id: string;
+          p_disposition: string;
+          p_event_id: string;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_claim_webhook_event: {
+        Args: {
+          p_lease_seconds?: number;
+          p_provider_email_id: string;
+          p_route_token_hash: string;
+          p_svix_id: string;
+        };
+        Returns: {
+          attempt_id: string;
+          attempts: number;
+          completed_at: string | null;
+          connection_id: string;
+          created_at: string;
+          disposition: string | null;
+          fund_id: string;
+          id: string;
+          last_error_code: string | null;
+          lease_expires_at: string;
+          provider_email_id: string;
+          status: string;
+          svix_id: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_webhook_events";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+
+      fund_email_store_inbound_message: {
+        Args: {
+          p_attachment_metadata: Json;
+          p_bcc_addresses: string[];
+          p_cc_addresses: string[];
+          p_from_address: string;
+          p_fund_id: string;
+          p_html_body_untrusted: string | null;
+          p_in_reply_to: string | null;
+          p_internet_message_id: string;
+          p_mailbox_id: string;
+          p_message_references: string[];
+          p_provider_message_id: string;
+          p_purpose: string;
+          p_received_at: string;
+          p_reply_to_address: string | null;
+          p_subject: string | null;
+          p_text_body: string | null;
+          p_thread_id: string | null;
+          p_to_addresses: string[];
+        };
+        Returns: {
+          message_id: string;
+          reused: boolean;
+          thread_id: string;
+        }[];
+      };
+
+      fund_email_ensure_reserved_mailboxes: {
+        Args: { p_fund_id: string };
+        Returns: {
+          active: boolean;
+          created_at: string;
+          display_name: string;
+          fund_id: string;
+          id: string;
+          kind: string;
+          local_part: string;
+          updated_at: string;
+          user_id: string | null;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_mailboxes";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+
+      fund_email_rotate_webhook_route: {
+        Args: {
+          p_actor_user_id: string;
+          p_fund_id: string;
+          p_overlap_seconds?: number;
+          p_route_token_hash: string;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_create_connection: {
+        Args: {
+          p_actor_user_id: string;
+          p_domain: string;
+          p_fund_id: string;
+          p_receiving_api_key_encrypted: string;
+          p_route_token_hash: string;
+          p_sending_api_key_encrypted: string;
+          p_slug: string;
+          p_webhook_secret_encrypted: string;
+        };
+        Returns: {
+          created_at: string;
+          created_by: string | null;
+          dns_records: Json;
+          domain: string;
+          domain_status: string;
+          fund_id: string;
+          id: string;
+          last_error_code: string | null;
+          last_verified_at: string | null;
+          previous_route_expires_at: string | null;
+          previous_route_token_hash: string | null;
+          provider: string;
+          provider_domain_id: string | null;
+          provider_webhook_id: string | null;
+          receiving_api_key_encrypted: string | null;
+          receiving_status: string;
+          route_token_hash: string | null;
+          sending_api_key_encrypted: string | null;
+          sending_status: string;
+          status: string;
+          updated_at: string;
+          updated_by: string | null;
+          webhook_secret_encrypted: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_provider_credentials";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+
+      fund_email_configure_receiving: {
+        Args: {
+          p_actor_user_id: string;
+          p_dns_records: Json;
+          p_domain: string;
+          p_domain_status: string;
+          p_expected_provider_webhook_id: string | null;
+          p_expected_updated_at: string | null;
+          p_fund_id: string;
+          p_last_error_code: string | null;
+          p_provider_domain_id: string;
+          p_provider_webhook_id: string;
+          p_receiving_api_key_encrypted: string;
+          p_receiving_status: string;
+          p_route_token_hash: string;
+          p_sending_status: string;
+          p_slug: string;
+          p_webhook_secret_encrypted: string;
+        };
+        Returns: {
+          created_at: string;
+          created_by: string | null;
+          dns_records: Json;
+          domain: string;
+          domain_status: string;
+          fund_id: string;
+          id: string;
+          last_error_code: string | null;
+          last_verified_at: string | null;
+          previous_route_expires_at: string | null;
+          previous_route_token_hash: string | null;
+          provider: string;
+          provider_domain_id: string | null;
+          provider_webhook_id: string | null;
+          receiving_api_key_encrypted: string | null;
+          receiving_status: string;
+          route_token_hash: string | null;
+          sending_api_key_encrypted: string | null;
+          sending_status: string;
+          status: string;
+          updated_at: string;
+          updated_by: string | null;
+          webhook_secret_encrypted: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_provider_credentials";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+
+      fund_email_configure_sending: {
+        Args: {
+          p_actor_user_id: string;
+          p_domain: string;
+          p_fund_id: string;
+          p_sending_api_key_encrypted: string;
+          p_slug: string;
+        };
+        Returns: {
+          created_at: string;
+          created_by: string | null;
+          dns_records: Json;
+          domain: string;
+          domain_status: string;
+          fund_id: string;
+          id: string;
+          last_error_code: string | null;
+          last_verified_at: string | null;
+          previous_route_expires_at: string | null;
+          previous_route_token_hash: string | null;
+          provider: string;
+          provider_domain_id: string | null;
+          provider_webhook_id: string | null;
+          receiving_api_key_encrypted: string | null;
+          receiving_status: string;
+          route_token_hash: string | null;
+          sending_api_key_encrypted: string | null;
+          sending_status: string;
+          status: string;
+          updated_at: string;
+          updated_by: string | null;
+          webhook_secret_encrypted: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_provider_credentials";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+
+      fund_email_configure_identity: {
+        Args: {
+          p_actor_user_id: string;
+          p_domain: string;
+          p_fund_id: string;
+          p_slug: string;
+        };
+        Returns: {
+          created_at: string;
+          created_by: string | null;
+          dns_records: Json;
+          domain: string;
+          domain_status: string;
+          fund_id: string;
+          id: string;
+          last_error_code: string | null;
+          last_verified_at: string | null;
+          previous_route_expires_at: string | null;
+          previous_route_token_hash: string | null;
+          provider: string;
+          provider_domain_id: string | null;
+          provider_webhook_id: string | null;
+          receiving_api_key_encrypted: string | null;
+          receiving_status: string;
+          route_token_hash: string | null;
+          sending_api_key_encrypted: string | null;
+          sending_status: string;
+          status: string;
+          updated_at: string;
+          updated_by: string | null;
+          webhook_secret_encrypted: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_provider_credentials";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+
+      fund_email_finalize_receiving_disconnect: {
+        Args: {
+          p_actor_user_id: string;
+          p_expected_provider_webhook_id: string | null;
+          p_expected_updated_at: string;
+          p_fund_id: string;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_set_authoritative_resend_key: {
+        Args: {
+          p_asks_email_provider: string | null;
+          p_fund_id: string;
+          p_outbound_email_provider: string | null;
+          p_resend_api_key_encrypted: string;
+          p_update_asks_provider: boolean;
+          p_update_outbound_provider: boolean;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_promote_legacy_resend_key: {
+        Args: {
+          p_expected_sending_api_key_encrypted: string;
+          p_fund_id: string;
+          p_resend_api_key_encrypted: string;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_begin_receiving_disconnect: {
+        Args: {
+          p_actor_user_id: string;
+          p_expected_provider_webhook_id: string | null;
+          p_expected_updated_at: string;
+          p_fund_id: string;
+        };
+        Returns: string;
+      };
+
+      fund_email_finalize_delete: {
+        Args: {
+          p_expected_provider_webhook_id: string | null;
+          p_expected_updated_at: string;
+          p_fund_id: string;
+        };
+        Returns: boolean;
+      };
+
+      fund_email_begin_delete: {
+        Args: {
+          p_actor_user_id: string;
+          p_expected_provider_webhook_id: string | null;
+          p_expected_updated_at: string;
+          p_fund_id: string;
+        };
+        Returns: string;
+      };
+
       change_diligence_output_language: {
         Args: {
-          p_confirm_version: boolean
-          p_deal_id: string
-          p_expected_draft_id: string | null
-          p_fund_id: string
-          p_output_language: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
+          p_confirm_version: boolean;
+          p_deal_id: string;
+          p_expected_draft_id: string | null;
+          p_fund_id: string;
+          p_output_language: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      claim_explore_discovery_refresh: {
+        Args: {
+          p_classifier_version: string;
+          p_fund_id: string;
+          p_lease_id: string;
+          p_lease_seconds: number;
+          p_semantic_version: string;
+        };
+        Returns: {
+          acquired: boolean;
+          active_generation: string | null;
+          changed_entry_id: number;
+          changed_scan_cutoff: string | null;
+          changed_watermark: string | null;
+          entry_watermark: number;
+          lease_until: string | null;
+        }[];
+      };
+      finish_explore_discovery_refresh: {
+        Args: {
+          p_error_code?: string | null;
+          p_fund_id: string;
+          p_lease_id: string;
+          p_watermark_changed_at: string | null;
+          p_watermark_changed_entry_id: number;
+          p_watermark_changed_scan_cutoff: string | null;
+          p_watermark_entry_id: number;
+        };
+        Returns: boolean;
+      };
+      publish_explore_discovery_generation: {
+        Args: {
+          p_expires_at: string;
+          p_fund_id: string;
+          p_generated_at: string;
+          p_generation_id: string;
+          p_items: Json;
+          p_lease_id: string;
+          p_semantic_version: string;
+          p_classifier_version: string;
+          p_watermark_changed_at: string | null;
+          p_watermark_changed_entry_id: number;
+          p_watermark_changed_scan_cutoff: string | null;
+          p_watermark_entry_id: number;
+        };
+        Returns: number;
+      };
+      next_feed_discovery_funds: {
+        Args: { p_limit?: number };
+        Returns: { fund_id: string }[];
+      };
       background_job_claim_due: {
-        Args: { p_kinds: string[]; p_limit?: number }
-        Returns: Database["public"]["Tables"]["background_jobs"]["Row"][]
-      }
+        Args: { p_kinds: string[]; p_limit?: number };
+        Returns: Database["public"]["Tables"]["background_jobs"]["Row"][];
+      };
       background_job_claim_tool_call: {
         Args: {
-          p_attempt_id: string
-          p_job_id: string
-          p_max_calls?: number
-          p_request_hash: string
-          p_tool_call_id: string
-          p_tool_name: string
-        }
-        Returns: Json
-      }
+          p_attempt_id: string;
+          p_job_id: string;
+          p_max_calls?: number;
+          p_request_hash: string;
+          p_tool_call_id: string;
+          p_tool_name: string;
+        };
+        Returns: Json;
+      };
       background_job_complete_tool_call: {
         Args: {
-          p_attempt_id: string
-          p_is_error?: boolean
-          p_job_id: string
-          p_request_hash: string
-          p_response: Json
-          p_tool_call_id: string
-          p_tool_name: string
-        }
-        Returns: boolean
-      }
+          p_attempt_id: string;
+          p_is_error?: boolean;
+          p_job_id: string;
+          p_request_hash: string;
+          p_response: Json;
+          p_tool_call_id: string;
+          p_tool_name: string;
+        };
+        Returns: boolean;
+      };
       background_job_enqueue: {
         Args: {
-          p_actor_type: string
-          p_actor_user_id: string | null
-          p_available_at?: string
-          p_dedupe_key: string
-          p_fund_id: string
-          p_kind: string
-          p_lease_seconds?: number
-          p_max_attempts?: number
-          p_payload: Json
-        }
-        Returns: Database["public"]["Tables"]["background_jobs"]["Row"]
-      }
+          p_actor_type: string;
+          p_actor_user_id: string | null;
+          p_available_at?: string;
+          p_dedupe_key: string;
+          p_fund_id: string;
+          p_kind: string;
+          p_lease_seconds?: number;
+          p_max_attempts?: number;
+          p_payload: Json;
+        };
+        Returns: Database["public"]["Tables"]["background_jobs"]["Row"];
+      };
       background_job_finalize: {
         Args: {
-          p_attempt_id: string
-          p_error?: string | null
-          p_job_id: string
-          p_retry_after_seconds?: number
-          p_status: string
-        }
-        Returns: boolean
-      }
+          p_attempt_id: string;
+          p_error?: string | null;
+          p_job_id: string;
+          p_retry_after_seconds?: number;
+          p_status: string;
+        };
+        Returns: boolean;
+      };
       background_job_claim_worker_attempt: {
-        Args: { p_job_id: string; p_attempt_id: string }
-        Returns: boolean
-      }
+        Args: { p_job_id: string; p_attempt_id: string };
+        Returns: boolean;
+      };
       background_job_write_deal_research: {
         Args: {
-          p_attempt_id: string
-          p_deal_id: string
-          p_error?: string | null
-          p_findings?: Json | null
-          p_job_id: string
-          p_sources?: Json | null
-          p_status: string
-          p_summary?: string | null
-        }
-        Returns: boolean
-      }
-      count_unread_notes: { Args: { p_user_id: string }; Returns: number }
+          p_attempt_id: string;
+          p_deal_id: string;
+          p_error?: string | null;
+          p_findings?: Json | null;
+          p_job_id: string;
+          p_sources?: Json | null;
+          p_status: string;
+          p_summary?: string | null;
+        };
+        Returns: boolean;
+      };
+      count_unread_notes: { Args: { p_user_id: string }; Returns: number };
       rate_limit_check: {
         Args: {
-          p_key: string
-          p_limit: number
-          p_window_seconds: number
-        }
-        Returns: number
-      }
+          p_key: string;
+          p_limit: number;
+          p_window_seconds: number;
+        };
+        Returns: number;
+      };
       enqueue_ingest_if_deal_idle: {
         Args: {
-          p_fund_id: string
-          p_deal_id: string
-          p_document_ids: string[]
-          p_enqueued_by?: string | null
-          p_dedupe_key?: string | null
-        }
-        Returns: Json
-      }
-      get_my_fund_ids: { Args: never; Returns: string[] }
-      resolve_my_lp_fund: { Args: never; Returns: string | null }
+          p_fund_id: string;
+          p_deal_id: string;
+          p_document_ids: string[];
+          p_enqueued_by?: string | null;
+          p_dedupe_key?: string | null;
+        };
+        Returns: Json;
+      };
+      get_my_fund_ids: { Args: never; Returns: string[] };
+      resolve_my_lp_fund: { Args: never; Returns: string | null };
       resolve_public_fund_host: {
-        Args: { p_slug: string }
+        Args: { p_slug: string };
         Returns: {
-          id: string
-          logo_url: string | null
-          name: string
-          slug: string
-          theme: Json | null
-        }[]
-      }
+          id: string;
+          logo_url: string | null;
+          name: string;
+          slug: string;
+          theme: Json | null;
+        }[];
+      };
       resolve_published_fund_site: {
-        Args: { p_slug: string }
+        Args: { p_slug: string };
         Returns: {
-          fund_id: string
-          slug: string
-          name: string
-          logo_url: string | null
-          template_key: string
-          content: Json
-          published_version: number
-          published_at: string
-        }[]
-      }
+          fund_id: string;
+          slug: string;
+          name: string;
+          logo_url: string | null;
+          template_key: string;
+          content: Json;
+          published_version: number;
+          published_at: string;
+        }[];
+      };
       publish_fund_public_site: {
-        Args: { p_fund_id: string; p_expected_draft_revision: number; p_expected_lifecycle_revision: number; p_user_id: string }
+        Args: {
+          p_fund_id: string;
+          p_expected_draft_revision: number;
+          p_expected_lifecycle_revision: number;
+          p_user_id: string;
+        };
         Returns: {
-          draft_revision: number
-          published_version: number
-          published_from_draft_revision: number
-          is_published: boolean
-          published_at: string
-        }[]
-      }
+          draft_revision: number;
+          published_version: number;
+          published_from_draft_revision: number;
+          is_published: boolean;
+          published_at: string;
+        }[];
+      };
       unpublish_fund_public_site: {
-        Args: { p_fund_id: string; p_expected_lifecycle_revision: number; p_user_id: string }
+        Args: {
+          p_fund_id: string;
+          p_expected_lifecycle_revision: number;
+          p_user_id: string;
+        };
         Returns: {
-          draft_revision: number
-          published_version: number
-          published_from_draft_revision: number | null
-          is_published: boolean
-          published_at: string | null
-        }[]
-      }
-      hook_before_user_created: { Args: { event: Json }; Returns: Json }
-      is_fund_admin: { Args: { check_fund_id: string }; Returns: boolean }
+          draft_revision: number;
+          published_version: number;
+          published_from_draft_revision: number | null;
+          is_published: boolean;
+          published_at: string | null;
+        }[];
+      };
+      hook_before_user_created: { Args: { event: Json }; Returns: Json };
+      is_fund_admin: { Args: { check_fund_id: string }; Returns: boolean };
       is_fund_member_by_email: {
-        Args: { p_email: string; p_fund_id: string }
+        Args: { p_email: string; p_fund_id: string };
         Returns: {
-          member_role: string
-          user_id: string
-        }[]
-      }
-      is_fund_writer: { Args: { check_fund_id: string }; Returns: boolean }
+          member_role: string;
+          user_id: string;
+        }[];
+      };
+      is_fund_writer: { Args: { check_fund_id: string }; Returns: boolean };
       match_experts: {
-        Args: { p_fund_id: string; p_query_embedding: string; p_match_count?: number }
+        Args: {
+          p_fund_id: string;
+          p_match_count?: number;
+          p_query_embedding: string;
+        };
         Returns: {
-          id: string
-          scope: string
-          name: string
-          title: string | null
-          organization: string | null
-          profile_text: string
-          similarity: number
-        }[]
-      }
-    }
+          id: string;
+          name: string;
+          organization: string;
+          profile_text: string;
+          scope: string;
+          similarity: number;
+          source_type: string;
+          title: string;
+          verification_type: string;
+          verified_at: string;
+        }[];
+      };
+      confirm_expert_candidate: {
+        Args: {
+          p_candidate_id: string;
+          p_fund_id: string;
+          p_user_id: string;
+          p_email: string;
+          p_name: string;
+          p_title: string;
+          p_organization: string;
+          p_profile_text: string;
+        };
+        Returns: string;
+      };
+      merge_expert_candidates: {
+        Args: {
+          p_fund_id: string;
+          p_user_id: string;
+          p_query: string;
+          p_candidates: Json;
+        };
+        Returns: undefined;
+      };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<
+  keyof Database,
+  "public"
+>];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
@@ -3396,170 +4895,213 @@ export type Tables<
         DefaultSchema["Views"])
     ? (DefaultSchema["Tables"] &
         DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const
+} as const;
 
 // Row-level type aliases
-export type AppSettings    = Tables<'app_settings'>
-export type Fund           = Tables<'funds'>
-export type FundMember     = Tables<'fund_members'>
-export type FundSettings   = Tables<'fund_settings'>
-export type AuthorizedSender = Tables<'authorized_senders'>
-export type Company        = Tables<'companies'>
-export type InboundEmail   = Tables<'inbound_emails'>
-export type Metric         = Tables<'metrics'>
-export type MetricValue    = Tables<'metric_values'>
-export type CompanySummary = Tables<'company_summaries'>
-export type ParsingReview  = Tables<'parsing_reviews'>
-export type AllowedSignup  = Tables<'allowed_signups'>
-export type FundJoinRequest = Tables<'fund_join_requests'>
-export type EmailRequest    = Tables<'email_requests'>
-export type CompanyNote     = Tables<'company_notes'>
-export type InvestmentTransaction = Tables<'investment_transactions'>
-export type NoteRead             = Tables<'note_reads'>
-export type NoteNotificationPreference = Tables<'note_notification_preferences'>
-export type NoteCompanySubscription    = Tables<'note_company_subscriptions'>
-export type AnalystConversation        = Tables<'analyst_conversations'>
-export type Interaction                = Tables<'interactions'>
-export type LpLetterTemplate           = Tables<'lp_letter_templates'>
-export type LpLetter                   = Tables<'lp_letters'>
+export type AppSettings = Tables<"app_settings">;
+export type Fund = Tables<"funds">;
+export type FundMember = Tables<"fund_members">;
+export type FundSettings = Tables<"fund_settings">;
+export type AuthorizedSender = Tables<"authorized_senders">;
+export type Company = Tables<"companies">;
+export type InboundEmail = Tables<"inbound_emails">;
+export type Metric = Tables<"metrics">;
+export type MetricValue = Tables<"metric_values">;
+export type CompanySummary = Tables<"company_summaries">;
+export type ParsingReview = Tables<"parsing_reviews">;
+export type AllowedSignup = Tables<"allowed_signups">;
+export type FundJoinRequest = Tables<"fund_join_requests">;
+export type EmailRequest = Tables<"email_requests">;
+export type CompanyNote = Tables<"company_notes">;
+export type InvestmentTransaction = Tables<"investment_transactions">;
+export type NoteRead = Tables<"note_reads">;
+export type NoteNotificationPreference =
+  Tables<"note_notification_preferences">;
+export type NoteCompanySubscription = Tables<"note_company_subscriptions">;
+export type AnalystConversation = Tables<"analyst_conversations">;
+export type Interaction = Tables<"interactions">;
+export type LpLetterTemplate = Tables<"lp_letter_templates">;
+export type LpLetter = Tables<"lp_letters">;
 
 export interface CompanyNarrative {
-  company_id: string
-  company_name: string
-  narrative: string
-  updated_by: string | null
-  updated_at: string
+  company_id: string;
+  company_name: string;
+  narrative: string;
+  updated_by: string | null;
+  updated_at: string;
 }
 
-export type LpLetterStatus = 'generating' | 'draft' | 'final'
+export type LpLetterStatus = "generating" | "draft" | "final";
 
 // Enum-style string literals
-export type CompanyStatus      = 'active' | 'exited' | 'written-off'
-export type ProcessingStatus   = 'pending' | 'processing' | 'success' | 'failed' | 'needs_review' | 'not_processed'
-export type Confidence         = 'high' | 'medium' | 'low'
-export type ValueType          = 'number' | 'currency' | 'percentage' | 'text'
-export type UnitPosition       = 'prefix' | 'suffix'
-export type ReportingCadence   = 'quarterly' | 'monthly' | 'annual'
-export type IssueType          =
-  | 'new_company_detected'
-  | 'low_confidence'
-  | 'ambiguous_period'
-  | 'metric_not_found'
-  | 'company_not_identified'
-  | 'duplicate_period'
-  | 'deal_extraction'
-  | 'routing_low_confidence'
-  | 'multi_company_email'
-  | 'diligence_intake_pending'
+export type CompanyStatus = "active" | "exited" | "written-off";
+export type ProcessingStatus =
+  | "pending"
+  | "processing"
+  | "success"
+  | "failed"
+  | "needs_review"
+  | "not_processed";
+export type Confidence = "high" | "medium" | "low";
+export type ValueType = "number" | "currency" | "percentage" | "text";
+export type UnitPosition = "prefix" | "suffix";
+export type ReportingCadence = "quarterly" | "monthly" | "annual";
+export type IssueType =
+  | "new_company_detected"
+  | "low_confidence"
+  | "ambiguous_period"
+  | "metric_not_found"
+  | "company_not_identified"
+  | "duplicate_period"
+  | "deal_extraction"
+  | "routing_low_confidence"
+  | "multi_company_email"
+  | "diligence_intake_pending";
 
 // 'deals' = a company pitching us (screening / dealflow → inbound_deals).
 // 'diligence' = an email about a company ALREADY in diligence; it is proposed
 // for that deal's data room and imported only once a human accepts it.
-export type RoutingLabel       = 'reporting' | 'interactions' | 'deals' | 'diligence' | 'other'
-export type RoutedTo           = 'reporting' | 'interactions' | 'deals' | 'diligence' | 'audit' | 'review'
-export type DiligenceIntakeStatus = 'pending' | 'accepted' | 'rejected'
-export type ThesisFitScore     = 'strong' | 'moderate' | 'weak' | 'out_of_thesis' | 'spam'
-export type DealStatus         = 'new' | 'reviewing' | 'advancing' | 'met' | 'diligence' | 'invested' | 'passed'
+export type RoutingLabel =
+  | "reporting"
+  | "interactions"
+  | "deals"
+  | "diligence"
+  | "other";
+export type RoutedTo =
+  | "reporting"
+  | "interactions"
+  | "deals"
+  | "diligence"
+  | "audit"
+  | "review";
+export type DiligenceIntakeStatus = "pending" | "accepted" | "rejected";
+export type ThesisFitScore =
+  | "strong"
+  | "moderate"
+  | "weak"
+  | "out_of_thesis"
+  | "spam";
+export type DealStatus =
+  | "new"
+  | "reviewing"
+  | "advancing"
+  | "met"
+  | "diligence"
+  | "invested"
+  | "passed";
 // 'heartbeat' is set ONLY by the Heartbeat ingest path (processDeal's
 // introSourceOverride), never inferred by the deal analyzer — it is deliberately
 // absent from VALID_INTRO_SOURCES in lib/claude/analyzeDeal.ts so the model can't
 // label an emailed pitch as having come from the community.
-export type IntroSource        = 'referral' | 'cold' | 'warm_intro' | 'accelerator' | 'demo_day' | 'event' | 'heartbeat' | 'other'
-export type ReviewResolution   = 'accepted' | 'rejected' | 'manually_corrected'
-export type EmailRequestStatus = 'draft' | 'sent' | 'failed'
-export type TransactionType    = 'investment' | 'proceeds' | 'unrealized_gain_change' | 'round_info'
-export type NotificationLevel  = 'all' | 'mentions' | 'none'
+export type IntroSource =
+  | "referral"
+  | "cold"
+  | "warm_intro"
+  | "accelerator"
+  | "demo_day"
+  | "event"
+  | "email"
+  | "heartbeat"
+  | "other";
+export type ReviewResolution = "accepted" | "rejected" | "manually_corrected";
+export type EmailRequestStatus = "draft" | "sent" | "failed";
+export type TransactionType =
+  | "investment"
+  | "proceeds"
+  | "unrealized_gain_change"
+  | "round_info";
+export type NotificationLevel = "all" | "mentions" | "none";

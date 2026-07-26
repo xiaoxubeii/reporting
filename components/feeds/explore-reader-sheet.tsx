@@ -1,11 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
-import { ExternalLink, Loader2, X } from 'lucide-react'
+import { BriefcaseBusiness, ExternalLink, Loader2, X } from 'lucide-react'
+import { ManualDealDialog } from '@/components/deals/manual-deal-dialog'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetContent } from '@/components/ui/sheet'
 import { feedErrorMessageKey, feedsRequest, type ExploreEntryResult } from './api'
+import { buildArticleDealPrefill } from '@/lib/feeds/deal-prefill'
+import { useCanWrite } from '@/components/access-context'
 
 export function ExploreReaderSheet({
   entry,
@@ -22,10 +26,13 @@ export function ExploreReaderSheet({
   const t = useTranslations('Feeds.reader')
   const feedError = useTranslations('Feeds.errors')
   const format = useFormatter()
+  const router = useRouter()
+  const canCreateDeal = useCanWrite('dealflow')
   const [detail, setDetail] = useState<ExploreEntryResult | null>(entry)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
+  const [dealOpen, setDealOpen] = useState(false)
 
   useEffect(() => {
     setError(null)
@@ -57,6 +64,8 @@ export function ExploreReaderSheet({
         overlayClassName="bg-black/35"
         className="w-screen max-w-none p-0 sm:w-[80vw] sm:max-w-[1040px] lg:w-[72vw]"
         aria-label={t('exploreLabel')}
+        dialogTitle={detail?.title ?? t('exploreLabel')}
+        dialogDescription={detail?.summary ?? t('previewOnly')}
         showCloseButton={false}
       >
         <SheetClose asChild>
@@ -75,6 +84,7 @@ export function ExploreReaderSheet({
         {!loading && !error && detail && (
           <div className="flex h-full flex-col">
             <div className="sticky top-0 z-10 flex min-h-16 items-center justify-end border-b bg-background/95 px-14 backdrop-blur">
+              {canCreateDeal && <Button variant="ghost" size="icon" aria-label={t('createDeal')} onClick={() => setDealOpen(true)}><BriefcaseBusiness /></Button>}
               {detail.originalUrl && (
                 <Button asChild variant="ghost" size="icon">
                   <a href={detail.originalUrl} target="_blank" rel="noopener noreferrer" aria-label={t('openOriginal')}><ExternalLink /></a>
@@ -103,6 +113,14 @@ export function ExploreReaderSheet({
           </div>
         )}
       </SheetContent>
+      {detail && (
+        <ManualDealDialog
+          open={dealOpen}
+          onOpenChange={setDealOpen}
+          prefill={buildArticleDealPrefill({ key: detail.id, title: detail.title, url: detail.originalUrl, summary: detail.summary, contentText: detail.contentText })}
+          onCreated={dealId => { setDealOpen(false); if (dealId) router.push(`/deals/${dealId}`) }}
+        />
+      )}
     </Sheet>
   )
 }

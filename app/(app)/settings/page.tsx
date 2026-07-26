@@ -37,8 +37,11 @@ import { AnalystPanel } from '@/components/analyst-panel'
 import { AffinityConnect } from '@/components/settings/affinity-connect'
 import { HeartbeatConnect } from '@/components/settings/heartbeat-connect'
 import { DealResearchSettings } from '@/components/settings/deal-research-settings'
-import { SearchCategorySettings } from '@/components/settings/search-category-settings'
 import { useTenantBranding } from '@/components/tenant-branding-provider'
+import {
+  FundResendInboundProviderFields,
+  FundResendOutboundProviderFields,
+} from '@/components/settings/fund-email-settings'
 import { AdminSectionContext, GroupHeader, Section } from '@/components/settings/section'
 import {
   CUSTOM_AI_PROVIDER_LABEL,
@@ -206,9 +209,6 @@ export default function SettingsPage() {
           </Section>}
           <CurrencySection currency={settings.currency} onSaved={load} />
           <FeatureVisibilitySection featureVisibility={settings.featureVisibility} lpPortalEnabled={settings.lpPortalEnabled} onSaved={load} />
-          <Section title={t('sections.searchCategories')}>
-            <SearchCategorySettings />
-          </Section>
           <Section title={t('sections.investmentVehicles')}>
             <VehiclesSettings />
           </Section>
@@ -236,6 +236,14 @@ export default function SettingsPage() {
       </Section>
       {!settings.isAdmin && (
         <AiSummaryPromptReadOnly prompt={settings.aiSummaryPrompt} />
+      )}
+      {!settings.isAdmin && (
+        settings.outboundEmailProvider === 'resend' || settings.asksEmailProvider === 'resend'
+      ) && (
+        <>
+          <GroupHeader label={t('groups.outboundEmail')} />
+          <FundResendOutboundProviderFields onChanged={load} />
+        </>
       )}
       {settings.isAdmin && (
         <AdminSectionContext.Provider value={true}>
@@ -2058,6 +2066,9 @@ function InboundEmailSection({
 }) {
   const t = useTranslations('Settings.page.inbound')
   const [selectedProvider, setSelectedProvider] = useState(provider || '')
+  useEffect(() => {
+    setSelectedProvider(provider || '')
+  }, [provider])
   const [addr, setAddr] = useState(postmarkAddress)
   const [mgDomain, setMgDomain] = useState(mailgunInboundDomain)
   const [mgSigningKey, setMgSigningKey] = useState('')
@@ -2072,6 +2083,13 @@ function InboundEmailSection({
 
   const handleSave = async () => {
     setSaving(true)
+    if (provider === 'resend' && selectedProvider !== 'resend') {
+      const disconnected = await fetch('/api/settings/fund-email', { method: 'DELETE' })
+      if (!disconnected.ok) {
+        setSaving(false)
+        return
+      }
+    }
     const payload: Record<string, unknown> = {
       inboundEmailProvider: selectedProvider || null,
     }
@@ -2126,6 +2144,7 @@ function InboundEmailSection({
             <option value="">{t('none')}</option>
             <option value="postmark">Postmark</option>
             <option value="mailgun">Mailgun</option>
+            <option value="resend">Resend</option>
           </select>
         </div>
 
@@ -2220,9 +2239,15 @@ function InboundEmailSection({
           </>
         )}
 
-        <Button onClick={handleSave} disabled={saving || !canSave} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
-        </Button>
+        {selectedProvider === 'resend' && (
+          <FundResendInboundProviderFields onChanged={onSaved} />
+        )}
+
+        {selectedProvider !== 'resend' && (
+          <Button onClick={handleSave} disabled={saving || !canSave} size="sm">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
+          </Button>
+        )}
       </div>
     </Section>
   )
@@ -3689,20 +3714,23 @@ function OutboundEmailSection({
         )}
 
         {activeProviders.has('resend') && (
-          <div>
-            <Label>{t('resendKey')}</Label>
-            {hasResendKey && (
-              <p className="text-xs text-muted-foreground mt-1 mb-1.5">
-                {t('keySaved')}
-              </p>
-            )}
-            <Input
-              type="password"
-              value={resendKey}
-              onChange={(e) => setResendKey(e.target.value)}
-              placeholder={hasResendKey ? '••••••••' : 're_...'}
-            />
-          </div>
+          <>
+            <div>
+              <Label>{t('resendKey')}</Label>
+              {hasResendKey && (
+                <p className="text-xs text-muted-foreground mt-1 mb-1.5">
+                  {t('keySaved')}
+                </p>
+              )}
+              <Input
+                type="password"
+                value={resendKey}
+                onChange={(e) => setResendKey(e.target.value)}
+                placeholder={hasResendKey ? '••••••••' : 're_...'}
+              />
+            </div>
+            <FundResendOutboundProviderFields onChanged={onSaved} />
+          </>
         )}
 
         {activeProviders.has('postmark') && (

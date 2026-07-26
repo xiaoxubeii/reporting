@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getOutboundConfig, sendOutboundEmail } from '@/lib/email'
 import { canonicalFundOriginForId } from '@/lib/tenancy/links'
+import { sendPlatformEmail } from '@/lib/email/system'
+import type { Database } from '@/lib/types/database'
 
 interface NoteInfo {
   id: string
@@ -27,42 +28,31 @@ interface NoteInfo {
  * Fails silently — never throws.
  */
 export async function sendNoteNotifications(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
   fundId: string,
   note: NoteInfo
 ): Promise<void> {
   try {
-    // Get outbound email config — bail if not configured
-    const config = await getOutboundConfig(admin, fundId, 'system')
-    if (!config) return
-
     // Get fund name for email subject
     const { data: fund } = await admin
       .from('funds')
       .select('name')
       .eq('id', fundId)
-      .maybeSingle() as { data: { name: string } | null }
-
-    // Get system email from address
-    const { data: fundSettings } = await admin
-      .from('fund_settings')
-      .select('system_email_from_name, system_email_from_address')
-      .eq('fund_id', fundId)
-      .maybeSingle() as { data: { system_email_from_name: string | null; system_email_from_address: string | null } | null }
+      .maybeSingle()
 
     // Get all fund members
     const { data: members } = await admin
       .from('fund_members')
       .select('user_id, display_name')
-      .eq('fund_id', fundId) as { data: { user_id: string; display_name: string | null }[] | null }
+      .eq('fund_id', fundId)
 
     if (!members || members.length === 0) return
 
     // Get notification preferences
     const { data: prefs } = await admin
-      .from('note_notification_preferences' as any)
+      .from('note_notification_preferences')
       .select('user_id, level')
-      .eq('fund_id', fundId) as { data: { user_id: string; level: string }[] | null }
+      .eq('fund_id', fundId)
 
     const prefMap = new Map<string, string>()
     for (const p of prefs ?? []) {
@@ -73,9 +63,9 @@ export async function sendNoteNotifications(
     const subscribedUserIds = new Set<string>()
     if (note.companyId) {
       const { data: subs } = await admin
-        .from('note_company_subscriptions' as any)
+        .from('note_company_subscriptions')
         .select('user_id')
-        .eq('company_id', note.companyId) as { data: { user_id: string }[] | null }
+        .eq('company_id', note.companyId)
 
       for (const s of subs ?? []) subscribedUserIds.add(s.user_id)
     }
@@ -110,8 +100,7 @@ export async function sendNoteNotifications(
 
     // Look up emails for recipients
     const siteUrl = await canonicalFundOriginForId(admin as never, fundId)
-    const fromName = fundSettings?.system_email_from_name || fund?.name || 'Portfolio'
-    const fromAddress = fundSettings?.system_email_from_address || ''
+    const fromName = fund?.name || 'Portfolio'
 
     const subject = note.companyName
       ? `New note from ${note.authorName} on ${note.companyName}`
@@ -134,18 +123,22 @@ export async function sendNoteNotifications(
           ? `You follow ${note.companyName}.`
           : 'You receive all note notifications.'
 
+        const safeAuthorName = escapeHtml(note.authorName)
+        const safeCompanyName = note.companyName ? escapeHtml(note.companyName) : null
+        const safeContent = escapeHtml(truncatedContent)
+        const safeFromName = escapeHtml(fromName)
+        const safeReason = escapeHtml(reason)
         const html = `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px;">
-            <p style="margin: 0 0 12px;"><strong>${note.authorName}</strong>${note.companyName ? ` on <strong>${note.companyName}</strong>` : ''}:</p>
-            <blockquote style="margin: 0 0 16px; padding: 12px 16px; background: #f5f5f5; border-left: 3px solid #ddd; border-radius: 4px; white-space: pre-wrap;">${truncatedContent}</blockquote>
-            <p style="margin: 0 0 16px;"><a href="${siteUrl}/notes" style="color: #2563eb;">View in ${fromName}</a></p>
-            <p style="margin: 0; color: #888; font-size: 12px;">${reason} <a href="${siteUrl}/settings" style="color: #888;">Manage preferences</a></p>
+            <p style="margin: 0 0 12px;"><strong>${safeAuthorName}</strong>${safeCompanyName ? ` on <strong>${safeCompanyName}</strong>` : ''}:</p>
+            <blockquote style="margin: 0 0 16px; padding: 12px 16px; background: #f5f5f5; border-left: 3px solid #ddd; border-radius: 4px; white-space: pre-wrap;">${safeContent}</blockquote>
+            <p style="margin: 0 0 16px;"><a href="${escapeHtml(siteUrl)}/notes" style="color: #2563eb;">View in ${safeFromName}</a></p>
+            <p style="margin: 0; color: #888; font-size: 12px;">${safeReason} <a href="${escapeHtml(siteUrl)}/settings" style="color: #888;">Manage preferences</a></p>
           </div>
         `.trim()
 
-        await sendOutboundEmail(config, {
+        await sendPlatformEmail({
           to: recipient.email,
-          from: fromAddress ? `${fromName} <${fromAddress}>` : undefined,
           subject,
           html,
         })
@@ -156,4 +149,13 @@ export async function sendNoteNotifications(
   } catch (err) {
     console.error('[notes-notify] Error in sendNoteNotifications:', err)
   }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }

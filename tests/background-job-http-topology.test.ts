@@ -6,6 +6,8 @@ const cronConfig = readFileSync(new URL('../scripts/cron-runner/config.mjs', imp
 const registry = readFileSync(new URL('../lib/background-jobs/registry.ts', import.meta.url), 'utf8')
 const context = readFileSync(new URL('../lib/background-jobs/context.ts', import.meta.url), 'utf8')
 const token = readFileSync(new URL('../lib/background-jobs/token.ts', import.meta.url), 'utf8')
+const feedWorker = readFileSync(new URL('../lib/background-jobs/feed-discovery-worker.ts', import.meta.url), 'utf8')
+const feedCron = readFileSync(new URL('../app/api/cron/feeds-discovery/route.ts', import.meta.url), 'utf8')
 
 describe('generic background-job HTTP topology', () => {
   it('dispatches registry-owned kinds instead of a Deal Research literal', () => {
@@ -22,5 +24,14 @@ describe('generic background-job HTTP topology', () => {
     expect(cronConfig).toContain("name: 'background-jobs'")
     expect(cronConfig).toContain("path: '/api/cron/background-jobs'")
     expect(registry).toContain("workerPath: '/api/internal/background-jobs/deal-research/run'")
+    expect(registry).toContain("workerPath: '/api/internal/background-jobs/feed-discovery/run'")
+  })
+
+  it('keeps Feed Discovery fund authority in signed persisted job context', () => {
+    expect(feedCron).toContain('scheduleFeedDiscoveryJobs()')
+    expect(feedCron).not.toContain('runFeedDiscoveryRefresh')
+    expect(feedCron).not.toContain("searchParams.get('fundId')")
+    expect(feedWorker).toContain('runRefresh(context.fundId)')
+    expect(feedWorker).not.toContain("searchParams.get('fundId')")
   })
 })

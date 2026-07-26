@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
-import { Bookmark, BookmarkCheck, Check, ExternalLink, Loader2, RotateCcw, X } from 'lucide-react'
+import { Bookmark, BookmarkCheck, BriefcaseBusiness, Check, ExternalLink, Loader2, RotateCcw, X } from 'lucide-react'
+import { ManualDealDialog } from '@/components/deals/manual-deal-dialog'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetContent } from '@/components/ui/sheet'
 import { feedErrorMessageKey, feedsRequest } from './api'
 import type { FeedEntryView } from '@/lib/feeds/today-state'
+import { buildArticleDealPrefill } from '@/lib/feeds/deal-prefill'
+import { useCanWrite } from '@/components/access-context'
 
 export function FeedReaderSheet({
   entry,
@@ -29,10 +33,13 @@ export function FeedReaderSheet({
   const t = useTranslations('Feeds.reader')
   const feedError = useTranslations('Feeds.errors')
   const format = useFormatter()
+  const router = useRouter()
+  const canCreateDeal = useCanWrite('dealflow')
   const [detail, setDetail] = useState<FeedEntryView | null>(entry)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [dealOpen, setDealOpen] = useState(false)
 
   useEffect(() => {
     setError(null)
@@ -93,6 +100,8 @@ export function FeedReaderSheet({
         overlayClassName="bg-black/35"
         className="w-screen max-w-none p-0 sm:w-[80vw] sm:max-w-[1040px] lg:w-[72vw]"
         aria-label={t('personalLabel')}
+        dialogTitle={detail?.title ?? t('personalLabel')}
+        dialogDescription={detail?.summary ?? t('previewOnly')}
         showCloseButton={false}
       >
         <SheetClose asChild>
@@ -118,6 +127,7 @@ export function FeedReaderSheet({
               <Button variant="ghost" size="icon" aria-label={detail.isSaved ? t('removeSaved') : t('saveLater')} onClick={() => updateState({ isSaved: !detail.isSaved })} disabled={saving}>
                 {detail.isSaved ? <BookmarkCheck className="text-primary" /> : <Bookmark />}
               </Button>
+              {canCreateDeal && <Button variant="ghost" size="icon" aria-label={t('createDeal')} onClick={() => setDealOpen(true)}><BriefcaseBusiness /></Button>}
               {detail.url && (
                 <Button asChild variant="ghost" size="icon">
                   <a href={detail.url} target="_blank" rel="noopener noreferrer" aria-label={t('openOriginal')}><ExternalLink /></a>
@@ -148,6 +158,14 @@ export function FeedReaderSheet({
           </div>
         )}
       </SheetContent>
+      {detail && (
+        <ManualDealDialog
+          open={dealOpen}
+          onOpenChange={setDealOpen}
+          prefill={buildArticleDealPrefill({ key: String(detail.externalId), title: detail.title, url: detail.url, summary: detail.summary, contentText: detail.contentText })}
+          onCreated={dealId => { setDealOpen(false); if (dealId) router.push(`/deals/${dealId}`) }}
+        />
+      )}
     </Sheet>
   )
 }

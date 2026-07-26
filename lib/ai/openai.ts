@@ -49,12 +49,15 @@ export class OpenAIProvider implements AIProvider {
 
     messages.push({ role: 'user', content: userContent })
 
-    const response = await this.client.chat.completions.create({
+    const request = {
       ...this.requestParameters,
       model: params.model,
       max_tokens: params.maxTokens,
       messages,
-    } as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming)
+    } as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming
+    const response = params.signal
+      ? await this.client.chat.completions.create(request, { signal: params.signal })
+      : await this.client.chat.completions.create(request)
 
     return {
       text: response.choices[0]?.message?.content ?? '',

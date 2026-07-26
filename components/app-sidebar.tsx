@@ -96,6 +96,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { href: '/diligence/inbox',     labelKey: 'inbox' },
       { href: '/diligence/analytics', labelKey: 'analytics', adminOnly: true },
+      { href: '/experts', labelKey: 'experts' },
     ],
   },
   {

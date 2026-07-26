@@ -53,6 +53,12 @@ const MAX_ZIP_UNCOMPRESSED = 500 * 1024 * 1024 // 500 MB
 const MAX_ZIP_RATIO = 100
 const MAX_ZIP_ENTRIES = 1000
 
+const OOXML_REQUIRED_ENTRIES = {
+  docx: ['[Content_Types].xml', 'word/document.xml'],
+  xlsx: ['[Content_Types].xml', 'xl/workbook.xml'],
+  pptx: ['[Content_Types].xml', 'ppt/presentation.xml'],
+} as const
+
 export function scanFile(buffer: Buffer, filename: string, contentType: string): ScanResult {
   // 1. File size check
   if (buffer.length > MAX_FILE_SIZE) {
@@ -110,6 +116,10 @@ export async function scanFileAsync(buffer: Buffer, filename: string, contentTyp
   const isZipBased = ZIP_BASED_TYPES.has(contentType) ||
     ['zip', 'docx', 'xlsx', 'pptx'].includes(ext)
 
+  if (isZipBased && buffer.length === 0) {
+    return { safe: false, reason: 'ZIP archive is invalid or corrupted' }
+  }
+
   if (isZipBased && buffer.length > 0) {
     try {
       const zip = await JSZip.loadAsync(buffer)
@@ -119,13 +129,22 @@ export async function scanFileAsync(buffer: Buffer, filename: string, contentTyp
         return { safe: false, reason: `ZIP has too many entries: ${entries.length} (max ${MAX_ZIP_ENTRIES})` }
       }
 
+      const requiredEntries = requiredOoxmlEntries(contentType, ext)
+      if (requiredEntries?.some(entry => !zip.files[entry] || zip.files[entry].dir)) {
+        return { safe: false, reason: 'OOXML package is invalid or corrupted' }
+      }
+
       let totalUncompressed = 0
       for (const entry of entries) {
         const file = zip.files[entry]
         if (!file.dir) {
           // _data contains compression info; use it to estimate uncompressed size
-          const info = file as any
-          totalUncompressed += info._data?.uncompressedSize ?? 0
+          const info = file as unknown as { _data?: { uncompressedSize?: unknown } }
+          const uncompressedSize = info._data?.uncompressedSize
+          if (!Number.isSafeInteger(uncompressedSize) || Number(uncompressedSize) < 0) {
+            return { safe: false, reason: 'ZIP archive metadata is invalid or corrupted' }
+          }
+          totalUncompressed += Number(uncompressedSize)
         }
       }
 
@@ -137,9 +156,28 @@ export async function scanFileAsync(buffer: Buffer, filename: string, contentTyp
         return { safe: false, reason: `ZIP compression ratio too high: ${Math.round(totalUncompressed / buffer.length)}:1 (max ${MAX_ZIP_RATIO}:1)` }
       }
     } catch {
-      // If we can't parse the ZIP, the file will likely fail downstream anyway
+      return { safe: false, reason: 'ZIP archive is invalid or corrupted' }
     }
   }
 
   return { safe: true }
+}
+
+function requiredOoxmlEntries(
+  contentType: string,
+  extension: string,
+): readonly string[] | null {
+  if (
+    contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    || extension === 'docx'
+  ) return OOXML_REQUIRED_ENTRIES.docx
+  if (
+    contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    || extension === 'xlsx'
+  ) return OOXML_REQUIRED_ENTRIES.xlsx
+  if (
+    contentType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    || extension === 'pptx'
+  ) return OOXML_REQUIRED_ENTRIES.pptx
+  return null
 }

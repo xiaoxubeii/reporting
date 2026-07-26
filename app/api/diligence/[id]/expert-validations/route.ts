@@ -16,7 +16,27 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       .eq('deal_id', params.id)
       .order('created_at', { ascending: false })
     if (error) throw error
-    const documentIds = (data ?? []).map(row => row.document_id).filter((id): id is string => Boolean(id))
+    const requestRows = data ?? []
+    const missingThreadRequestIds = requestRows
+      .filter(row => !row.email_thread_id && row.status !== 'draft')
+      .map(row => row.id)
+    const recoveredThreadByRequest = new Map<string, string>()
+    if (missingThreadRequestIds.length > 0) {
+      const threads = await context.admin
+        .from('fund_email_threads')
+        .select('id, context_id, updated_at')
+        .eq('fund_id', context.gate.fundId)
+        .eq('context_type', 'diligence_expert_request')
+        .in('context_id', missingThreadRequestIds)
+        .order('updated_at', { ascending: false })
+      if (threads.error) throw threads.error
+      for (const thread of threads.data ?? []) {
+        if (thread.context_id && !recoveredThreadByRequest.has(thread.context_id)) {
+          recoveredThreadByRequest.set(thread.context_id, thread.id)
+        }
+      }
+    }
+    const documentIds = requestRows.map(row => row.document_id).filter((id): id is string => Boolean(id))
     const statusById = new Map<string, string>()
     if (documentIds.length > 0) {
       const documents = await context.admin
@@ -29,8 +49,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       for (const document of documents.data ?? []) statusById.set(document.id, document.parse_status)
     }
     return NextResponse.json({
-      requests: (data ?? []).map(row => toExpertRequest({
+      requests: requestRows.map(row => toExpertRequest({
         ...row,
+        email_thread_id: row.email_thread_id ?? recoveredThreadByRequest.get(row.id) ?? null,
         evidence_parse_status: row.document_id ? statusById.get(row.document_id) ?? null : null,
       })),
     })

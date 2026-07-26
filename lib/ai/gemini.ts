@@ -18,6 +18,7 @@ export class GeminiProvider implements AIProvider {
       contents,
       config: {
         maxOutputTokens: params.maxTokens,
+        ...(params.signal ? { abortSignal: params.signal } : {}),
         ...(params.system ? { systemInstruction: params.system } : {}),
       },
     })
