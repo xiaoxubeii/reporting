@@ -15,8 +15,15 @@ async function contentSecurityPolicy(): Promise<string> {
     headers: () => Promise<HeaderRule[]>
   }
   const rules = await config.headers()
-  const pageRule = rules.find(rule => rule.source === '/((?!_next/static).*)')
+  const pageRule = rules.find(rule => rule.source.includes('_next/static'))
   return pageRule?.headers.find(header => header.key === 'Content-Security-Policy')?.value ?? ''
+}
+
+async function headerRule(source: string): Promise<HeaderRule | undefined> {
+  const config = (await import('../next.config.mjs')).default as {
+    headers: () => Promise<HeaderRule[]>
+  }
+  return (await config.headers()).find(rule => rule.source === source)
 }
 
 async function rewrites(): Promise<RewriteRule[]> {
@@ -31,6 +38,24 @@ afterEach(() => {
 })
 
 describe('Content Security Policy', () => {
+  it('allows only same-origin Fund previews and the existing Calendly frame', async () => {
+    const csp = await contentSecurityPolicy()
+
+    expect(csp).toContain("frame-src 'self' https://calendly.com")
+  })
+
+  it('allows only the preview route to be framed by the same origin', async () => {
+    const previewRule = await headerRule('/fund-public-site-preview')
+    const generalRule = (await headerRule('/((?!_next/static|fund-public-site-preview).*)'))
+
+    expect(previewRule?.headers).toContainEqual({ key: 'X-Frame-Options', value: 'SAMEORIGIN' })
+    expect(previewRule?.headers.find(header => header.key === 'Content-Security-Policy')?.value)
+      .toContain("frame-ancestors 'self'")
+    expect(generalRule?.headers).toContainEqual({ key: 'X-Frame-Options', value: 'DENY' })
+    expect(generalRule?.headers.find(header => header.key === 'Content-Security-Policy')?.value)
+      .toContain("frame-ancestors 'none'")
+  })
+
   it('allows the configured local Supabase HTTP and WebSocket origins', async () => {
     vi.stubEnv('NODE_ENV', 'development')
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:8000/auth/v1')

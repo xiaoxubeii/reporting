@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { AuthShell } from '@/components/auth-shell'
@@ -22,7 +21,6 @@ export default function ForgotPasswordPage() {
   const t = useTranslations('Auth')
   const locale = useLocale()
 
-  const router = useRouter()
   const supabase = createClient()
 
   async function handleSend() {
@@ -51,8 +49,9 @@ export default function ForgotPasswordPage() {
       setError(locale === 'en' ? error.message : t('genericError'))
       setVerifying(false)
     } else {
-      // Recovery session is now active — let the user set a new password.
-      router.push('/auth/reset-password')
+      // verifyOtp has just issued a browser session. Re-enter the server-side
+      // Host/Fund boundary before allowing that session to update credentials.
+      window.location.href = `/auth/post-login?method=recovery&next=${encodeURIComponent('/auth/reset-password')}`
     }
   }
 

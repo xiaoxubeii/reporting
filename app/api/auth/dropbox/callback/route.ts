@@ -3,31 +3,43 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { encrypt } from '@/lib/crypto'
 import { getDropboxCredentials } from '@/lib/dropbox/credentials'
+import { canonicalProviderOriginForFundId } from '@/lib/tenancy/links'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
+import { canonicalFundRequestUrl } from '@/lib/tenancy/host'
+import {
+  providerOAuthStateCookieName,
+  providerOAuthStateSecret,
+  verifyProviderOAuthState,
+} from '@/lib/provider-oauth-state'
 
 export async function GET(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.redirect(new URL('/auth', req.url))
+  if (!user) return NextResponse.redirect(canonicalFundRequestUrl(req, '/auth'))
 
   const code = req.nextUrl.searchParams.get('code')
   const stateParam = req.nextUrl.searchParams.get('state')
   const error = req.nextUrl.searchParams.get('error')
 
-  if (error) {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=consent_denied', req.url))
-  }
+  if (!stateParam) return clearStateAndRedirect(req, '/settings?dropbox_error=missing_params')
 
-  if (!code || !stateParam) {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=missing_params', req.url))
-  }
-
-  let fundId: string
+  let state
   try {
-    const state = JSON.parse(Buffer.from(stateParam, 'base64url').toString())
-    fundId = state.fund_id
+    state = verifyProviderOAuthState(stateParam, {
+      provider: 'dropbox',
+      userId: user.id,
+      secret: providerOAuthStateSecret(),
+    })
   } catch {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=invalid_state', req.url))
+    return clearStateAndRedirect(req, '/settings?dropbox_error=server_error')
   }
+  if (!state || req.cookies.get(providerOAuthStateCookieName('dropbox'))?.value !== stateParam) {
+    return clearStateAndRedirect(req, '/settings?dropbox_error=invalid_state')
+  }
+  if (error) return clearStateAndRedirect(req, '/settings?dropbox_error=consent_denied')
+  if (!code) return clearStateAndRedirect(req, '/settings?dropbox_error=missing_params')
+
+  const fundId = state.fundId
 
   // Verify user has access to this fund
   const admin = createAdminClient()
@@ -39,22 +51,21 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
 
   if (!membership) {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=forbidden', req.url))
+    return clearStateAndRedirect(req, '/settings?dropbox_error=forbidden')
   }
   if (membership.role !== 'admin') {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=forbidden', req.url))
+    return clearStateAndRedirect(req, '/settings?dropbox_error=forbidden')
   }
+  if (!await fundMatchesTrustedRequestTenant(admin, req.headers, fundId)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+  const baseUrl = await canonicalProviderOriginForFundId(admin as never, fundId)
 
   const creds = await getDropboxCredentials(admin, fundId)
   if (!creds) {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=not_configured', req.url))
+    return clearStateAndRedirect(req, new URL('/settings?dropbox_error=not_configured', baseUrl))
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-    ? process.env.NEXT_PUBLIC_APP_URL
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000'
   const redirectUri = `${baseUrl}/api/auth/dropbox/callback`
 
   const tokenRes = await fetch('https://api.dropbox.com/oauth2/token', {
@@ -71,14 +82,14 @@ export async function GET(req: NextRequest) {
 
   if (!tokenRes.ok) {
     console.error('[dropbox-oauth] Token exchange failed:', await tokenRes.text())
-    return NextResponse.redirect(new URL('/settings?dropbox_error=token_exchange_failed', req.url))
+    return clearStateAndRedirect(req, new URL('/settings?dropbox_error=token_exchange_failed', baseUrl))
   }
 
   const tokens = await tokenRes.json()
   const refreshToken = tokens.refresh_token
 
   if (!refreshToken) {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=no_refresh_token', req.url))
+    return clearStateAndRedirect(req, new URL('/settings?dropbox_error=no_refresh_token', baseUrl))
   }
 
   // Encrypt and store refresh token
@@ -89,22 +100,35 @@ export async function GET(req: NextRequest) {
     .single()
 
   if (!settings?.encryption_key_encrypted) {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=no_encryption_key', req.url))
+    return clearStateAndRedirect(req, new URL('/settings?dropbox_error=no_encryption_key', baseUrl))
   }
 
   const kek = process.env.ENCRYPTION_KEY
   if (!kek) {
-    return NextResponse.redirect(new URL('/settings?dropbox_error=server_error', req.url))
+    return clearStateAndRedirect(req, new URL('/settings?dropbox_error=server_error', baseUrl))
   }
 
   const { decrypt } = await import('@/lib/crypto')
   const dek = decrypt(settings.encryption_key_encrypted, kek)
   const encryptedRefreshToken = encrypt(refreshToken, dek)
 
-  await admin
+  const { error: updateError } = await admin
     .from('fund_settings')
     .update({ dropbox_refresh_token_encrypted: encryptedRefreshToken })
     .eq('fund_id', fundId)
+  if (updateError) {
+    return clearStateAndRedirect(req, new URL('/settings?dropbox_error=server_error', baseUrl))
+  }
 
-  return NextResponse.redirect(new URL('/settings?dropbox_connected=true', req.url))
+  return clearStateAndRedirect(req, new URL('/settings?dropbox_connected=true', baseUrl))
+}
+
+function clearStateAndRedirect(req: NextRequest, destination: string | URL): NextResponse {
+  const response = NextResponse.redirect(
+    typeof destination === 'string' ? canonicalFundRequestUrl(req, destination) : destination,
+  )
+  response.cookies.set(providerOAuthStateCookieName('dropbox'), '', {
+    httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 0,
+  })
+  return response
 }

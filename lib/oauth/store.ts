@@ -197,6 +197,13 @@ export interface ConsumedCode {
   resource: string | null
 }
 
+interface AuthorizationCodeConditions {
+  readonly clientId: string
+  readonly redirectUri: string
+  readonly expectedFundId?: string
+  readonly expectedResource?: string
+}
+
 /**
  * Consume an authorization code, atomically.
  *
@@ -208,12 +215,24 @@ export interface ConsumedCode {
  */
 export async function consumeAuthorizationCode(
   admin: SupabaseClient,
-  code: string
+  code: string,
+  conditions: AuthorizationCodeConditions,
 ): Promise<ConsumedCode | null> {
-  const { data } = await (admin as any)
+  let consumeQuery = (admin as any)
     .from('oauth_authorization_codes')
     .update({ consumed_at: new Date().toISOString() })
     .eq('code_hash', hashToken(code))
+    .eq('client_id', conditions.clientId)
+    .eq('redirect_uri', conditions.redirectUri)
+
+  if (conditions.expectedFundId) {
+    consumeQuery = consumeQuery.eq('fund_id', conditions.expectedFundId)
+  }
+  if (conditions.expectedResource) {
+    consumeQuery = consumeQuery.eq('resource', conditions.expectedResource)
+  }
+
+  const { data } = await consumeQuery
     .is('consumed_at', null)
     .gt('expires_at', new Date().toISOString())
     .select('client_id, user_id, fund_id, redirect_uri, scope, code_challenge, resource')
@@ -351,7 +370,7 @@ export async function resolveAccessToken(
  */
 export async function rotateRefreshToken(
   admin: SupabaseClient,
-  params: { clientId: string; refreshToken: string }
+  params: { clientId: string; refreshToken: string; expectedFundId?: string }
 ): Promise<IssuedTokens | null> {
   const hash = hashToken(params.refreshToken)
 
@@ -368,6 +387,7 @@ export async function rotateRefreshToken(
 
   // The token must belong to the client presenting it.
   if (row.client_id !== params.clientId) return null
+  if (params.expectedFundId && row.fund_id !== params.expectedFundId) return null
 
   if (row.revoked_at) {
     await revokeAllForClient(admin, row.client_id, row.user_id)

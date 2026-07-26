@@ -43,13 +43,22 @@ export interface ResolvedKey {
   scopes: string[]
 }
 
+interface ResolveCredentialOptions {
+  /** Fund selected by the trusted tenant Host, when hosted mode is active. */
+  readonly expectedFundId?: string
+}
+
 /**
  * Resolve a fund + owner from a Bearer API key. Verifies the hash against a
  * non-revoked key, re-checks the owner is still a fund member (so a removed or
  * demoted user's key loses access immediately), stamps last_used_at, and returns
  * the fund, owner, current role, and scopes — or null if invalid.
  */
-export async function resolveFundFromApiKey(admin: SupabaseClient, req: Request): Promise<ResolvedKey | null> {
+export async function resolveFundFromApiKey(
+  admin: SupabaseClient,
+  req: Request,
+  options: ResolveCredentialOptions = {},
+): Promise<ResolvedKey | null> {
   const token = bearerToken(req)
   if (!token) return null
   const hash = hashApiKey(token)
@@ -62,6 +71,9 @@ export async function resolveFundFromApiKey(admin: SupabaseClient, req: Request)
 
   const row = data as any
   if (!row || row.revoked_at) return null
+  // Reject a credential for another tenant before reading its owner or writing
+  // last_used_at. A wrong-Host probe must be completely side-effect free.
+  if (options.expectedFundId && row.fund_id !== options.expectedFundId) return null
 
   // The key acts as its owner: resolve the owner's CURRENT role (membership may
   // have changed since the key was minted). No membership → no access.
@@ -100,7 +112,11 @@ export async function resolveFundFromApiKey(admin: SupabaseClient, req: Request)
  * every call, so demoting or removing someone instantly downgrades every token
  * they hold without anyone having to hunt those tokens down.
  */
-export async function resolveAgentAuth(admin: SupabaseClient, req: Request): Promise<ResolvedKey | null> {
+export async function resolveAgentAuth(
+  admin: SupabaseClient,
+  req: Request,
+  options: ResolveCredentialOptions = {},
+): Promise<ResolvedKey | null> {
   const token = bearerToken(req)
   if (!token) return null
 
@@ -110,6 +126,7 @@ export async function resolveAgentAuth(admin: SupabaseClient, req: Request): Pro
     const { resolveAccessToken } = await import('@/lib/oauth/store')
     const resolved = await resolveAccessToken(admin, token)
     if (!resolved) return null
+    if (options.expectedFundId && resolved.fundId !== options.expectedFundId) return null
 
     const { data: membership } = await admin
       .from('fund_members')
@@ -132,7 +149,7 @@ export async function resolveAgentAuth(admin: SupabaseClient, req: Request): Pro
     }
   }
 
-  return resolveFundFromApiKey(admin, req)
+  return resolveFundFromApiKey(admin, req, options)
 }
 
 /**

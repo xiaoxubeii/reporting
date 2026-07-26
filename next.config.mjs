@@ -114,16 +114,27 @@ const nextConfig = {
       'https://api.github.com',
       'https://calendly.com',
     ]
-    const securityHeaders = [
-      { key: 'X-Frame-Options', value: 'DENY' },
+    const contentSecurityPolicy = (frameAncestors) => (
+      `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src ${connectSources.join(' ')}; frame-src 'self' https://calendly.com; frame-ancestors ${frameAncestors}; object-src 'none'; base-uri 'self'`
+    )
+    const sharedSecurityHeaders = [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
       { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
       { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+    ]
+    const securityHeaders = [
+      { key: 'X-Frame-Options', value: 'DENY' },
+      ...sharedSecurityHeaders,
       {
         key: 'Content-Security-Policy',
-        value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com; style-src 'self' 'unsafe-inline' https://assets.calendly.com; img-src 'self' data: blob: https:; font-src 'self'; connect-src ${connectSources.join(' ')}; frame-src https://calendly.com; object-src 'none'; base-uri 'self'`,
+        value: contentSecurityPolicy("'none'"),
       },
+    ]
+    const previewSecurityHeaders = [
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      ...sharedSecurityHeaders,
+      { key: 'Content-Security-Policy', value: contentSecurityPolicy("'self'") },
     ]
 
     const noCacheHeaders = [
@@ -136,8 +147,14 @@ const nextConfig = {
       // Security headers for pages and API routes only — exclude _next/static
       // so Netlify CDN can serve JS/CSS chunks directly without interference.
       {
-        source: '/((?!_next/static).*)',
+        source: '/((?!_next/static|fund-public-site-preview).*)',
         headers: securityHeaders,
+      },
+      // The private draft renderer is the only page designed for same-origin
+      // framing. Authentication and Host/Fund checks still run on the route.
+      {
+        source: '/fund-public-site-preview',
+        headers: previewSecurityHeaders,
       },
       // Prevent caching on auth and demo routes
       { source: '/auth/:path*', headers: noCacheHeaders },

@@ -68,6 +68,19 @@ describe('public expert response service', () => {
     })).rejects.toThrow(PUBLIC_INVITATION_ERROR)
   })
 
+  it('binds resolution and submission to the expected Host Fund', async () => {
+    const credential = createInvitationToken()
+    const { admin } = publicAdmin({ tokenHash: credential.tokenHash, fundId: 'fund-alpha' })
+    await expect(resolvePublicInvitation(admin, credential.rawToken, 'fund-beta'))
+      .rejects.toThrow(PUBLIC_INVITATION_ERROR)
+    await expect(submitPublicResponse({
+      admin,
+      rawToken: credential.rawToken,
+      responseMarkdown: 'Cross-Fund answer',
+      expectedFundId: 'fund-beta',
+    })).rejects.toThrow(PUBLIC_INVITATION_ERROR)
+  })
+
   it('hashes IP and token rate-limit keys without retaining the credential', () => {
     const credential = createInvitationToken()
     const tokenKey = rateKey('token', credential.rawToken)
@@ -147,6 +160,7 @@ function publicAdmin(overrides: Partial<PublicState>) {
         },
         maybeSingle: async () => {
           const matches = (!equals.has('token_hash') || equals.get('token_hash') === state.tokenHash)
+            && (!equals.has('fund_id') || equals.get('fund_id') === state.fundId)
             && (!equals.has('status') || equals.get('status') === state.status)
             && (!greaterThan.has('expires_at') || state.expiresAt > (greaterThan.get('expires_at') as string))
             && (!nullFields.has('response_markdown') || state.responseMarkdown === null)

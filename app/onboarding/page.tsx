@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, Circle, Loader2, X, Plus, Building2, HardDrive } from 'lucide-react'
+import { useTenantBranding } from '@/components/tenant-branding-provider'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,10 +96,11 @@ function OnboardingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const t = useTranslations('Onboarding')
+  const tenant = useTenantBranding()
 
   const [loading, setLoading] = useState(true)
   const [matchingFund, setMatchingFund] = useState<MatchingFund | null>(null)
-  const [mode, setMode] = useState<'detect' | 'join' | 'create'>('detect')
+  const [mode, setMode] = useState<'detect' | 'join' | 'create' | 'tenant-blocked'>('detect')
   const [step, setStep] = useState(1)
   const [state, setState] = useState<OnboardingState>({ fundId: null, webhookToken: null })
   const emailConfirmed = searchParams.get('confirmed') === 'true'
@@ -146,9 +148,9 @@ function OnboardingContent() {
       }
     }
 
-    setMode('create')
+    setMode(tenant ? 'tenant-blocked' : 'create')
     setLoading(false)
-  }, [router, searchParams])
+  }, [router, searchParams, tenant])
 
   useEffect(() => { detectFund() }, [detectFund])
 
@@ -170,7 +172,31 @@ function OnboardingContent() {
   ) : null
 
   if (mode === 'join' && matchingFund) {
-    return <JoinFundScreen fund={matchingFund} onCreateInstead={() => setMode('create')} confirmedBanner={confirmedBanner} />
+    return (
+      <JoinFundScreen
+        fund={matchingFund}
+        onCreateInstead={tenant ? undefined : () => setMode('create')}
+        confirmedBanner={confirmedBanner}
+      />
+    )
+  }
+
+  if (mode === 'tenant-blocked' && tenant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded bg-muted">
+              <Building2 className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <CardTitle>
+              <h1>{t('join.workspaceTitle', { fundName: tenant.name })}</h1>
+            </CardTitle>
+            <CardDescription>{t('join.workspaceUnavailable')}</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -228,7 +254,7 @@ function JoinFundScreen({
   confirmedBanner,
 }: {
   fund: MatchingFund
-  onCreateInstead: () => void
+  onCreateInstead?: () => void
   confirmedBanner?: React.ReactNode
 }) {
   const router = useRouter()
@@ -308,16 +334,20 @@ function JoinFundScreen({
                   {t('join.reviewNotice')}
                 </p>
 
-                <div className="relative py-2">
-                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">{t('join.or')}</span>
-                  </div>
-                </div>
+                {onCreateInstead && (
+                  <>
+                    <div className="relative py-2">
+                      <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">{t('join.or')}</span>
+                      </div>
+                    </div>
 
-                <Button variant="outline" className="w-full" onClick={onCreateInstead}>
-                  {t('join.createInstead')}
-                </Button>
+                    <Button variant="outline" className="w-full" onClick={onCreateInstead}>
+                      {t('join.createInstead')}
+                    </Button>
+                  </>
+                )}
               </>
             )}
           </CardContent>

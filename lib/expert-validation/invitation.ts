@@ -4,6 +4,7 @@ import { getOutboundConfig, sendOutboundEmail } from '@/lib/email'
 import { createInvitationToken, invitationExpiry, invitationUrl } from './token'
 import { sanitizeProviderError } from './validation'
 import { toExpertRequest } from './service'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 
 type Admin = ReturnType<typeof createAdminClient>
 type RequestRow = Tables<'diligence_expert_requests'>
@@ -60,7 +61,10 @@ export async function issueInvitation(params: {
   if (issueError) throw issueError
   if (!issued) throw new Error('Invitation state changed; refresh and try again')
 
-  const url = invitationUrl(credential.rawToken)
+  const url = invitationUrl(
+    credential.rawToken,
+    await canonicalFundOriginForId(admin as never, fundId),
+  )
   const { data: fund } = await admin.from('funds').select('name').eq('id', fundId).maybeSingle()
   const invitationParty = fund?.name ?? 'the investment team'
   let emailAccepted = false

@@ -54,9 +54,11 @@ export const UI_PAGE_FILES = [
   'app/(app)/settings/memo-agent/style-anchors/[id]/page.tsx',
   'app/(app)/settings/memo-agent/style-anchors/page.tsx',
   'app/(app)/settings/page.tsx',
+  'app/(app)/settings/public-site/page.tsx',
   'app/(app)/support/page.tsx',
   'app/(app)/updates/page.tsx',
   'app/(app)/usage/page.tsx',
+  'app/(fund-preview)/fund-public-site-preview/page.tsx',
   'app/(public)/accounting-explainer/page.tsx',
   'app/(public)/asks-explainer/page.tsx',
   'app/(public)/company-explainer/page.tsx',
@@ -167,9 +169,11 @@ export const LOCALIZED_PAGE_FILES = [
   'app/(app)/settings/memo-agent/style-anchors/[id]/page.tsx',
   'app/(app)/settings/memo-agent/style-anchors/page.tsx',
   'app/(app)/settings/page.tsx',
+  'app/(app)/settings/public-site/page.tsx',
   'app/(app)/support/page.tsx',
   'app/(app)/updates/page.tsx',
   'app/(app)/usage/page.tsx',
+  'app/(fund-preview)/fund-public-site-preview/page.tsx',
   'app/(public)/accounting-explainer/page.tsx',
   'app/(public)/asks-explainer/page.tsx',
   'app/(public)/company-explainer/page.tsx',
@@ -217,6 +221,7 @@ export const LOCALIZED_PAGE_FILES = [
 ] as const
 
 const PAGE_NAMESPACE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/[\\/]fund-public-site-preview[\\/]/, 'Settings'],
   [/\/auth\//, 'Auth'],
   [/[\\/]dashboard[\\/]/, 'Dashboard'],
   [/[\\/]import[\\/]/, 'Import'],

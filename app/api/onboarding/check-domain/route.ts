@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { headers } from 'next/headers'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export async function GET() {
   const supabase = createClient()
@@ -11,6 +13,7 @@ export async function GET() {
   if (!domain) return NextResponse.json({ fund: null })
 
   const admin = createAdminClient()
+  const tenant = await getTrustedRequestTenant(admin as never, new Headers(headers()))
 
   // Check if user already belongs to a fund — if so, don't suggest joining
   const { data: existing } = await admin
@@ -19,14 +22,19 @@ export async function GET() {
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (existing) return NextResponse.json({ fund: null })
+  if (existing) {
+    if (tenant && existing.fund_id !== tenant.id) {
+      return NextResponse.json({ error: 'Fund not found' }, { status: 404 })
+    }
+    return NextResponse.json({ fund: null })
+  }
 
-  const { data: fund } = await admin
+  let fundQuery = admin
     .from('funds')
     .select('id, name')
     .eq('email_domain', domain)
-    .limit(1)
-    .maybeSingle()
+  if (tenant) fundQuery = fundQuery.eq('id', tenant.id)
+  const { data: fund } = await fundQuery.limit(1).maybeSingle()
 
   return NextResponse.json({ fund: fund ?? null })
 }

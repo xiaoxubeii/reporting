@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { admitsRegisteredSystemRequest } from '@/lib/tenancy/system-request'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyMailgunWebhook } from '@/lib/mailgun/verify'
 import { normalizeMailgunPayload, toPostmarkPayload } from '@/lib/pipeline/normalizePayload'
@@ -12,6 +13,9 @@ import { emailFingerprint } from '@/lib/pipeline/emailFingerprint'
 import type { Json } from '@/lib/types/database'
 
 export async function POST(req: NextRequest) {
+  if (!admitsRegisteredSystemRequest(req)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   // Rate limit inbound webhook: 60 per minute per IP
   const limited = await rateLimit({ key: `inbound-mailgun:${getClientIp(req)}`, limit: 60, windowSeconds: 60 })
   if (limited) return limited

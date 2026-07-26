@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activity'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export async function POST(req: NextRequest) {
   const supabase = createClient()
@@ -17,6 +18,9 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (!membership) return NextResponse.json({ ok: true })
+  if (!await fundMatchesTrustedRequestTenant(admin, req.headers, membership.fund_id)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   let method = 'password'
   try {

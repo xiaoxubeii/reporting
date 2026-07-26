@@ -6,6 +6,13 @@ import { hasAccess, resolveAccessContext } from '@/lib/access/effective'
 import { DOMAIN_META } from '@/lib/access/domains'
 import { listBackgroundJobPolicies } from '@/lib/background-jobs/registry'
 import { getSupabaseCookieOptions } from '@/lib/supabase/cookie-options'
+import {
+  canonicalFundRequestOrigin,
+  classifyFundRequestHost,
+  sanitizeTenantRequestHeaders,
+} from '@/lib/tenancy/host'
+import { admitFundHostRoute } from '@/lib/tenancy/route-authority'
+import { resolveTenantDescriptor, type TenantDescriptor } from '@/lib/tenancy/descriptor'
 
 const BACKGROUND_JOB_WORKER_PATHS = new Set(
   listBackgroundJobPolicies().map(policy => policy.workerPath),
@@ -14,13 +21,6 @@ const BACKGROUND_JOB_WORKER_PATHS = new Set(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Expert invitations use a fragment credential handled by the isolated page
-  // and token APIs. Bypass session initialization entirely so this public flow
-  // never reads, refreshes, or writes Supabase authentication cookies.
-  if (pathname === '/expert-response' || pathname.startsWith('/api/public/expert-response/')) {
-    return NextResponse.next({ request })
-  }
-
   // Alternate server-to-server authentication. Presence of Authorization is
   // an exclusive mode switch: these handlers validate an exact-audience Job
   // Token and never fall back to Session. Bypass Session refresh/MFA/domain
@@ -28,9 +28,62 @@ export async function middleware(request: NextRequest) {
   const hasBackgroundAuthorization = request.method === 'POST' && request.headers.has('authorization') && (
     pathname === '/api/search' || BACKGROUND_JOB_WORKER_PATHS.has(pathname)
   )
-  if (hasBackgroundAuthorization) return NextResponse.next({ request })
 
-  let supabaseResponse = NextResponse.next({ request })
+  let hostContext
+  try {
+    hostContext = classifyFundRequestHost(request)
+  } catch {
+    return hostNotFound()
+  }
+  const admission = admitFundHostRoute(
+    hostContext,
+    pathname,
+    request.method,
+    hasBackgroundAuthorization,
+  )
+  if (!admission.allowed) return hostNotFound()
+
+  const trustedHeaders = sanitizeTenantRequestHeaders(
+    request.headers,
+    hostContext.mode === 'tenant' ? hostContext.slug : undefined,
+  )
+
+  let tenant: TenantDescriptor | null = null
+  if (hostContext.mode === 'tenant') {
+    const tenantLookup = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => [],
+          setAll: () => undefined,
+        },
+      },
+    )
+    try {
+      tenant = await resolveTenantDescriptor(tenantLookup as never, hostContext.slug)
+    } catch {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
+    }
+    if (!tenant) return hostNotFound()
+  }
+
+  let supabaseResponse = NextResponse.next({ request: { headers: trustedHeaders } })
+
+  // Expert invitations use a fragment credential handled by the isolated page
+  // and token APIs. Host admission and exact tenant resolution happen first,
+  // but this public flow still never reads or writes Session cookies.
+  if (pathname === '/expert-response' || pathname.startsWith('/api/public/expert-response/')) {
+    return supabaseResponse
+  }
+
+  // Registered workers and webhooks authenticate inside their handlers with a
+  // cron secret, Job Token, or provider credential. Their identity must remain
+  // exclusive from a stray browser Session after Host admission.
+  if (hasBackgroundAuthorization || admission.authority === 'worker' || admission.authority === 'webhook') {
+    return supabaseResponse
+  }
+
   const cookieOptions = getSupabaseCookieOptions()
 
   const supabase = createServerClient(
@@ -44,7 +97,7 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({ request: { headers: trustedHeaders } })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -67,7 +120,11 @@ export async function middleware(request: NextRequest) {
     !!process.env.MARKETING_DEPLOYMENT_KEY
 
   const isMarketingRoute = pathname === '/' || pathname === '/license' || pathname === '/demo' || pathname === '/contact' || pathname === '/terms' || pathname === '/privacy' || pathname === '/pricing' || pathname.endsWith('-explainer')
-  const isPublicMarketingRoute = marketingEnabled && isMarketingRoute
+  // A Fund's published/private homepage is a tenant product surface, not the
+  // FundWorkspace marketing deployment. It remains reachable for signed-out
+  // and signed-in visitors even when the platform marketing flag is disabled.
+  const isPublicFundHomepage = Boolean(tenant && pathname === '/')
+  const isPublicMarketingRoute = isPublicFundHomepage || (marketingEnabled && isMarketingRoute)
 
   // Token-gated public surfaces — always reachable regardless of the marketing
   // site flag. The token in the URL is the auth: a fund admin generates it
@@ -78,6 +135,9 @@ export async function middleware(request: NextRequest) {
 
   const isSetupRoute = pathname === '/setup' && process.env.ENABLE_SETUP_PAGE === 'true'
   const isPortalRoute = pathname.startsWith('/portal')
+  const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/')
+  const isLpApiRoute = pathname.startsWith('/api/portal/')
+  const isLpActivationApi = pathname === '/api/portal/activate'
 
   // OAuth discovery (RFC 8414 / RFC 9728). An MCP client fetches these BEFORE it
   // has any credential, so they must answer to an anonymous caller — bouncing them
@@ -91,7 +151,7 @@ export async function middleware(request: NextRequest) {
   // Unauthenticated users can only access /auth, API, marketing pages (if
   // enabled), the token-gated public submit form, and setup routes.
   if (!user && !isAuthRoute && !isApiRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isSetupRoute && !isPortalWelcome && !isOAuthDiscovery) {
-    const url = request.nextUrl.clone()
+    const url = canonicalRedirectUrl(request)
     url.pathname = '/auth'
     // Carry where they were headed, so signing in RESUMES it.
     //
@@ -117,7 +177,7 @@ export async function middleware(request: NextRequest) {
       if (isApiRoute) {
         return NextResponse.json({ error: 'MFA verification required' }, { status: 403 })
       }
-      const url = request.nextUrl.clone()
+      const url = canonicalRedirectUrl(request)
       url.pathname = '/auth/mfa-verify'
       return NextResponse.redirect(url)
     }
@@ -136,7 +196,19 @@ export async function middleware(request: NextRequest) {
   // Reads use the caller's own session (RLS-scoped), so the edge never holds a service-role key:
   // fund_settings, fund_member_access, and fund_domain_defaults are all readable by their owner.
   if (user && isApiRoute) {
-    const denial = await gateApiRequest(supabase, request, user.id)
+    if (tenant && isLpApiRoute && !isLpActivationApi) {
+      const { data: lpFundId, error: lpFundError } = await supabase.rpc('resolve_my_lp_fund', {})
+      if (lpFundError || lpFundId !== tenant.id) return hostNotFound()
+    }
+    const expectedGpFundId = tenant && !isLpApiRoute && !isTenantCredentialOrOnboardingApi(pathname)
+      ? tenant.id
+      : undefined
+    const denial = await gateApiRequest(
+      supabase,
+      request,
+      user.id,
+      expectedGpFundId,
+    )
     if (denial) return denial
   }
 
@@ -145,37 +217,58 @@ export async function middleware(request: NextRequest) {
   // route context decides which applies. /portal is LP-only; the GP app is for
   // members. A dual GP+LP user is allowed in both. Resolved from the user's OWN
   // rows (RLS-scoped) — never cross-referenced.
-  if (user && !isApiRoute && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isSetupRoute && !isOAuthDiscovery) {
-    const [{ data: membership }, { data: lpAccount }] = await Promise.all([
+  if (user && !isApiRoute && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isSetupRoute && !isOAuthDiscovery && !isOnboardingRoute) {
+    const [{ data: membership }, { data: lpAccount }, lpFundResult] = await Promise.all([
       supabase.from('fund_members').select('fund_id').eq('user_id', user.id).maybeSingle(),
       supabase.from('lp_accounts').select('status').eq('auth_user_id', user.id).maybeSingle(),
+      tenant ? supabase.rpc('resolve_my_lp_fund', {}) : Promise.resolve({ data: null, error: null }),
     ])
     const isGp = !!membership
+    const gpFundId = (membership as { fund_id?: string } | null)?.fund_id ?? null
     const lpStatus = (lpAccount as { status?: string } | null)?.status ?? null
     const isActiveLp = lpStatus === 'active'
+
+    if (tenant) {
+      if ((gpFundId && gpFundId !== tenant.id) || (isActiveLp && lpFundResult.data !== tenant.id)) {
+        return hostNotFound()
+      }
+    }
 
     if (isPortalRoute) {
       // An already-active LP has no business on the onboarding page.
       if (isActiveLp && isPortalWelcome) {
-        const url = request.nextUrl.clone()
+        const url = canonicalRedirectUrl(request)
         url.pathname = '/portal/overview'
         return NextResponse.redirect(url)
       }
       // Only active LPs (incl. active LPs who are also GPs) belong in the portal.
       if (!isActiveLp) {
-        const url = request.nextUrl.clone()
+        const url = canonicalRedirectUrl(request)
         url.pathname = lpStatus === 'invited' ? '/portal/welcome' : (isGp ? '/' : '/auth')
         if (url.pathname !== pathname) return NextResponse.redirect(url)
       }
+    } else if (lpStatus === 'invited' && !isGp) {
+      // A pending LP must finish the tenant-scoped activation flow even when a
+      // stale/deep `next` path or direct navigation points at the GP app.
+      const url = canonicalRedirectUrl(request)
+      url.pathname = '/portal/welcome'
+      return NextResponse.redirect(url)
     } else if (isActiveLp && !isGp) {
       // LP-only user on a GP route → their portal.
-      const url = request.nextUrl.clone()
+      const url = canonicalRedirectUrl(request)
       url.pathname = '/portal/overview'
       return NextResponse.redirect(url)
     }
   }
 
   return supabaseResponse
+}
+
+function canonicalRedirectUrl(request: NextRequest): URL {
+  return new URL(
+    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    canonicalFundRequestOrigin(request),
+  )
 }
 
 /**
@@ -189,6 +282,7 @@ async function gateApiRequest(
   supabase: ReturnType<typeof createServerClient>,
   request: NextRequest,
   userId: string,
+  expectedFundId?: string,
 ): Promise<NextResponse | null> {
   const key = matchRoute(request.nextUrl.pathname)
 
@@ -196,6 +290,18 @@ async function gateApiRequest(
     console.error(`[access] unmapped API route: ${request.nextUrl.pathname} — denying`)
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
+
+  // Host/Fund equality is an identity boundary, not a domain grant. Enforce it
+  // before both early-return classes below: `any` routes still read the
+  // caller's Fund, and internally-gated routes such as pending-actions must
+  // never receive a sibling Fund's session in the first place.
+  let access = expectedFundId
+    ? await resolveAccessContext(supabase as never, userId)
+    : null
+  if (expectedFundId && (!access || access.fundId !== expectedFundId)) {
+    return hostNotFound()
+  }
+
   // Authenticates by some other means (API key, cron secret, webhook token, LP portal account) or
   // serves no fund data. Each entry carries its reason.
   if (key in UNGATED_ROUTES) return null
@@ -210,7 +316,7 @@ async function gateApiRequest(
   // ONE round trip: fund, role, feature switches, grants and defaults together. This runs on every
   // /api request, so it resolves live (a revoked grant bites on the next request, with no token to
   // hunt down and no cache to wait out) — which is exactly why the one call has to be cheap.
-  const access = await resolveAccessContext(supabase as never, userId)
+  if (!access) access = await resolveAccessContext(supabase as never, userId)
 
   // Not a fund member: an LP-portal-only user, or a pending join request. The route's own
   // membership lookup returns the right error; nothing here to gate.
@@ -226,6 +332,22 @@ async function gateApiRequest(
     { error: level === 'write' ? `You do not have write access to ${label}.` : `You do not have access to ${label}.` },
     { status: 403 },
   )
+}
+
+function hostNotFound(): NextResponse {
+  return NextResponse.json({ error: 'Not found' }, { status: 404 })
+}
+
+function isTenantCredentialOrOnboardingApi(pathname: string): boolean {
+  return pathname === '/api/auth/branding'
+    || pathname === '/api/auth/signup'
+    || pathname === '/api/auth/logout'
+    || pathname.startsWith('/api/onboarding/')
+    || pathname.startsWith('/api/public/')
+    || pathname.startsWith('/api/oauth/')
+    || pathname === '/api/mcp'
+    || pathname === '/api/agent'
+    || pathname === '/api/locale'
 }
 
 export const config = {

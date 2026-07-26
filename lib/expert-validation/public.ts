@@ -11,13 +11,18 @@ export function validateRawToken(value: unknown): string {
   return value
 }
 
-export async function resolvePublicInvitation(admin: Admin, rawToken: string): Promise<PublicExpertInvitation> {
+export async function resolvePublicInvitation(
+  admin: Admin,
+  rawToken: string,
+  expectedFundId?: string,
+): Promise<PublicExpertInvitation> {
   const tokenHash = hashInvitationToken(validateRawToken(rawToken))
-  const { data, error } = await admin
+  let invitationQuery = admin
     .from('diligence_expert_requests')
     .select('fund_id, question, context_snapshot, expires_at, status, submitted_at')
     .eq('token_hash', tokenHash)
-    .maybeSingle()
+  if (expectedFundId) invitationQuery = invitationQuery.eq('fund_id', expectedFundId)
+  const { data, error } = await invitationQuery.maybeSingle()
   if (error) throw error
   const row = data
   if (!row || !row.expires_at || Date.parse(row.expires_at) <= Date.now() || !['invited', 'submitted'].includes(row.status)) {
@@ -38,10 +43,11 @@ export async function submitPublicResponse(params: {
   admin: Admin
   rawToken: string
   responseMarkdown: string
+  expectedFundId?: string
 }): Promise<{ requestId: string; submittedAt: string; alreadySubmitted: boolean }> {
   const tokenHash = hashInvitationToken(validateRawToken(params.rawToken))
   const now = new Date().toISOString()
-  const { data, error } = await params.admin
+  let submissionQuery = params.admin
     .from('diligence_expert_requests')
     .update({
       response_markdown: params.responseMarkdown,
@@ -49,6 +55,8 @@ export async function submitPublicResponse(params: {
       status: 'submitted',
     })
     .eq('token_hash', tokenHash)
+  if (params.expectedFundId) submissionQuery = submissionQuery.eq('fund_id', params.expectedFundId)
+  const { data, error } = await submissionQuery
     .eq('status', 'invited')
     .gt('expires_at', now)
     .is('response_markdown', null)
@@ -57,11 +65,12 @@ export async function submitPublicResponse(params: {
   if (error) throw error
   if (data?.submitted_at) return { requestId: data.id, submittedAt: data.submitted_at, alreadySubmitted: false }
 
-  const { data: existing } = await params.admin
+  let existingQuery = params.admin
     .from('diligence_expert_requests')
     .select('id, status, submitted_at, expires_at')
     .eq('token_hash', tokenHash)
-    .maybeSingle()
+  if (params.expectedFundId) existingQuery = existingQuery.eq('fund_id', params.expectedFundId)
+  const { data: existing } = await existingQuery.maybeSingle()
   const row = existing
   if (row?.status === 'submitted' && row.submitted_at && row.expires_at && Date.parse(row.expires_at) > Date.now()) {
     return { requestId: row.id, submittedAt: row.submitted_at, alreadySubmitted: true }

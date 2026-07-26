@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertWriteAccess } from '@/lib/api-helpers'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 
 /**
  * Admin-only bulk LP onboarding (gap 3). Paste a sheet of investors + emails
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
   const fundId = writeCheck.fundId
   const { data: fund } = await admin.from('funds').select('name').eq('id', fundId).maybeSingle()
   const fundName = fund?.name ?? null
+  const redirectTo = `${await canonicalFundOriginForId(admin as never, fundId)}/portal/welcome`
 
   const body = await req.json().catch(() => ({}))
   const commit = !!body.commit
@@ -104,7 +106,10 @@ export async function POST(req: NextRequest) {
   // ── Phase 2b: invite + account + link + authorized users, concurrency-limited ─
   async function sendInvite(email: string): Promise<string | null> {
     try {
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, { data: { fund_name: fundName } })
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        data: { fund_name: fundName },
+        redirectTo,
+      })
       return error ? null : (data?.user?.id ?? null)
     } catch { return null }
   }

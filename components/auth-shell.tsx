@@ -1,7 +1,9 @@
-import Image from 'next/image'
+'use client'
+
 import Link from 'next/link'
 import { Building2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useTenantBranding } from '@/components/tenant-branding-provider'
 
 /**
  * The chrome for every signed-out, full-page screen: sign-in, sign-up, password reset,
@@ -50,18 +52,21 @@ export function AuthShell({
 /** The logo tile + product name, linked home. */
 export function AuthWordmark({ logoSrc, label }: { logoSrc?: string; label?: string }) {
   const t = useTranslations('Auth')
-  const brandName = label ?? t('brand')
+  const tenant = useTenantBranding()
+  const brandName = tenant?.name ?? label ?? t('brand')
+  const resolvedLogoSrc = tenant?.logoUrl ?? logoSrc
 
   return (
     <div className="text-center">
       <Link href="/" className="inline-block group">
-        {logoSrc ? (
-          <Image
-            src={logoSrc}
+        {resolvedLogoSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolvedLogoSrc}
             alt=""
             width={94}
             height={76}
-            priority
+            referrerPolicy="no-referrer"
             className="mx-auto mb-2 h-16 w-auto object-contain transition-transform group-hover:scale-[1.02]"
           />
         ) : (

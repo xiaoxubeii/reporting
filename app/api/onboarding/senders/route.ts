@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertWriteAccess } from '@/lib/api-helpers'
+import { headers } from 'next/headers'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
 
 interface Sender {
   email: string
@@ -22,6 +24,9 @@ export async function POST(req: NextRequest) {
 
   if (!fundId || !Array.isArray(senders) || senders.length === 0) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+  if (!(await fundMatchesTrustedRequestTenant(admin as never, new Headers(headers()), fundId))) {
+    return NextResponse.json({ error: 'Fund not found' }, { status: 404 })
   }
 
   // Verify the fund belongs to this user

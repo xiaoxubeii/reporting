@@ -5,6 +5,7 @@ import { agentApiEnabled } from '@/lib/oauth/enabled'
 import { AGENT_TOOLS, getTool, resolveVehicleForTool, accessDomainFor, accessDomainForCall, accessFeatureFor } from '@/lib/accounting/agent-tools'
 import { hasAccess } from '@/lib/access/effective'
 import { rateLimit } from '@/lib/rate-limit'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,8 +24,12 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const admin = createAdminClient()
-  const auth = await resolveFundFromApiKey(admin, req)
+  const tenant = await getTrustedRequestTenant(admin as never, req.headers)
+  const auth = await resolveFundFromApiKey(admin, req, { expectedFundId: tenant?.id })
   if (!auth) return NextResponse.json({ error: 'Unauthorized — provide a fund API key as a Bearer token' }, { status: 401 })
+  if (tenant && tenant.id !== auth.fundId) {
+    return NextResponse.json({ error: 'Unauthorized — provide a fund API key as a Bearer token' }, { status: 401 })
+  }
 
   // The fund's master switch for the agent surface. Checked per request rather
   // than baked into the key, so turning it off immediately disarms keys that were
@@ -47,8 +52,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const admin = createAdminClient()
-  const auth = await resolveFundFromApiKey(admin, req)
+  const tenant = await getTrustedRequestTenant(admin as never, req.headers)
+  const auth = await resolveFundFromApiKey(admin, req, { expectedFundId: tenant?.id })
   if (!auth) return NextResponse.json({ error: 'Unauthorized — provide a fund API key as a Bearer token' }, { status: 401 })
+  if (tenant && tenant.id !== auth.fundId) {
+    return NextResponse.json({ error: 'Unauthorized — provide a fund API key as a Bearer token' }, { status: 401 })
+  }
 
   // The fund's master switch for the agent surface. Checked per request rather
   // than baked into the key, so turning it off immediately disarms keys that were

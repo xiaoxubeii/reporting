@@ -1,0 +1,914 @@
+{
+  "generatedAt": "2026-07-26T13:10:37.201Z",
+  "results": [
+    {
+      "name": "platform root remains product marketing",
+      "status": "passed",
+      "details": ""
+    },
+    {
+      "name": "unpublished Fund hosts show private state",
+      "status": "passed",
+      "details": ""
+    },
+    {
+      "name": "settings exposes exactly three templates and preserves shared content",
+      "status": "passed",
+      "details": ""
+    },
+    {
+      "name": "saved draft preview works on desktop and mobile",
+      "status": "passed",
+      "details": "mobile width 390px"
+    },
+    {
+      "name": "explicit publish completes",
+      "status": "passed",
+      "details": ""
+    },
+    {
+      "name": "published snapshot is live on alpha host",
+      "status": "passed",
+      "details": ""
+    },
+    {
+      "name": "public Fund language control switches published content",
+      "status": "passed",
+      "details": "English → 简体中文"
+    },
+    {
+      "name": "two published Funds remain isolated",
+      "status": "passed",
+      "details": ""
+    },
+    {
+      "name": "cross-Fund admin session is denied by Host/Fund binding",
+      "status": "passed",
+      "details": "404"
+    },
+    {
+      "name": "unpublish hides live site and preserves draft",
+      "status": "passed",
+      "details": ""
+    },
+    {
+      "name": "disposable fixture cleanup",
+      "status": "passed",
+      "details": "2 Funds, 2 users deleted"
+    }
+  ],
+  "diagnostics": {
+    "consoleErrors": [
+      {
+        "label": "platform",
+        "url": "http://localhost:5040/auth?next=%2F",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "platform",
+        "url": "http://localhost:5040/auth?next=%2F",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "platform",
+        "url": "http://localhost:5040/auth?next=%2F",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/auth?next=%2Fsettings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/auth?next=%2Fsettings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Blocked script execution in 'http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/fund-public-site-preview?locale=en&revision=5' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/auth?next=%2Fsettings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/auth?next=%2Fsettings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "label": "beta-admin",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "cross-host",
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "anonymous",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked."
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "label": "alpha-admin",
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site",
+        "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      }
+    ],
+    "pageErrors": [],
+    "unexpectedResponses": [
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 503,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 503,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 503,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 503,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "beta-admin",
+        "status": 404,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "beta-admin",
+        "status": 404,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "beta-admin",
+        "status": 503,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "beta-admin",
+        "status": 503,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "beta-admin",
+        "status": 404,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "beta-admin",
+        "status": 404,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "beta-admin",
+        "status": 503,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/vehicles"
+      },
+      {
+        "label": "beta-admin",
+        "status": 503,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/settings/search-categories"
+      },
+      {
+        "label": "beta-admin",
+        "status": 403,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/api/firm/memo-agent-defaults"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 404,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/portal/me"
+      },
+      {
+        "label": "alpha-admin",
+        "status": 403,
+        "url": "http://e2e-alpha-ms1tf5ig-e3a8fd.localhost:5040/api/accounting/vehicle-index"
+      }
+    ],
+    "expectedResponses": [
+      {
+        "label": "cross-host",
+        "status": 404,
+        "url": "http://e2e-beta-ms1tf5ig-e3a8fd.localhost:5040/settings/public-site"
+      }
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertWriteAccess } from '@/lib/api-helpers'
@@ -121,7 +122,7 @@ export async function GET(req: NextRequest) {
   const id = sp.get('id') ?? ''
   if (!['snapshot', 'letter', 'document'].includes(kind) || !id) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const siteUrl = await canonicalFundOriginForId(admin as never, fundId)
   const resolved = await resolveSendItem(admin, fundId, siteUrl, kind, id)
   if ('error' in resolved) return resolved.error
 
@@ -172,7 +173,7 @@ export async function POST(req: NextRequest) {
   const { data: fs } = await (admin as any).from('fund_settings').select('lp_portal_enabled').eq('fund_id', fundId).maybeSingle()
   const portalEnabled = !!fs?.lp_portal_enabled
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const siteUrl = await canonicalFundOriginForId(admin as never, fundId)
 
   // Resolve the item (verifies fund ownership) and intersect the investors it's
   // shared with against the ones the GP selected.

@@ -6,6 +6,7 @@ import { hasAccess, type AccessContext } from '@/lib/access/effective'
 import { rateLimit } from '@/lib/rate-limit'
 import { agentApiEnabled } from '@/lib/oauth/enabled'
 import { wwwAuthenticate } from '@/lib/oauth/metadata'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -84,11 +85,18 @@ const MAX_BATCH = 20
 
 export async function POST(req: NextRequest) {
   const admin = createAdminClient()
-  const auth = await resolveAgentAuth(admin, req)
+  const tenant = await getTrustedRequestTenant(admin as never, req.headers)
+  const auth = await resolveAgentAuth(admin, req, { expectedFundId: tenant?.id })
   if (!auth) {
     return NextResponse.json(
       err(null, -32001, 'Unauthorized — present a fund API key or an OAuth access token as a Bearer token'),
       { status: 401, headers: { 'WWW-Authenticate': wwwAuthenticate(req) } }
+    )
+  }
+  if (tenant && tenant.id !== auth.fundId) {
+    return NextResponse.json(
+      err(null, -32001, 'Unauthorized — present a fund API key or an OAuth access token as a Bearer token'),
+      { status: 401, headers: { 'WWW-Authenticate': wwwAuthenticate(req) } },
     )
   }
 

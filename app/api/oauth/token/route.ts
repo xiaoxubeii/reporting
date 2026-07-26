@@ -11,6 +11,8 @@ import {
 } from '@/lib/oauth/store'
 import { agentApiEnabled } from '@/lib/oauth/enabled'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
+import { canonicalFundOrigin } from '@/lib/tenancy/host'
 
 /**
  * OAuth 2.1 token endpoint. Two grants:
@@ -38,6 +40,8 @@ export async function POST(req: NextRequest) {
 
   const params = await readParams(req)
   const admin = createAdminClient()
+  const tenant = await getTrustedRequestTenant(admin as never, req.headers)
+  const tenantResource = tenant ? `${canonicalFundOrigin(tenant.slug)}/api/mcp` : null
 
   const grantType = params.get('grant_type')
   const clientId = params.get('client_id')
@@ -62,13 +66,21 @@ export async function POST(req: NextRequest) {
     if (!redirectUri) return err('invalid_request', 'redirect_uri is required')
 
     // Consume atomically. A code is single-use; a replay gets nothing.
-    const consumed = await consumeAuthorizationCode(admin, code)
+    const consumed = await consumeAuthorizationCode(admin, code, {
+      clientId,
+      redirectUri,
+      expectedFundId: tenant?.id,
+      expectedResource: tenantResource ?? undefined,
+    })
     if (!consumed) return err('invalid_grant', 'Code is invalid, expired, or already used')
 
     // The code was minted for THIS client. Without this check, one registered
     // client could redeem a code issued to another.
     if (consumed.clientId !== clientId) {
       return err('invalid_grant', 'Code was not issued to this client')
+    }
+    if (tenant && (consumed.fundId !== tenant.id || consumed.resource !== tenantResource)) {
+      return err('invalid_grant', 'Code is invalid, expired, or already used')
     }
 
     // The redirect_uri presented now must match the one bound at authorize time,
@@ -107,7 +119,11 @@ export async function POST(req: NextRequest) {
 
     // Rotation, replay detection, and a live re-check of the owner's role all
     // happen inside. A refresh must never launder a stale privilege.
-    const tokens = await rotateRefreshToken(admin, { clientId, refreshToken })
+    const tokens = await rotateRefreshToken(admin, {
+      clientId,
+      refreshToken,
+      expectedFundId: tenant?.id,
+    })
     if (!tokens) return err('invalid_grant', 'Refresh token is invalid, expired, or revoked')
 
     return tokenResponse(tokens)

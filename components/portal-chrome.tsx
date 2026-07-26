@@ -28,7 +28,20 @@ export function PortalChrome({ fundName, logoUrl, userEmail, children }: { fundN
   const translate = useTranslations('PortalChrome')
 
   if (pathname === '/portal/welcome') {
-    return <>{children}</>
+    return (
+      <div className="flex flex-col min-h-screen">
+        <header className="border-b bg-background/80">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className="h-7 w-auto max-w-[140px] object-contain rounded" />
+            ) : null}
+            <span className="font-medium text-sm text-muted-foreground tracking-tight truncate">{fundName}</span>
+          </div>
+        </header>
+        <main className="flex-1">{children}</main>
+      </div>
+    )
   }
 
   return (

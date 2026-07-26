@@ -3,11 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activity'
 import { safeNextPath } from '@/lib/safe-redirect'
+import { headers } from 'next/headers'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
+import { canonicalFundRequestOrigin } from '@/lib/tenancy/host'
+import { resolveBrowserFundIdentity } from '@/lib/tenancy/browser-identity'
 
 // Handles magic link, password reset, and OAuth redirects from Supabase Auth.
 // Supabase appends ?code= to the redirect URL after authentication.
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
+  const origin = canonicalFundRequestOrigin(request)
   const code = searchParams.get('code')
   // Prevent open redirect. Not exploitable here as it stands (origin is prepended,
   // so a stray backslash lands in the path and can't re-enter the authority) — but
@@ -26,13 +31,26 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const admin = createAdminClient()
-      const { data: membership } = await admin
-        .from('fund_members')
-        .select('fund_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      if (membership) {
-        logActivity(admin, membership.fund_id, user.id, 'login', { method: 'magic_link' })
+      const tenant = await getTrustedRequestTenant(admin as never, new Headers(headers()))
+      const identity = await resolveBrowserFundIdentity({
+        admin: admin as never,
+        session: supabase as never,
+        userId: user.id,
+        tenantFundId: tenant?.id ?? null,
+      })
+      if (!identity.matches) {
+        await supabase.auth.signOut({ scope: 'local' })
+        return NextResponse.redirect(`${origin}/auth?error=workspace_mismatch`)
+      }
+      if (identity.membershipFundId) {
+        logActivity(admin, identity.membershipFundId, user.id, 'login', { method: 'magic_link' })
+        if (next === '/') {
+          return NextResponse.redirect(`${origin}/dashboard`)
+        }
+      } else if (identity.identityFundId && identity.lpStatus === 'invited' && !next.startsWith('/auth/')) {
+        return NextResponse.redirect(`${origin}/portal/welcome`)
+      } else if (identity.identityFundId && next === '/') {
+        return NextResponse.redirect(`${origin}/portal/overview`)
       } else if (next === '/') {
         // New user with no fund — send to onboarding with confirmation message
         return NextResponse.redirect(`${origin}/onboarding?confirmed=true`)
