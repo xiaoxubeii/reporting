@@ -55,6 +55,30 @@
       "notes": "The remaining operational risk is provider behavior: the configured OpenRouter model may cite URLs outside server-collected Search evidence. Provenance validation intentionally rejects that output instead of persisting ungrounded Research."
     },
     {
+      "id": "feed-discovery",
+      "title": "Explore Trending and Deal Signals discovery",
+      "status": "complete",
+      "current_task": "Fund-owned Custom Provider runtime completed and verified",
+      "definition_of_done": [
+        "Public Explore articles are processed incrementally without persisting or reading personal feed state",
+        "One cached versioned semantic enrichment supplies entities, concepts, events, evidence, and confidence per unique article",
+        "Trending uses deterministic clustering, source diversity, growth, and freshness rather than AI ranking",
+        "Deal Signals use structured AI classification plus deterministic open-opportunity evidence gates",
+        "Explore exposes Latest, Trending, and Deal Signals with accessible desktop and mobile states",
+        "Articles and eligible Deal Signals prefill the existing manual Deal flow without creating a second intake pipeline",
+        "Focused tests, strict OpenSpec, typecheck/build, code/security/UI review, and real browser acceptance pass"
+      ],
+      "evidence": [
+        ".harnesskit/evidence/add-feed-discovery/verification.md",
+        ".harnesskit/evidence/add-feed-discovery/trending-desktop.png",
+        ".harnesskit/evidence/add-feed-discovery/deal-signal-prefill.png",
+        ".harnesskit/evidence/add-feed-discovery/deal-signals-mobile.png",
+        ".harnesskit/evidence/add-feed-discovery/custom-provider-empty-state.png"
+      ],
+      "blocked_by": [],
+      "notes": "Run only in /home/ubuntu/workspace/reporting.worktrees/add-feed-discovery on codex/add-feed-discovery. Discovery uses one server-selected owner fund and resolves its encrypted default provider, including a validated OpenAI-compatible Custom Provider; it never copies provider keys or falls back to another fund/provider. Fund-thesis personalization, personal-feed scanning, behavior ranking, custom-model training, and automatic Deal creation are excluded."
+    },
+    {
       "id": "investment-decision-e2e",
       "title": "End-to-end investment decision workflow",
       "status": "in_progress",

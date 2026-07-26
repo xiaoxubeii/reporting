@@ -7,6 +7,17 @@ function response(message: Record<string, unknown>, usage = { prompt_tokens: 2, 
 }
 
 describe('OpenAIProvider.createToolLoop', () => {
+  it('forwards createMessage cancellation to the SDK request options', async () => {
+    const provider = new OpenAIProvider('test-key')
+    const create = vi.fn().mockResolvedValue(response({ role: 'assistant', content: 'done' }))
+    ;(provider as unknown as { client: { chat: { completions: { create: typeof create } } } }).client.chat.completions.create = create
+    const controller = new AbortController()
+
+    await provider.createMessage({ model: 'gpt', maxTokens: 10, content: 'x', signal: controller.signal })
+
+    expect(create.mock.calls[0][1]).toEqual({ signal: controller.signal })
+  })
+
   it('defines tools, executes ordered parallel calls, returns matching tool messages, and aggregates usage', async () => {
     const provider = new OpenAIProvider('test-key')
     const create = vi.fn()

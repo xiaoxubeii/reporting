@@ -16,6 +16,17 @@ function message(content: unknown[], stopReason = 'end_turn', input = 2, output 
 }
 
 describe('AnthropicProvider.createToolLoop', () => {
+  it('forwards createMessage cancellation to the SDK stream options', async () => {
+    const provider = new AnthropicProvider('test-key')
+    const stream = vi.fn().mockReturnValue({ finalMessage: async () => message([{ type: 'text', text: 'done' }]) })
+    ;(provider as unknown as { client: { messages: { stream: typeof stream } } }).client.messages.stream = stream
+    const controller = new AbortController()
+
+    await provider.createMessage({ model: 'claude', maxTokens: 10, content: 'x', signal: controller.signal })
+
+    expect(stream.mock.calls[0][1]).toEqual({ signal: controller.signal })
+  })
+
   it('propagates abort, executes ordered multi-calls with ids, and aggregates usage', async () => {
     const provider = new AnthropicProvider('test-key')
     const stream = vi.fn()

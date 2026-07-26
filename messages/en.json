@@ -5823,6 +5823,7 @@
       "markRead": "Mark read",
       "removeSaved": "Remove from saved",
       "saveLater": "Save for later",
+      "createDeal": "Create Deal from article",
       "openOriginal": "Open original article",
       "previewOnly": "This feed only provided a short preview. Visit the original website to read the complete article.",
       "visitOriginal": "Visit original website"
@@ -5920,6 +5921,36 @@
           "description": "Try another category or search term.",
           "action": "Show all"
         }
+      }
+    },
+    "discovery": {
+      "title": "Explore",
+      "description": "See what is accelerating and review evidence-backed open fundraising signals.",
+      "refresh": "Refresh discovery results",
+      "stale": "These are the last known good results. The latest background refresh has not completed yet.",
+      "retry": "Retry",
+      "showing": "Showing {visible} of {total}",
+      "loadMore": "Load more",
+      "trendingBadge": "Trending",
+      "signalBadge": "Deal Signal",
+      "articles": "articles",
+      "sources": "sources",
+      "growth": "growth",
+      "viewSources": "View sources",
+      "evidence": "Evidence",
+      "openRaise": "Open fundraising opportunity",
+      "openDeal": "Open Deal",
+      "createDeal": "Create Deal",
+      "whyTrending": "This topic passed the transparent volume, source-diversity, growth, and freshness strategy.",
+      "whySignal": "The evidence explicitly supports a current or upcoming fundraising opportunity.",
+      "sourceArticles": "Source articles",
+      "tabs": { "label": "Explore view", "latest": "Latest", "trending": "Trending", "dealSignals": "Deal Signals" },
+      "states": {
+        "errorTitle": "Discovery results could not be loaded",
+        "noTrendingTitle": "No topics are trending yet",
+        "noTrendingDescription": "A topic appears here only after enough recent articles from independent sources pass the strategy thresholds.",
+        "noSignalsTitle": "No open Deal Signals right now",
+        "noSignalsDescription": "Completed financings and uncertain opportunities are intentionally excluded. Check back after the next refresh."
       }
     },
     "sources": {

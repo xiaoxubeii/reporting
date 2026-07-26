@@ -5789,6 +5789,7 @@
       "markRead": "标为已读",
       "removeSaved": "取消收藏",
       "saveLater": "稍后阅读",
+      "createDeal": "从文章创建 Deal",
       "openOriginal": "打开原文",
       "previewOnly": "此订阅仅提供了简短预览。请访问原网站阅读全文。",
       "visitOriginal": "访问原网站"
@@ -5886,6 +5887,36 @@
           "description": "请尝试其他分类或搜索词。",
           "action": "显示全部"
         }
+      }
+    },
+    "discovery": {
+      "title": "探索",
+      "description": "查看正在升温的主题，以及有明确证据的开放融资机会。",
+      "refresh": "刷新发现结果",
+      "stale": "当前展示的是最近一次可用结果；最新后台刷新尚未成功完成。",
+      "retry": "重试",
+      "showing": "显示 {visible} / {total} 条",
+      "loadMore": "加载更多",
+      "trendingBadge": "趋势",
+      "signalBadge": "Deal 信号",
+      "articles": "篇文章",
+      "sources": "个来源",
+      "growth": "增长",
+      "viewSources": "查看来源",
+      "evidence": "查看证据",
+      "openRaise": "开放融资机会",
+      "openDeal": "打开 Deal",
+      "createDeal": "创建 Deal",
+      "whyTrending": "该主题通过了透明的文章量、来源多样性、增长率和新鲜度策略。",
+      "whySignal": "证据明确支持公司正在或即将融资。",
+      "sourceArticles": "来源文章",
+      "tabs": { "label": "探索视图", "latest": "最新", "trending": "趋势", "dealSignals": "Deal 信号" },
+      "states": {
+        "errorTitle": "无法加载发现结果",
+        "noTrendingTitle": "暂时没有达到门槛的趋势",
+        "noTrendingDescription": "只有近期文章量、独立来源数等指标达到策略门槛的主题才会显示在这里。",
+        "noSignalsTitle": "当前没有开放的 Deal 信号",
+        "noSignalsDescription": "系统会主动排除已完成融资和状态不确定的机会，请在下次刷新后再查看。"
       }
     },
     "sources": {

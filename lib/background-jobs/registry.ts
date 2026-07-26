@@ -25,6 +25,13 @@ function parseDealResearchPayload(value: unknown): Readonly<BackgroundJobPayload
   return Object.freeze({ dealId: value.dealId })
 }
 
+function parseFeedDiscoveryPayload(value: unknown): Readonly<BackgroundJobPayloadByKind['feed_discovery']> {
+  if (!isPlainObject(value) || Object.keys(value).length !== 0) {
+    throw new Error('Invalid feed_discovery payload')
+  }
+  return Object.freeze({})
+}
+
 const DEAL_RESEARCH_SEARCH = Object.freeze({
   audience: 'reporting-search',
   scope: 'search:execute',
@@ -49,12 +56,25 @@ const DEAL_RESEARCH_POLICY = Object.freeze({
   requestTimeoutMs: 270_000,
 } satisfies BackgroundJobPolicy<'deal_research'>)
 
+const FEED_DISCOVERY_POLICY = Object.freeze({
+  kind: 'feed_discovery',
+  actors: Object.freeze(['system'] as const),
+  parsePayload: parseFeedDiscoveryPayload,
+  workerPath: '/api/internal/background-jobs/feed-discovery/run',
+  workerAudience: 'reporting-feed-discovery-worker',
+  workerScope: 'feed-discovery:execute',
+  requiredUserAccess: Object.freeze([]),
+  maxAttempts: 3,
+  leaseSeconds: 300,
+  requestTimeoutMs: 270_000,
+} satisfies BackgroundJobPolicy<'feed_discovery'>)
+
 export interface BackgroundJobRegistry {
   list(): readonly BackgroundJobPolicy[]
   get(kind: string): BackgroundJobPolicy
 }
 
-const POLICIES = Object.freeze([DEAL_RESEARCH_POLICY] as const)
+const POLICIES = Object.freeze([DEAL_RESEARCH_POLICY, FEED_DISCOVERY_POLICY] as const)
 export const backgroundJobRegistry = createBackgroundJobRegistry(POLICIES)
 export const BACKGROUND_JOB_KINDS = Object.freeze(backgroundJobRegistry.list().map(policy => policy.kind))
 

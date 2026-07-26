@@ -206,6 +206,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/feeds/entries/[id]': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/entries/[id]/state': { domain: 'dealflow', feature: 'feeds', level: { PATCH: 'read' } },
   'api/feeds/explore/categories': { domain: 'dealflow', feature: 'feeds' },
+  'api/feeds/explore/discovery': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries/[id]': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/following': { domain: 'dealflow', feature: 'feeds' },
@@ -418,9 +419,11 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/cron/affinity-sync': 'Cron: CRON_SECRET.',
   'api/cron/background-jobs': 'Cron: CRON_SECRET; dispatches only code-registered background workers.',
   'api/cron/deals-digest': 'Cron: CRON_SECRET.',
+  'api/cron/feeds-discovery': 'Cron: CRON_SECRET; refreshes deployment-owned public Explore discovery data.',
   'api/cron/heartbeat-backfill': 'Cron: CRON_SECRET.',
   'api/cron/memo-agent-worker': 'Cron: CRON_SECRET.',
   'api/internal/background-jobs/deal-research/run': 'Internal HTTP worker: exact-audience, attempt-bound Job Token and live context restoration.',
+  'api/internal/background-jobs/feed-discovery/run': 'Internal system worker: exact-audience, attempt-bound Job Token and verified persisted fund context.',
 
   // Inbound from third parties, authenticated by a token in the path or a provider signature.
   'api/webhooks/heartbeat/[token]': 'Inbound webhook: high-entropy path token.',

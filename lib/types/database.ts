@@ -3162,6 +3162,329 @@ export type Database = {
           },
         ]
       }
+      explore_article_enrichments: {
+        Row: {
+          canonical_url: string | null
+          category_ref: string | null
+          changed_at: string | null
+          collector_entry_id: number
+          collector_entry_ref: string
+          content_hash: string
+          created_at: string
+          expires_at: string
+          failure_code: string | null
+          fund_id: string
+          id: string
+          input_tokens: number | null
+          output_tokens: number | null
+          processed_at: string | null
+          processing_status: string
+          published_at: string | null
+          retry_after: string | null
+          retry_count: number
+          semantic_model: string | null
+          semantic_payload: Json | null
+          semantic_provider: string | null
+          semantic_version: string
+          source_ref: string
+          source_title: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_url?: string | null
+          category_ref?: string | null
+          changed_at?: string | null
+          collector_entry_id: number
+          collector_entry_ref: string
+          content_hash: string
+          created_at?: string
+          expires_at: string
+          failure_code?: string | null
+          fund_id: string
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          processed_at?: string | null
+          processing_status?: string
+          published_at?: string | null
+          retry_after?: string | null
+          retry_count?: number
+          semantic_model?: string | null
+          semantic_payload?: Json | null
+          semantic_provider?: string | null
+          semantic_version: string
+          source_ref: string
+          source_title: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_url?: string | null
+          category_ref?: string | null
+          changed_at?: string | null
+          collector_entry_id?: number
+          collector_entry_ref?: string
+          content_hash?: string
+          created_at?: string
+          expires_at?: string
+          failure_code?: string | null
+          fund_id?: string
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          processed_at?: string | null
+          processing_status?: string
+          published_at?: string | null
+          retry_after?: string | null
+          retry_count?: number
+          semantic_model?: string | null
+          semantic_payload?: Json | null
+          semantic_provider?: string | null
+          semantic_version?: string
+          source_ref?: string
+          source_title?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explore_article_enrichments_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      explore_article_deal_classifications: {
+        Row: {
+          classification_payload: Json | null
+          classification_status: string
+          classified_at: string | null
+          classifier_model: string | null
+          classifier_provider: string | null
+          classifier_version: string
+          content_hash: string
+          created_at: string
+          enrichment_id: string
+          expires_at: string
+          failure_code: string | null
+          fund_id: string
+          id: string
+          input_tokens: number | null
+          output_tokens: number | null
+          retry_after: string | null
+          retry_count: number
+          updated_at: string
+        }
+        Insert: {
+          classification_payload?: Json | null
+          classification_status?: string
+          classified_at?: string | null
+          classifier_model?: string | null
+          classifier_provider?: string | null
+          classifier_version: string
+          content_hash: string
+          created_at?: string
+          enrichment_id: string
+          expires_at: string
+          failure_code?: string | null
+          fund_id: string
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          retry_after?: string | null
+          retry_count?: number
+          updated_at?: string
+        }
+        Update: {
+          classification_payload?: Json | null
+          classification_status?: string
+          classified_at?: string | null
+          classifier_model?: string | null
+          classifier_provider?: string | null
+          classifier_version?: string
+          content_hash?: string
+          created_at?: string
+          enrichment_id?: string
+          expires_at?: string
+          failure_code?: string | null
+          fund_id?: string
+          id?: string
+          input_tokens?: number | null
+          output_tokens?: number | null
+          retry_after?: string | null
+          retry_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explore_article_deal_classifications_fund_enrichment_fkey"
+            columns: ["fund_id", "enrichment_id"]
+            isOneToOne: false
+            referencedRelation: "explore_article_enrichments"
+            referencedColumns: ["fund_id", "id"]
+          },
+          {
+            foreignKeyName: "explore_article_deal_classifications_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      explore_discovery_items: {
+        Row: {
+          evidence_json: Json
+          expires_at: string
+          fund_id: string
+          generation_id: string
+          generated_at: string
+          id: string
+          kind: string
+          metadata_json: Json
+          result_key: string
+          score: number
+          source_entry_refs: Json
+          strategy_version: string
+          summary: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          evidence_json?: Json
+          expires_at: string
+          fund_id: string
+          generation_id: string
+          generated_at: string
+          id?: string
+          kind: string
+          metadata_json?: Json
+          result_key: string
+          score: number
+          source_entry_refs: Json
+          strategy_version: string
+          summary?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          evidence_json?: Json
+          expires_at?: string
+          fund_id?: string
+          generation_id?: string
+          generated_at?: string
+          id?: string
+          kind?: string
+          metadata_json?: Json
+          result_key?: string
+          score?: number
+          source_entry_refs?: Json
+          strategy_version?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explore_discovery_items_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      explore_discovery_refresh_state: {
+        Row: {
+          active_generation_id: string | null
+          fund_id: string
+          last_attempt_at: string | null
+          last_error_code: string | null
+          last_success_at: string | null
+          lease_expires_at: string | null
+          lease_id: string | null
+          scope: string
+          target_classifier_version: string | null
+          target_semantic_version: string | null
+          updated_at: string
+          watermark_changed_at: string | null
+          watermark_changed_entry_id: number
+          watermark_changed_scan_cutoff: string | null
+          watermark_entry_id: number
+        }
+        Insert: {
+          active_generation_id?: string | null
+          fund_id: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          last_success_at?: string | null
+          lease_expires_at?: string | null
+          lease_id?: string | null
+          scope?: string
+          target_classifier_version?: string | null
+          target_semantic_version?: string | null
+          updated_at?: string
+          watermark_changed_at?: string | null
+          watermark_changed_entry_id?: number
+          watermark_changed_scan_cutoff?: string | null
+          watermark_entry_id?: number
+        }
+        Update: {
+          active_generation_id?: string | null
+          fund_id?: string
+          last_attempt_at?: string | null
+          last_error_code?: string | null
+          last_success_at?: string | null
+          lease_expires_at?: string | null
+          lease_id?: string | null
+          scope?: string
+          target_classifier_version?: string | null
+          target_semantic_version?: string | null
+          updated_at?: string
+          watermark_changed_at?: string | null
+          watermark_changed_entry_id?: number
+          watermark_changed_scan_cutoff?: string | null
+          watermark_entry_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explore_discovery_refresh_state_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      explore_discovery_schedule_state: {
+        Row: {
+          cursor_fund_id: string | null
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          cursor_fund_id?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Update: {
+          cursor_fund_id?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explore_discovery_schedule_state_cursor_fund_id_fkey"
+            columns: ["cursor_fund_id"]
+            isOneToOne: false
+            referencedRelation: "funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limit_entries: {
         Row: {
           created_at: string
@@ -3230,6 +3553,57 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      claim_explore_discovery_refresh: {
+        Args: {
+          p_classifier_version: string
+          p_fund_id: string
+          p_lease_id: string
+          p_lease_seconds: number
+          p_semantic_version: string
+        }
+        Returns: {
+          acquired: boolean
+          active_generation: string | null
+          changed_entry_id: number
+          changed_scan_cutoff: string | null
+          changed_watermark: string | null
+          entry_watermark: number
+          lease_until: string | null
+        }[]
+      }
+      finish_explore_discovery_refresh: {
+        Args: {
+          p_error_code?: string | null
+          p_fund_id: string
+          p_lease_id: string
+          p_watermark_changed_at: string | null
+          p_watermark_changed_entry_id: number
+          p_watermark_changed_scan_cutoff: string | null
+          p_watermark_entry_id: number
+        }
+        Returns: boolean
+      }
+      publish_explore_discovery_generation: {
+        Args: {
+          p_expires_at: string
+          p_fund_id: string
+          p_generated_at: string
+          p_generation_id: string
+          p_items: Json
+          p_lease_id: string
+          p_semantic_version: string
+          p_classifier_version: string
+          p_watermark_changed_at: string | null
+          p_watermark_changed_entry_id: number
+          p_watermark_changed_scan_cutoff: string | null
+          p_watermark_entry_id: number
+        }
+        Returns: number
+      }
+      next_feed_discovery_funds: {
+        Args: { p_limit?: number }
+        Returns: { fund_id: string }[]
       }
       background_job_claim_due: {
         Args: { p_kinds: string[]; p_limit?: number }

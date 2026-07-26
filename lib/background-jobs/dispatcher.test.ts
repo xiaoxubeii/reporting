@@ -155,14 +155,14 @@ describe('background job dispatcher', () => {
     })
 
     expect(result).toEqual({ claimed: 2, completed: 2, retried: 0, failed: 0 })
-    expect(repo.claimDue).toHaveBeenCalledWith(['deal_research', 'test_notify'], 3)
+    expect(repo.claimDue).toHaveBeenCalledWith(policies.map(policy => policy.kind), 3)
     expect(calls.map(call => call.url).sort()).toEqual([
       'https://reporting.example/api/internal/background-jobs/deal-research/run',
       'https://reporting.example/api/internal/background-jobs/test-notify/run',
     ].sort())
     for (const { policy, job } of [
-      { policy: policies[0], job: JOB },
-      { policy: policies[1], job: notifyJob },
+      { policy: registry.get('deal_research'), job: JOB },
+      { policy: notifyPolicy, job: notifyJob },
     ]) {
       const call = calls.find(candidate => candidate.url.endsWith(policy.workerPath))!
       await expect(verifyBackgroundJobToken(call.authorization.replace('Bearer ', ''), {

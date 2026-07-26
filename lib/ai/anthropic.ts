@@ -44,13 +44,16 @@ export class AnthropicProvider implements AIProvider {
     // (large max_tokens + slow models like Opus, or long web-search runs).
     // `finalMessage()` reassembles the complete response so the rest of the
     // pipeline sees the same shape as the legacy non-streaming call.
-    const stream = this.client.messages.stream({
+    const request = {
       model: params.model,
       max_tokens: params.maxTokens,
       ...(systemBlocks ? { system: systemBlocks } : {}),
       ...(tools ? { tools: tools as any } : {}),
-      messages: [{ role: 'user', content }],
-    })
+      messages: [{ role: 'user' as const, content }],
+    }
+    const stream = params.signal
+      ? this.client.messages.stream(request, { signal: params.signal })
+      : this.client.messages.stream(request)
     const response = await stream.finalMessage()
 
     // When web search runs server-side, the response interleaves

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import React from 'react'
 import { useTranslations } from 'next-intl'
 
 export function TodayViewTabs({ active }: { active: 'me' | 'explore' }) {

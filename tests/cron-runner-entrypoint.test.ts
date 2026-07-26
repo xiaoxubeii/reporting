@@ -52,6 +52,28 @@ describe('Croner real Node.js entrypoint', () => {
     expect(result.stderr).not.toContain(fixtureValue)
   })
 
+  it('routes the discovery job through the real Croner bearer path', async () => {
+    const received: Array<{ method?: string; url?: string; authorization?: string }> = []
+    const target = await listen(createServer((request, response) => {
+      received.push({ method: request.method, url: request.url, authorization: request.headers.authorization })
+      response.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({
+        success: true,
+        data: { state: 'published', summary: { scanned: 0, reused: 0, enriched: 0, classified: 0, published: 0, skipped: 0, failed: 0, expired: 0 } },
+      }))
+    }))
+    const fixtureValue = ['discovery', 'cron', 'credential'].join('-')
+    const child = runEntrypoint(['--run', 'feeds-discovery'], {
+      NODE_ENV: 'development', CRON_SECRET: fixtureValue, CRON_RUNNER_BASE_URL: serverOrigin(target),
+    })
+
+    const result = await waitForExit(child)
+
+    expect(result.exitCode).toBe(0)
+    expect(received).toEqual([{ method: 'GET', url: '/api/cron/feeds-discovery', authorization: `Bearer ${fixtureValue}` }])
+    expect(result.stdout).not.toContain(fixtureValue)
+    expect(result.stderr).not.toContain(fixtureValue)
+  })
+
   it('stays resident, serves health, and exits cleanly on SIGTERM', async () => {
     const target = await listen(createServer((_request, response) => {
       response.writeHead(204).end()

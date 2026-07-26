@@ -27,6 +27,7 @@ dependency and ownership checks.
 | external-devctl-dependencies | Restrict devctl lifecycle ownership to Web/Cron and reuse operator-owned Miniflux/SearXNG | feature-planning | `openspec/changes/externalize-devctl-service-dependencies` | Default lifecycle commands manage only Web/Cron; configured Miniflux 8085, SearXNG 8086, and Supabase are status-only external dependencies; legacy Compose records are forgotten without container or volume mutation | main-agent-only | completed devctl-service-manager, operator-owned Miniflux/SearXNG, external Supabase | main-agent | current checkout | in_progress |
 | feeds-product | Add personal Today and Follow sources backed exclusively by Miniflux APIs | feature-planning | `openspec/changes/add-feeds-product` | Approved users receive isolated Miniflux identities and can read, save, discover, categorize, follow, and unfollow through the authenticated Reporting BFF | serial-required | Miniflux V2, Reporting auth and approval workflow, Dealflow grants | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
 | curated-explore | Add a global read-only curated discovery view backed by one non-admin Miniflux user | feature-planning | `openspec/changes/add-curated-explore` | Authorized users can browse curated categories/articles and idempotently follow a trusted source into their personal Miniflux without shared read/save mutations or Reporting feed tables | serial-required | feeds-product, Miniflux BFF, personal FeedService, Today reader | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feeds-product` | complete |
+| feed-discovery | Add reusable semantic tags, deterministic Trending, evidence-gated Deal Signals, and a confirmed Feed-to-Deal handoff over the public Explore collector | feature-planning | `openspec/changes/add-feed-discovery` | Latest remains available; deployment-owned refresh atomically publishes explainable Trending and open Deal Signals through one fixed owner fund's validated default provider; authorized users can prefill and confirm the existing manual Deal flow from an article | single-feature | curated-explore, feeds-product, Croner, fixed owner-fund AI provider, Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feed-discovery` | in_progress |
 | croner-node-runtime | Replace Vercel Cron with one persistent Croner process while running the existing Next.js API routes on a persistent Node server | feature-planning | `openspec/changes/replace-vercel-cron-with-croner` | Production exposes separate Web and Cron start commands; the Cron process schedules the existing five authenticated routes with overlap protection, health reporting, bounded requests, and graceful shutdown; Vercel schedules are removed | main-agent-only | existing Next.js cron routes, `CRON_SECRET`, production process supervisor | main-agent | current checkout | complete |
 | search-product | Add bounded federated Search across personal Feeds, Reporting SearXNG, and five direct professional sources | feature-planning | `openspec/changes/add-search-product` | Authorized users select fund-configured categories that resolve to code-reviewed adapters, receive safe normalized partial results with exact provenance, and use origin-correct result actions | serial-required | merged feeds-product, Reporting auth/access, dedicated SearXNG, five public source contracts | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-search-product` | complete |
 
@@ -812,6 +813,63 @@ contract for self-check, review, testing, and merge.
 - security: fixed HTTPS upstreams, bounded API transport, same-origin mutation checks, fail-closed rate limits, strict input limits, RLS/service-role grants, atomic row locking, cross-fund tests, safe browser errors, and a 52-file secret scan produced no medium/high/critical finding
 - baseline: `next build --no-lint` passes; regular build and HarnessKit targeted/full stop on repository-wide pre-existing ESLint errors outside this change. `npm audit` cannot run against the current invalid package tree and unchanged lockfile
 - evidence: `.harnesskit/evidence/add-expert-directory-discovery/`
+
+### Feature: feed-discovery
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible, cross-boundary capability adding persistent derived data, scheduled AI processing, public Explore APIs, and a Deal intake handoff.
+- Change: `openspec/changes/add-feed-discovery`
+- Task: implement `tasks.md` contract-first from migrations and semantic enrichment through Trending, Deal Signals, Explore UI, Deal prefill, review, and real browser verification
+
+#### Acceptance
+
+- Public Explore articles are processed incrementally and idempotently without reading or persisting personal subscription, read, or saved state.
+- Each unique public article receives one cached, versioned semantic enrichment with entities, concepts, events, evidence, and confidence.
+- Trending is ranked deterministically from clustered article volume, distinct source count, growth, and freshness; AI does not determine the trend score.
+- Deal Signals use deterministic prefiltering plus structured AI classification, and only explicit open opportunities with evidence pass the display gate; completed financing remains news and cannot be promoted as an open Deal.
+- Explore exposes `Latest / Trending / Deal Signals`; both ordinary articles and Deal Signals can open the existing manual Deal form with source context prefilled, while final Deal creation continues through `/api/deals/manual`, existing dedupe, and Deal Research.
+- Fund-thesis personalization, personal-feed background scanning, automatic Deal creation, behavior-based ranking, and custom-model training remain out of scope.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-feed-discovery/**`
+- `supabase/migrations/**`, generated database types, and focused migration/contract tests
+- `lib/feeds/**`, focused AI provider integration, discovery scheduling, and route-domain/access contracts
+- `app/api/feeds/explore/**`, the Croner service registry/configuration needed for one refresh endpoint, `app/(app)/feeds/**`, `components/feeds/**`, and the existing manual Deal dialog integration point
+- locale messages, `.env.example` only when required, focused tests, browser evidence, and HarnessKit plan/state/progress evidence
+
+#### Shared Contract Changes
+
+- Adds derived semantic-enrichment and discovery-result persistence with explicit Data API grants and access policies; Miniflux remains authoritative for source articles.
+- Adds versioned semantic enrichment, Trending result, and Deal Signal DTOs plus an authenticated Explore discovery read contract.
+- Adds an authenticated internal refresh route invoked by the existing Croner runtime; refresh is idempotent and deployment-scoped rather than forced into fund-scoped `background_jobs`.
+- Extends the existing manual Deal creation UI with trusted server-provided article prefill; it does not create a second Deal ingestion pipeline.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec validation, migration/schema checks, route allowlist and scheduler configuration tests, bootstrap marker guard.
+- targeted: semantic schema/parser tests, deterministic clustering/ranking tests, Deal Signal gate tests, refresh idempotence, API/access tests, and UI/prefill contract tests.
+- full: TypeScript, lint status, focused/full tests, production build, code/security/UI review, and real authenticated desktop/mobile Explore-to-Deal browser flow.
+
+#### Review Required
+
+- planner: yes, contract/sequence review before implementation
+- reviewer: yes, architecture-path use, deterministic strategy correctness, UI consistency, and regression risk
+- security-reviewer: yes, Cron authentication, server-only AI credentials, RLS/grants, untrusted article content, prompt-injection containment, and Deal prefill validation
+- browser/QA: yes, the feature is browser-visible and crosses Explore, AI-derived data, and Deal creation
+- parallelization: `single-feature`; task groups execute in dependency order from persistence through refresh/API and UI, with the main agent owning shared contracts and implementation in `codex/add-feed-discovery`
+
+#### Progress / Evidence
+
+- status: complete
+- branch/worktree: `codex/add-feed-discovery` in `/home/ubuntu/workspace/reporting.worktrees/add-feed-discovery`
+- ownership: authenticated reads derive the fund from verified membership; scheduled work derives it from signed persisted job context; Provider, cache, refresh state, and results are fund-scoped with no Discovery fund/provider environment configuration
+- planning: OpenSpec proposal, design, specification, and all tasks are complete and pass strict validation
+- implementation: shared semantic enrichment, deterministic Trending, independent Deal classification, immutable publication, Croner/API integration, Explore UI, and confirmed Feed-to-Deal handoff are complete
+- verification: 1,525 tests pass; TypeScript, changed-file ESLint, production build with repository lint bypass, isolated PostgreSQL fund-isolation and scheduler-cursor regressions, strict OpenSpec validation, and authenticated desktop/mobile browser evidence pass
+- bounded baseline issues: repository-wide `next build` lint remains blocked by pre-existing lint debt; full local Supabase bootstrap remains blocked by the pre-existing `compliance_seed` null `regulation_url` row
 
 ## Parallelization Decision
 

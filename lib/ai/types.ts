@@ -14,6 +14,7 @@ export interface CreateMessageParams {
   maxTokens: number
   system?: string
   content: MessageContent
+  signal?: AbortSignal
   /**
    * Enable provider-side web search. Only honored by Anthropic right now; other
    * providers ignore the flag (the prompt fallback handles graceful degradation).

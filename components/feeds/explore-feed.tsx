@@ -16,11 +16,20 @@ import {
 import { ExploreReaderSheet } from './explore-reader-sheet'
 import { FeedRowsSkeleton, FeedsStatePanel } from './state-panel'
 import { TodayViewTabs } from './today-view-tabs'
+import { ExploreViewTabs } from './explore-view-tabs'
+import { ExploreDiscovery } from './explore-discovery'
 import { groupExploreEntriesByCategory, mergeExploreEntryPages } from '@/lib/feeds/explore-state'
 
 const ALL_CATEGORY_ID = 'explore-category:all'
 
 export function ExploreFeed() {
+  const searchParams = useSearchParams()
+  const mode = searchParams.get('exploreView')
+  if (mode === 'trending' || mode === 'deal_signal') return <ExploreDiscovery kind={mode} />
+  return <ExploreLatestFeed />
+}
+
+function ExploreLatestFeed() {
   const locale = useLocale()
   const t = useTranslations('Feeds.explore')
   const relative = useTranslations('Feeds.relative')
@@ -193,6 +202,7 @@ export function ExploreFeed() {
       </header>
 
       <TodayViewTabs active="explore" />
+      <ExploreViewTabs active="latest" />
 
       <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto" aria-label={t('categoriesLabel')}>

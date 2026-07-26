@@ -26,6 +26,7 @@ export interface FeedEntry {
   imageUrl: string | null
   publishedAt: string | null
   createdAt: string | null
+  changedAt?: string | null
   readingTimeMinutes: number | null
   isRead: boolean
   isSaved: boolean
@@ -157,6 +158,7 @@ export function normalizeMinifluxEntry(value: unknown): FeedEntry {
     imageUrl: imageFrom(raw, contentHtml),
     publishedAt: dateValue(raw.published_at),
     createdAt: dateValue(raw.created_at),
+    changedAt: dateValue(raw.changed_at),
     readingTimeMinutes: readingTime,
     isRead: raw.status === 'read',
     isSaved: raw.starred === true,

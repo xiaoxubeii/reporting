@@ -2,13 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MinifluxClient, MinifluxError } from './client'
 
 function mockFetch(body: unknown, status = 200, headers: Record<string, string> = {}) {
-  const fn = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => ({
-    ok: status >= 200 && status < 300,
-    status,
-    headers: new Headers(headers),
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  }))
+  const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    void input
+    void init
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      headers: new Headers(headers),
+      json: async () => body,
+      text: async () => JSON.stringify(body),
+    }
+  })
   vi.stubGlobal('fetch', fn)
   return fn
 }
@@ -53,7 +57,7 @@ describe('MinifluxClient', () => {
     await expect(client.createFeed('https://example.com/feed.xml')).resolves.toBe(262)
 
     mockFetch({}, 204)
-    await expect(client.deleteFeed(262 as any)).resolves.toBeUndefined()
+    await expect(client.deleteFeed(262)).resolves.toBeUndefined()
   })
 
   it('limits discovery response bytes and result count before normalizing entries', async () => {
@@ -95,7 +99,7 @@ describe('MinifluxClient', () => {
     }])
     const client = new MinifluxClient({ baseUrl: 'https://feeds.example.com', apiKey: 'k' })
 
-    await expect((client as any).listFeeds()).resolves.toEqual([expect.objectContaining({
+    await expect(client.listFeeds()).resolves.toEqual([expect.objectContaining({
       id: 42,
       title: 'Example News',
       feedUrl: 'https://example.com/feed.xml',
@@ -119,7 +123,7 @@ describe('MinifluxClient', () => {
     const fetchMock = mockFetch({}, 204)
     const client = new MinifluxClient({ baseUrl: 'https://feeds.example.com', apiKey: 'k' })
 
-    await expect((client as any).updateEntryState(888, { isRead: true, isSaved: false })).resolves.toEqual({
+    await expect(client.updateEntryState(888, { isRead: true, isSaved: false })).resolves.toEqual({
       isRead: true,
       isSaved: false,
     })
@@ -150,6 +154,55 @@ describe('MinifluxClient', () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       'https://feeds.example.com/v1/entries?limit=20&offset=0&order=published_at&direction=desc&category_id=8',
     )
+  })
+
+  it('lists new collector entries in ascending ID order after a bounded watermark', async () => {
+    const fetchMock = mockFetch({ total: 1, entries: [{
+      id: 889,
+      feed_id: 42,
+      title: 'New entry',
+      url: 'https://example.com/new',
+      content: '<p>Body</p>',
+      published_at: '2026-07-25T10:00:00Z',
+      changed_at: '2026-07-25T10:05:00Z',
+      feed: { id: 42, title: 'Example', site_url: 'https://example.com', feed_url: 'https://example.com/feed.xml' },
+    }] })
+    const client = new MinifluxClient({ baseUrl: 'https://feeds.example.com', apiKey: 'k' })
+
+    const page = await client.listIncrementalEntries({ limit: 50, afterEntryId: 888 })
+
+    expect(page.items[0]).toMatchObject({ upstreamId: 889, changedAt: '2026-07-25T10:05:00.000Z' })
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://feeds.example.com/v1/entries?limit=50&offset=0&order=id&direction=asc&after_entry_id=888',
+    )
+    expect(fetchMock.mock.calls[0][1]?.method).toBeUndefined()
+  })
+
+  it('reconciles changed older IDs with a stable ID cursor instead of a live-result offset', async () => {
+    const fetchMock = mockFetch({ total: 0, entries: [] })
+    const client = new MinifluxClient({ baseUrl: 'https://feeds.example.com', apiKey: 'k' })
+
+    await client.listIncrementalEntries({
+      limit: 40,
+      afterEntryId: 20,
+      changedAfter: new Date('2026-07-24T12:34:56Z'),
+    })
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://feeds.example.com/v1/entries?limit=40&offset=0&order=id&direction=asc&after_entry_id=20&changed_after=1784896496',
+    )
+  })
+
+  it('rejects unsafe incremental bounds before issuing a request', async () => {
+    const fetchMock = mockFetch({ total: 0, entries: [] })
+    const client = new MinifluxClient({ baseUrl: 'https://feeds.example.com', apiKey: 'k' })
+
+    await expect(client.listIncrementalEntries({ limit: 0, afterEntryId: 1 })).rejects.toThrow(/limit/i)
+    await expect(client.listIncrementalEntries({ limit: 101, afterEntryId: 1 })).rejects.toThrow(/limit/i)
+    await expect(client.listIncrementalEntries({ limit: 20, afterEntryId: Number.MAX_SAFE_INTEGER + 1 })).rejects.toThrow(/entry/i)
+    await expect(client.listIncrementalEntries({ limit: 20 })).rejects.toThrow(/watermark/i)
+    await expect(client.listIncrementalEntries({ limit: 20, offset: 1, afterEntryId: 1 })).rejects.toThrow(/offset/i)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('bounds entry list responses before parsing untrusted upstream content', async () => {

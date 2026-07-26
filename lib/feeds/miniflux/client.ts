@@ -191,6 +191,54 @@ export class MinifluxClient {
     return normalizeMinifluxEntryPage(value, params)
   }
 
+  async listIncrementalEntries(params: {
+    limit: number
+    offset?: number
+    afterEntryId?: number
+    changedAfter?: Date
+    signal?: AbortSignal
+  }): Promise<FeedEntryPage> {
+    if (!Number.isSafeInteger(params.limit) || params.limit < 1 || params.limit > 100) {
+      throw new Error('Incremental entry limit must be between 1 and 100')
+    }
+    const offset = params.offset ?? 0
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 10_000) {
+      throw new Error('Incremental entry offset is outside allowed bounds')
+    }
+    const hasEntryWatermark = params.afterEntryId !== undefined
+    const hasChangedWatermark = params.changedAfter !== undefined
+    if (!hasEntryWatermark && !hasChangedWatermark) {
+      throw new Error('At least one incremental entry watermark is required')
+    }
+    if (hasEntryWatermark && offset !== 0) {
+      throw new Error('Incremental entry ID cursors cannot be combined with an offset')
+    }
+
+    const query = new URLSearchParams()
+    query.set('limit', String(params.limit))
+    query.set('offset', String(offset))
+    query.set('order', 'id')
+    query.set('direction', 'asc')
+    if (hasEntryWatermark) {
+      if (!Number.isSafeInteger(params.afterEntryId) || params.afterEntryId! < 0) {
+        throw new Error('Incremental entry ID watermark is invalid')
+      }
+      query.set('after_entry_id', String(params.afterEntryId))
+    }
+    if (hasChangedWatermark) {
+      const changedAt = params.changedAfter!.getTime()
+      if (!Number.isFinite(changedAt)) throw new Error('Incremental changed watermark is invalid')
+      query.set('changed_after', String(Math.floor(changedAt / 1000)))
+    }
+
+    const value = await this.request(
+      `/v1/entries?${query.toString()}`,
+      { signal: params.signal },
+      MAX_ENTRY_LIST_RESPONSE_BYTES,
+    )
+    return normalizeMinifluxEntryPage(value, { limit: params.limit, offset })
+  }
+
   async updateEntryState(
     entryId: number,
     state: { isRead?: boolean; isSaved?: boolean },
