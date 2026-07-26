@@ -92,6 +92,7 @@ function invitationAdmin(overrides: Partial<InvitationRow> = {}) {
     question: 'Can the plant reach 92% yield?', expert_profile: 'Factory operator', context_snapshot: 'Sensitive context',
     expert_id: 'expert-1', selection_method: 'manual', expert_name: 'Ada', expert_email: 'ada@example.test',
     expert_snapshot: { name: 'Ada', title: 'COO', organization: 'Factory', profileText: 'Operator' },
+    expert_verification_type: 'fund_confirmed', expert_source_type: 'manual', expert_verified_at: '2030-01-01T00:00:00.000Z',
     token_hash: null, expires_at: null, invited_at: null, email_provider_accepted_at: null,
     email_message_id: null, email_error_code: null, email_error_message: null,
     response_markdown: null, submitted_at: null, document_id: null, materialization_error: null,
@@ -102,6 +103,11 @@ function invitationAdmin(overrides: Partial<InvitationRow> = {}) {
   const admin = {
     from(table: string) {
       if (table === 'funds') return staticResult({ name: 'Fund One' })
+      if (table === 'experts') return staticResult({
+        id: 'expert-1', scope: 'fund', fund_id: 'fund-1', status: 'active',
+        verification_type: 'fund_confirmed', source_type: 'manual',
+        verified_at: '2030-01-01T00:00:00.000Z', verified_by: 'user-1',
+      })
       let updateValues: Record<string, unknown> | null = null
       const equals = new Map<string, unknown>()
       const nullFields = new Set<string>()

@@ -280,6 +280,10 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/diligence/prompts': { domain: 'diligence' },
   'api/experts': { domain: 'diligence' },
   'api/experts/[expertId]': { domain: 'diligence' },
+  'api/experts/discovery': { domain: 'diligence' },
+  'api/experts/discovery/search': { domain: 'diligence' },
+  'api/experts/discovery/[candidateId]/confirm': { domain: 'diligence' },
+  'api/experts/discovery/[candidateId]/reject': { domain: 'diligence' },
   // The memo agent's firm-wide configuration: house style, schemas, defaults.
   'api/firm/memo-agent-defaults': { domain: 'diligence' },
   'api/firm/schemas': { domain: 'diligence' },

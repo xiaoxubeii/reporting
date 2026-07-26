@@ -1,0 +1,39 @@
+{
+  "adminTabs": 3,
+  "manualExpert": "created-deactivated-reactivated",
+  "discoveryCandidate": "Panichella G",
+  "discoveryConfirmed": true,
+  "diligenceSelected": true,
+  "mobileOverflowPx": 0,
+  "consoleErrors": [
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to fetch RSC payload for http://127.0.0.1:5030/dashboard. Falling back to browser navigation. TypeError: Failed to fetch\n    at fetchServerResponse (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js:59:27)\n    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/client/components/layout-router.js:305:90)\n    at renderWithHooks (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11121:18)\n    at mountIndeterminateComponent (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:16869:13)\n    at beginWork$1 (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:18458:16)\n    at beginWork (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:26927:14)\n    at performUnitOfWork (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25748:12)\n    at workLoopConcurrent (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25734:5)\n    at renderRootConcurrent (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25690:9)\n    at performConcurrentWorkOnRoot (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24504:38)\n    at workLoop (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:256:34)\n    at flushWork (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:225:14)\n    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/../../reporting/node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:534:21)",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[i18n] ENVIRONMENT_FALLBACK",
+    "[i18n] ENVIRONMENT_FALLBACK",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[i18n] ENVIRONMENT_FALLBACK",
+    "[i18n] ENVIRONMENT_FALLBACK",
+    "[i18n] ENVIRONMENT_FALLBACK",
+    "[i18n] ENVIRONMENT_FALLBACK",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "failedRequests": [
+    "403 http://127.0.0.1:5030/api/accounting/vehicle-index",
+    "403 http://127.0.0.1:5030/api/accounting/vehicle-index",
+    "403 http://127.0.0.1:5030/api/accounting/vehicle-index",
+    "403 http://127.0.0.1:5030/api/accounting/vehicle-index",
+    "403 http://127.0.0.1:5030/api/accounting/vehicle-index",
+    "403 http://127.0.0.1:5030/api/accounting/vehicle-index"
+  ]
+}

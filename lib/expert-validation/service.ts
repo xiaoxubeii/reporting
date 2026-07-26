@@ -19,7 +19,7 @@ type RequestRow = Tables<'diligence_expert_requests'> & {
 }
 type ResearchRow = { id: string; research_output: Json | null }
 
-export function toDirectoryEntry(row: Pick<ExpertRow, 'id' | 'scope' | 'name' | 'title' | 'organization' | 'profile_text' | 'status' | 'embedding'>): ExpertDirectoryEntry {
+export function toDirectoryEntry(row: Pick<ExpertRow, 'id' | 'scope' | 'name' | 'title' | 'organization' | 'profile_text' | 'status' | 'embedding' | 'verification_type' | 'source_type' | 'verified_at'>): ExpertDirectoryEntry {
   return {
     id: row.id,
     scope: row.scope as ExpertDirectoryEntry['scope'],
@@ -29,6 +29,9 @@ export function toDirectoryEntry(row: Pick<ExpertRow, 'id' | 'scope' | 'name' | 
     profileText: row.profile_text,
     status: row.status as ExpertDirectoryEntry['status'],
     hasEmbedding: Boolean(row.embedding),
+    verificationType: row.verification_type as ExpertDirectoryEntry['verificationType'],
+    sourceType: row.source_type as ExpertDirectoryEntry['sourceType'],
+    verifiedAt: row.verified_at ?? null,
   }
 }
 
@@ -59,14 +62,22 @@ export function toExpertRequest(row: RequestRow): ExpertValidationRequest {
   }
 }
 
-export async function listExperts(admin: Admin, fundId: string, search = ''): Promise<ExpertDirectoryEntry[]> {
-  const { data, error } = await admin
+export async function listExperts(
+  admin: Admin,
+  fundId: string,
+  search = '',
+  options: Readonly<{ includeInactiveFund?: boolean }> = {},
+): Promise<ExpertDirectoryEntry[]> {
+  let query = admin
     .from('experts')
-    .select('id, scope, name, title, organization, profile_text, status, embedding')
+    .select('id, scope, name, title, organization, profile_text, status, embedding, verification_type, source_type, verified_at')
     .or(`scope.eq.global,fund_id.eq.${fundId}`)
-    .eq('status', 'active')
     .order('name')
     .limit(250)
+  query = options.includeInactiveFund
+    ? query.or(`status.eq.active,and(scope.eq.fund,fund_id.eq.${fundId},status.eq.inactive)`)
+    : query.eq('status', 'active')
+  const { data, error } = await query
   if (error) throw error
   const needle = search.trim().toLocaleLowerCase()
   return (data ?? [])
@@ -99,7 +110,10 @@ export async function saveExpert(params: {
     existing = result.data
     if (!existing || (existing.scope === 'fund' && existing.fund_id !== fundId)) throw new Error('Expert not found')
     if (existing.scope === 'global' && !params.allowGlobalWrite) throw new Error('Expert not found')
+    if (existing.scope !== input.scope) throw new Error('Expert scope cannot be changed')
   }
+
+  if (input.scope === 'global' && !params.allowGlobalWrite) throw new Error('Expert not found')
 
   const profileChanged = !existing || existing.profile_text !== input.profileText
   let embedding: string | null = existing?.embedding ?? null
@@ -124,6 +138,13 @@ export async function saveExpert(params: {
     organization: input.organization,
     profile_text: input.profileText,
     status: input.status,
+    verification_type: input.scope === 'global' ? 'platform_certified' : 'fund_confirmed',
+    // Source identifies how the person entered this fund's directory. A later
+    // fund review refreshes the attestation without rewriting that history.
+    source_type: existing?.source_type ?? (input.scope === 'global' ? 'platform' : 'manual'),
+    verified_at: new Date().toISOString(),
+    verified_by: params.userId,
+    provenance_snapshot: existing?.provenance_snapshot ?? {},
     embedding,
     embedding_model: embeddingModel,
     ...(!existing ? { created_by: params.userId } : {}),
@@ -132,7 +153,7 @@ export async function saveExpert(params: {
     ? admin.from('experts').update(values).eq('id', existing.id)
     : admin.from('experts').insert(values)
   const { data, error } = await query
-    .select('id, scope, name, title, organization, profile_text, status, embedding')
+    .select('id, scope, name, title, organization, profile_text, status, embedding, verification_type, source_type, verified_at')
     .single()
   if (error) throw error
   return { expert: toDirectoryEntry(data), embeddingWarning }
@@ -168,12 +189,18 @@ export async function selectExpert(params: {
 }): Promise<ExpertValidationRequest> {
   const { data: expert, error: expertError } = await params.admin
     .from('experts')
-    .select('id, scope, fund_id, name, email, title, organization, profile_text, status')
+    .select('id, scope, fund_id, name, email, title, organization, profile_text, status, verification_type, source_type, verified_at, verified_by')
     .eq('id', params.expertId)
     .maybeSingle()
   if (expertError) throw expertError
   const row = expert
-  if (!row || row.status !== 'active' || (row.scope === 'fund' && row.fund_id !== params.fundId)) {
+  const eligible = row && row.status === 'active' && (
+    (row.scope === 'global' && row.verification_type === 'platform_certified'
+      && row.source_type === 'platform' && Boolean(row.verified_at))
+    || (row.scope === 'fund' && row.fund_id === params.fundId
+      && row.verification_type === 'fund_confirmed' && Boolean(row.verified_at) && Boolean(row.verified_by))
+  )
+  if (!eligible || !row) {
     throw new Error('Expert not found')
   }
   const snapshot: ExpertIdentitySnapshot = {
@@ -181,6 +208,9 @@ export async function selectExpert(params: {
     title: row.title ?? null,
     organization: row.organization ?? null,
     profileText: row.profile_text,
+    verificationType: row.verification_type as ExpertIdentitySnapshot['verificationType'],
+    sourceType: row.source_type as ExpertIdentitySnapshot['sourceType'],
+    verifiedAt: row.verified_at ?? null,
   }
   const { data, error } = await params.admin
     .from('diligence_expert_requests')
@@ -189,6 +219,9 @@ export async function selectExpert(params: {
       expert_name: row.name,
       expert_email: row.email,
       expert_snapshot: snapshot as unknown as Json,
+      expert_verification_type: row.verification_type,
+      expert_source_type: row.source_type,
+      expert_verified_at: row.verified_at,
       selection_method: params.selectionMethod,
     })
     .eq('id', params.requestId)

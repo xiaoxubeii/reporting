@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Plus, RefreshCw, Search, Send } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, RefreshCw, Search, Send, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { ResearchOutput } from '@/lib/memo-agent/stages/research'
@@ -22,6 +24,7 @@ export function ExpertValidationPanel({
   editable: boolean
 }) {
   const t = useTranslations('Diligence.expertValidation')
+  const expertT = useTranslations('ExpertDirectory')
   const format = useFormatter()
   const [requests, setRequests] = useState<ExpertValidationRequest[]>([])
   const [source, setSource] = useState<Source | null>(null)
@@ -33,8 +36,6 @@ export function ExpertValidationPanel({
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null)
-  const [showAdd, setShowAdd] = useState(false)
-  const [newExpert, setNewExpert] = useState({ name: '', email: '', title: '', organization: '', profileText: '' })
 
   const sources = useMemo<Source[]>(() => [
     ...(research?.contradictions ?? []).map((item, index) => ({
@@ -159,23 +160,6 @@ export function ExpertValidationPanel({
     finally { setBusy(null) }
   }
 
-  async function addExpert() {
-    setBusy('add-expert'); setMessage(null)
-    try {
-      const response = await fetch('/api/experts', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newExpert, profile_text: newExpert.profileText, scope: 'fund' }),
-      })
-      const body = await response.json()
-      if (!response.ok) throw new Error(body.error ?? t('errors.addExpert'))
-      setExperts(previous => [body.expert, ...previous])
-      setShowAdd(false)
-      setNewExpert({ name: '', email: '', title: '', organization: '', profileText: '' })
-      if (body.embeddingWarning) setMessage(body.embeddingWarning)
-    } catch (error) { setMessage(error instanceof Error ? error.message : t('errors.addExpert')) }
-    finally { setBusy(null) }
-  }
-
   async function retryEvidence(request: ExpertValidationRequest) {
     setBusy(`retry:${request.id}`); setMessage(null)
     try {
@@ -213,18 +197,10 @@ export function ExpertValidationPanel({
         <div className="relative flex-1 min-w-52"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={search} onChange={event => setSearch(event.target.value)} className="pl-8" placeholder={t('choose.searchPlaceholder')} /></div>
         <Button variant="outline" onClick={() => loadExperts()}><Search className="h-4 w-4 mr-1" />{t('choose.search')}</Button>
         <Button variant="outline" onClick={autoMatch} disabled={busy === 'match'}>{busy === 'match' ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}{t('choose.autoMatch')}</Button>
-        <Button variant="ghost" onClick={() => setShowAdd(value => !value)}><Plus className="h-4 w-4 mr-1" />{t('choose.addExpert')}</Button>
+        <Button variant="ghost" asChild><Link href="/experts"><Users className="h-4 w-4 mr-1" />{t('choose.addExpert')}</Link></Button>
       </div>
-      {showAdd && <div className="grid gap-2 md:grid-cols-2 rounded-md border p-3">
-        <Input placeholder={t('newExpert.name')} value={newExpert.name} onChange={e => setNewExpert(v => ({ ...v, name: e.target.value }))} />
-        <Input placeholder={t('newExpert.email')} type="email" value={newExpert.email} onChange={e => setNewExpert(v => ({ ...v, email: e.target.value }))} />
-        <Input placeholder={t('newExpert.title')} value={newExpert.title} onChange={e => setNewExpert(v => ({ ...v, title: e.target.value }))} />
-        <Input placeholder={t('newExpert.organization')} value={newExpert.organization} onChange={e => setNewExpert(v => ({ ...v, organization: e.target.value }))} />
-        <div className="md:col-span-2"><Field label={t('newExpert.profile')} value={newExpert.profileText} onChange={profileText => setNewExpert(v => ({ ...v, profileText }))} maxLength={6000} rows={3} /></div>
-        <Button onClick={addExpert} disabled={busy === 'add-expert'}>{t('newExpert.save')}</Button>
-      </div>}
       {(matches.length > 0 ? matches : experts).map(expert => <div key={expert.id} className="flex items-start gap-3 border-t pt-3 text-sm">
-        <div className="flex-1"><div className="font-medium">{expert.name}</div><div className="text-xs text-muted-foreground">{[expert.title, expert.organization].filter(Boolean).join(' · ')}</div><div className="text-xs mt-1">{expert.profileText}</div>{'similarity' in expert && <div className="text-[11px] text-muted-foreground mt-1">{t('choose.similarity', { value: format.number((expert as ExpertMatch).similarity, { style: 'percent', maximumFractionDigits: 0 }) })}</div>}</div>
+        <div className="flex-1"><div className="flex items-center gap-2"><div className="font-medium">{expert.name}</div><Badge variant="secondary" className="text-[10px]">{expert.verificationType === 'platform_certified' ? expertT('badges.platform') : expert.sourceType === 'discovery' ? expertT('badges.fundDiscovery') : expertT('badges.fundManual')}</Badge></div><div className="text-xs text-muted-foreground">{[expert.title, expert.organization].filter(Boolean).join(' · ')}</div><div className="text-xs mt-1">{expert.profileText}</div>{'similarity' in expert && <div className="text-[11px] text-muted-foreground mt-1">{t('choose.similarity', { value: format.number((expert as ExpertMatch).similarity, { style: 'percent', maximumFractionDigits: 0 }) })}</div>}</div>
         <Button size="sm" variant={active.expertId === expert.id ? 'default' : 'outline'} onClick={() => choose(expert.id, 'similarity' in expert ? 'auto_match' : 'manual')} disabled={busy === `select:${expert.id}`}>{active.expertId === expert.id ? t('choose.selected') : t('choose.select')}</Button>
       </div>)}
       {active.expertId && <Button onClick={() => invite(false)} disabled={busy === 'invite'}><Send className="h-4 w-4 mr-1" />{t('sendInvitation')}</Button>}
