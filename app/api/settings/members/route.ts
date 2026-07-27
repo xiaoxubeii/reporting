@@ -1,74 +1,75 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveFund } from '@/lib/api-helpers'
+import { deriveFundEmailDomain } from '@/lib/email/domain'
+import { listFundInvitations } from '@/lib/identity/invitations'
+import { identityErrorResponse } from '@/lib/identity/http'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const admin = createAdminClient()
+  const gate = await resolveFund(admin, user.id)
+  if (gate instanceof NextResponse) return gate
+  const isAdmin = gate.role === 'admin'
 
-  const { data: membership } = await admin
-    .from('fund_members')
-    .select('fund_id, role')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const [{ data: fund, error: fundError }, { data: members, error: memberError }] = await Promise.all([
+    admin.from('funds').select('created_by,email_subdomain').eq('id', gate.fundId).single(),
+    admin.from('fund_members')
+      .select('id,user_id,role,created_at')
+      .eq('fund_id', gate.fundId)
+      .order('created_at'),
+  ])
+  if (fundError || !fund || memberError) {
+    return NextResponse.json({ error: 'Unable to load Fund members.' }, { status: 503 })
+  }
 
-  if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
+  const userIds = (members ?? []).map(member => member.user_id)
+  const [{ data: profiles }, { data: mailboxes }] = await Promise.all([
+    userIds.length
+      ? admin.from('user_profiles').select('user_id,full_name').in('user_id', userIds)
+      : Promise.resolve({ data: [], error: null }),
+    userIds.length
+      ? admin.from('fund_email_mailboxes')
+        .select('claimed_by_user_id,local_part,active')
+        .eq('fund_id', gate.fundId)
+        .eq('kind', 'user')
+        .in('claimed_by_user_id', userIds)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+  const profileByUser = new Map((profiles ?? []).map(profile => [profile.user_id, profile.full_name]))
+  const mailboxByUser = new Map((mailboxes ?? []).map(mailbox => [mailbox.claimed_by_user_id, mailbox]))
+  const emailDomain = fund.email_subdomain ? deriveFundEmailDomain(fund.email_subdomain) : null
 
-  const fundId = membership.fund_id
-  const isAdmin = membership.role === 'admin'
+  const memberList = await Promise.all((members ?? []).map(async member => {
+    const mailbox = mailboxByUser.get(member.user_id)
+    const common = {
+      id: member.id,
+      userId: member.user_id,
+      name: profileByUser.get(member.user_id) ?? null,
+      role: member.role,
+      isFounder: member.user_id === fund.created_by,
+      businessEmail: mailbox && emailDomain ? `${mailbox.local_part}@${emailDomain}` : null,
+      mailboxActive: mailbox?.active ?? false,
+      createdAt: member.created_at,
+    }
+    if (!isAdmin) return common
+    const { data } = await admin.auth.admin.getUserById(member.user_id)
+    return { ...common, externalEmail: data?.user?.email ?? null }
+  }))
 
-  // Get all members with their emails from auth.users
-  const { data: members } = await admin
-    .from('fund_members')
-    .select('id, user_id, role, created_at')
-    .eq('fund_id', fundId)
-    .order('created_at')
-
-  // Get emails for members from auth - we need the admin client for this
-  const memberList = []
-  for (const m of members ?? []) {
-    const { data: { user: memberUser } } = await admin.auth.admin.getUserById(m.user_id)
-    memberList.push({
-      id: m.id,
-      userId: m.user_id,
-      email: memberUser?.email ?? 'Unknown',
-      role: m.role,
-      createdAt: m.created_at,
+  try {
+    return NextResponse.json({
+      members: memberList,
+      invitations: isAdmin ? await listFundInvitations(admin, gate.fundId) : [],
+      isAdmin,
+      isFounder: user.id === fund.created_by,
     })
+  } catch (error) {
+    return identityErrorResponse(error, 'settings-members')
   }
-
-  // Get pending join requests (only if admin)
-  let pendingRequests: Array<{
-    id: string
-    email: string
-    createdAt: string | null
-    status: string
-    claimedAt: string | null
-  }> = []
-
-  if (isAdmin) {
-    const { data: requests } = await admin
-      .from('fund_join_requests')
-      .select('id, email, created_at, status, approval_claimed_at')
-      .eq('fund_id', fundId)
-      .in('status', ['pending', 'provisioning'])
-      .order('created_at')
-
-    pendingRequests = (requests ?? []).map(r => ({
-      id: r.id,
-      email: r.email,
-      createdAt: r.created_at,
-      status: r.status,
-      claimedAt: r.approval_claimed_at,
-    }))
-  }
-
-  return NextResponse.json({
-    members: memberList,
-    pendingRequests,
-    isAdmin,
-  })
 }

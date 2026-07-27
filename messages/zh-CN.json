@@ -2482,6 +2482,37 @@
     "emailConfirmed": "您的邮箱已确认，可以开始使用了。",
     "title": "设置您的基金",
     "description": "大约需要 3 分钟。所有设置之后都可以在“设置”中更新。",
+    "identity": {
+      "loading": "正在检查账户…",
+      "redirecting": "正在打开基金工作区…",
+      "eyebrow": "不可变的业务身份",
+      "title": "为基金创建一个长期稳定的工作空间",
+      "description": "请选择团队用于租户链接和业务邮箱的工作区身份。基金显示名称之后可以修改，但此身份创建后不可更改。",
+      "previewLabel": "工作区预览",
+      "immutableHelp": "该主机名与基金初始邮件子域名会同时保留，创建后不可重命名。",
+      "emailConfirmed": "您的外部登录邮箱已验证。",
+      "formTitle": "基金身份",
+      "formDescription": "只需填写基金名称和工作区名称；所有集成都可以稍后配置。",
+      "fundName": "基金显示名称",
+      "fundNamePlaceholder": "中国心血管创新俱乐部",
+      "slug": "工作区名称",
+      "slugHelp": "使用 3–63 位小写字母、数字或连字符；保留名称和已占用名称不可使用。",
+      "optionalAi": "可选 AI 配置",
+      "claudeKey": "Claude API 密钥",
+      "optionalAiHelp": "可以暂时跳过，之后在“当前基金设置”中配置任意受支持的 AI 服务商。",
+      "create": "创建基金工作区",
+      "reauthNotice": "基金工作区使用仅限当前主机的会话。进入新工作区时可能需要重新登录。",
+      "tenant": {
+        "title": "{fundName} 仅限受邀用户",
+        "description": "基金成员资格只通过精确邮箱邀请授予，不再使用邮箱域名匹配。",
+        "openInvite": "打开邀请"
+      },
+      "errors": {
+        "required": "请输入基金名称和有效的工作区名称。",
+        "conflict": "该工作区名称已被占用，请选择其他名称。",
+        "generic": "暂时无法创建基金，请稍后重试。"
+      }
+    },
     "saving": "正在保存…",
     "next": "下一步 →",
     "errors": {
@@ -2563,6 +2594,92 @@
       "connect": "连接 Google 云端硬盘",
       "finish": "完成设置",
       "skip": "暂时跳过"
+    }
+  },
+  "FundInvitation": {
+    "metadata": { "title": "基金邀请" },
+    "loading": "正在检查邀请…",
+    "title": "加入 {fundName}",
+    "description": "加入基金工作区前，请确认这份精确外部邮箱邀请。",
+    "invitee": "受邀账户",
+    "role": "基金角色",
+    "roles": { "admin": "管理员", "member": "成员" },
+    "verifiedAccount": "接受邀请时，系统会核对当前登录的外部账户与邀请邮箱。",
+    "signInGuidance": "请使用受邀的外部邮箱登录或创建账户。基金内部邮箱不能用于登录。",
+    "expires": "邀请将于 {date} 到期。",
+    "decline": "拒绝",
+    "accept": "接受邀请",
+    "signIn": "登录并继续",
+    "errors": { "generic": "暂时无法接受此邀请。" },
+    "invalid": { "title": "邀请不可用", "description": "该邀请无效、已过期、已撤销或已被新邀请替换。" },
+    "declined": { "title": "已拒绝邀请", "description": "该邀请已从当前浏览器标签页中清除。" },
+    "accepted": {
+      "title": "欢迎加入基金",
+      "description": "您现在已成为 {fundName} 的成员。",
+      "personal": "设置个人设置",
+      "setup": "打开设置清单"
+    }
+  },
+  "FundSetup": {
+    "metadata": { "title": "基金设置" },
+    "eyebrow": "基金工作区",
+    "title": "设置清单",
+    "description": "完成 {fundName} 的身份与通信设置。",
+    "loadingDescription": "正在加载当前基金的设置状态。",
+    "loading": "正在加载设置状态…",
+    "refresh": "刷新状态",
+    "error": "无法加载设置清单。",
+    "required": "必需",
+    "optional": "可选",
+    "completed": "已完成",
+    "pending": "待完成",
+    "progress": {
+      "title": "工作区就绪情况",
+      "description": "已完成 {complete}/{total} 项"
+    },
+    "steps": {
+      "profile": { "title": "填写真实姓名", "description": "用于向基金成员展示身份，并作为业务邮件显示名。" },
+      "mailbox": { "title": "申请基金业务邮箱", "description": "选择您在当前基金中永久使用的业务邮箱地址。" },
+      "branding": { "title": "设置基金品牌", "description": "上传在应用页眉和通信中使用的基金标志。" },
+      "email": { "title": "连接基金邮件", "description": "配置基金级别的发信和收信服务商。" },
+      "members": { "title": "邀请团队成员", "description": "按对方精确的外部登录邮箱邀请管理员或成员。" }
+    }
+  },
+  "SettingsIdentity": {
+    "navigation": {
+      "label": "设置范围",
+      "personal": { "title": "个人设置", "description": "您的身份、登录账户和基金业务邮箱。" },
+      "fund": { "title": "当前基金：{fundName}", "fallback": "尚未选择", "description": "基金身份、服务商、访问权限和团队。", "adminOnly": "只有基金管理员可以修改这些设置。", "memberDescription": "查看基金成员目录；服务商和访问权限由管理员管理。" }
+    },
+    "personal": {
+      "metadata": { "title": "个人设置" },
+      "title": "个人设置",
+      "description": "管理与您的外部登录账户绑定的个人身份。",
+      "loading": "正在加载个人设置…",
+      "save": "保存姓名",
+      "errors": { "load": "无法加载个人设置。", "save": "无法保存此设置。" },
+      "profile": {
+        "title": "身份与登录",
+        "description": "当前基金的其他成员可以看到您的真实姓名。",
+        "fullName": "真实姓名",
+        "externalEmail": "外部登录邮箱",
+        "externalEmailHelp": "这是您的认证身份。基金业务邮箱不能用于登录。",
+        "saved": "真实姓名已保存。"
+      },
+      "fund": { "current": "当前基金", "role": "角色" },
+      "roles": { "admin": "管理员", "member": "成员" },
+      "mailbox": {
+        "title": "基金业务邮箱",
+        "description": "此地址用于基金业务通信，不用于身份认证。",
+        "businessEmail": "业务邮箱地址",
+        "localPart": "选择邮箱名称",
+        "claimHelp": "请谨慎选择。申请后地址将永久固定，并且必须先保存真实姓名。",
+        "immutableHelp": "此基金业务邮箱地址不可更改。请继续使用外部登录邮箱登录。",
+        "claim": "申请地址",
+        "saved": "基金业务邮箱已创建。"
+      },
+      "security": { "title": "账户安全", "description": "为您的外部登录账户启用双重身份验证。" },
+      "preferences": { "title": "语言与显示", "description": "当前账户在此浏览器上的个人偏好。", "language": "语言", "theme": "颜色模式", "themeHelp": "在跟随系统、浅色和深色之间切换。" }
     }
   },
   "Setup": {
@@ -3081,6 +3198,11 @@
     },
     "title": "设置",
     "description": "配置基金、集成和团队偏好",
+    "fundAdminOnly": {
+      "title": "当前基金设置仅限管理员",
+      "description": "您可以在“个人设置”中查看和更新自己的身份及基金业务邮箱。",
+      "action": "打开个人设置"
+    },
     "errors": {
       "load": "无法加载设置。"
     },
@@ -3091,6 +3213,8 @@
       "inboundDescription": "通过系统托管的 Resend Webhook 接收基金邮件。",
       "slug": "基金邮箱子域名",
       "slugHelp": "设置平台邮件域名前永久使用的基金标识。",
+      "immutableDomain": "基金邮件域名",
+      "immutableDomainHelp": "此身份已在创建基金时永久保留，不能更改。",
       "configureDomain": "配置基金域名",
       "domainConfigured": "基金域名已配置",
       "domain": "域名",
@@ -3826,6 +3950,7 @@
         "chooseFile": "选择文件",
         "replace": "替换",
         "fileTooLarge": "文件必须小于 200 KB",
+        "invalidFileType": "请使用 PNG、JPEG 或 WebP 图片。",
         "uploadFailed": "无法上传标志",
         "address": "地址／联系信息",
         "addressHelp": "显示在投资人报告 PDF 的基金名称下方。",
@@ -3981,6 +4106,11 @@
         "postmarkHelp": "请在 Postmark 控制台的 Inbound 中设置。投资组合公司将报告转发到此地址，Postmark 再将其发送到 Webhook。",
         "webhookUrl": "Webhook URL",
         "postmarkWebhookHelp": "请将此 URL 粘贴到 Postmark 的入站 Webhook 设置。进行本地开发时可编辑基础 URL，例如使用 ngrok。",
+        "webhookConfigured": "已配置安全的 Postmark Webhook Token。如果您未保存 URL，请重新生成。",
+        "generateWebhookToken": "生成 Webhook URL",
+        "rotateWebhookToken": "重新生成 Webhook URL",
+        "webhookTokenOnce": "请立即复制此 URL，Token 不会再次显示。",
+        "webhookTokenError": "暂时无法重新生成 Postmark Webhook URL。",
         "mailgunDomain": "Mailgun 入站域名",
         "mailgunDomainHelp": "Mailgun 中为入站路由配置的域名。",
         "signingKey": "Webhook 签名密钥",
@@ -4045,6 +4175,22 @@
         "loading": "正在加载…",
         "admin": "管理员",
         "member": "成员",
+        "members": "基金成员",
+        "role": "角色",
+        "founder": "创始管理员",
+        "unnamed": "尚未设置姓名",
+        "noBusinessEmail": "尚未申请基金业务邮箱",
+        "externalEmail": "外部登录邮箱",
+        "inviteTitle": "邀请成员",
+        "inviteDescription": "邀请将发送到对方用于登录的精确外部邮箱；系统不会按邮箱域名自动匹配。",
+        "emailPlaceholder": "person@example.com",
+        "sendInvite": "发送邀请",
+        "inviteError": "暂时无法发送此邀请。",
+        "invitations": "邀请记录",
+        "invitedAs": "于 {date} 以{role}身份邀请",
+        "resend": "重新发送",
+        "revoke": "撤销",
+        "statuses": { "pending": "待接受", "accepted": "已接受", "revoked": "已撤销", "replaced": "已替换", "expired": "已过期" },
         "confirm": "确认",
         "cancel": "取消",
         "remove": "移除",
@@ -4054,6 +4200,15 @@
         "retryApproval": "重试批准",
         "updateError": "暂时无法更新此申请。",
         "access": "访问权限"
+      },
+      "fundIdentity": {
+        "title": "永久基金身份",
+        "description": "租户与邮件身份在创建基金时即被保留。这里仅供查看，不能在设置中重命名。",
+        "tenant": "租户标识",
+        "tenantHelp": "用于基金主机名。",
+        "email": "邮件子域名",
+        "emailHelp": "用于基金业务邮箱。",
+        "legacyMissing": "此旧基金尚无邮件身份，请联系平台管理员处理。"
       },
       "drive": {
         "myDrive": "我的云端硬盘",

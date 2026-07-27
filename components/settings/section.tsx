@@ -32,15 +32,15 @@ export function GroupHeader({ label }: { label: string }) {
   )
 }
 
-export function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   const isAdminSection = useContext(AdminSectionContext)
   return (
-    <div className={`rounded-lg border bg-card p-5 ${isAdminSection ? 'border-amber-500/30' : ''}`}>
+    <section id={id} className={`scroll-mt-6 rounded-lg border bg-card p-5 ${isAdminSection ? 'border-amber-500/30' : ''}`}>
       <h2 className="text-sm font-medium mb-3 flex items-center gap-1.5">
         {isAdminSection && <Lock className="h-3 w-3 text-amber-500" />}
         {title}
       </h2>
       {children}
-    </div>
+    </section>
   )
 }

@@ -5,7 +5,11 @@ The system SHALL allow a current Fund administrator to create an invitation for 
 
 #### Scenario: Administrator sends invitation
 - **WHEN** an administrator submits a valid external email and `admin` or `member` role
-- **THEN** the server persists one live invitation, sends a canonical tenant invitation link through platform mail, and returns only secret-free status
+- **THEN** the server persists an inert invitation, sends a canonical tenant invitation link through platform mail, activates the invitation only after successful delivery, and returns only secret-free status
+
+#### Scenario: Invitation delivery fails
+- **WHEN** the provider does not confirm successful invitation delivery
+- **THEN** the invitation remains unusable for signup, resolution, acceptance, listing, and setup completion and the server revokes it when possible
 
 #### Scenario: Non-founder administrator invites administrator
 - **WHEN** an administrator who is not the Fund founder attempts to issue an `admin` invitation

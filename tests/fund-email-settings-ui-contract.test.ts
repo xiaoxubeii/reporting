@@ -14,15 +14,16 @@ describe('Fund email Settings UI contract', () => {
 
   it('integrates Fund Resend controls into outbound and inbound settings', () => {
     expect(component).toContain("useTranslations('Settings.fundEmail')")
-    expect(component).toContain("action: 'set_mailbox'")
-    expect(component).toContain("action: 'configure_identity'")
+    expect(component).not.toContain("action: 'set_mailbox'")
+    expect(component).not.toContain("action: 'configure_identity'")
     expect(component).toContain("action: 'configure_inbound'")
     expect(component).toContain("action: 'recreate_inbound_webhook'")
     expect(component).toContain('receivingApiKey: receivingKey')
     expect(component).not.toContain('sendingApiKey:')
     expect(component).not.toContain('webhookSecret')
     expect(component).not.toContain('fund-email-webhook-secret')
-    expect(component).toMatch(/status\.isAdmin\s*&&/)
+    expect(component).toContain('<ImmutableDomain status={status} />')
+    expect(component).not.toContain('function DomainField')
     expect(component).toContain('export function FundResendOutboundProviderFields')
     expect(component).toContain('export function FundResendInboundProviderFields')
     expect(component).not.toContain("from '@/components/settings/section'")
@@ -39,7 +40,7 @@ describe('Fund email Settings UI contract', () => {
 
   it('uses the server-provided base domain and localizes provider statuses', () => {
     expect(component).toContain('baseDomain: string')
-    expect(component).toContain('status.baseDomain')
+    expect(component).toContain('status.domain')
     expect(component).not.toContain('.fundworkspace.com</span>')
     expect(component).toContain("t('statuses.verified')")
     expect(component).toContain("t('statuses.pending')")

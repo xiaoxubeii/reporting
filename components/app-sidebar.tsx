@@ -138,7 +138,7 @@ const NAV_ITEMS: NavItem[] = [
     children: ACCOUNTING_SECTIONS.map(({ href, label, domain }) => ({ href, label, domain })),
   },
   { href: '/usage', labelKey: 'usage', icon: Users, adminOnly: true, domain: 'admin' },
-  { href: '/settings', labelKey: 'settings', icon: Settings, badgeKey: 'settings' },
+  { href: '/settings/personal', labelKey: 'settings', icon: Settings, badgeKey: 'settings' },
 ]
 
 const ACCOUNTING_LABEL_KEYS: Record<string, NavigationKey> = {

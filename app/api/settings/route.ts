@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { assertWriteAccess } from '@/lib/api-helpers'
+import { assertAdminAccess } from '@/lib/api-helpers'
 import { APP_VERSION } from '@/lib/version'
 import { getUpdateAvailable } from '@/lib/cache/layout'
 import { encrypt } from '@/lib/crypto'
@@ -32,36 +33,17 @@ export async function GET() {
 
   const { data: membership } = await admin
     .from('fund_members')
-    .select('fund_id, role, display_name')
+    .select('fund_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
 
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 404 })
 
   const [{ data: fund }, { data: settings }, { data: senders }] = await Promise.all([
-    admin.from('funds').select('id, name, logo_url, address').eq('id', membership.fund_id).single(),
-    (admin as any).from('fund_settings').select('postmark_inbound_address, postmark_webhook_token, postmark_webhook_token_encrypted, encryption_key_encrypted, retain_resolved_reviews, resolved_reviews_ttl_days, claude_api_key_encrypted, claude_model, ai_summary_prompt, google_refresh_token_encrypted, google_drive_folder_id, google_drive_folder_name, google_client_id, google_client_secret_encrypted, outbound_email_provider, asks_email_provider, approval_email_subject, approval_email_body, system_email_from_name, system_email_from_address, resend_api_key_encrypted, postmark_server_token_encrypted, inbound_email_provider, mailgun_inbound_domain, mailgun_signing_key_encrypted, mailgun_api_key_encrypted, mailgun_sending_domain, file_storage_provider, dropbox_app_key, dropbox_app_secret_encrypted, dropbox_refresh_token_encrypted, dropbox_folder_path, openai_api_key_encrypted, openai_model, default_ai_provider, gemini_api_key_encrypted, gemini_model, ollama_base_url, ollama_model, openrouter_api_key_encrypted, openrouter_model, openrouter_base_url, openrouter_request_parameters, analytics_fathom_site_id, analytics_ga_measurement_id, currency, disable_user_tracking, feature_visibility, deal_thesis, deal_screening_prompt, deal_intake_enabled, deal_submission_token, routing_confidence_threshold, routing_model, lp_portal_enabled').eq('fund_id', membership.fund_id).single(),
+    admin.from('funds').select('id, name, slug, email_subdomain, logo_url, address, created_by').eq('id', membership.fund_id).single(),
+    admin.from('fund_settings').select('postmark_inbound_address, postmark_webhook_token, postmark_webhook_token_encrypted, encryption_key_encrypted, retain_resolved_reviews, resolved_reviews_ttl_days, claude_api_key_encrypted, claude_model, ai_summary_prompt, google_refresh_token_encrypted, google_drive_folder_id, google_drive_folder_name, google_client_id, google_client_secret_encrypted, outbound_email_provider, asks_email_provider, approval_email_subject, approval_email_body, system_email_from_name, system_email_from_address, resend_api_key_encrypted, postmark_server_token_encrypted, inbound_email_provider, mailgun_inbound_domain, mailgun_signing_key_encrypted, mailgun_api_key_encrypted, mailgun_sending_domain, file_storage_provider, dropbox_app_key, dropbox_app_secret_encrypted, dropbox_refresh_token_encrypted, dropbox_folder_path, openai_api_key_encrypted, openai_model, default_ai_provider, gemini_api_key_encrypted, gemini_model, ollama_base_url, ollama_model, openrouter_api_key_encrypted, openrouter_model, openrouter_base_url, openrouter_request_parameters, analytics_fathom_site_id, analytics_ga_measurement_id, currency, disable_user_tracking, feature_visibility, deal_thesis, deal_screening_prompt, deal_intake_enabled, deal_submission_token, routing_confidence_threshold, routing_model, lp_portal_enabled').eq('fund_id', membership.fund_id).single(),
     admin.from('authorized_senders').select('id, email, label, created_at').eq('fund_id', membership.fund_id).order('email'),
   ])
-
-  // Decrypt webhook token if encrypted; fall back to plaintext for legacy
-  let webhookToken = ''
-  if (membership.role === 'admin' && settings) {
-    if (settings.postmark_webhook_token_encrypted && settings.encryption_key_encrypted) {
-      try {
-        const kek = process.env.ENCRYPTION_KEY
-        if (kek) {
-          const { decrypt } = await import('@/lib/crypto')
-          const dek = decrypt(settings.encryption_key_encrypted, kek)
-          webhookToken = decrypt(settings.postmark_webhook_token_encrypted, dek)
-        }
-      } catch {
-        webhookToken = settings.postmark_webhook_token ?? ''
-      }
-    } else {
-      webhookToken = settings.postmark_webhook_token ?? ''
-    }
-  }
 
   // Read on its own, tolerating a missing column. `affinity_mcp_enabled` ships in the
   // Affinity migration, which a given deployment may not have run yet — and one absent
@@ -69,7 +51,7 @@ export async function GET() {
   // page down with it.
   let affinityMcpEnabled = false
   try {
-    const { data: aff } = await (admin as any)
+    const { data: aff } = await admin
       .from('fund_settings')
       .select('affinity_mcp_enabled')
       .eq('fund_id', membership.fund_id)
@@ -82,7 +64,7 @@ export async function GET() {
   // the OAuth migration reads `false` rather than failing the settings page.
   let agentApiEnabled = false
   try {
-    const { data: agentRow } = await (admin as any)
+    const { data: agentRow } = await admin
       .from('fund_settings')
       .select('agent_api_enabled')
       .eq('fund_id', membership.fund_id)
@@ -102,7 +84,8 @@ export async function GET() {
   // of a settings page that won't load.
   let heartbeatSourceAvailable = false
   try {
-    const { data: hb } = await (admin as any)
+    const compatibilityAdmin = admin as unknown as SupabaseClient
+    const { data: hb } = await compatibilityAdmin
       .from('heartbeat_credentials')
       .select('enabled')
       .eq('fund_id', membership.fund_id)
@@ -111,7 +94,7 @@ export async function GET() {
     if (hb?.enabled) {
       heartbeatSourceAvailable = true
     } else {
-      const { count } = await (admin as any)
+      const { count } = await compatibilityAdmin
         .from('inbound_deals')
         .select('id', { count: 'exact', head: true })
         .eq('fund_id', membership.fund_id)
@@ -127,10 +110,15 @@ export async function GET() {
   return NextResponse.json({
     fundId: fund?.id,
     fundName: fund?.name,
+    fundSlug: fund?.slug,
+    fundEmailSubdomain: fund?.email_subdomain ?? null,
     fundLogo: fund?.logo_url ?? null,
     fundAddress: fund?.address ?? null,
     postmarkInboundAddress: settings?.postmark_inbound_address ?? '',
-    postmarkWebhookToken: webhookToken,
+    postmarkWebhookToken: '',
+    postmarkWebhookConfigured: Boolean(
+      settings?.postmark_webhook_token_encrypted || settings?.postmark_webhook_token,
+    ),
     hasClaudeKey: !!settings?.claude_api_key_encrypted,
     claudeModel: settings?.claude_model ?? 'claude-sonnet-4-6',
     hasOpenAIKey: !!settings?.openai_api_key_encrypted,
@@ -193,8 +181,8 @@ export async function GET() {
     affinityMcpEnabled,
     heartbeatSourceAvailable,
     agentApiEnabled,
-    displayName: membership.display_name ?? '',
     isAdmin: membership.role === 'admin',
+    isFounder: fund?.created_by === user.id,
     userId: user.id,
     appVersion: APP_VERSION,
     updateAvailable: membership.role === 'admin' ? await getUpdateAvailable() : false,
@@ -209,7 +197,7 @@ export async function PATCH(req: NextRequest) {
 
   const admin = createAdminClient()
 
-  const writeCheck = await assertWriteAccess(admin, user.id)
+  const writeCheck = await assertAdminAccess(admin, user.id)
   if (writeCheck instanceof NextResponse) return writeCheck
 
   const { data: membership } = await admin
@@ -221,12 +209,7 @@ export async function PATCH(req: NextRequest) {
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 404 })
 
   const body = await req.json()
-  const { fundName, fundLogo, fundAddress, postmarkInboundAddress, claudeApiKey, claudeModel, retainResolvedReviews, resolvedReviewsTtlDays, googleClientId, googleClientSecret, aiSummaryPrompt, displayName, outboundEmailProvider, asksEmailProvider, approvalEmailSubject, approvalEmailBody, systemEmailFromName, systemEmailFromAddress, resendApiKey, postmarkServerToken, inboundEmailProvider, mailgunInboundDomain, mailgunSigningKey, mailgunApiKey, mailgunSendingDomain, fileStorageProvider, dropboxAppKey, dropboxAppSecret, openaiApiKey, openaiModel, defaultAIProvider, geminiApiKey, geminiModel, ollamaBaseUrl, ollamaModel, openrouterApiKey, openrouterModel, openrouterBaseUrl, openrouterRequestParameters, analyticsFathomSiteId, analyticsGaMeasurementId, analyticsCustomHeadScript, currency, disableUserTracking, featureVisibility, dealThesis, dealScreeningPrompt, dealIntakeEnabled, routingConfidenceThreshold, routingModel, lpPortalEnabled, affinityMcpEnabled, agentApiEnabled } = body
-
-  // Update display name on fund_members (any user can do this)
-  if (displayName !== undefined) {
-    await admin.from('fund_members').update({ display_name: displayName?.trim() || null }).eq('fund_id', membership.fund_id).eq('user_id', user.id)
-  }
+  const { fundName, fundLogo, fundAddress, postmarkInboundAddress, claudeApiKey, claudeModel, retainResolvedReviews, resolvedReviewsTtlDays, googleClientId, googleClientSecret, aiSummaryPrompt, outboundEmailProvider, asksEmailProvider, approvalEmailSubject, approvalEmailBody, systemEmailFromName, systemEmailFromAddress, resendApiKey, postmarkServerToken, inboundEmailProvider, mailgunInboundDomain, mailgunSigningKey, mailgunApiKey, mailgunSendingDomain, fileStorageProvider, dropboxAppKey, dropboxAppSecret, openaiApiKey, openaiModel, defaultAIProvider, geminiApiKey, geminiModel, ollamaBaseUrl, ollamaModel, openrouterApiKey, openrouterModel, openrouterBaseUrl, openrouterRequestParameters, analyticsFathomSiteId, analyticsGaMeasurementId, analyticsCustomHeadScript, currency, disableUserTracking, featureVisibility, dealThesis, dealScreeningPrompt, dealIntakeEnabled, routingConfidenceThreshold, routingModel, lpPortalEnabled, affinityMcpEnabled, agentApiEnabled } = body
 
   // All other settings require admin role
   const hasAdminFields = fundName !== undefined || fundLogo !== undefined || fundAddress !== undefined || postmarkInboundAddress !== undefined ||
@@ -317,14 +300,11 @@ export async function PATCH(req: NextRequest) {
   // Update fund logo
   if (fundLogo !== undefined) {
     if (fundLogo !== null) {
-      if (typeof fundLogo !== 'string' || !fundLogo.startsWith('data:image/')) {
-        return NextResponse.json({ error: 'Logo must be a data:image/ URL' }, { status: 400 })
-      }
-      if (fundLogo.length > 200 * 1024) {
-        return NextResponse.json({ error: 'Logo must be under 200KB' }, { status: 400 })
-      }
+      const logoError = validateFundLogoDataUrl(fundLogo)
+      if (logoError) return NextResponse.json({ error: logoError }, { status: 400 })
     }
-    await admin.from('funds').update({ logo_url: fundLogo }).eq('id', membership.fund_id)
+    const result = await admin.from('funds').update({ logo_url: fundLogo }).eq('id', membership.fund_id)
+    if (result.error) return dbError(result.error, 'settings-logo')
   }
 
   // Update fund address
@@ -674,47 +654,26 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-// DELETE — delete all fund data
-export async function DELETE(req: NextRequest) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const writeCheck = await assertWriteAccess(createAdminClient(), user.id)
-  if (writeCheck instanceof NextResponse) return writeCheck
-
-  const { confirm } = await req.json()
-  if (confirm !== 'DELETE ALL DATA') {
-    return NextResponse.json({ error: 'Confirmation text does not match' }, { status: 400 })
+function validateFundLogoDataUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 280 * 1024) {
+    return 'Logo must be a PNG, JPEG, or WebP image under 200KB'
   }
-
-  const admin = createAdminClient()
-
-  const { data: membership } = await admin
-    .from('fund_members')
-    .select('fund_id, role')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 404 })
-
-  if (membership.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+  const match = /^data:image\/(?:png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value)
+  if (!match) return 'Logo must be a PNG, JPEG, or WebP image under 200KB'
+  try {
+    if (Buffer.from(match[1], 'base64').byteLength > 200 * 1024) {
+      return 'Logo must be under 200KB'
+    }
+  } catch {
+    return 'Logo image is invalid'
   }
+  return null
+}
 
-  const fundId = membership.fund_id
-
-  // Delete in dependency order
-  await admin.from('parsing_reviews').delete().eq('fund_id', fundId)
-  await admin.from('metric_values').delete().eq('fund_id', fundId)
-  await admin.from('metrics').delete().eq('fund_id', fundId)
-  await admin.from('inbound_emails').delete().eq('fund_id', fundId)
-  await admin.from('companies').delete().eq('fund_id', fundId)
-  await admin.from('authorized_senders').delete().eq('fund_id', fundId)
-  await admin.from('fund_join_requests').delete().eq('fund_id', fundId)
-  await admin.from('fund_settings').delete().eq('fund_id', fundId)
-  await admin.from('fund_members').delete().eq('fund_id', fundId)
-  await admin.from('funds').delete().eq('id', fundId)
-
-  return NextResponse.json({ ok: true })
+// Fund tenant and email identities are permanent namespace reservations.
+export async function DELETE() {
+  return NextResponse.json(
+    { error: 'Fund identity deletion is unavailable.', code: 'fund_identity_immutable' },
+    { status: 410 },
+  )
 }

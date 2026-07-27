@@ -2492,6 +2492,37 @@
     "emailConfirmed": "Your email has been confirmed. You're all set to get started.",
     "title": "Set up your fund",
     "description": "This takes about 3 minutes. You can update everything later in Settings.",
+    "identity": {
+      "loading": "Checking your account…",
+      "redirecting": "Opening your Fund workspace…",
+      "eyebrow": "Immutable business identity",
+      "title": "Create a durable home for your Fund",
+      "description": "Choose the workspace identity your team will use for tenant links and business email. The Fund display name can change later; this identity cannot.",
+      "previewLabel": "Workspace preview",
+      "immutableHelp": "This hostname and the initial Fund email subdomain are reserved together and cannot be renamed after creation.",
+      "emailConfirmed": "Your external login email is verified.",
+      "formTitle": "Fund identity",
+      "formDescription": "Only the Fund name and workspace name are required. Integrations remain optional.",
+      "fundName": "Fund display name",
+      "fundNamePlaceholder": "Center for Cardiovascular Innovations",
+      "slug": "Workspace name",
+      "slugHelp": "Use 3–63 lowercase letters, numbers, or hyphens. Reserved and existing names are unavailable.",
+      "optionalAi": "Optional AI configuration",
+      "claudeKey": "Claude API key",
+      "optionalAiHelp": "Skip this now and configure any supported AI provider later in Current Fund Settings.",
+      "create": "Create Fund workspace",
+      "reauthNotice": "Fund workspaces use host-only sessions. You may be asked to sign in again on the new workspace.",
+      "tenant": {
+        "title": "{fundName} is invitation-only",
+        "description": "Fund membership is granted only through an exact-email invitation. Email-domain matching is no longer used.",
+        "openInvite": "Open an invitation"
+      },
+      "errors": {
+        "required": "Enter a Fund name and a valid workspace name.",
+        "conflict": "That workspace name is already reserved. Choose another one.",
+        "generic": "Fund creation is temporarily unavailable. Please try again."
+      }
+    },
     "saving": "Saving…",
     "next": "Next →",
     "errors": {
@@ -2573,6 +2604,92 @@
       "connect": "Connect Google Drive",
       "finish": "Finish setup",
       "skip": "Skip for now"
+    }
+  },
+  "FundInvitation": {
+    "metadata": { "title": "Fund invitation" },
+    "loading": "Checking this invitation…",
+    "title": "Join {fundName}",
+    "description": "Confirm the exact external-email invitation before joining this Fund workspace.",
+    "invitee": "Invited account",
+    "role": "Fund role",
+    "roles": { "admin": "Administrator", "member": "Member" },
+    "verifiedAccount": "Your signed-in external account will be verified against this invitation when you accept.",
+    "signInGuidance": "Sign in or create an account with the invited external email. Internal Fund mailboxes cannot be used to sign in.",
+    "expires": "Invitation expires {date}.",
+    "decline": "Decline",
+    "accept": "Accept invitation",
+    "signIn": "Sign in to continue",
+    "errors": { "generic": "Unable to accept this invitation right now." },
+    "invalid": { "title": "Invitation unavailable", "description": "This invitation is invalid, expired, revoked, or has already been replaced." },
+    "declined": { "title": "Invitation declined", "description": "The invitation was removed from this browser tab." },
+    "accepted": {
+      "title": "Welcome to the Fund",
+      "description": "You are now a member of {fundName}.",
+      "personal": "Set up Personal Settings",
+      "setup": "Open setup checklist"
+    }
+  },
+  "FundSetup": {
+    "metadata": { "title": "Fund setup" },
+    "eyebrow": "Fund workspace",
+    "title": "Setup checklist",
+    "description": "Finish the identity and communication setup for {fundName}.",
+    "loadingDescription": "Loading the current Fund setup state.",
+    "loading": "Loading setup status…",
+    "refresh": "Refresh status",
+    "error": "Unable to load the setup checklist.",
+    "required": "Required",
+    "optional": "Optional",
+    "completed": "Completed",
+    "pending": "Pending",
+    "progress": {
+      "title": "Workspace readiness",
+      "description": "{complete} of {total} steps completed"
+    },
+    "steps": {
+      "profile": { "title": "Add your real name", "description": "Identify yourself to other Fund members and in business email." },
+      "mailbox": { "title": "Claim a Fund business email", "description": "Choose the permanent address you will use inside this Fund." },
+      "branding": { "title": "Add Fund branding", "description": "Upload the Fund logo used in the application header and communications." },
+      "email": { "title": "Connect Fund email", "description": "Configure the Fund-level sending and receiving provider." },
+      "members": { "title": "Invite your team", "description": "Invite administrators or members by their exact external login email." }
+    }
+  },
+  "SettingsIdentity": {
+    "navigation": {
+      "label": "Settings scope",
+      "personal": { "title": "Personal settings", "description": "Your identity, login account, and Fund mailbox." },
+      "fund": { "title": "Current Fund: {fundName}", "fallback": "Not selected", "description": "Fund identity, providers, access, and team.", "adminOnly": "Only Fund administrators can change these settings.", "memberDescription": "View the Fund member directory; administrators manage providers and access." }
+    },
+    "personal": {
+      "metadata": { "title": "Personal settings" },
+      "title": "Personal settings",
+      "description": "Manage the identity attached to your external login account.",
+      "loading": "Loading personal settings…",
+      "save": "Save name",
+      "errors": { "load": "Unable to load personal settings.", "save": "Unable to save this setting." },
+      "profile": {
+        "title": "Identity and login",
+        "description": "Your real name is visible to members of the current Fund.",
+        "fullName": "Real name",
+        "externalEmail": "External login email",
+        "externalEmailHelp": "This is your authentication identity. Fund business email addresses cannot be used to sign in.",
+        "saved": "Your real name was saved."
+      },
+      "fund": { "current": "Current Fund", "role": "Role" },
+      "roles": { "admin": "Administrator", "member": "Member" },
+      "mailbox": {
+        "title": "Fund business email",
+        "description": "This address is for Fund communication, not authentication.",
+        "businessEmail": "Business email address",
+        "localPart": "Choose your address",
+        "claimHelp": "Choose carefully. The address becomes permanent after it is claimed, and your real name must be saved first.",
+        "immutableHelp": "This Fund business address is permanent. Continue to sign in with your external login email.",
+        "claim": "Claim address",
+        "saved": "Your Fund business email was created."
+      },
+      "security": { "title": "Account security", "description": "Protect your external login account with two-factor authentication." },
+      "preferences": { "title": "Language and display", "description": "Personal browser preferences for this account.", "language": "Language", "theme": "Color mode", "themeHelp": "Cycle between system, light, and dark." }
     }
   },
   "Setup": {
@@ -3091,6 +3208,11 @@
     },
     "title": "Settings",
     "description": "Configure your fund, integrations, and team preferences",
+    "fundAdminOnly": {
+      "title": "Current Fund settings are administrator-only",
+      "description": "You can view and update your own identity and Fund business mailbox from Personal settings.",
+      "action": "Open Personal settings"
+    },
     "errors": {
       "load": "Could not load settings."
     },
@@ -3101,6 +3223,8 @@
       "inboundDescription": "Receive Fund email through a managed Resend webhook.",
       "slug": "Fund email subdomain",
       "slugHelp": "Choose the permanent Fund label used before the platform email domain.",
+      "immutableDomain": "Fund email domain",
+      "immutableDomainHelp": "This identity was reserved when the Fund was created and cannot be changed.",
       "configureDomain": "Configure Fund domain",
       "domainConfigured": "Fund domain configured",
       "domain": "Domain",
@@ -3839,6 +3963,7 @@
         "chooseFile": "Choose file",
         "replace": "Replace",
         "fileTooLarge": "File must be under 200 KB",
+        "invalidFileType": "Use a PNG, JPEG, or WebP image.",
         "uploadFailed": "Could not upload the logo",
         "address": "Address / contact information",
         "addressHelp": "Displayed below the fund name on investor-report PDFs.",
@@ -3994,6 +4119,11 @@
         "postmarkHelp": "Set this in the Postmark dashboard under Inbound. Portfolio companies forward reports to this address, and Postmark delivers them to your webhook.",
         "webhookUrl": "Webhook URL",
         "postmarkWebhookHelp": "Paste this into Postmark’s inbound webhook settings. Edit the base URL for local development, such as ngrok.",
+        "webhookConfigured": "A secure Postmark webhook token is configured. Rotate it if you no longer have the URL.",
+        "generateWebhookToken": "Generate webhook URL",
+        "rotateWebhookToken": "Rotate webhook URL",
+        "webhookTokenOnce": "Copy this URL now. The token will not be shown again.",
+        "webhookTokenError": "Unable to rotate the Postmark webhook URL.",
         "mailgunDomain": "Mailgun inbound domain",
         "mailgunDomainHelp": "The domain configured for inbound routing in Mailgun.",
         "signingKey": "Webhook signing key",
@@ -4058,6 +4188,22 @@
         "loading": "Loading…",
         "admin": "Admin",
         "member": "Member",
+        "members": "Fund members",
+        "role": "Role",
+        "founder": "Founder",
+        "unnamed": "Name not set",
+        "noBusinessEmail": "Fund business email not claimed",
+        "externalEmail": "External login email",
+        "inviteTitle": "Invite a member",
+        "inviteDescription": "Send an invitation to the exact external email the person will use to sign in. Domain matching is not used.",
+        "emailPlaceholder": "person@example.com",
+        "sendInvite": "Send invitation",
+        "inviteError": "Unable to send this invitation right now.",
+        "invitations": "Invitations",
+        "invitedAs": "Invited as {role} on {date}",
+        "resend": "Resend",
+        "revoke": "Revoke",
+        "statuses": { "pending": "Pending", "accepted": "Accepted", "revoked": "Revoked", "replaced": "Replaced", "expired": "Expired" },
         "confirm": "Confirm",
         "cancel": "Cancel",
         "remove": "Remove",
@@ -4067,6 +4213,15 @@
         "retryApproval": "Retry approval",
         "updateError": "Unable to update this request right now.",
         "access": "Access"
+      },
+      "fundIdentity": {
+        "title": "Permanent Fund identity",
+        "description": "The tenant and email identities are reserved at Fund creation. They are displayed for reference and cannot be renamed from Settings.",
+        "tenant": "Tenant slug",
+        "tenantHelp": "Used by the Fund hostname.",
+        "email": "Email subdomain",
+        "emailHelp": "Used by Fund business email.",
+        "legacyMissing": "This legacy Fund does not yet have an email identity. Contact a platform operator."
       },
       "drive": {
         "myDrive": "My Drive",

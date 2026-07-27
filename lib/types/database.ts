@@ -878,6 +878,65 @@ export type Database = {
           },
         ];
       };
+      fund_member_invitations: {
+        Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
+          created_at: string;
+          delivery_confirmed_at: string | null;
+          email_normalized: string;
+          expires_at: string;
+          fund_id: string;
+          id: string;
+          invited_by: string;
+          replaced_at: string | null;
+          revoked_at: string | null;
+          role: string;
+          token_hash: string;
+          updated_at: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          delivery_confirmed_at?: string | null;
+          email_normalized: string;
+          expires_at: string;
+          fund_id: string;
+          id?: string;
+          invited_by: string;
+          replaced_at?: string | null;
+          revoked_at?: string | null;
+          role: string;
+          token_hash: string;
+          updated_at?: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          delivery_confirmed_at?: string | null;
+          email_normalized?: string;
+          expires_at?: string;
+          fund_id?: string;
+          id?: string;
+          invited_by?: string;
+          replaced_at?: string | null;
+          revoked_at?: string | null;
+          role?: string;
+          token_hash?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_member_invitations_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: false;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       fund_members: {
         Row: {
           created_at: string | null;
@@ -3755,9 +3814,32 @@ export type Database = {
           },
         ];
       };
+      user_profiles: {
+        Row: {
+          created_at: string;
+          full_name: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          full_name?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          full_name?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       fund_email_mailboxes: {
         Row: {
           active: boolean;
+          claimed_at: string | null;
+          claimed_by_user_id: string | null;
           created_at: string;
           display_name: string;
           fund_id: string;
@@ -3769,6 +3851,8 @@ export type Database = {
         };
         Insert: {
           active?: boolean;
+          claimed_at?: string | null;
+          claimed_by_user_id?: string | null;
           created_at?: string;
           display_name: string;
           fund_id: string;
@@ -3780,6 +3864,8 @@ export type Database = {
         };
         Update: {
           active?: boolean;
+          claimed_at?: string | null;
+          claimed_by_user_id?: string | null;
           created_at?: string;
           display_name?: string;
           fund_id?: string;
@@ -4191,6 +4277,74 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_fund_member_invitation: {
+        Args: { p_token_hash: string; p_user_id: string };
+        Returns: { fund_id: string; invitation_id: string; role: string }[];
+      };
+      bootstrap_fund_identity: {
+        Args: {
+          p_actor_user_id: string;
+          p_claude_api_key_encrypted?: string | null;
+          p_encryption_key_encrypted: string;
+          p_name: string;
+          p_postmark_webhook_token_encrypted?: string | null;
+          p_slug: string;
+        };
+        Returns: { fund_id: string; slug: string }[];
+      };
+      create_fund_member_invitation: {
+        Args: {
+          p_email_normalized: string;
+          p_expires_at: string;
+          p_fund_id: string;
+          p_invited_by: string;
+          p_role: string;
+          p_token_hash: string;
+        };
+        Returns: Database["public"]["Tables"]["fund_member_invitations"]["Row"];
+      };
+      confirm_fund_member_invitation_delivery: {
+        Args: {
+          p_actor_user_id: string;
+          p_fund_id: string;
+          p_invitation_id: string;
+        };
+        Returns: Database["public"]["Tables"]["fund_member_invitations"]["Row"];
+      };
+      resolve_fund_member_invitation: {
+        Args: { p_token_hash: string };
+        Returns: {
+          email_masked: string;
+          expires_at: string;
+          fund_id: string;
+          fund_name: string;
+          fund_slug: string;
+          invitation_id: string;
+          role: string;
+        }[];
+      };
+      update_user_profile: {
+        Args: { p_full_name: string; p_user_id: string };
+        Returns: Database["public"]["Tables"]["user_profiles"]["Row"];
+      };
+      revoke_fund_member_invitation: {
+        Args: {
+          p_actor_user_id: string;
+          p_fund_id: string;
+          p_invitation_id: string;
+        };
+        Returns: boolean;
+      };
+      rotate_fund_member_invitation: {
+        Args: {
+          p_actor_user_id: string;
+          p_expires_at: string;
+          p_fund_id: string;
+          p_invitation_id: string;
+          p_token_hash: string;
+        };
+        Returns: Database["public"]["Tables"]["fund_member_invitations"]["Row"];
+      };
       fund_email_set_user_mailbox: {
         Args: {
           p_display_name: string;
@@ -4200,6 +4354,35 @@ export type Database = {
         };
         Returns: {
           active: boolean;
+          claimed_at: string | null;
+          claimed_by_user_id: string | null;
+          created_at: string;
+          display_name: string;
+          fund_id: string;
+          id: string;
+          kind: string;
+          local_part: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "fund_email_mailboxes";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+
+      fund_email_update_user_mailbox_display_name: {
+        Args: {
+          p_display_name: string;
+          p_fund_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          active: boolean;
+          claimed_at: string | null;
+          claimed_by_user_id: string | null;
           created_at: string;
           display_name: string;
           fund_id: string;

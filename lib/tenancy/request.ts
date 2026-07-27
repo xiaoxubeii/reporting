@@ -1,4 +1,4 @@
-import { FUND_TENANT_SLUG_HEADER, isValidFundSlug } from './host'
+import { FUND_TENANT_SLUG_HEADER, isRoutableFundSlug } from './host'
 import { resolveTenantDescriptor, type TenantDescriptor } from './descriptor'
 
 interface TenantDescriptorRpcClient {
@@ -10,7 +10,7 @@ interface TenantDescriptorRpcClient {
 
 export function trustedTenantSlugFromHeaders(requestHeaders: Headers): string | null {
   const slug = requestHeaders.get(FUND_TENANT_SLUG_HEADER)
-  return slug && isValidFundSlug(slug) ? slug : null
+  return slug && isRoutableFundSlug(slug) ? slug : null
 }
 
 export function getTrustedRequestTenant(

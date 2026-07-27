@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { AuthShell } from '@/components/auth-shell'
@@ -11,8 +12,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { createClient } from '@/lib/supabase/client'
 import { OtpCodeForm } from '@/components/auth/otp-code-form'
 import { useLocale, useTranslations } from 'next-intl'
+import { safeNextPath } from '@/lib/safe-redirect'
 
 export default function SignUpPage() {
+  return <Suspense><SignUpForm /></Suspense>
+}
+
+function SignUpForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [acceptedLicense, setAcceptedLicense] = useState(false)
@@ -24,6 +30,9 @@ export default function SignUpPage() {
   const [isHemrock, setIsHemrock] = useState(false)
   const t = useTranslations('Auth')
   const locale = useLocale()
+  const searchParams = useSearchParams()
+  const nextPath = safeNextPath(searchParams.get('next'))
+  const destination = nextPath ?? '/'
 
   async function handleVerify(code: string) {
     setError(null)
@@ -38,7 +47,7 @@ export default function SignUpPage() {
       setError(locale === 'en' ? error.message : t('genericError'))
       setVerifying(false)
     } else {
-      window.location.href = '/auth/post-login?method=signup&next=/'
+      window.location.href = `/auth/post-login?method=signup&next=${encodeURIComponent(destination)}`
     }
   }
 
@@ -123,7 +132,7 @@ export default function SignUpPage() {
         email: email.trim().toLowerCase(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`,
           data: {
             accepted_license_at: new Date().toISOString(),
           },
@@ -268,7 +277,7 @@ export default function SignUpPage() {
 
             <p className="text-center text-sm text-muted-foreground">
               {t('alreadyAccount')}{' '}
-              <Link href="/auth" className="text-primary underline underline-offset-4 hover:text-primary/80">
+              <Link href={`/auth${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`} className="text-primary underline underline-offset-4 hover:text-primary/80">
                 {t('signIn')}
               </Link>
             </p>

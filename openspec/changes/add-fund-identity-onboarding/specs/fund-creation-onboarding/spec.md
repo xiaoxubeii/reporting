@@ -45,8 +45,12 @@ The system SHALL reject any post-creation change to a persisted Fund slug or ema
 - **WHEN** any authenticated or service path attempts to change the persisted slug or email subdomain
 - **THEN** the database rejects the change and canonical links and addresses remain unchanged
 
+#### Scenario: Administrator attempts hard deletion
+- **WHEN** any application or Data API path attempts to hard-delete a Fund
+- **THEN** the database rejects deletion so the tenant slug, email subdomain, and historical mailbox namespace remain permanently reserved
+
 ### Requirement: Existing Fund identities migrate without silent renaming
-The migration SHALL preserve every existing stable tenant slug and every configured email subdomain. An existing Fund missing an email subdomain SHALL receive a valid reserved value through a deterministic conflict-safe migration, while any pre-existing slug/subdomain difference SHALL be shown read-only and SHALL NOT be silently reconciled.
+The migration SHALL preserve every existing stable tenant slug and every configured email subdomain, including identities whose labels became reserved after creation. An existing Fund missing an email subdomain SHALL receive its slug when safe or a valid non-reserved deterministic conflict-safe fallback, while any pre-existing slug/subdomain difference SHALL be shown read-only and SHALL NOT be silently reconciled. Current reserved-label rules SHALL apply to new creation without making a preserved historical Host or email identity unreachable.
 
 #### Scenario: Existing connected Fund has different identities
 - **WHEN** an existing Fund has a stable tenant slug and a different verified email subdomain

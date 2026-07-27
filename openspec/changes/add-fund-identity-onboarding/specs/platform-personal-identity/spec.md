@@ -11,8 +11,12 @@ The system SHALL use the verified Supabase Auth external email as the only email
 - **WHEN** a user submits an address derived from a Fund mailbox as the authentication identifier
 - **THEN** the system returns the same controlled invalid-credential outcome as an unknown identity and does not reveal mailbox ownership
 
+#### Scenario: Existing user attempts an internal email change
+- **WHEN** an existing external-email account attempts to change its Auth email or pending email-change value to the platform root or any Fund tenant mailbox domain
+- **THEN** the database rejects the change before the internal address can become an authentication, recovery, or invitation identity
+
 ### Requirement: One global personal profile belongs to the auth user
-The system SHALL persist one personal profile keyed by the auth user id for the person's real name, independently of Fund membership, role, and business mailbox. Profile reads and writes SHALL be limited to the authenticated owner, with service-role access only for explicit server workflows.
+The system SHALL persist one personal profile keyed by the auth user id for the person's real name, independently of Fund membership, role, and business mailbox. Profile reads SHALL be limited to the authenticated owner. Writes SHALL use the explicit server-owned profile transaction so an authenticated Data API call cannot bypass mailbox display-name synchronization.
 
 #### Scenario: User saves real name
 - **WHEN** an authenticated user saves a trimmed valid real name in Personal Settings

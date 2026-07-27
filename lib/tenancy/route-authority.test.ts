@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FundHostContext } from './host'
+import { classifyFundHost, isValidFundSlug } from './host'
 import { admitFundHostRoute } from './route-authority'
 
 const legacy: FundHostContext = { mode: 'legacy' }
@@ -29,6 +30,17 @@ const hooks: FundHostContext = {
 const invalid: FundHostContext = { mode: 'invalid', reason: 'outside root' }
 
 describe('Fund Host x route authority registry', () => {
+  it('keeps newly-reserved legacy tenant Hosts routable but unavailable for new Funds', () => {
+    expect(isValidFundSlug('mail')).toBe(false)
+    expect(classifyFundHost('mail.fundworkspace.com', 'fundworkspace.com')).toMatchObject({
+      mode: 'tenant',
+      slug: 'mail',
+    })
+    expect(classifyFundHost('internal.fundworkspace.com', 'fundworkspace.com')).toMatchObject({
+      mode: 'reserved',
+      label: 'internal',
+    })
+  })
   it('preserves every existing route in legacy self-host mode', () => {
     expect(admitFundHostRoute(legacy, '/dashboard', 'GET')).toEqual({ allowed: true, authority: 'legacy' })
     expect(admitFundHostRoute(legacy, '/api/cron/background-jobs', 'POST')).toEqual({ allowed: true, authority: 'legacy' })
@@ -69,6 +81,9 @@ describe('Fund Host x route authority registry', () => {
       ['/api/setup', 'POST'],
       ['/onboarding', 'GET'],
       ['/api/onboarding/fund', 'POST'],
+      ['/settings/personal', 'GET'],
+      ['/api/settings/personal', 'GET'],
+      ['/api/settings/personal', 'PATCH'],
       ['/.well-known/oauth-authorization-server', 'GET'],
       ['/api/oauth/register', 'POST'],
       ['/api/oauth/metadata/authorization-server', 'GET'],

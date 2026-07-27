@@ -32,13 +32,18 @@ export const FUND_UI_FILES = [
   'app/(app)/funds/periods/view.tsx',
   'app/(app)/funds/schedule-of-investments/view.tsx',
   'app/(app)/funds/setup.tsx',
+  'app/(app)/funds/setup/layout.tsx',
+  'app/(app)/funds/setup/page.tsx',
   'app/(app)/funds/statements/view.tsx',
   'app/(app)/funds/status/deal-carry-card.tsx',
   'app/(app)/funds/status/view.tsx',
 ] as const
 
 /** The layout only renders its children and therefore has no authored copy. */
-export const FUND_TEXT_FREE_FILES = ['app/(app)/funds/layout.tsx'] as const
+export const FUND_TEXT_FREE_FILES = [
+  'app/(app)/funds/layout.tsx',
+  'app/(app)/funds/setup/layout.tsx',
+] as const
 
 export const FUND_LOCALIZED_FILES = FUND_UI_FILES.filter(
   file => !(FUND_TEXT_FREE_FILES as readonly string[]).includes(file),

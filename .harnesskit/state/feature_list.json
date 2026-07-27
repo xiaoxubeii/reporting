@@ -5,8 +5,8 @@
     {
       "id": "fund-identity-onboarding",
       "title": "External-login identity, immutable Fund onboarding, invitations, and business mailboxes",
-      "status": "in_progress",
-      "current_task": "Persistence and security RED tests",
+      "status": "passing",
+      "current_task": "Implementation and verification complete; ready for branch handoff",
       "definition_of_done": [
         "External verified email is the only login and recovery identity; global personal profile is independent of Fund membership",
         "Fund creation atomically reserves an immutable unique slug, bootstraps the founder as administrator, and initializes required settings and reserved mailboxes",
@@ -18,13 +18,21 @@
       ],
       "evidence": [
         "Isolated worktree created at /home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding on codex/add-fund-identity-onboarding",
-        "Baseline full Vitest passed 285 files and 1967 tests with 4 files and 8 environment-gated tests skipped"
+        "Strict OpenSpec validation and all 45 implementation tasks pass",
+        "Full Vitest passed 293 files and 2005 tests; 4 files and 8 environment-gated tests were skipped, and the final 49-test route/Host regression suite passed",
+        "Disposable PostgreSQL migration, grants, policies, triggers, RLS, legacy preservation, rollback, replay, and concurrency verification passed",
+        "TypeScript, 67-file changed-scope ESLint with zero errors, diff/secret/marker checks, unchanged dependency manifests, and production next build --no-lint passed",
+        "Authenticated English, Chinese, desktop, and 390px browser flows passed Fund creation, canonical continuation, profile, mailbox claim, Settings scopes, member permissions, and Resend status",
+        "Real invitation accept, revoke, and provider-failure resend rollback passed; canonical localhost Fund continuation preserves the trusted listener port",
+        "Independent correctness, security, and accessibility reviews report no remaining Blocker, High, Important, or Critical finding"
       ],
       "open_risks": [
-        "Existing Funds may have different stable web slug and configured email_subdomain; migration must preserve both identities without silent renaming",
-        "The current signup allowlist and one-user-one-Fund constraints must compose atomically with invitation acceptance",
+        "Production tenant enablement still requires wildcard DNS/TLS, proxy Host preservation, and Supabase redirect allowlisting",
+        "Live external invitation delivery was not sent from the disposable fixture because platform email was intentionally unconfigured; the 503 fail-closed and rollback path passed",
         "Repository dependency audit currently reports 24 existing advisories including 19 high-severity findings"
-      ]
+      ],
+      "blocked_by": [],
+      "notes": "HarnessKit fast was run but stops before this feature at the unrelated legacy feed-discovery status value 'complete'; changed-scope checks and all feature verification pass. Normal repository build remains affected by pre-existing global lint debt, while production compilation and route generation pass with next build --no-lint."
     },
     {
       "id": "expert-directory-discovery",

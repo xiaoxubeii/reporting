@@ -312,6 +312,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/settings/dropbox/folders': { domain: 'admin' },
   'api/settings/heartbeat': { domain: 'admin' },
   'api/settings/fund-email': { domain: 'admin', level: 'any' },
+  'api/settings/postmark-webhook-token': { domain: 'admin' },
   'api/settings/senders': { domain: 'admin' },
   'api/settings/senders/[id]': { domain: 'admin' },
   'api/settings/search-categories': { domain: 'admin' },
@@ -325,6 +326,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/onboarding/inbound-email': { domain: 'admin' },
   'api/onboarding/postmark': { domain: 'admin' },
   'api/onboarding/senders': { domain: 'admin' },
+  'api/onboarding/setup': { domain: 'admin', level: 'any' },
   'api/usage': { domain: 'admin' },
   'api/test-claude-key': { domain: 'admin' },
   'api/test-custom-provider': { domain: 'admin' },
@@ -336,10 +338,12 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   // — but `displayName` is deliberately member-writable ("any user can do this"), and the route
   // already refuses every admin-only field to a non-admin via its `hasAdminFields` check. Gating
   // the whole PATCH as admin took away a member's own name.
-  'api/settings': { domain: 'admin', level: { GET: 'any', PATCH: 'any' } },
+  'api/settings': { domain: 'admin', level: { GET: 'any' } },
   // Any member sees the team roster; changing it is administration.
   'api/settings/members': { domain: 'admin', level: { GET: 'any' } },
   'api/settings/members/[id]': { domain: 'admin' },
+  'api/settings/members/invitations': { domain: 'admin' },
+  'api/settings/members/invitations/[id]': { domain: 'admin' },
 
   // ── A member's own data — membership is the whole test ─────────────────────
   // The Analyst gates each domain block internally against this same resolver, so gating the route
@@ -350,6 +354,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/analyst/conversations/[id]': { domain: 'portfolio', level: 'any' },
   // Personal preferences, not fund data.
   'api/settings/theme': { domain: 'portfolio', level: 'any' },
+  'api/settings/personal': { domain: 'portfolio', level: 'any' },
   'api/settings/notifications': { domain: 'portfolio', level: 'any' },
   'api/auth/activity': { domain: 'portfolio', level: 'any' },
   'api/contact': { domain: 'portfolio', level: 'any' },
@@ -397,6 +402,8 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/onboarding/check-domain': 'Pre-fund: is this email domain claimed.',
   'api/onboarding/fund': 'Creates the fund and its first admin.',
   'api/onboarding/join': 'Requests membership; the caller has none yet.',
+  'api/public/fund-invitations/resolve': 'Public bearer resolver; handler hashes the bounded fragment token and enforces tenant Host equality.',
+  'api/fund-invitations/accept': 'Pre-membership exact-email acceptance; handler requires Session, token, verified email, and tenant Host equality.',
   'api/public/expert-response/resolve': 'Bearer invitation token is the only credential; handler enforces scope, expiry and rate limits.',
   'api/public/expert-response/submit': 'Bearer invitation token is the only credential; handler enforces one-time submission and rate limits.',
 

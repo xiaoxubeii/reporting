@@ -19,6 +19,7 @@ const PLATFORM_PAGE_PREFIXES = [
   '/auth',
   '/onboarding',
   '/setup',
+  '/settings/personal',
 ] as const
 
 const PLATFORM_PAGE_PATHS = new Set([
@@ -34,6 +35,7 @@ const PLATFORM_PAGE_PATHS = new Set([
 
 const PLATFORM_API_PREFIXES = [
   '/api/onboarding/',
+  '/api/settings/personal',
 ] as const
 
 const PLATFORM_API_PATHS = new Set([
@@ -76,7 +78,7 @@ function isPlatformRoute(pathname: string): boolean {
   if (pathname === '/api/oauth/register' || pathname.startsWith('/api/oauth/metadata/')) return true
   if (PLATFORM_API_PATHS.has(pathname)) return true
   if (PLATFORM_PAGE_PREFIXES.some(prefix => hasPathPrefix(pathname, prefix))) return true
-  return PLATFORM_API_PREFIXES.some(prefix => pathname.startsWith(prefix))
+  return PLATFORM_API_PREFIXES.some(prefix => hasPathPrefix(pathname, prefix))
 }
 
 /**

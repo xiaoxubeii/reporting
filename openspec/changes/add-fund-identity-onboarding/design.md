@@ -45,7 +45,7 @@ Alternatives rejected:
 
 The creation form accepts a normalized DNS-safe slug and previews the configured root-domain address. A service-role-only `create_fund_with_owner` RPC locks the actor and slug, inserts the Fund with explicit `slug` and matching `email_subdomain`, relies on the existing creator trigger for the founder `admin` membership, inserts `fund_settings` with the server-produced encrypted Fund key envelope, and ensures `pitch`/`expert` mailboxes in one transaction.
 
-New Funds therefore use one value for Host and email identity. Database triggers reject later changes to either column even without a provider connection. Existing Funds keep both current values; missing email subdomains are backfilled conflict-safely, but a pre-existing difference is recorded and displayed read-only rather than renamed. Email code continues using the persisted email subdomain for legacy delivery, while all new creation sets it equal to the canonical slug.
+New Funds therefore use one value for Host and email identity. Database triggers reject later changes to either column even without a provider connection. Existing Funds keep both current values, including labels added to the reserved union after those identities were created. Missing email subdomains are backfilled conflict-safely with the stable slug when available or a deterministic non-reserved fallback otherwise; a pre-existing difference is recorded and displayed read-only rather than renamed. Host and email renderers accept persisted legacy identities, while every new creation path applies the stricter current reserved-label union.
 
 Alternatives rejected:
 
@@ -59,7 +59,7 @@ The founder has the existing `admin` role and remains identifiable by `funds.cre
 
 ### 4. Invitations are service-owned bearer capabilities with exact identity proof
 
-`fund_member_invitations` is service-only and records normalized email, bounded role, SHA-256 token hash, inviter, expiry, replacement/revocation, and acceptance audit fields. Creation uses 32 random bytes and sends via `sendPlatformEmail()`. The raw token appears only in the URL fragment so it is absent from HTTP access logs and Referer headers; the invite page submits it in a bounded same-origin POST body.
+`fund_member_invitations` is service-only and records normalized email, bounded role, SHA-256 token hash, inviter, expiry, delivery confirmation, replacement/revocation, and acceptance audit fields. Creation uses 32 random bytes and sends via `sendPlatformEmail()`; an invitation becomes live only after provider delivery succeeds, and failed delivery is revoked or remains inert. The raw token appears only in the URL fragment so it is absent from HTTP access logs and Referer headers; the invite page submits it in a bounded same-origin POST body.
 
 The invite and authentication pages use `no-referrer`; if authentication is required on the tenant host, the raw token is retained only in same-tab session storage and erased after terminal resolution. No broad tenant middleware bypass is added: only the exact public invite resolution surface and existing auth routes are admitted before membership, and acceptance still requires token Fund equals Host Fund.
 
