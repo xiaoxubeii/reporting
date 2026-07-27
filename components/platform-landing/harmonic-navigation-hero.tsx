@@ -15,7 +15,7 @@ function Wordmark() {
     <a href="#top" className={styles.wordmark} aria-label="FundWorkspace">
       <span className={styles.logoMark} aria-hidden="true">
         <Image
-          src="/landing/fundworkspace-logo.png"
+          src="/landing/fundworkspace-logo-transparent.png"
           alt=""
           fill
           priority
