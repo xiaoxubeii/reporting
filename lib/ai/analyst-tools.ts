@@ -31,6 +31,8 @@ export interface AnalystToolDeps {
    * domain READ; approving it (elsewhere) needs domain WRITE.
    */
   enableDrafts?: boolean
+  /** When present, expose only these explicitly requested write-action families. */
+  enabledDraftActions?: readonly ActionType[]
   /** Recorded on staged rows, e.g. 'analyst'. */
   createdVia?: string | null
   /** Executor pushes each staged write here (when provided) for the caller to render. */
@@ -45,6 +47,8 @@ export interface AnalystToolDeps {
  * executing. Scope from the request narrows what appears; it never widens the caller's access.
  */
 export function buildAnalystTools(deps: AnalystToolDeps): { tools: ToolDefinition[]; executeTool: ToolExecutor } {
+  const enabledDraftActions = deps.enabledDraftActions ? new Set(deps.enabledDraftActions) : null
+  const draftActionEnabled = (name: string) => !enabledDraftActions || enabledDraftActions.has(name as ActionType)
   const readTools = AGENT_TOOLS.filter(
     t => t.scope === 'read' && hasAccess(deps.access, accessDomainFor(t), 'read', accessFeatureFor(t)),
   )
@@ -57,6 +61,7 @@ export function buildAnalystTools(deps: AnalystToolDeps): { tools: ToolDefinitio
   // Write actions appear as DRAFTING tools when the caller can at least read the domain.
   if (deps.enableDrafts) {
     for (const [name, action] of Object.entries(WRITE_ACTIONS)) {
+      if (!draftActionEnabled(name)) continue
       if (!hasAccess(deps.access, action.domain, 'read', action.accessFeature)) continue
       tools.push({ name, description: action.description, inputSchema: action.inputSchema })
     }
@@ -67,6 +72,7 @@ export function buildAnalystTools(deps: AnalystToolDeps): { tools: ToolDefinitio
     if (deps.enableDrafts) {
       const action = getWriteAction(call.name)
       if (action) {
+        if (!draftActionEnabled(call.name)) return JSON.stringify({ error: 'Action was not requested by the user' })
         if (!hasAccess(deps.access, action.domain, 'read', action.accessFeature)) {
           return JSON.stringify({ error: 'Access denied' })
         }

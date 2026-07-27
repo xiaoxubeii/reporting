@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea'
 import type { ExpertCandidate } from '@/lib/expert-discovery/types'
 import type { DiscoverySourceOutcome } from '@/lib/expert-discovery/types'
 import type { ExpertDirectoryEntry } from '@/lib/expert-validation/types'
+import { AnalystContextActions } from '@/components/analyst-context-actions'
+import { snapshotExpert } from '@/lib/analyst/source-snapshots'
 
 type Tab = 'platform' | 'fund' | 'discovery'
 
@@ -183,9 +185,9 @@ function TabButton(props: { tab: Tab; active: boolean; onClick: () => void; chil
   return <button id={`expert-tab-${props.tab}`} aria-controls={`expert-panel-${props.tab}`} aria-selected={props.active} className={`rounded-md px-3 py-2 text-sm ${props.active ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-muted'}`} role="tab" type="button" onClick={props.onClick}>{props.children}</button>
 }
 
-function ExpertCard({ expert }: { expert: ExpertDirectoryEntry }) {
+function ExpertCard({ expert, onEdit }: { expert: ExpertDirectoryEntry; onEdit?: () => void }) {
   const t = useTranslations('ExpertDirectory')
-  return <article className="rounded-lg border p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="font-medium">{expert.name}</h2><p className="text-sm text-muted-foreground">{[expert.title, expert.organization].filter(Boolean).join(' · ') || '—'}</p></div><div className="flex flex-wrap justify-end gap-1"><Badge variant="secondary">{expert.verificationType === 'platform_certified' ? t('badges.platform') : expert.sourceType === 'discovery' ? t('badges.fundDiscovery') : t('badges.fundManual')}</Badge>{expert.status === 'inactive' && <Badge variant="outline">{t('badges.inactive')}</Badge>}</div></div><p className="mt-3 line-clamp-3 text-sm">{expert.profileText}</p></article>
+  return <article className="group rounded-lg border p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="font-medium">{expert.name}</h2><p className="text-sm text-muted-foreground">{[expert.title, expert.organization].filter(Boolean).join(' · ') || '—'}</p></div><div className="flex flex-wrap justify-end gap-1"><Badge variant="secondary">{expert.verificationType === 'platform_certified' ? t('badges.platform') : expert.sourceType === 'discovery' ? t('badges.fundDiscovery') : t('badges.fundManual')}</Badge>{expert.status === 'inactive' && <Badge variant="outline">{t('badges.inactive')}</Badge>}</div></div><p className="mt-3 line-clamp-3 text-sm">{expert.profileText}</p><div className="mt-2 flex flex-wrap items-center justify-end gap-1"><AnalystContextActions snapshot={snapshotExpert(expert)} presentation="compact-hover" />{onEdit && <Button size="sm" variant="ghost" onClick={onEdit}>{t('manual.edit')}</Button>}</div></article>
 }
 
 function EditableExpertCard({ expert, busy, onUpdate }: { expert: ExpertDirectoryEntry; busy: boolean; onUpdate: (expert: ExpertDirectoryEntry, form: HTMLFormElement) => Promise<boolean> }) {
@@ -198,7 +200,7 @@ function EditableExpertCard({ expert, busy, onUpdate }: { expert: ExpertDirector
     setDetail((await response.json()).expert)
     setEditing(true)
   }
-  if (!editing) return <article className="relative"><ExpertCard expert={expert} /><Button className="absolute bottom-3 right-3" size="sm" variant="ghost" onClick={() => void open()}>{t('manual.edit')}</Button></article>
+  if (!editing) return <ExpertCard expert={expert} onEdit={() => void open()} />
   return <form aria-busy={busy} className="grid gap-3 rounded-lg border p-4 md:grid-cols-2" onSubmit={async event => { event.preventDefault(); if (await onUpdate(expert, event.currentTarget)) setEditing(false) }}><ExpertFields prefix={`expert-${expert.id}`} values={{ name: expert.name, email: detail?.email ?? '', title: expert.title ?? '', organization: expert.organization ?? '', profileText: expert.profileText }} /><label className="flex items-center gap-2 text-sm"><input type="checkbox" name="inactive" defaultChecked={expert.status === 'inactive'} />{t('manual.inactive')}</label><div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setEditing(false)}>{t('manual.cancel')}</Button><Button disabled={busy} type="submit">{t('manual.update')}</Button></div></form>
 }
 

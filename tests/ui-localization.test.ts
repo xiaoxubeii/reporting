@@ -214,15 +214,17 @@ describe('UI locale contract', () => {
 
   it('localizes the Analyst surface exposed by authenticated content pages', () => {
     const english = JSON.parse(readFileSync(resolve(process.cwd(), 'messages/en.json'), 'utf8'))
-    const analystButton = readFileSync(resolve(process.cwd(), 'components/analyst-button.tsx'), 'utf8')
     const analystPanel = readFileSync(resolve(process.cwd(), 'components/analyst-panel.tsx'), 'utf8')
     const analystProposals = readFileSync(resolve(process.cwd(), 'components/analyst-proposals.tsx'), 'utf8')
     const analystPendingActions = readFileSync(resolve(process.cwd(), 'components/analyst-pending-actions.tsx'), 'utf8')
+    const analystFloatingHost = readFileSync(resolve(process.cwd(), 'components/analyst-floating-host.tsx'), 'utf8')
+    const analystContextActions = readFileSync(resolve(process.cwd(), 'components/analyst-context-actions.tsx'), 'utf8')
     const analystSources = [
-      analystButton,
       analystPanel,
       analystProposals,
       analystPendingActions,
+      analystFloatingHost,
+      analystContextActions,
     ].join('\n')
 
     const usedAnalystKeys = Array.from(

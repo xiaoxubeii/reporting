@@ -10,6 +10,7 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { FeatureVisibilityProvider } from '@/components/feature-visibility-context'
 import { AccessProvider, type ClientAccess } from '@/components/access-context'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
+import { AnalystFloatingHost } from '@/components/analyst-floating-host'
 
 /** A member with no grants — the fail-closed default when the shell is rendered without access. */
 const EMPTY_ACCESS: ClientAccess = { role: 'member', features: DEFAULT_FEATURE_VISIBILITY, grants: {}, defaults: {} }
@@ -79,7 +80,7 @@ function AppShellInner({ fundName, fundLogo, userEmail, reviewBadge, settingsBad
   }
 
   return (
-    <>
+    <AnalystFloatingHost>
       <AppHeader
         fundName={fundName}
         fundLogo={fundLogo}
@@ -108,6 +109,6 @@ function AppShellInner({ fundName, fundLogo, userEmail, reviewBadge, settingsBad
           </div>
         </main>
       </div>
-    </>
+    </AnalystFloatingHost>
   )
 }

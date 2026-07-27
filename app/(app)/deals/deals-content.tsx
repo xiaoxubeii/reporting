@@ -12,6 +12,10 @@ import { ManualDealDialog } from '@/components/deals/manual-deal-dialog'
 import { STATUS_OPTIONS, DEFAULT_STATUSES, STATUS_ORDER } from '@/lib/deals/statuses'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useCanWrite } from '@/components/access-context'
+import { AnalystContextActions } from '@/components/analyst-context-actions'
+import { snapshotDeal, snapshotDealBoard } from '@/lib/analyst/source-snapshots'
+
+const DEAL_BOARD_MIME = 'application/x-reporting-deal-board'
 
 interface Deal {
   id: string
@@ -281,7 +285,7 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
                 </td>
               </tr>
             ) : sorted.map(d => (
-              <tr key={d.id} className="border-t hover:bg-muted/30">
+              <tr key={d.id} className="group border-t hover:bg-muted/30">
                 <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
                   {format.dateTime(new Date(d.created_at), { month: 'short', day: 'numeric' })}
                 </td>
@@ -320,9 +324,12 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
                   </select>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <Link href={`/deals/${d.id}`} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-                    {t('view')} <ExternalLink className="h-3 w-3" />
-                  </Link>
+                  <div className="inline-flex items-center gap-1">
+                    <AnalystContextActions snapshot={snapshotDeal(d)} presentation="compact-hover" />
+                    <Link href={`/deals/${d.id}`} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                      {t('view')} <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -418,7 +425,7 @@ function DealsBoard({ deals, onMove }: { deals: Deal[]; onMove: (id: string, sta
   function handleDragStart(e: React.DragEvent, id: string) {
     setDraggingId(id)
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', id)
+    e.dataTransfer.setData(DEAL_BOARD_MIME, id)
   }
 
   function handleDragEnd() {
@@ -427,14 +434,16 @@ function DealsBoard({ deals, onMove }: { deals: Deal[]; onMove: (id: string, sta
   }
 
   function handleDragOver(e: React.DragEvent, status: Deal['status']) {
+    if (!Array.from(e.dataTransfer.types).includes(DEAL_BOARD_MIME)) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
     setOverColumn(status)
   }
 
   function handleDrop(e: React.DragEvent, status: Deal['status']) {
+    if (!Array.from(e.dataTransfer.types).includes(DEAL_BOARD_MIME)) return
     e.preventDefault()
-    const id = e.dataTransfer.getData('text/plain') || draggingId
+    const id = e.dataTransfer.getData(DEAL_BOARD_MIME) || draggingId
     if (id) {
       const deal = deals.find(d => d.id === id)
       if (deal && deal.status !== status) onMove(id, status)
@@ -470,7 +479,7 @@ function DealsBoard({ deals, onMove }: { deals: Deal[]; onMove: (id: string, sta
                   draggable
                   onDragStart={e => handleDragStart(e, d.id)}
                   onDragEnd={handleDragEnd}
-                  className={`rounded border bg-background p-2 cursor-grab active:cursor-grabbing hover:border-primary/50 ${draggingId === d.id ? 'opacity-40' : ''}`}
+                  className={`group rounded border bg-background p-2 cursor-grab active:cursor-grabbing hover:border-primary/50 ${draggingId === d.id ? 'opacity-40' : ''}`}
                 >
                   <Link href={`/deals/${d.id}`} className="block" onClick={e => { if (draggingId) e.preventDefault() }}>
                     <div className="flex items-start justify-between gap-2">
@@ -488,6 +497,9 @@ function DealsBoard({ deals, onMove }: { deals: Deal[]; onMove: (id: string, sta
                       <span className="ml-auto">{format.dateTime(new Date(d.created_at), { month: 'short', day: 'numeric' })}</span>
                     </div>
                   </Link>
+                  <div className="mt-1 flex justify-end">
+                    <AnalystContextActions snapshot={snapshotDealBoard(d)} presentation="compact-hover" />
+                  </div>
                 </div>
               ))}
             </div>

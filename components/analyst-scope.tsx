@@ -33,3 +33,13 @@ export function AnalystDomainScope({ domain }: { domain: AnalystDomain }) {
 
   return null
 }
+
+/** Scopes the global Assistant to one portfolio company without rendering a local launcher. */
+export function AnalystCompanyScope({ companyId }: { companyId: string }) {
+  const { setCompanyId } = useAnalystContext()
+
+  useEffect(() => { setCompanyId(companyId) }, [companyId, setCompanyId])
+  useEffect(() => () => setCompanyId(null), [setCompanyId])
+
+  return null
+}

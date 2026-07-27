@@ -102,7 +102,11 @@ const REPLY_WITH_DRAFT = `Here's the entry for that purchase.
 
 async function post(body: Record<string, unknown>) {
   const { POST } = await import('@/app/api/analyst/route')
-  const req = { json: async () => body } as any
+  const req = new Request('http://localhost/api/analyst', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }) as any
   const res = await POST(req)
   return { status: res.status, json: await res.json(), system: createChat.mock.calls[0]?.[0]?.system ?? '' }
 }

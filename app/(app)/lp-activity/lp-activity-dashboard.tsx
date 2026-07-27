@@ -5,8 +5,6 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Loader2, LogIn, Eye, ArrowDownCircle, Search } from 'lucide-react'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 interface ActivityEvent {
   id: string
@@ -129,7 +127,6 @@ export function LpActivityDashboard() {
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
       <div className="flex items-start justify-between gap-4 mb-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-        <AnalystToggleButton />
       </div>
       <p className="text-sm text-muted-foreground mb-6">
         {t('description')}
@@ -292,7 +289,6 @@ export function LpActivityDashboard() {
         </>
       )}
 
-      <AnalystPanel />
     </div>
   )
 }

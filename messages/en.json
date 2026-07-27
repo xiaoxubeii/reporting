@@ -165,11 +165,13 @@
     "signOut": "Sign out"
   },
   "Analyst": {
-    "title": "Analyst",
+    "title": "Assistant",
     "auto": "Auto",
     "conversationHistory": "Conversation history",
     "newConversation": "New conversation",
-    "closePanel": "Close Analyst",
+    "openPanel": "Open Assistant",
+    "closePanel": "Close Assistant",
+    "resizePanel": "Resize Assistant panel",
     "backToConversation": "Back to conversation",
     "noPreviousConversations": "No previous conversations.",
     "messageCount": "{count, plural, one {# message} other {# messages}}",
@@ -187,6 +189,20 @@
     "attachedDocument": "the attached document",
     "documentDraftPrompt": "Draft the entry that records {document}.",
     "storageNotice": "Conversations are stored to provide context and improve AI performance.",
+    "context": {
+      "add": "Send to Assistant",
+      "added": "In Assistant",
+      "drag": "Drag to Assistant",
+      "send": "Send to Assistant",
+      "edgeLabel": "Assistant",
+      "dropToAdd": "Drop to send to Assistant",
+      "activeLabel": "Active page context",
+      "sentLabel": "Context used for this message",
+      "activeCount": "{count, plural, one {# context item} other {# context items}}",
+      "clear": "Clear",
+      "remove": "Remove {title} from context",
+      "limit": "Can't add this context. Remove one or use shorter content."
+    },
     "proposals": {
       "title": "Proposed entries",
       "edit": "Edit",
@@ -236,6 +252,7 @@
     },
     "errors": {
       "readFile": "Could not read that file.",
+      "messageTooLong": "This message is too long. Shorten it and try again.",
       "requestFailed": "Request failed",
       "network": "Network error. Please try again.",
       "saveSummary": "Failed to save summary"

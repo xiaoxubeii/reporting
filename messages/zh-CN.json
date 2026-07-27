@@ -165,11 +165,13 @@
     "signOut": "退出登录"
   },
   "Analyst": {
-    "title": "分析师",
+    "title": "助手",
     "auto": "自动选择",
     "conversationHistory": "对话历史",
     "newConversation": "新建对话",
-    "closePanel": "关闭分析师",
+    "openPanel": "打开助手",
+    "closePanel": "关闭助手",
+    "resizePanel": "调整助手面板宽度",
     "backToConversation": "返回对话",
     "noPreviousConversations": "暂无历史对话。",
     "messageCount": "{count, number} 条消息",
@@ -187,6 +189,20 @@
     "attachedDocument": "所附文档",
     "documentDraftPrompt": "起草用于记录{document}的分录。",
     "storageNotice": "系统会保存对话，以提供上下文并改进 AI 表现。",
+    "context": {
+      "add": "发送到助手",
+      "added": "已在助手中",
+      "drag": "拖拽到助手",
+      "send": "发送到助手",
+      "edgeLabel": "助手",
+      "dropToAdd": "松开，发送到助手",
+      "activeLabel": "当前页面上下文",
+      "sentLabel": "本条消息使用的上下文",
+      "activeCount": "{count, number} 条上下文",
+      "clear": "清空",
+      "remove": "从上下文移除 {title}",
+      "limit": "无法添加此上下文，请移除一条或使用更短的内容。"
+    },
     "proposals": {
       "title": "建议分录",
       "edit": "编辑",
@@ -236,6 +252,7 @@
     },
     "errors": {
       "readFile": "无法读取该文件。",
+      "messageTooLong": "消息内容过长，请缩短后重试。",
       "requestFailed": "请求失败",
       "network": "网络错误，请重试。",
       "saveSummary": "摘要保存失败"

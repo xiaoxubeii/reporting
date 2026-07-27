@@ -3,6 +3,29 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "global-assistant-context",
+      "title": "Global assistant with bounded page context",
+      "status": "passing",
+      "current_task": "Verification complete; merge into main requested",
+      "definition_of_done": [
+        "Exactly one global assistant launcher and responsive panel appear across authenticated app routes",
+        "Trusted Fund, Company, Deal, Vehicle, LP, and Diligence scopes remain server-authorized",
+        "Search, Feed, Expert, Company, and Deal content can be explicitly added as bounded immutable snapshots",
+        "Snapshots remain untrusted reference data and cannot widen scope or initiate unrequested staged actions",
+        "Conversation lifecycle, history, mobile accessibility, and browser interactions are verified"
+      ],
+      "evidence": [
+        "OpenSpec add-global-assistant-context is complete and passes strict validation",
+        "73 focused tests, TypeScript, changed-scope ESLint, production compilation, and diff/secret/bootstrap scans pass",
+        "Full Vitest passes 258 files/1830 tests; one unrelated baseline documentation fixture is missing",
+        "Authenticated desktop and 390px browser flows pass with no relevant console, network, or page errors",
+        "Feed, Search, Expert, Dashboard Company, and Deal repeated surfaces share the compact 36px assistant action with desktop hover/focus reveal and touch visibility",
+        "Correctness, security, and UI/UX reviews found no remaining High/Medium or P1/P2 issue"
+      ],
+      "blocked_by": [],
+      "notes": "Verification is complete and the user requested merge into main. HarnessKit fast/targeted remain blocked by unrelated feature-state and repository-wide lint debt; details and screenshots are under .harnesskit/evidence/add-global-assistant-context/."
+    },
+    {
       "id": "expert-directory-discovery",
       "title": "Platform and fund expert directory with source-backed discovery",
       "status": "passing",

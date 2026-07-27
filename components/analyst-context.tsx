@@ -1,6 +1,16 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import {
+  AssistantDragRegistry,
+  activeContextsFromMessages,
+  addAssistantContext,
+  removeAssistantContext,
+  tryNormalizeStoredAnalystMessages,
+  type AnalystConversationMessage,
+  type AssistantContextSnapshot,
+  type AssistantContextAddResult,
+} from '@/lib/analyst/context-snapshot'
 
 /** Domains the Analyst can be scoped to that have no id of their own (unlike a company or deal). */
 export type AnalystDomain = 'lps' | 'diligence'
@@ -23,10 +33,20 @@ export interface ConversationListItem {
 
 interface AnalystContextValue {
   open: boolean
+  openPanel: () => void
   toggleOpen: () => void
   close: () => void
-  messages: { role: 'user' | 'assistant'; content: string }[]
-  setMessages: React.Dispatch<React.SetStateAction<{ role: 'user' | 'assistant'; content: string }[]>>
+  messages: AnalystConversationMessage[]
+  setMessages: React.Dispatch<React.SetStateAction<AnalystConversationMessage[]>>
+  activeContexts: readonly AssistantContextSnapshot[]
+  addContext: (snapshot: AssistantContextSnapshot) => AssistantContextAddResult
+  removeContext: (snapshot: AssistantContextSnapshot) => void
+  clearContexts: () => void
+  registerDragContext: (snapshot: AssistantContextSnapshot) => string
+  consumeDragContext: (token: string) => AssistantContextAddResult | 'invalid'
+  revokeDragContext: (token: string) => void
+  scopeRevision: number
+  getScopeRevision: () => number
   companyId: string | null
   setCompanyId: (id: string | null) => void
   dealId: string | null
@@ -60,7 +80,6 @@ const AnalystContext = createContext<AnalystContextValue | null>(null)
 export function AnalystProvider({
   hasAIKey,
   configuredProviders,
-  defaultAIProvider,
   fundName,
   children,
 }: {
@@ -71,11 +90,21 @@ export function AnalystProvider({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+  const [messages, setMessages] = useState<AnalystConversationMessage[]>([])
+  const [activeContexts, setActiveContexts] = useState<readonly AssistantContextSnapshot[]>(Object.freeze([]))
+  const activeContextsRef = useRef<readonly AssistantContextSnapshot[]>(Object.freeze([]))
+  const dragRegistry = useRef(new AssistantDragRegistry())
+  const conversationLoadId = useRef(0)
+  const [scopeRevision, setScopeRevision] = useState(0)
+  const scopeRevisionRef = useRef(0)
   const [companyId, setCompanyIdState] = useState<string | null>(null)
+  const companyIdRef = useRef<string | null>(null)
   const [dealId, setDealIdState] = useState<string | null>(null)
+  const dealIdRef = useRef<string | null>(null)
   const [vehicle, setVehicleState] = useState<string | null>(null)
+  const vehicleRef = useRef<string | null>(null)
   const [domain, setDomainState] = useState<AnalystDomain | null>(null)
+  const domainRef = useRef<AnalystDomain | null>(null)
   const [availableModels, setAvailableModels] = useState<AnalystModel[]>([])
   const [selectedModel, setSelectedModel] = useState<AnalystModel | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -83,65 +112,112 @@ export function AnalystProvider({
   const [showHistory, setShowHistory] = useState(false)
 
   const toggleOpen = useCallback(() => setOpen(prev => !prev), [])
+  const openPanel = useCallback(() => setOpen(true), [])
   const close = useCallback(() => setOpen(false), [])
+
+  const addContext = useCallback((snapshot: AssistantContextSnapshot) => {
+    try {
+      const current = activeContextsRef.current
+      const next = addAssistantContext(current, snapshot)
+      if (next === current) return 'duplicate'
+      activeContextsRef.current = next
+      setActiveContexts(next)
+      return 'added'
+    } catch {
+      return 'limit'
+    }
+  }, [])
+  const removeContext = useCallback((snapshot: AssistantContextSnapshot) => {
+    const next = removeAssistantContext(activeContextsRef.current, snapshot)
+    activeContextsRef.current = next
+    setActiveContexts(next)
+  }, [])
+  const clearContexts = useCallback(() => {
+    const empty = Object.freeze([]) as readonly AssistantContextSnapshot[]
+    activeContextsRef.current = empty
+    setActiveContexts(empty)
+  }, [])
+  const registerDragContext = useCallback((snapshot: AssistantContextSnapshot) => (
+    dragRegistry.current.issue(snapshot)
+  ), [])
+  const consumeDragContext = useCallback((token: string) => {
+    const snapshot = dragRegistry.current.consume(token)
+    if (!snapshot) return 'invalid'
+    return addContext(snapshot)
+  }, [addContext])
+  const revokeDragContext = useCallback((token: string) => dragRegistry.current.revoke(token), [])
+
+  const resetEphemeralConversationState = useCallback(() => {
+    const empty = Object.freeze([]) as readonly AssistantContextSnapshot[]
+    activeContextsRef.current = empty
+    setActiveContexts(empty)
+    dragRegistry.current.clear()
+    conversationLoadId.current += 1
+    scopeRevisionRef.current += 1
+    setScopeRevision(scopeRevisionRef.current)
+  }, [])
+
+  const getScopeRevision = useCallback(() => scopeRevisionRef.current, [])
 
   // Reset conversation state when companyId changes
   const setCompanyId = useCallback((id: string | null) => {
-    setCompanyIdState(prev => {
-      if (prev !== id) {
-        setMessages([])
-        setConversationId(null)
-        setShowHistory(false)
-        setConversations([])
-        // Switching to/from a company scope clears any deal scope.
-        setDealIdState(null)
-      }
-      return id
-    })
-  }, [])
+    if (companyIdRef.current === id) return
+    companyIdRef.current = id
+    setCompanyIdState(id)
+    setMessages([])
+    setConversationId(null)
+    setShowHistory(false)
+    setConversations([])
+    resetEphemeralConversationState()
+    // Switching to/from a company scope clears any deal scope.
+    dealIdRef.current = null
+    setDealIdState(null)
+  }, [resetEphemeralConversationState])
 
   // Reset conversation state when dealId changes
   const setDealId = useCallback((id: string | null) => {
-    setDealIdState(prev => {
-      if (prev !== id) {
-        setMessages([])
-        setConversationId(null)
-        setShowHistory(false)
-        setConversations([])
-        // Switching into a deal scope clears any company scope.
-        if (id) setCompanyIdState(null)
-      }
-      return id
-    })
-  }, [])
+    if (dealIdRef.current === id) return
+    dealIdRef.current = id
+    setDealIdState(id)
+    setMessages([])
+    setConversationId(null)
+    setShowHistory(false)
+    setConversations([])
+    resetEphemeralConversationState()
+    // Switching into a deal scope clears any company scope.
+    if (id) {
+      companyIdRef.current = null
+      setCompanyIdState(null)
+    }
+  }, [resetEphemeralConversationState])
 
   // Switching vehicles switches which books the Analyst is looking at, so the thread starts over.
   const setVehicle = useCallback((group: string | null) => {
-    setVehicleState(prev => {
-      if (prev !== group) {
-        setMessages([])
-        setConversationId(null)
-        setShowHistory(false)
-        setConversations([])
-      }
-      return group
-    })
-  }, [])
+    if (vehicleRef.current === group) return
+    vehicleRef.current = group
+    setVehicleState(group)
+    setMessages([])
+    setConversationId(null)
+    setShowHistory(false)
+    setConversations([])
+    resetEphemeralConversationState()
+  }, [resetEphemeralConversationState])
 
   // Likewise moving between domains — an LP thread and a diligence thread are different threads.
   const setDomain = useCallback((next: AnalystDomain | null) => {
-    setDomainState(prev => {
-      if (prev !== next) {
-        setMessages([])
-        setConversationId(null)
-        setShowHistory(false)
-        setConversations([])
-      }
-      return next
-    })
-  }, [])
+    if (domainRef.current === next) return
+    domainRef.current = next
+    setDomainState(next)
+    setMessages([])
+    setConversationId(null)
+    setShowHistory(false)
+    setConversations([])
+    resetEphemeralConversationState()
+  }, [resetEphemeralConversationState])
 
   const loadConversations = useCallback(async () => {
+    const requestId = conversationLoadId.current + 1
+    conversationLoadId.current = requestId
     const params = new URLSearchParams()
     if (dealId) {
       params.set('dealId', dealId)
@@ -156,8 +232,9 @@ export function AnalystProvider({
     }
     try {
       const res = await fetch(`/api/analyst/conversations?${params}`)
-      if (res.ok) {
+      if (res.ok && conversationLoadId.current === requestId) {
         const data = await res.json()
+        if (conversationLoadId.current !== requestId) return
         setConversations(data.conversations ?? [])
       }
     } catch {
@@ -166,25 +243,36 @@ export function AnalystProvider({
   }, [companyId, dealId, vehicle, domain])
 
   const loadConversation = useCallback(async (id: string) => {
+    setMessages([])
+    setConversationId(null)
+    resetEphemeralConversationState()
+    const requestId = conversationLoadId.current + 1
+    conversationLoadId.current = requestId
     try {
       const res = await fetch(`/api/analyst/conversations/${id}`)
-      if (res.ok) {
+      if (res.ok && conversationLoadId.current === requestId) {
         const data = await res.json()
+        if (conversationLoadId.current !== requestId) return
         const conv = data.conversation
         setConversationId(conv.id)
-        setMessages(Array.isArray(conv.messages) ? conv.messages : [])
+        const storedMessages = [...tryNormalizeStoredAnalystMessages(conv.messages)]
+        setMessages(storedMessages)
+        const restoredContexts = activeContextsFromMessages(storedMessages)
+        activeContextsRef.current = restoredContexts
+        setActiveContexts(restoredContexts)
         setShowHistory(false)
       }
     } catch {
       // Silently fail
     }
-  }, [])
+  }, [resetEphemeralConversationState])
 
   const startNewConversation = useCallback(() => {
     setMessages([])
     setConversationId(null)
     setShowHistory(false)
-  }, [])
+    resetEphemeralConversationState()
+  }, [resetEphemeralConversationState])
 
   const deleteConversation = useCallback(async (id: string) => {
     try {
@@ -194,12 +282,13 @@ export function AnalystProvider({
         if (conversationId === id) {
           setMessages([])
           setConversationId(null)
+          resetEphemeralConversationState()
         }
       }
     } catch {
       // Silently fail
     }
-  }, [conversationId])
+  }, [conversationId, resetEphemeralConversationState])
 
   // Fetch models lazily — only when the analyst panel is first opened
   const modelsFetched = useCallback(() => availableModels.length > 0, [availableModels])
@@ -238,10 +327,20 @@ export function AnalystProvider({
   return (
     <AnalystContext.Provider value={{
       open,
+      openPanel,
       toggleOpen,
       close,
       messages,
       setMessages,
+      activeContexts,
+      addContext,
+      removeContext,
+      clearContexts,
+      registerDragContext,
+      consumeDragContext,
+      revokeDragContext,
+      scopeRevision,
+      getScopeRevision,
       companyId,
       setCompanyId,
       dealId,
@@ -274,4 +373,8 @@ export function useAnalystContext() {
   const ctx = useContext(AnalystContext)
   if (!ctx) throw new Error('useAnalystContext must be used within AnalystProvider')
   return ctx
+}
+
+export function useOptionalAnalystContext() {
+  return useContext(AnalystContext)
 }

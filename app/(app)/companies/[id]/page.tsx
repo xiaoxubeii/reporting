@@ -19,8 +19,7 @@ import { CompanySummary } from './company-summary'
 import { CompanyEditButton } from './company-edit-button'
 import { CompanyPanelProvider } from './company-panel-context'
 import { ChatButton, CompanyNotesPanel } from './company-notes'
-import { AnalystButton } from './company-analyst'
-import { AnalystPanel } from '@/components/analyst-panel'
+import { AnalystCompanyScope } from '@/components/analyst-scope'
 import { CompanyDocuments } from './company-documents'
 import { CompanyInvestments } from './company-investments'
 import { CompanyInteractions } from './company-interactions'
@@ -184,7 +183,7 @@ export default async function CompanyDetailPage({
             <Badge key={ind} variant="outline">{ind}</Badge>
           ))}
           {showNotes && <ChatButton />}
-          <AnalystButton companyId={company.id} pushRight={!showNotes} />
+          <AnalystCompanyScope companyId={company.id} />
         </div>
 
         {(latestMrr || latestCash) && (
@@ -292,7 +291,6 @@ export default async function CompanyDetailPage({
         </div>
 
         {showNotes && <CompanyNotesPanel />}
-        <AnalystPanel />
       </div>
     </div>
     </CompanyPanelProvider>

@@ -7,8 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AlertCircle, Check, Loader2, Send, Lock } from 'lucide-react'
 import { ResponseTracker } from './response-tracker'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 
@@ -251,7 +249,6 @@ export default function RequestsPage() {
           </div>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
-            <AnalystToggleButton />
           </div>
         </div>
         <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -261,7 +258,6 @@ export default function RequestsPage() {
           </div>
         </div>
         <PortfolioNotesPanel />
-        <AnalystPanel />
         </div>
       </div>
       </PortfolioNotesProvider>
@@ -279,7 +275,6 @@ export default function RequestsPage() {
           </div>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
-            <AnalystToggleButton />
           </div>
         </div>
         <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -297,7 +292,6 @@ export default function RequestsPage() {
           </div>
         </div>
         <PortfolioNotesPanel />
-        <AnalystPanel />
         </div>
       </div>
       </PortfolioNotesProvider>
@@ -314,7 +308,6 @@ export default function RequestsPage() {
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.asks === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
-            <AnalystToggleButton />
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t('description')}</p>
@@ -541,7 +534,6 @@ export default function RequestsPage() {
       )}
     </div>
     <PortfolioNotesPanel />
-    <AnalystPanel />
     </div>
     </div>
     </PortfolioNotesProvider>

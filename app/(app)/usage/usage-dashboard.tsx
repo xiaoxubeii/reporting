@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Lock } from 'lucide-react'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 interface DailyRow {
   date: string
@@ -166,7 +164,6 @@ export function UsageDashboard() {
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2"><Lock className="h-4 w-4 text-amber-500" />{t('title')}</h1>
-          <AnalystToggleButton />
         </div>
         <p className="text-sm text-muted-foreground">{t('monthToDate', { month: monthLabel })}</p>
       </div>
@@ -371,7 +368,6 @@ export function UsageDashboard() {
         </div>
       )}
     </div>
-    <AnalystPanel />
     </div>
     </div>
   )

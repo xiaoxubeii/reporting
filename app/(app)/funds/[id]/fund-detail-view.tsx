@@ -11,7 +11,6 @@ import {
 import { Loader2, ArrowRight } from 'lucide-react'
 import { useCurrency } from '@/components/currency-context'
 import { useVehicle, FundSwitcher } from '@/components/accounting-vehicle'
-import { AnalystToggleButton } from '@/components/analyst-button'
 import { AccountingBody } from '@/components/accounting-chrome'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCompactMoney, formatMoney, formatNumber, formatPercent } from '../format'
@@ -223,7 +222,6 @@ export function FundDetailView({ vehicle, vehicleId }: { vehicle: string; vehicl
             </div>
           )}
           <FundSwitcher />
-          <AnalystToggleButton />
         </div>
       </div>
       <AccountingBody>{body}</AccountingBody>

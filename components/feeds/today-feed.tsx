@@ -18,6 +18,8 @@ import {
   type FeedEntryView,
   type FeedFilter,
 } from '@/lib/feeds/today-state'
+import { AnalystContextActions } from '@/components/analyst-context-actions'
+import { snapshotFeedEntry } from '@/lib/analyst/source-snapshots'
 
 export function TodayFeed() {
   const searchParams = useSearchParams()
@@ -235,9 +237,9 @@ function PersonalTodayFeed() {
                 <h2 className="mb-3 text-sm font-medium text-muted-foreground">{group.categoryId === null ? t('uncategorized') : group.label}</h2>
                 <div className="divide-y border-y">
                   {group.items.map(entry => (
-                    <article key={entry.externalId} className="relative flex gap-4 py-5">
+                    <article key={entry.externalId} className="group relative flex flex-wrap gap-3 py-5 md:flex-nowrap md:gap-4">
                       {!entry.isRead && <span className="absolute -left-3 top-8 h-2 w-2 rounded-full bg-primary" aria-label={t('unread')} />}
-                      <div className="flex h-[72px] w-[112px] shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/50">
+                      <div className="flex h-[72px] w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/50 md:w-[112px]">
                         {entry.imageUrl
                           ? <img src={entry.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                           : <Rss className="h-6 w-6 text-muted-foreground/60" aria-hidden="true" />}
@@ -249,9 +251,12 @@ function PersonalTodayFeed() {
                         <p className="mt-1 text-xs text-muted-foreground">{entry.source.title} · {relativeTime(entry.publishedAt ?? entry.createdAt)}</p>
                         {entry.summary && <p className="mt-2 line-clamp-2 text-sm leading-5 text-muted-foreground">{entry.summary}</p>}
                       </div>
-                      <Button variant="ghost" size="icon" aria-label={entry.isSaved ? t('removeSaved') : t('saveLater')} onClick={() => toggleSaved(entry)}>
-                        {entry.isSaved ? <BookmarkCheck className="text-primary" /> : <Bookmark />}
-                      </Button>
+                      <div className="flex w-full shrink-0 flex-row items-center justify-end gap-1 md:w-auto">
+                        <AnalystContextActions snapshot={snapshotFeedEntry(entry)} presentation="compact-hover" />
+                        <Button variant="ghost" size="icon" aria-label={entry.isSaved ? t('removeSaved') : t('saveLater')} onClick={() => toggleSaved(entry)}>
+                          {entry.isSaved ? <BookmarkCheck className="text-primary" /> : <Bookmark />}
+                        </Button>
+                      </div>
                     </article>
                   ))}
                 </div>

@@ -15,6 +15,7 @@ dependency and ownership checks.
 
 | Feature ID | Goal | Lane | OpenSpec | Acceptance | Parallel Class | Dependencies | Owner | Worktree | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| global-assistant-context | Replace page-local Analyst mounts with one authenticated global assistant and let supported front-end content become bounded conversation context | feature-planning | `openspec/changes/add-global-assistant-context` | One responsive assistant works across authenticated routes; desktop uses a 400px right dock that reflows content, narrower screens use full-height drawers, and supported snapshots use a full-height right-edge drag target plus accessible send action without changing trusted scope | main-agent-only | current Analyst shell/panel/API/conversations, Search, Feeds, Expert Directory, Dashboard Companies, Deals | main-agent | `/home/ubuntu/workspace/reporting.worktrees/global-assistant-context` | ready_to_merge |
 | multi-tenant-resend-mail | Add isolated FundWorkspace platform mail and per-Fund BYOK Resend business mail with secure outbound threads, tokenized replies, inbound routing, Pitch intake, and expert invitations | feature-planning | `openspec/changes/add-multi-tenant-resend-mail` | Platform and Fund credentials never cross; each Fund has an exact derived subdomain and Fund-scoped mailboxes; signed/idempotent Resend inbound routes deterministic replies; Pitch enters Deal screening; expert replies remain thread mail; Settings, focused tests, security review, and real local flows pass | serial-required | current email adapters, Fund envelope encryption, Supabase Auth SMTP operations, Deal intake, expert validation, local Supabase | main-agent | current checkout | in_progress |
 | background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
 | investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
@@ -36,6 +37,63 @@ dependency and ownership checks.
 
 Copy this block for each planned feature. Keep it short; it is the shared
 contract for self-check, review, testing, and merge.
+
+### Feature: global-assistant-context
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a cross-cutting authenticated UI, message contract, prompt-boundary, persistence, and security change.
+- Change: `openspec/changes/add-global-assistant-context`
+- Classification: `main-agent-only`; one shared AppShell/Analyst contract must land serially in the isolated worktree.
+
+#### Acceptance
+
+- Authenticated application routes with configured AI expose exactly one right-edge assistant launcher and panel; public/auth routes and the LP full-screen preview remain excluded.
+- At 1280px and wider the panel is a fixed 400px full-height shell dock that reflows content; from 768px through 1279px it is a full-height 400px drawer, and below 768px it is near-full-width.
+- Existing Company, Deal, Vehicle, LP, Diligence, and default Fund scopes retain their server-side authorization and context behavior.
+- A versioned plain-text snapshot contract supports Search, Feed, Expert, Company, Deal, and future page content without DOM serialization, external fetching, resolvers, indexes, or a new table.
+- Desktop drag/drop to a full-height right-edge target and localized keyboard/touch “Drag to Assistant” / “Send to Assistant” actions add equivalent context chips, open the panel, deduplicate items, and never auto-send.
+- Active context persists until removed; the normalized active set is attached to each relevant user message in existing conversation JSON and restored from history without breaking legacy messages.
+- The Analyst API strictly validates item count, lengths, kind/version, URL schemes, and control characters; provider messages remain role/content only and snapshots are injected as untrusted user reference material.
+- Snapshot fields never change Fund/entity scope or authorize reads/writes; existing server tools and approvals remain authoritative.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-global-assistant-context/**`, focused HarnessKit plan/state/evidence.
+- Shared Analyst shell/context/panel/API/conversation code and localized messages.
+- Removal of duplicate page-local Analyst launchers/panels while preserving scope synchronizers.
+- Search, Feed, Expert, Company, and Deal serializers and interaction affordances.
+- Focused contract, component, integration, accessibility, and browser tests.
+
+#### Shared Contract Changes
+
+- Adds immutable `AssistantContextSnapshot` and extended Analyst conversation-message types without changing provider `ChatMessage`.
+- Adds a Reporting-private drag MIME carrying an ephemeral in-memory token, not snapshot content.
+- Extends `/api/analyst` messages with validated optional user contexts and scope-safe conversation update checks.
+
+#### Verification Plan
+
+- Contract-first tests for normalization, limits, prompt isolation, provider stripping, conversation persistence, legacy compatibility, and conversation-scope mismatch.
+- React tests for provider lifecycle, singleton floating host, drag token handling, chips, explicit add, and no auto-send.
+- Serializer/interaction coverage for Search, Feed, Expert, Company, and Deal, including Deal Board drag isolation.
+- TypeScript, changed-file lint, strict OpenSpec, HarnessKit fast/targeted/full where applicable, full Vitest, production build, diff/secret scans.
+- Authenticated desktop and 390px browser flows covering drag, explicit add, combined question, history restoration, scope preservation, console/network errors, and responsive containment.
+
+#### Review Required
+
+- Correctness review for singleton mounting, state lifecycle, message compatibility, and scope preservation.
+- Security review for untrusted prompt material, request bounds, drag leakage, cross-fund/conversation isolation, and write-tool authority.
+- UX/accessibility review for discoverability, keyboard/touch parity, drop feedback, chip management, focus, and mobile safe areas.
+
+#### Completion Evidence
+
+- Strict OpenSpec, TypeScript, changed-scope ESLint, production compilation with the unrelated global lint gate bypassed, diff/secret/bootstrap scans, and 63 focused tests pass.
+- Full Vitest passes 258 files/1,830 tests; the only failure is the unrelated baseline-missing `docs/fund-email-resend.md` fixture.
+- Authenticated desktop and 390px browser acceptance passes Search drag/add/question, Feed add, Expert/Company/Deal actions, context persistence/reset, no horizontal overflow, and clean relevant console/network checks.
+- Correctness, security, and UI/UX re-reviews report no remaining High/Medium or P1/P2 finding.
+- HarnessKit fast is blocked by the unrelated `feed-discovery: complete` state value; targeted is blocked by pre-existing repository-wide ESLint debt. Feature-scoped replacements pass.
+- Evidence: `.harnesskit/evidence/add-global-assistant-context/verification.md` and captured browser artifacts in the same directory.
 
 ### Feature: multi-tenant-resend-mail
 

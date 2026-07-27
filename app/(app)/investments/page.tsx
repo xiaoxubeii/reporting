@@ -7,8 +7,6 @@ import { Loader2, ChevronUp, ChevronDown, Lock } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useCurrency, formatCurrency, formatCurrencyFull } from '@/components/currency-context'
 import type { CompanyStatus } from '@/lib/types/database'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 
@@ -376,7 +374,7 @@ export default function InvestmentsPage() {
     <div className="mb-6 space-y-1">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.investments === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
-        <div className="flex items-center gap-2"><PortfolioNotesButton /><AnalystToggleButton /></div>
+        <div className="flex items-center gap-2"><PortfolioNotesButton /></div>
       </div>
       <p className="text-sm text-muted-foreground">{t('description')}</p>
       <div className="flex items-center gap-2 pt-2">
@@ -404,7 +402,6 @@ export default function InvestmentsPage() {
           </div>
         </div>
         <PortfolioNotesPanel />
-        <AnalystPanel />
         </div>
       </div>
       </PortfolioNotesProvider>
@@ -423,7 +420,6 @@ export default function InvestmentsPage() {
           </p>
         </div>
         <PortfolioNotesPanel />
-        <AnalystPanel />
         </div>
       </div>
       </PortfolioNotesProvider>
@@ -641,7 +637,6 @@ export default function InvestmentsPage() {
       </div>
     </div>
     <PortfolioNotesPanel />
-    <AnalystPanel />
     </div>
     </div>
     </PortfolioNotesProvider>

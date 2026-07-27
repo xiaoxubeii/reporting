@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { useVehicle, FundSwitcher } from '@/components/accounting-vehicle'
-import { AnalystToggleButton } from '@/components/analyst-button'
 import { AccountingBody } from '@/components/accounting-chrome'
 
 /**
@@ -47,7 +46,6 @@ export function FundSubpageChrome({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <FundSwitcher />
-          <AnalystToggleButton />
         </div>
       </div>
       <AccountingBody>{children}</AccountingBody>

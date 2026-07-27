@@ -5,8 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Lock, Plus, Search, Loader2, Inbox } from 'lucide-react'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { AnalystDomainScope } from '@/components/analyst-scope'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -105,7 +103,6 @@ export function DiligenceIndex({ initialDeals }: { initialDeals: Deal[]; isAdmin
           <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> {t('newDealButton')}
           </Button>
-          <AnalystToggleButton />
         </div>
       </div>
 
@@ -189,7 +186,6 @@ export function DiligenceIndex({ initialDeals }: { initialDeals: Deal[]; isAdmin
             </div>
           )}
         </div>
-        <AnalystPanel />
       </div>
 
       <NewDealDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={onCreated} />

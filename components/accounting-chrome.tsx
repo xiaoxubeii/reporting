@@ -1,7 +1,5 @@
 'use client'
 
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 /**
  * Page header in the /dashboard shape: title all the way up, actions inline at the right.
@@ -20,7 +18,6 @@ export function AccountingPageHeader({ title, children }: { title: string; child
         <p className="text-sm text-muted-foreground">{children}</p>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <AnalystToggleButton />
       </div>
     </div>
   )
@@ -31,7 +28,6 @@ export function AccountingBody({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col lg:flex-row gap-4 items-start">
       <div className="flex-1 min-w-0 w-full">{children}</div>
-      <AnalystPanel />
     </div>
   )
 }

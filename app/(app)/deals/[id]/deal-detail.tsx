@@ -7,8 +7,6 @@ import { ArrowLeft, RefreshCw, ExternalLink, UserPlus, Loader2, ChevronDown, Arr
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { useAnalystContext } from '@/components/analyst-context'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { DealResearchCard } from '@/components/deals/research-card'
@@ -216,7 +214,6 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
         <h1 className="text-2xl font-semibold tracking-tight">{deal.company_name ?? t('unknownCompany')}</h1>
         <div className="flex items-center gap-2">
           <PortfolioNotesButton />
-          <AnalystToggleButton />
         </div>
       </div>
 
@@ -367,7 +364,6 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
       </Card>
     </div>
     <PortfolioNotesPanel />
-    <AnalystPanel />
     </div>
     </PortfolioNotesProvider>
   )

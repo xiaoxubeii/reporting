@@ -30,10 +30,8 @@ import { AlertCircle, Check, ChevronDown, ChevronRight, Loader2, Plus, Trash2, C
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
 import type { FeatureKey, FeatureVisibility, FeatureVisibilityMap } from '@/lib/types/features'
 import { FEATURE_META } from '@/lib/types/feature-meta'
-import { AnalystToggleButton } from '@/components/analyst-button'
 import { AccessGrid } from '@/components/settings-access-grid'
 import { SettingsCard, SettingsCardGrid } from '@/components/settings-card'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { AffinityConnect } from '@/components/settings/affinity-connect'
 import { HeartbeatConnect } from '@/components/settings/heartbeat-connect'
 import { DealResearchSettings } from '@/components/settings/deal-research-settings'
@@ -141,7 +139,6 @@ export default function SettingsPage() {
         <div className="mb-6 space-y-1">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-            <AnalystToggleButton />
           </div>
           <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
@@ -151,7 +148,6 @@ export default function SettingsPage() {
             {[1, 2, 3].map(i => <div key={i} className="h-24 bg-muted rounded-lg" />)}
           </div>
         </div>
-        <AnalystPanel />
         </div>
       </div>
     )
@@ -163,7 +159,6 @@ export default function SettingsPage() {
         <div className="mb-6 space-y-1">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-            <AnalystToggleButton />
           </div>
           <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
@@ -171,7 +166,6 @@ export default function SettingsPage() {
         <div className="flex-1 min-w-0 max-w-3xl w-full">
           <p className="text-muted-foreground">{t('errors.load')}</p>
         </div>
-        <AnalystPanel />
         </div>
       </div>
     )
@@ -181,7 +175,6 @@ export default function SettingsPage() {
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-        <AnalystToggleButton />
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -342,7 +335,6 @@ export default function SettingsPage() {
       )}
 
     </div>
-    <AnalystPanel />
     </div>
     </div>
   )

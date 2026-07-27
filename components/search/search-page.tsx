@@ -13,6 +13,8 @@ import { SEARCH_ADAPTER_DESCRIPTORS } from '@/lib/search/adapter-contracts'
 import type { SearchCategoryOption } from '@/lib/search/categories'
 import type { SearchResponse, SearchSourceStatus } from '@/lib/search/contracts'
 import { initialSearchPageState, isSearchStale, requestFromState, searchPageReducer } from './state'
+import { AnalystContextActions } from '@/components/analyst-context-actions'
+import { snapshotSearchHit } from '@/lib/analyst/source-snapshots'
 
 interface SearchEnvelope {
   readonly success: boolean
@@ -260,10 +262,11 @@ function SearchResults({ response, loading, onOpenFeed }: {
     ) : (
       <div className="divide-y border-y">
         {response.results.map(hit => (
-          <article key={hit.id} className="py-5">
+          <article key={hit.id} className="group py-5">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {hit.sources.map(source => <Badge key={`${source.id}:${source.label}`} variant="secondary">{source.label}</Badge>)}
               {hit.publishedAt && <time dateTime={hit.publishedAt}>{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(hit.publishedAt))}</time>}
+              <AnalystContextActions snapshot={snapshotSearchHit(hit)} presentation="compact-hover" className="ml-auto" />
             </div>
             <h3 className="mt-2 text-base font-semibold leading-6">
               {hit.url ? (

@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 import { Lock, Copy, Check } from 'lucide-react'
@@ -52,7 +50,6 @@ export function InteractionsContent({ interactions }: { interactions: Interactio
             <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.interactions === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
             <div className="flex items-center gap-2">
               <PortfolioNotesButton />
-              <AnalystToggleButton />
             </div>
           </div>
           <p className="text-sm text-muted-foreground">{t('description')}</p>
@@ -84,7 +81,6 @@ export function InteractionsContent({ interactions }: { interactions: Interactio
             <RelationshipsList interactions={interactions} />
           </div>
           <PortfolioNotesPanel />
-          <AnalystPanel />
         </div>
       </div>
     </PortfolioNotesProvider>

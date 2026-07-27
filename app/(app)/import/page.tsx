@@ -8,8 +8,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, CheckCircle2, AlertCircle, Upload, FileText, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 
 interface ImportResult {
@@ -407,7 +405,6 @@ export default function ImportPage() {
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.imports === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
-          <AnalystToggleButton />
         </div>
         <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
@@ -742,7 +739,6 @@ export default function ImportPage() {
         </div>
       </div>
     </div>
-    <AnalystPanel />
     </div>
     </div>
   )

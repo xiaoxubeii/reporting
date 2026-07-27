@@ -23,8 +23,6 @@ import {
   Users,
 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 type SectionDefinition = {
   id: string
@@ -103,7 +101,6 @@ export default async function SupportPage() {
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-        <AnalystToggleButton />
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -151,7 +148,6 @@ export default async function SupportPage() {
           </div>
         </div>
       </div>
-      <AnalystPanel />
     </div>
   )
 }

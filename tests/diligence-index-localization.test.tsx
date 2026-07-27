@@ -15,7 +15,6 @@ vi.mock('next/navigation', () => ({
 vi.mock('../components/feature-visibility-context', () => ({
   useFeatureVisibility: () => ({ diligence: 'enabled' }),
 }))
-vi.mock('../components/analyst-button', () => ({ AnalystToggleButton: () => null }))
 vi.mock('../components/analyst-panel', () => ({ AnalystPanel: () => null }))
 vi.mock('../components/analyst-scope', () => ({ AnalystDomainScope: () => null }))
 

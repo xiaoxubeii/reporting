@@ -30,7 +30,7 @@ export function AppHeader({ fundName, fundLogo, userEmail, reviewBadge, settings
   return (
     <header className="relative flex items-center justify-between px-4 py-3 shrink-0">
       {/* Left: hamburger + logo + fund name */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <Button
           ref={menuButtonRef}
           variant="ghost"
@@ -54,19 +54,19 @@ export function AppHeader({ fundName, fundLogo, userEmail, reviewBadge, settings
           </div>
         )}
         {!collapsed && (
-          <span className="font-medium text-sm text-muted-foreground tracking-tight truncate">{fundName}</span>
+          <span className="min-w-0 truncate text-sm font-medium tracking-tight text-muted-foreground">{fundName}</span>
         )}
       </div>
 
       {/* Fund name aligned above page content when sidebar collapsed */}
       {collapsed && (
-        <span className="hidden md:block absolute left-24 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground/70 tracking-tight">
+        <span className="pointer-events-none absolute left-24 right-96 top-1/2 hidden -translate-y-1/2 truncate text-sm font-medium tracking-tight text-muted-foreground/70 md:block">
           {fundName}
         </span>
       )}
 
       {/* Right: user + sign out */}
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <LpPortalSwitchLink />
         <span className="text-xs text-muted-foreground truncate hidden sm:block max-w-[200px]">
           {userEmail}

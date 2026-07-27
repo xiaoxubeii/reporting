@@ -21,8 +21,6 @@ import { useCurrency, formatCurrencyFull } from '@/components/currency-context'
 import { useIsAdmin, useLpPortalEnabled } from '@/components/feature-visibility-context'
 import { PortfolioGroupFilter } from '@/components/lp-portfolio-group-filter'
 import { LpSharePanel } from '@/components/lp-share-control'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { AnalystDomainScope } from '@/components/analyst-scope'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { RenameInvestorDialog } from '@/components/lp/rename-investor-dialog'
@@ -225,7 +223,6 @@ function LpsInner() {
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <PortfolioNotesButton />
-          <AnalystToggleButton />
         </div>
       </div>
 
@@ -446,7 +443,6 @@ function LpsInner() {
 
         <PortfolioNotesPanel />
         <AnalystDomainScope domain="lps" />
-        <AnalystPanel />
       </div>
     </div>
   )

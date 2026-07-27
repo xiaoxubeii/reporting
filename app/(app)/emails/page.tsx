@@ -16,8 +16,6 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Loader2, Trash2, Copy, Check } from 'lucide-react'
 import { FiltersSheet } from '@/components/filters-sheet'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { EmailReviewModal } from '@/components/email-review-modal'
 
 // ---------------------------------------------------------------------------
@@ -267,7 +265,6 @@ export default function EmailsPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               {t('actions.refresh')}
             </Button>
-            <AnalystToggleButton />
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t('description')}</p>
@@ -579,7 +576,6 @@ export default function EmailsPage() {
         onOpenChange={(open) => { if (!open) { setReviewModalEmailId(null); load(page) } }}
       />
     </div>
-    <AnalystPanel />
     </div>
     </div>
   )

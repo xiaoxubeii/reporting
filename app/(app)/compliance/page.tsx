@@ -5,8 +5,6 @@ import { useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Check, AlertTriangle, X, ExternalLink, Clock, Loader2, Link as LinkIcon } from 'lucide-react'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { evaluateAll, type ComplianceProfile, type Applicability } from '@/lib/compliance/applicability'
 import { ComplianceNav, type ComplianceTab } from './compliance-nav'
@@ -482,7 +480,6 @@ export default function CompliancePage() {
           <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <div className="flex items-center gap-2">
             <PortfolioNotesButton />
-            <AnalystToggleButton />
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t('description')}</p>
@@ -557,7 +554,6 @@ export default function CompliancePage() {
           )}
         </div>
         <PortfolioNotesPanel />
-        <AnalystPanel />
       </div>
     </div>
     </PortfolioNotesProvider>

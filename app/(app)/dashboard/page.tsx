@@ -7,8 +7,6 @@ import type { InvestmentTransaction, CompanyStatus } from '@/lib/types/database'
 
 import { DashboardCompanies } from './dashboard-companies'
 import { DashboardNotesLayout, DashboardChatButton, DashboardNotesPanel } from './dashboard-notes'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 export async function generateMetadata() {
   const t = await getTranslations('Dashboard')
@@ -188,7 +186,6 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
           <div className="flex items-center gap-2">
             <DashboardChatButton />
-            <AnalystToggleButton />
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
@@ -199,7 +196,6 @@ export default async function DashboardPage() {
           <DashboardCompanies companies={companiesWithInvestments} />
         </div>
         <DashboardNotesPanel />
-        <AnalystPanel />
       </div>
     </div>
     </DashboardNotesLayout>

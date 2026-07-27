@@ -4,8 +4,6 @@ import { useTranslations } from 'next-intl'
 import { LpAccessSettings } from '@/components/lp-access-settings'
 import { LpDocumentsSettings } from '@/components/lp-documents-settings'
 import { LpMessagesSection } from '@/components/lp-messages-section'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -25,7 +23,6 @@ export function LpPortalDashboard() {
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
       <div className="flex items-start justify-between gap-4 mb-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-        <AnalystToggleButton />
       </div>
       <p className="text-sm text-muted-foreground mb-8">
         {t('description')}
@@ -41,7 +38,6 @@ export function LpPortalDashboard() {
         <LpMessagesSection />
       </div>
 
-      <AnalystPanel />
     </div>
   )
 }

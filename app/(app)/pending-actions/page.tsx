@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 interface PreviewResult {
   summary: string
@@ -82,7 +80,6 @@ export default function PendingActionsPage() {
             {t('description')}
           </p>
         </div>
-        <AnalystToggleButton />
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -164,7 +161,6 @@ export default function PendingActionsPage() {
             </div>
           )}
         </div>
-        <AnalystPanel />
       </div>
     </div>
   )

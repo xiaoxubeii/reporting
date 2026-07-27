@@ -6,8 +6,6 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Plus, FileText, Loader2, Trash2, Upload, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 
 interface LetterSummary {
@@ -122,7 +120,6 @@ export default function LettersPage() {
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             {fv.lp_letters === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}
           </h1>
-          <AnalystToggleButton />
         </div>
         <p className="text-sm text-muted-foreground">{t('description')}</p>
         <div className="flex items-center gap-3 pt-2">
@@ -206,7 +203,6 @@ export default function LettersPage() {
             </div>
           )}
         </div>
-        <AnalystPanel />
       </div>
 
       {/* Delete letter confirm dialog */}

@@ -9,8 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Check, X, Pencil, Loader2, Mail } from 'lucide-react'
 import { EmailReviewModal } from '@/components/email-review-modal'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 
 interface ReviewItem {
   id: string
@@ -134,7 +132,6 @@ export default function ReviewPage() {
             {t('description')}
           </p>
         </div>
-        <AnalystToggleButton />
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -335,7 +332,6 @@ export default function ReviewPage() {
         }}
       />
     </div>
-    <AnalystPanel />
     </div>
     </div>
   )

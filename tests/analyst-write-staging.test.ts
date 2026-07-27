@@ -94,4 +94,19 @@ describe('analyst write staging', () => {
     })
     expect(tools.map(t => t.name)).not.toContain('update_company_metric')
   })
+
+  it('does not expose or execute a write action outside the explicit action-family allowlist', async () => {
+    const { tools, executeTool } = buildAnalystTools({
+      admin: makeAdmin(),
+      fundId: 'f1',
+      userId: 'u1',
+      access: ctx({ portfolio: 'write' }),
+      enableDrafts: true,
+      enabledDraftActions: [],
+    })
+
+    expect(tools.map(t => t.name)).not.toContain('update_company_metric')
+    await expect(executeTool({ name: 'update_company_metric', input: {} })).resolves.toContain('not requested')
+    expect(inserted).toEqual([])
+  })
 })

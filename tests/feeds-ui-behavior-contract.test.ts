@@ -118,6 +118,14 @@ describe('Feeds recovery and pagination UI contract', () => {
     expect(todayFeed).not.toMatch(/groupByRecency/)
   })
 
+  it('keeps Feed rows readable while progressively revealing a compact assistant handle', () => {
+    expect(todayFeed).toContain('className="group relative flex flex-wrap')
+    expect(todayFeed).toContain('presentation="compact-hover"')
+    expect(todayFeed).toContain('flex w-full shrink-0 flex-row items-center justify-end gap-1 md:w-auto')
+    expect(todayFeed).not.toContain('md:items-start')
+    expect(todayFeed).not.toMatch(/<article[^>]*\sdraggable(?:=|\s|>)/)
+  })
+
   it('provides URL-backed Me and Explore sibling views inside Today', () => {
     expect(todayFeed).toMatch(/searchParams\.get\('view'\) === 'explore'/)
     expect(todayViewTabs).toMatch(/\{t\('me'\)\}/)

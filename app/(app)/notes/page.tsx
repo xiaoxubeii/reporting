@@ -5,8 +5,6 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Building2, Lock, Send, Pencil, X, Check, Reply, Pin, PinOff } from 'lucide-react'
 import Link from 'next/link'
 import { NoteContent } from '@/components/note-content'
-import { AnalystToggleButton } from '@/components/analyst-button'
-import { AnalystPanel } from '@/components/analyst-panel'
 import { PortfolioNotesProvider } from '@/components/portfolio-notes'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
 import { MentionTextarea, type MentionMember, type MentionTextareaRef } from '@/components/mention-textarea'
@@ -232,7 +230,6 @@ export default function NotesPage() {
       <div className="mb-6 space-y-1">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{fv.notes === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}{t('title')}</h1>
-          <AnalystToggleButton />
         </div>
         <p className="text-sm text-muted-foreground">{t('description')}</p>
         <div className="flex items-center pt-2">
@@ -421,7 +418,6 @@ export default function NotesPage() {
         ))}
       </div>
     </div>
-    <AnalystPanel />
     </div>
     </div>
     </PortfolioNotesProvider>

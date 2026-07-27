@@ -7,6 +7,8 @@ import { ArrowDownAZ, ArrowUpZA, ArrowDown, ArrowUp, LayoutGrid, Table2, Calenda
 import { Button } from '@/components/ui/button'
 import { DashboardTable } from './dashboard-table'
 import { useCurrency, getCurrencySymbol } from '@/components/currency-context'
+import { AnalystContextActions } from '@/components/analyst-context-actions'
+import { snapshotCompany } from '@/lib/analyst/source-snapshots'
 
 interface ActiveMetric {
   id: string
@@ -261,11 +263,8 @@ function CompanyGrid({ companies }: { companies: Company[] }) {
         const isExited = c.status === 'exited' || c.status === 'written-off'
 
         return (
-          <Link
-            key={c.id}
-            href={`/companies/${c.id}`}
-            className="rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors"
-          >
+          <article key={c.id} className="group relative rounded-lg border bg-card transition-colors hover:bg-accent/50">
+          <Link href={`/companies/${c.id}`} className="block p-4 pb-10">
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-sm">{c.name}</span>
                 {c.openReviews > 0 && (
@@ -302,6 +301,8 @@ function CompanyGrid({ companies }: { companies: Company[] }) {
                 </div>
               ) : null}
           </Link>
+          <AnalystContextActions snapshot={snapshotCompany(c)} presentation="compact-hover" className="absolute bottom-2 right-2" />
+          </article>
         )
       })}
     </div>

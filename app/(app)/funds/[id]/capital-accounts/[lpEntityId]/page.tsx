@@ -6,7 +6,6 @@ import { requireAccountingAccess } from '../../../guard'
 import { resolveVehicleParam } from '../../resolve'
 import { FundScopeSync } from '@/components/fund-subpage-chrome'
 import { FundSwitcher } from '@/components/accounting-vehicle'
-import { AnalystToggleButton } from '@/components/analyst-button'
 import { AccountingBody } from '@/components/accounting-chrome'
 import { LpStatementView } from '../../../capital-accounts/[lpEntityId]/view'
 
@@ -39,7 +38,6 @@ export default async function LpStatementPage({
         <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <div className="flex items-center gap-2">
           <FundSwitcher />
-          <AnalystToggleButton />
         </div>
       </div>
       <AccountingBody>

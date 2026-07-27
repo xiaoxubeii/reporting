@@ -10,7 +10,7 @@ export function Toaster() {
     <Sonner
       theme={resolvedTheme as 'light' | 'dark' | undefined}
       richColors
-      position="bottom-right"
+      position="top-right"
       toastOptions={{
         className: 'text-sm',
       }}

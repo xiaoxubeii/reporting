@@ -74,6 +74,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     fundSettings?.openai_api_key_encrypted ? 'openai' : null,
     fundSettings?.gemini_api_key_encrypted ? 'gemini' : null,
     fundSettings?.ollama_base_url ? 'ollama' : null,
+    fundSettings?.openrouter_api_key_encrypted ? 'openrouter' : null,
   ].filter(Boolean) as string[]
   const hasAIKey = configuredProviders.length > 0
   const defaultAIProvider = fundSettings?.default_ai_provider ?? 'anthropic'
@@ -98,7 +99,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </>
       )}
 
-      <div className="w-full max-w-screen-xl mx-auto flex flex-col flex-1">
+      <div className="flex w-full flex-1 flex-col">
         <AppShell
           lpPortalEnabled={!!fundSettings?.lp_portal_enabled}
           fundName={fundName}

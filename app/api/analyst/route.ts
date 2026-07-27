@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createFundAIProviderWithOverride } from '@/lib/ai'
 import { withTopicalGuardrail } from '@/lib/ai/topical-guard'
-import type { ChatMessage } from '@/lib/ai/types'
 import type { Json } from '@/lib/types/database'
 import { logAIUsage } from '@/lib/ai/usage'
 import { buildCompanyContext, buildPortfolioContext, buildDealContext } from '@/lib/ai/context-builder'
@@ -16,17 +15,77 @@ import {
 } from '@/lib/accounting/assistant'
 import { resolveVehicle } from '@/lib/accounting/agent-tools'
 import { buildAnalystTools, type StagedActionRecord } from '@/lib/ai/analyst-tools'
+import type { ActionType } from '@/lib/pending-actions/types'
 import { buildLpContext, LP_ANALYST_GUIDE } from '@/lib/ai/lp-fund-context'
 import { buildDiligenceContext, DILIGENCE_ANALYST_GUIDE } from '@/lib/diligence/analyst-context'
 import { extractText } from '@/lib/memo-agent/extract-text'
 import { hasAccess, loadAccessContext } from '@/lib/access/effective'
 import { rateLimit } from '@/lib/rate-limit'
 import { DEFAULT_LOCALE, isSupportedLocale, type Locale } from '@/i18n/locales'
+import {
+  AssistantContextValidationError,
+  ASSISTANT_CONTEXT_SYSTEM_POLICY,
+  MAX_ANALYST_REPLY_CONTENT,
+  normalizeAnalystMessages,
+  prepareAnalystMessagesForRequest,
+  prepareAnalystMessagesForStorage,
+  toProviderMessages,
+  type AnalystConversationMessage,
+} from '@/lib/analyst/context-snapshot'
 
 const RESPONSE_LANGUAGE_LABELS: Readonly<Record<Locale, string>> = Object.freeze({
   en: 'English (en)',
   'zh-CN': 'Simplified Chinese (zh-CN)',
 })
+
+// A 10 MB source document expands by roughly one third when base64 encoded. Bound the complete
+// HTTP body before JSON parsing so ignored top-level fields cannot consume unbounded memory.
+const MAX_ANALYST_REQUEST_BODY_BYTES = 15 * 1024 * 1024
+
+class AnalystRequestBodyError extends Error {
+  constructor(readonly status: 400 | 413) {
+    super(status === 413 ? 'Request body too large' : 'Invalid JSON')
+  }
+}
+
+async function readAnalystJson(req: NextRequest): Promise<unknown> {
+  const contentLength = req.headers.get('content-length')
+  if (contentLength !== null) {
+    if (!/^\d+$/.test(contentLength)) throw new AnalystRequestBodyError(400)
+    const declared = Number(contentLength)
+    if (!Number.isSafeInteger(declared) || declared < 0) throw new AnalystRequestBodyError(400)
+    if (declared > MAX_ANALYST_REQUEST_BODY_BYTES) {
+      if (req.body) await req.body.cancel().catch(() => undefined)
+      throw new AnalystRequestBodyError(413)
+    }
+  }
+  if (!req.body) throw new AnalystRequestBodyError(400)
+
+  const reader = req.body.getReader()
+  const decoder = new TextDecoder()
+  let total = 0
+  let text = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > MAX_ANALYST_REQUEST_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined)
+        throw new AnalystRequestBodyError(413)
+      }
+      text += decoder.decode(value, { stream: true })
+    }
+    text += decoder.decode()
+    try {
+      return JSON.parse(text)
+    } catch {
+      throw new AnalystRequestBodyError(400)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
 
 function responseLanguageInstruction(localeInput: unknown): string {
   const fallbackLocale = isSupportedLocale(localeInput) ? localeInput : DEFAULT_LOCALE
@@ -46,7 +105,7 @@ export async function POST(req: NextRequest) {
   if (limited) return limited
 
   let body: {
-    messages?: ChatMessage[]
+    messages?: unknown
     companyId?: string
     dealId?: string
     /** Accounting scope (portfolio_group) — set by the funds pages' vehicle selector. */
@@ -61,14 +120,35 @@ export async function POST(req: NextRequest) {
     locale?: unknown
   }
   try {
-    body = await req.json()
-  } catch {
+    const parsed = await readAnalystJson(req)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+    body = parsed as typeof body
+  } catch (error) {
+    if (error instanceof AnalystRequestBodyError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  if (!Array.isArray(body.messages) || body.messages.length === 0) {
-    return NextResponse.json({ error: 'messages array is required' }, { status: 400 })
+  let conversationMessages: readonly AnalystConversationMessage[]
+  try {
+    conversationMessages = prepareAnalystMessagesForRequest(normalizeAnalystMessages(body.messages))
+  } catch (error) {
+    if (error instanceof AssistantContextValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    throw error
   }
+
+  const latestUserMessage = [...conversationMessages].reverse().find(message => message.role === 'user')
+  const hasAttachedSnapshots = Boolean(latestUserMessage?.contexts?.length)
+  const hasUntrustedAttachment = hasAttachedSnapshots || Boolean(body.document?.base64)
+  const explicitDraftIntent = detectExplicitDraftIntent(latestUserMessage?.content ?? '')
+  const enableDraftTools = !hasUntrustedAttachment || explicitDraftIntent.actionTypes.length > 0
+  const enabledDraftActions = hasUntrustedAttachment ? explicitDraftIntent.actionTypes : undefined
+  const allowAccountingProposals = !hasUntrustedAttachment || explicitDraftIntent.accountingEntry
 
   const admin = createAdminClient()
 
@@ -129,7 +209,7 @@ export async function POST(req: NextRequest) {
       .eq('id', body.dealId)
       .maybeSingle()
     if (!dealCheck) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if ((dealCheck as any).fund_id !== membership.fund_id) {
+    if ((dealCheck as { fund_id: string }).fund_id !== membership.fund_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -219,7 +299,7 @@ export async function POST(req: NextRequest) {
         }
         // Drafting is a WRITE. A read-only accounting grant explains the books; it doesn't hand
         // back entries to post. Without this text the model has no way to propose one.
-        if (hasAccess(access, 'accounting', 'write')) {
+        if (hasAccess(access, 'accounting', 'write') && allowAccountingProposals) {
           systemPrompt += `\n\n${ACCOUNTING_DRAFTING_PROTOCOL}`
         }
         accountingGroup = group
@@ -272,9 +352,39 @@ export async function POST(req: NextRequest) {
         ? 'diligence'
         : null
 
+  const conversationCompanyId = body.dealId ? null : body.companyId ?? null
+  const conversationDealId = body.dealId ?? null
+
+  // Continuing a thread must not let client-controlled IDs retarget stored history to another
+  // company, deal, Fund, or granted domain. Verify the complete trusted scope before the model
+  // sees any history or a write is attempted.
+  if (body.conversationId) {
+    const { data: existingConversation, error: existingConversationError } = await admin
+      .from('analyst_conversations')
+      .select('id, fund_id, user_id, company_id, deal_id, scope')
+      .eq('id', body.conversationId)
+      .eq('user_id', user.id)
+      .eq('fund_id', membership.fund_id)
+      .maybeSingle()
+
+    if (existingConversationError) {
+      return NextResponse.json({ error: 'Could not verify conversation scope.' }, { status: 500 })
+    }
+    if (!existingConversation) {
+      return NextResponse.json({ error: 'Conversation not found.' }, { status: 404 })
+    }
+    if (
+      existingConversation.company_id !== conversationCompanyId
+      || existingConversation.deal_id !== conversationDealId
+      || existingConversation.scope !== scope
+    ) {
+      return NextResponse.json({ error: 'Conversation scope does not match the current page.' }, { status: 409 })
+    }
+  }
+
   // Dynamic context: detect company references in messages and inject their data
   const referencedCompanyIds = detectReferencedCompanies(
-    body.messages,
+    conversationMessages,
     companyNameLookup,
     body.companyId ?? null
   )
@@ -361,10 +471,13 @@ export async function POST(req: NextRequest) {
     }, { status: 400 })
   }
 
-  const messages: ChatMessage[] = body.messages.map(m => ({
-    role: m.role === 'assistant' ? 'assistant' : 'user',
-    content: String(m.content).slice(0, 10_000),
-  }))
+  // Page snapshots remain user-provided reference material. Only the newest user turn receives
+  // its active snapshots, rendered into user content after strict normalization. Provider inputs
+  // contain no client metadata fields and no snapshot content enters the system instruction.
+  const messages = toProviderMessages(conversationMessages)
+  if (hasAttachedSnapshots) {
+    systemPrompt += `\n\n${ASSISTANT_CONTEXT_SYSTEM_POLICY}`
+  }
 
   try {
     let text: string
@@ -383,7 +496,8 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         access,
         vehicle: accountingGroup ?? undefined,
-        enableDrafts: true,
+        enableDrafts: enableDraftTools,
+        enabledDraftActions,
         createdVia: 'analyst',
         stagedActions,
       })
@@ -422,14 +536,18 @@ export async function POST(req: NextRequest) {
     // Drafted entries come back as ```proposal fences alongside the prose. Only parse them when
     // accounting scope was actually granted — otherwise the protocol was never in the prompt and
     // any fence-shaped text is just prose the model wrote.
-    const { reply, proposals } = accountingGroup && hasAccess(access, 'accounting', 'write')
+    const { reply: unboundedReply, proposals } = accountingGroup && hasAccess(access, 'accounting', 'write') && allowAccountingProposals
       ? extractProposals(text)
       : { reply: text, proposals: [] as AssistantProposal[] }
+    const reply = unboundedReply.slice(0, MAX_ANALYST_REPLY_CONTENT)
 
     // Persist conversation
     let conversationId = body.conversationId ?? null
-    const lastUserMsg = body.messages[body.messages.length - 1]
-    const allMessages = [...body.messages, { role: 'assistant' as const, content: reply }]
+    const lastUserMsg = conversationMessages[conversationMessages.length - 1]
+    const allMessages = prepareAnalystMessagesForStorage([
+      ...conversationMessages,
+      Object.freeze({ role: 'assistant' as const, content: reply }),
+    ])
 
     try {
       if (conversationId) {
@@ -443,6 +561,7 @@ export async function POST(req: NextRequest) {
           })
           .eq('id', conversationId)
           .eq('user_id', user.id)
+          .eq('fund_id', membership.fund_id)
       } else {
         // Create new conversation with title from first message
         const title = (lastUserMsg?.content ?? 'New conversation').slice(0, 60)
@@ -452,8 +571,8 @@ export async function POST(req: NextRequest) {
           .insert({
             fund_id: membership.fund_id,
             user_id: user.id,
-            company_id: body.companyId ?? null,
-            deal_id: body.dealId ?? null,
+            company_id: conversationCompanyId,
+            deal_id: conversationDealId,
             scope,
             title,
             messages: allMessages as unknown as Json,
@@ -472,8 +591,8 @@ export async function POST(req: NextRequest) {
             aiModel,
             membership.fund_id,
             user.id,
-            body.companyId ?? null,
-            body.dealId ?? null,
+            conversationCompanyId,
+            conversationDealId,
             scope,
             conversationId,
           ).catch(() => {})
@@ -549,11 +668,16 @@ function extractProposals(text: string): { reply: string; proposals: AssistantPr
         entryDate: String(obj.entryDate ?? ''),
         memo: String(obj.memo ?? ''),
         sourceType: obj.sourceType ?? 'manual',
-        postings: obj.postings.map((p: any) => ({
-          accountCode: String(p.accountCode),
-          amount: Number(p.amount),
-          lpEntity: p.lpEntity ?? null,
-        })),
+        postings: obj.postings.map((candidate: unknown) => {
+          const posting = candidate && typeof candidate === 'object'
+            ? candidate as Record<string, unknown>
+            : {}
+          return {
+            accountCode: String(posting.accountCode),
+            amount: Number(posting.amount),
+            lpEntity: posting.lpEntity ?? null,
+          }
+        }),
         rationale: String(obj.rationale ?? ''),
       })
       return ''
@@ -634,7 +758,7 @@ async function summarizePreviousConversation(
 }
 
 function detectReferencedCompanies(
-  messages: ChatMessage[],
+  messages: readonly AnalystConversationMessage[],
   lookup: Map<string, string>,
   currentCompanyId: string | null
 ): string[] {
@@ -667,4 +791,19 @@ function detectReferencedCompanies(
     .sort((a, b) => a[1] - b[1])
     .slice(0, 2)
     .map(([id]) => id)
+}
+
+function detectExplicitDraftIntent(content: string): { actionTypes: ActionType[]; accountingEntry: boolean } {
+  const actionTypes: ActionType[] = []
+  if (/\b(?:update|set|change)\s+(?:a\s+|the\s+)?(?:company\s+)?metric\b|(?:更新|设置|修改)(?:公司)?指标/i.test(content)) {
+    actionTypes.push('update_company_metric')
+  }
+  if (/\b(?:record|add|create)\s+(?:an?\s+|the\s+)?(?:investment|portfolio transaction)\b|(?:记录|添加|创建)(?:一笔|该笔|这个)?(?:投资|投资交易)/i.test(content)) {
+    actionTypes.push('record_investment')
+  }
+  if (/\b(?:issue|create|schedule)\s+(?:an?\s+|the\s+)?capital call\b|(?:发起|创建|安排)(?:一次|该次)?资本调用/i.test(content)) {
+    actionTypes.push('issue_capital_call')
+  }
+  const accountingEntry = /\b(?:record|add|create|draft|prepare|post)\s+(?:an?\s+|the\s+)?(?:accounting entry|journal entry|entry that records)\b|(?:记录|添加|创建|起草|准备|生成)(?:一笔|该笔|这个)?(?:会计分录|日记账分录|分录)/i.test(content)
+  return { actionTypes, accountingEntry }
 }
