@@ -1,6 +1,9 @@
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import nextConfig, { supabaseConnectSources } from '../next.config.mjs'
+import nextConfig, { nextDistDir, nextTsconfigPath, supabaseConnectSources } from '../next.config.mjs'
 
 type HeaderRule = {
   source: string
@@ -49,5 +52,47 @@ describe('supabaseConnectSources', () => {
       if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL
       else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl
     }
+  })
+})
+
+describe('nextDistDir', () => {
+  it('keeps production output at .next and accepts an isolated devctl directory', () => {
+    expect(nextDistDir(undefined)).toBe('.next')
+    expect(nextDistDir('  ')).toBe('.next')
+    expect(nextDistDir('.next-devctl')).toBe('.next-devctl')
+  })
+
+  it('rejects paths outside the project root', () => {
+    expect(() => nextDistDir('../shared-next')).toThrow('NEXT_DIST_DIR must be a safe directory name')
+    expect(() => nextDistDir('/tmp/shared-next')).toThrow('NEXT_DIST_DIR must be a safe directory name')
+    expect(() => nextDistDir('.git')).toThrow('NEXT_DIST_DIR must be a safe directory name')
+    expect(() => nextDistDir('app')).toThrow('NEXT_DIST_DIR must be a safe directory name')
+    expect(() => nextDistDir('node_modules')).toThrow('NEXT_DIST_DIR must be a safe directory name')
+  })
+
+  it('rejects a symlinked build directory', () => {
+    const rootDir = mkdtempSync(path.join(os.tmpdir(), 'reporting-next-dist-'))
+    try {
+      symlinkSync(path.join(rootDir, 'outside'), path.join(rootDir, '.next-devctl'))
+      expect(() => nextDistDir('.next-devctl', rootDir)).toThrow(
+        'NEXT_DIST_DIR must not be a symbolic link',
+      )
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('nextTsconfigPath', () => {
+  it('keeps production and devctl generated types isolated', () => {
+    expect(nextTsconfigPath('.next')).toBe('tsconfig.json')
+    expect(nextTsconfigPath('.next-devctl')).toBe('tsconfig.devctl.json')
+
+    const productionConfig = JSON.parse(readFileSync(path.join(process.cwd(), 'tsconfig.json'), 'utf8'))
+    const devctlConfig = JSON.parse(readFileSync(path.join(process.cwd(), 'tsconfig.devctl.json'), 'utf8'))
+    expect(productionConfig.include).toContain('.next/types/**/*.ts')
+    expect(productionConfig.include).not.toContain('.next-devctl/types/**/*.ts')
+    expect(devctlConfig.include).toContain('.next-devctl/types/**/*.ts')
+    expect(devctlConfig.include).not.toContain('.next/types/**/*.ts')
   })
 })

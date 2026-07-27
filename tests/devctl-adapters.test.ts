@@ -6,6 +6,7 @@ import {
   composeServicesHealthy,
   cronStopTimeout,
   dynamicRuntimeEnv,
+  webBindHost,
 } from '../scripts/devctl/adapters.mjs'
 
 describe('devctl real adapter contracts', () => {
@@ -17,6 +18,15 @@ describe('devctl real adapter contracts', () => {
     })
 
     expect(Object.keys(adapters)).toEqual(['web', 'cron'])
+  })
+
+  it('keeps Web loopback-only by default and accepts an explicit bind host', () => {
+    expect(webBindHost({})).toBe('127.0.0.1')
+    expect(webBindHost({ DEVCTL_WEB_HOST: '0.0.0.0' })).toBe('0.0.0.0')
+    expect(webBindHost({ DEVCTL_WEB_HOST: '  ' })).toBe('127.0.0.1')
+    expect(() => webBindHost({ DEVCTL_WEB_HOST: '192.0.2.10' })).toThrow(
+      'DEVCTL_WEB_HOST must be 127.0.0.1 or 0.0.0.0',
+    )
   })
 
   it('requires every Compose service to be running and healthy', () => {
@@ -51,6 +61,7 @@ describe('devctl real adapter contracts', () => {
     expect(env.CRON_RUNNER_BASE_URL).toBe('http://127.0.0.1:5000')
     expect(env.BACKGROUND_JOB_INTERNAL_ORIGIN).toBe('http://127.0.0.1:5000')
     expect(env.FUND_WORKSPACE_DEV_PORT).toBe('5000')
+    expect(env.NEXT_DIST_DIR).toBe('.next-devctl')
     for (const key of [
       'MINIFLUX_BASE_URL',
       'MINIFLUX_PROVISIONER_TOKEN_FILE',

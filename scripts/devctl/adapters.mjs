@@ -19,7 +19,7 @@ export function buildDefaultAdapters(options) {
       args: context => [
         'node_modules/next/dist/bin/next',
         'dev',
-        '--hostname', '127.0.0.1',
+        '--hostname', webBindHost(context.env),
         '--port', String(context.ports.web),
       ],
       readinessUrl: context => `http://127.0.0.1:${context.ports.web}/`,
@@ -38,6 +38,14 @@ export function buildDefaultAdapters(options) {
       stopTimeoutMs: cronStopTimeout,
     }),
   })
+}
+
+export function webBindHost(env) {
+  const host = env.DEVCTL_WEB_HOST?.trim() || '127.0.0.1'
+  if (host !== '127.0.0.1' && host !== '0.0.0.0') {
+    throw new Error('DEVCTL_WEB_HOST must be 127.0.0.1 or 0.0.0.0')
+  }
+  return host
 }
 
 function createProcessAdapter(options) {
@@ -123,6 +131,7 @@ function dynamicRuntimeEnv(context) {
     PORT: String(context.ports.web),
     NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${context.ports.web}`,
     NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${context.ports.web}`,
+    NEXT_DIST_DIR: '.next-devctl',
     FUND_WORKSPACE_DEV_PORT: String(context.ports.web),
     CRON_RUNNER_BASE_URL: `http://127.0.0.1:${context.ports.web}`,
     BACKGROUND_JOB_INTERNAL_ORIGIN: `http://127.0.0.1:${context.ports.web}`,

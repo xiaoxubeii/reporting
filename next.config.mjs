@@ -1,5 +1,7 @@
 import { withBotId } from 'botid/next/config'
+import { lstatSync } from 'node:fs'
 import { isIP } from 'node:net'
+import path from 'node:path'
 import createNextIntlPlugin from 'next-intl/plugin'
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
@@ -53,8 +55,31 @@ function isDevelopmentSupabaseProxyEnabled() {
   return process.env.NODE_ENV !== 'production' && browserUrl === '/_supabase'
 }
 
+export function nextDistDir(rawValue, rootDir = process.cwd()) {
+  const value = rawValue?.trim()
+  if (!value) return '.next'
+  if (value !== '.next' && value !== '.next-devctl') {
+    throw new Error('NEXT_DIST_DIR must be a safe directory name')
+  }
+  const existing = lstatSync(path.resolve(rootDir, value), { throwIfNoEntry: false })
+  if (existing?.isSymbolicLink()) {
+    throw new Error('NEXT_DIST_DIR must not be a symbolic link')
+  }
+  return value
+}
+
+export function nextTsconfigPath(distDir) {
+  return distDir === '.next-devctl' ? 'tsconfig.devctl.json' : 'tsconfig.json'
+}
+
+const distDir = nextDistDir(process.env.NEXT_DIST_DIR)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir,
+  typescript: {
+    tsconfigPath: nextTsconfigPath(distDir),
+  },
   experimental: {
     serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
     // Include the memo-agent default schema files in the serverless function
