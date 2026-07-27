@@ -131,7 +131,9 @@ export async function middleware(request: NextRequest) {
   // in Settings and shares the resulting link with founders. The page itself
   // 404s if the token doesn't resolve or `deal_intake_enabled` is false on the
   // fund, so the URL alone isn't enough to abuse the endpoint.
-  const isPublicTokenRoute = pathname.startsWith('/submit/') || pathname === '/expert-response'
+  const isPublicTokenRoute = pathname.startsWith('/submit/')
+    || pathname === '/expert-response'
+    || pathname === '/invite'
 
   const isSetupRoute = pathname === '/setup' && process.env.ENABLE_SETUP_PAGE === 'true'
   const isPortalRoute = pathname.startsWith('/portal')
@@ -344,6 +346,7 @@ function isTenantCredentialOrOnboardingApi(pathname: string): boolean {
     || pathname === '/api/auth/logout'
     || pathname.startsWith('/api/onboarding/')
     || pathname.startsWith('/api/public/')
+    || pathname === '/api/fund-invitations/accept'
     || pathname.startsWith('/api/oauth/')
     || pathname === '/api/mcp'
     || pathname === '/api/agent'

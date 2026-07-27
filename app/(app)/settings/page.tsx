@@ -1,23 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog'
 import Link from 'next/link'
 import { DefaultsEditor } from './memo-agent/defaults/editor'
 import { LedgerAgentAccess } from '@/components/ledger-agent-access'
@@ -41,6 +31,7 @@ import {
   FundResendOutboundProviderFields,
 } from '@/components/settings/fund-email-settings'
 import { AdminSectionContext, GroupHeader, Section } from '@/components/settings/section'
+import { SettingsScopeNavigation } from '@/components/settings/settings-scope-navigation'
 import {
   CUSTOM_AI_PROVIDER_LABEL,
   parseCustomAIProviderRequestParameters,
@@ -56,10 +47,13 @@ interface Sender {
 
 interface Settings {
   fundName: string
+  fundSlug: string
+  fundEmailSubdomain: string | null
   fundLogo: string | null
   fundAddress: string | null
   postmarkInboundAddress: string
   postmarkWebhookToken: string
+  postmarkWebhookConfigured: boolean
   hasClaudeKey: boolean
   claudeModel: string
   hasOpenAIKey: boolean
@@ -107,8 +101,8 @@ interface Settings {
   disableUserTracking: boolean
   currency: string
   featureVisibility: Record<string, string>
-  displayName: string
   isAdmin: boolean
+  isFounder: boolean
   appVersion: string
   updateAvailable: boolean
   dealThesis: string | null
@@ -122,7 +116,6 @@ interface Settings {
 
 export default function SettingsPage() {
   const tenantBranding = useTenantBranding()
-  const router = useRouter()
   const t = useTranslations('Settings')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -173,6 +166,24 @@ export default function SettingsPage() {
     )
   }
 
+  if (!settings.isAdmin) {
+    return (
+      <div className="mx-auto w-full max-w-4xl space-y-6 p-4 md:p-8">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
+        </div>
+        <SettingsScopeNavigation current="fund" isAdmin={false} fundName={settings.fundName} />
+        <div className="rounded-xl border bg-muted/30 p-5">
+          <p className="text-sm font-medium">{t('fundAdminOnly.title')}</p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{t('fundAdminOnly.description')}</p>
+          <Button asChild variant="outline" size="sm" className="mt-4"><Link href="/settings/personal">{t('fundAdminOnly.action')}</Link></Button>
+        </div>
+        <TeamSection isAdmin={false} isFounder={false} featureVisibility={settings.featureVisibility} />
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
@@ -182,11 +193,11 @@ export default function SettingsPage() {
       <div className="flex flex-col lg:flex-row gap-6 items-start">
       <div className="flex-1 min-w-0 max-w-3xl w-full space-y-8">
 
-      <ProfileSection displayName={settings.displayName} onSaved={load} />
-      <MfaSection />
+      <SettingsScopeNavigation current="fund" isAdmin fundName={settings.fundName} />
       {settings.isAdmin && (
         <AdminSectionContext.Provider value={true}>
           <VersionSection appVersion={settings.appVersion} updateAvailable={settings.updateAvailable} />
+          <FundIdentitySection slug={settings.fundSlug} emailSubdomain={settings.fundEmailSubdomain} />
           <FundNameSection name={settings.fundName} logo={settings.fundLogo} address={settings.fundAddress} onSaved={load} />
           <Section title={t('sections.appearance')}>
             <AppearanceEditor />
@@ -210,16 +221,11 @@ export default function SettingsPage() {
           </Section>
         </AdminSectionContext.Provider>
       )}
-      {/* Per-USER, not per-fund: the Affinity key is the caller's own personal access
-          token and every user needs their own. This section used for all external data integrations. */}
       <GroupHeader label={t('groups.externalData')} />
-      <AffinityConnect />
       {/* Heartbeat, unlike Affinity, is a per-FUND credential that reads the whole
           community — so the card is admin-only and renders nothing for everyone else. */}
       <HeartbeatConnect />
 
-      <GroupHeader label={t('groups.notes')} />
-      <NotificationPreferencesSection />
       {/* No longer gated on the accounting feature: the agent surface now covers the
           portfolio, companies, performance and LPs as well as the ledger, so a fund with
           accounting switched off still has most of it. */}
@@ -235,16 +241,16 @@ export default function SettingsPage() {
       ) && (
         <>
           <GroupHeader label={t('groups.outboundEmail')} />
-          <FundResendOutboundProviderFields onChanged={load} />
+          <FundResendOutboundProviderFields />
         </>
       )}
       {settings.isAdmin && (
         <AdminSectionContext.Provider value={true}>
-          <GroupHeader label={t('groups.inboundEmail')} />
+          <div id="fund-email" className="scroll-mt-6"><GroupHeader label={t('groups.inboundEmail')} /></div>
           <InboundEmailSection
             provider={settings.inboundEmailProvider}
             postmarkAddress={settings.postmarkInboundAddress}
-            postmarkToken={settings.postmarkWebhookToken}
+            postmarkWebhookConfigured={settings.postmarkWebhookConfigured}
             mailgunInboundDomain={settings.mailgunInboundDomain}
             hasMailgunSigningKey={settings.hasMailgunSigningKey}
             onSaved={load}
@@ -340,8 +346,7 @@ export default function SettingsPage() {
           <GroupHeader label={t('groups.accessControl')} />
           <AuthEmailTemplatesSection />
           <WhitelistSection />
-          <TeamSection isAdmin={settings.isAdmin} featureVisibility={settings.featureVisibility} />
-          <DangerZone onDeleted={() => router.push('/auth')} />
+          <TeamSection isAdmin={settings.isAdmin} isFounder={settings.isFounder} featureVisibility={settings.featureVisibility} />
         </AdminSectionContext.Provider>
       )}
 
@@ -382,256 +387,6 @@ function VersionSection({ appVersion, updateAvailable }: { appVersion: string; u
         </p>
       )}
     </div>
-  )
-}
-
-// ──────────────────────────── Profile ────────────────────────────
-
-function ProfileSection({ displayName, onSaved }: { displayName: string; onSaved: () => void }) {
-  const t = useTranslations('Settings.page.profile')
-  const [value, setValue] = useState(displayName)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  const handleSave = async () => {
-    setSaving(true)
-    const res = await fetch('/api/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName: value }),
-    })
-    setSaving(false)
-    if (res.ok) {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-      onSaved()
-    }
-  }
-
-  return (
-    <Section title={t('title')}>
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-        <div className="flex-1">
-          <Label>{t('displayName')}</Label>
-          <p className="text-xs text-muted-foreground mt-1 mb-1.5">
-            {t('help')}
-          </p>
-          <Input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={t('placeholder')}
-          />
-        </div>
-        <Button onClick={handleSave} disabled={saving || value === displayName} size="sm">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="h-3.5 w-3.5" /> : t('save')}
-        </Button>
-      </div>
-    </Section>
-  )
-}
-
-// ──────────────────────────── MFA ────────────────────────────
-
-function MfaSection() {
-  const t = useTranslations('Settings.page.mfa')
-  const supabase = createClient()
-  const [state, setState] = useState<'loading' | 'disabled' | 'enrolling' | 'enabled'>('loading')
-  const [qrCode, setQrCode] = useState<string | null>(null)
-  const [secret, setSecret] = useState<string | null>(null)
-  const [enrolledFactorId, setEnrolledFactorId] = useState<string | null>(null)
-  const [verifiedFactorIds, setVerifiedFactorIds] = useState<string[]>([])
-  const [code, setCode] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [verifying, setVerifying] = useState(false)
-  const [confirmDisable, setConfirmDisable] = useState(false)
-  const [disabling, setDisabling] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    async function check() {
-      const { data: factors } = await supabase.auth.mfa.listFactors()
-      const verified = factors?.totp?.filter(f => f.status === 'verified') ?? []
-      if (verified.length > 0) {
-        setVerifiedFactorIds(verified.map(f => f.id))
-        setState('enabled')
-      } else {
-        setState('disabled')
-      }
-    }
-    check()
-  }, [supabase])
-
-  async function startEnroll() {
-    setError(null)
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' })
-    if (error) {
-      setError(error.message)
-      return
-    }
-    setEnrolledFactorId(data.id)
-    setQrCode(data.totp.qr_code)
-    setSecret(data.totp.secret)
-    setState('enrolling')
-    setTimeout(() => inputRef.current?.focus(), 100)
-  }
-
-  async function verifyEnroll() {
-    if (code.length !== 6 || !enrolledFactorId) return
-    setError(null)
-    setVerifying(true)
-    const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: enrolledFactorId })
-    if (challengeError) {
-      setError(challengeError.message)
-      setVerifying(false)
-      return
-    }
-    const { error: verifyError } = await supabase.auth.mfa.verify({
-      factorId: enrolledFactorId,
-      challengeId: challenge.id,
-      code,
-    })
-    if (verifyError) {
-      setError(verifyError.message)
-      setCode('')
-      inputRef.current?.focus()
-    } else {
-      setVerifiedFactorIds([enrolledFactorId])
-      setQrCode(null)
-      setSecret(null)
-      setEnrolledFactorId(null)
-      setCode('')
-      setState('enabled')
-    }
-    setVerifying(false)
-  }
-
-  async function cancelEnroll() {
-    if (enrolledFactorId) {
-      await supabase.auth.mfa.unenroll({ factorId: enrolledFactorId })
-    }
-    setEnrolledFactorId(null)
-    setQrCode(null)
-    setSecret(null)
-    setCode('')
-    setError(null)
-    setState('disabled')
-  }
-
-  async function disableMfa() {
-    setDisabling(true)
-    setError(null)
-    for (const id of verifiedFactorIds) {
-      const { error } = await supabase.auth.mfa.unenroll({ factorId: id })
-      if (error) {
-        setError(error.message)
-        setDisabling(false)
-        return
-      }
-    }
-    setVerifiedFactorIds([])
-    setConfirmDisable(false)
-    setDisabling(false)
-    setState('disabled')
-  }
-
-  if (state === 'loading') {
-    return (
-      <Section title={t('title')}>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loading')}
-        </div>
-      </Section>
-    )
-  }
-
-  return (
-    <Section title={t('title')}>
-      {error && (
-        <p className="text-xs text-destructive flex items-center gap-1 mb-3">
-          <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {error}
-        </p>
-      )}
-
-      {state === 'disabled' && (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            {t('description')}
-          </p>
-          <Button size="sm" onClick={startEnroll}>
-            <Shield className="h-3.5 w-3.5 mr-1.5" />
-            {t('enable')}
-          </Button>
-        </div>
-      )}
-
-      {state === 'enrolling' && (
-        <div className="space-y-4">
-          <p className="text-xs text-muted-foreground">
-            {t('scanHelp')}
-          </p>
-          {qrCode && (
-            <div className="flex justify-center">
-              <img src={qrCode} alt={t('qrAlt')} className="h-48 w-48 rounded border" />
-            </div>
-          )}
-          {secret && (
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">{t('manualCode')}</p>
-              <code className="text-xs bg-muted px-2 py-1 rounded select-all">{secret}</code>
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="mfa-enroll-code">{t('verificationCode')}</Label>
-            <Input
-              ref={inputRef}
-              id="mfa-enroll-code"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={code}
-              onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={e => e.key === 'Enter' && verifyEnroll()}
-              autoComplete="one-time-code"
-              placeholder="000000"
-              className="text-center font-mono text-lg tracking-widest max-w-48 mx-auto"
-            />
-          </div>
-          <div className="flex gap-2 justify-center">
-            <Button size="sm" onClick={verifyEnroll} disabled={verifying || code.length !== 6}>
-              {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-              {t('verifyEnable')}
-            </Button>
-            <Button size="sm" variant="outline" onClick={cancelEnroll} disabled={verifying}>
-              {t('cancel')}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {state === 'enabled' && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Check className="h-4 w-4 text-green-600 shrink-0" />
-            <span>{t('enabled')}</span>
-          </div>
-          {!confirmDisable ? (
-            <Button size="sm" variant="outline" onClick={() => setConfirmDisable(true)}>
-              {t('disable')}
-            </Button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="destructive" onClick={disableMfa} disabled={disabling}>
-                {disabling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                {t('confirmDisable')}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setConfirmDisable(false)} disabled={disabling}>
-                {t('cancel')}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </Section>
   )
 }
 
@@ -795,123 +550,20 @@ function FeatureVisibilitySection({
   )
 }
 
-// ──────────────────────────── Notification Preferences ────────────────────────────
+// ──────────────────────────── Fund Name ────────────────────────────
 
-function NotificationPreferencesSection() {
-  const t = useTranslations('Settings.page.notifications')
-  const [level, setLevel] = useState<string>('mentions')
-  const [subscribedIds, setSubscribedIds] = useState<string[]>([])
-  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/settings/notifications').then(r => r.json()),
-      fetch('/api/companies').then(r => r.json()),
-    ]).then(([prefs, companiesData]) => {
-      if (prefs.level) setLevel(prefs.level)
-      if (prefs.subscribedCompanyIds) setSubscribedIds(prefs.subscribedCompanyIds)
-      if (Array.isArray(companiesData)) {
-        setCompanies(companiesData.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })).sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)))
-      }
-    }).finally(() => setLoading(false))
-  }, [])
-
-  const save = async (newLevel: string, newSubscribedIds?: string[]) => {
-    setSaving(true)
-    const body: Record<string, unknown> = { level: newLevel }
-    if (newSubscribedIds !== undefined) body.subscribedCompanyIds = newSubscribedIds
-    const res = await fetch('/api/settings/notifications', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    setSaving(false)
-    if (res.ok) {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    }
-  }
-
-  const handleLevelChange = (newLevel: string) => {
-    setLevel(newLevel)
-    save(newLevel)
-  }
-
-  const toggleCompany = (companyId: string) => {
-    const next = subscribedIds.includes(companyId)
-      ? subscribedIds.filter(id => id !== companyId)
-      : [...subscribedIds, companyId]
-    setSubscribedIds(next)
-    save(level, next)
-  }
-
-  const options = ['all', 'mentions', 'none'] as const
-
+function FundIdentitySection({ slug, emailSubdomain }: { slug: string; emailSubdomain: string | null }) {
+  const t = useTranslations('Settings.page.fundIdentity')
   return (
-    <Section title={t('title')}>
-      {loading ? (
-        <div className="h-16 bg-muted rounded animate-pulse" />
-      ) : (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground mb-3">
-            {t('description')}
-          </p>
-          {options.map(opt => (
-            <label
-              key={opt}
-              className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
-                level === opt ? 'border-foreground/30 bg-accent/50' : 'hover:bg-accent/30'
-              }`}
-            >
-              <input
-                type="radio"
-                name="note-notification-level"
-                value={opt}
-                checked={level === opt}
-                onChange={() => handleLevelChange(opt)}
-                className="mt-0.5"
-              />
-              <div>
-                <span className="text-sm font-medium">{t(`options.${opt}.label`)}</span>
-                <p className="text-xs text-muted-foreground">{t(`options.${opt}.description`)}</p>
-              </div>
-            </label>
-          ))}
-
-          {level === 'mentions' && companies.length > 0 && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs font-medium mb-2">{t('followCompanies')}</p>
-              <p className="text-xs text-muted-foreground mb-2">
-                {t('followHelp')}
-              </p>
-              <div className="max-h-48 overflow-y-auto space-y-1">
-                {companies.map(c => (
-                  <label key={c.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent/30 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={subscribedIds.includes(c.id)}
-                      onChange={() => toggleCompany(c.id)}
-                      className="rounded"
-                    />
-                    <span className="text-sm">{c.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {saving && <p className="text-xs text-muted-foreground mt-2">{t('saving')}</p>}
-          {saved && <p className="text-xs text-green-600 mt-2">{t('saved')}</p>}
-        </div>
-      )}
+    <Section id="fund-identity" title={t('title')}>
+      <p className="mb-4 text-xs leading-5 text-muted-foreground">{t('description')}</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5"><Label htmlFor="fund-tenant-slug">{t('tenant')}</Label><Input id="fund-tenant-slug" value={slug} readOnly className="font-mono" aria-describedby="fund-tenant-slug-help" /><p id="fund-tenant-slug-help" className="text-xs text-muted-foreground">{t('tenantHelp')}</p></div>
+        <div className="space-y-1.5"><Label htmlFor="fund-email-subdomain">{t('email')}</Label><Input id="fund-email-subdomain" value={emailSubdomain ?? ''} readOnly className="font-mono" aria-describedby="fund-email-subdomain-help" /><p id="fund-email-subdomain-help" className="text-xs text-muted-foreground">{emailSubdomain ? t('emailHelp') : t('legacyMissing')}</p></div>
+      </div>
     </Section>
   )
 }
-
-// ──────────────────────────── Fund Name ────────────────────────────
 
 function FundNameSection({ name, logo, address, onSaved }: { name: string; logo: string | null; address: string | null; onSaved: () => void }) {
   const t = useTranslations('Settings.page.fund')
@@ -950,6 +602,11 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
       e.target.value = ''
       return
     }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setLogoError(t('invalidFileType'))
+      e.target.value = ''
+      return
+    }
 
     const reader = new FileReader()
     reader.onload = async () => {
@@ -966,7 +623,8 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
         onSaved()
       } else {
         setLogoPreview(logo)
-        setLogoError(t('uploadFailed'))
+        const body = await res.json().catch(() => null) as { error?: string } | null
+        setLogoError(body?.error ?? t('uploadFailed'))
       }
     }
     reader.readAsDataURL(file)
@@ -989,7 +647,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
   }
 
   return (
-    <Section title={t('title')}>
+    <Section id="fund-branding" title={t('title')}>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
         <div className="flex-1">
           <Label>{t('name')}</Label>
@@ -1027,7 +685,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
               {t('chooseFile')}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={handleLogoFile}
                 className="hidden"
               />
@@ -1038,7 +696,7 @@ function FundNameSection({ name, logo, address, onSaved }: { name: string; logo:
               {t('replace')}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={handleLogoFile}
                 className="hidden"
               />
@@ -2044,14 +1702,14 @@ function AiSummaryPromptReadOnly({ prompt }: { prompt: string | null }) {
 function InboundEmailSection({
   provider,
   postmarkAddress,
-  postmarkToken,
+  postmarkWebhookConfigured,
   mailgunInboundDomain,
   hasMailgunSigningKey,
   onSaved,
 }: {
   provider: string | null
   postmarkAddress: string
-  postmarkToken: string
+  postmarkWebhookConfigured: boolean
   mailgunInboundDomain: string
   hasMailgunSigningKey: boolean
   onSaved: () => void
@@ -2067,11 +1725,31 @@ function InboundEmailSection({
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [postmarkToken, setPostmarkToken] = useState('')
+  const [postmarkConfigured, setPostmarkConfigured] = useState(postmarkWebhookConfigured)
+  const [postmarkTokenBusy, setPostmarkTokenBusy] = useState(false)
+  const [postmarkTokenError, setPostmarkTokenError] = useState<string | null>(null)
   const defaultBase = typeof window !== 'undefined' ? window.location.origin : ''
   const [baseUrl, setBaseUrl] = useState(defaultBase)
 
   const postmarkWebhookUrl = `${baseUrl}/api/inbound-email?token=${postmarkToken}`
   const mailgunWebhookUrl = `${baseUrl}/api/inbound-email/mailgun`
+
+  const rotatePostmarkWebhookToken = async () => {
+    setPostmarkTokenBusy(true)
+    setPostmarkTokenError(null)
+    try {
+      const response = await fetch('/api/settings/postmark-webhook-token', { method: 'POST' })
+      const body = await response.json().catch(() => null) as { webhookToken?: string; error?: string } | null
+      if (!response.ok || !body?.webhookToken) throw new Error(body?.error || t('webhookTokenError'))
+      setPostmarkToken(body.webhookToken)
+      setPostmarkConfigured(true)
+    } catch (error) {
+      setPostmarkTokenError(error instanceof Error ? error.message : t('webhookTokenError'))
+    } finally {
+      setPostmarkTokenBusy(false)
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -2173,8 +1851,15 @@ function InboundEmailSection({
                 <p className="text-xs text-muted-foreground mt-1">
                   {t('postmarkWebhookHelp')}
                 </p>
+                <p className="mt-1 text-xs font-medium text-amber-700">{t('webhookTokenOnce')}</p>
               </div>
             )}
+            {!postmarkToken && postmarkConfigured && <p className="text-xs text-muted-foreground">{t('webhookConfigured')}</p>}
+            <Button type="button" variant="outline" size="sm" onClick={() => void rotatePostmarkWebhookToken()} disabled={postmarkTokenBusy}>
+              {postmarkTokenBusy && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              {postmarkConfigured ? t('rotateWebhookToken') : t('generateWebhookToken')}
+            </Button>
+            {postmarkTokenError && <p className="text-xs text-destructive" role="alert">{postmarkTokenError}</p>}
           </>
         )}
 
@@ -3721,7 +3406,7 @@ function OutboundEmailSection({
                 placeholder={hasResendKey ? '••••••••' : 're_...'}
               />
             </div>
-            <FundResendOutboundProviderFields onChanged={onSaved} />
+            <FundResendOutboundProviderFields />
           </>
         )}
 
@@ -4099,27 +3784,36 @@ function WhitelistSection() {
 interface Member {
   id: string
   userId: string
-  email: string
-  role: string
+  name: string | null
+  role: 'admin' | 'member'
+  isFounder: boolean
+  businessEmail: string | null
+  externalEmail?: string | null
+  mailboxActive: boolean
   createdAt: string
 }
 
-interface JoinRequest {
+interface FundInvitation {
   id: string
   email: string
+  role: 'admin' | 'member'
+  status: 'pending' | 'accepted' | 'revoked' | 'replaced' | 'expired'
+  expiresAt: string
   createdAt: string
-  status: string
-  claimedAt: string | null
+  acceptedAt: string | null
 }
 
 // `featureVisibility` is threaded through to the access grid so it re-derives what's grantable the
 // moment a switch above changes — see AccessGrid's note.
-function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; featureVisibility: Record<string, string> }) {
+function TeamSection({ isAdmin, isFounder, featureVisibility }: { isAdmin: boolean; isFounder: boolean; featureVisibility: Record<string, string> }) {
   const locale = useLocale()
   const t = useTranslations('Settings.page.team')
   const [members, setMembers] = useState<Member[]>([])
-  const [pendingRequests, setPendingRequests] = useState<JoinRequest[]>([])
+  const [invitations, setInvitations] = useState<FundInvitation[]>([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member')
   const [loading, setLoading] = useState(true)
+  const [inviting, setInviting] = useState(false)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [memberActionError, setMemberActionError] = useState<string | null>(null)
@@ -4129,28 +3823,50 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
     if (res.ok) {
       const data = await res.json()
       setMembers(data.members)
-      setPendingRequests(data.pendingRequests)
+      setInvitations(data.invitations)
     }
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  const handleRequest = async (requestId: string, action: 'approve' | 'reject') => {
-    setProcessingId(requestId)
+  const handleInvite = async () => {
+    setInviting(true)
     setMemberActionError(null)
     try {
-      const res = await fetch(`/api/settings/members/${requestId}`, {
-        method: 'PATCH',
+      const res = await fetch('/api/settings/members/invitations', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
       })
       if (res.ok) {
+        setInviteEmail('')
+        setInviteRole('member')
         await load()
         return
       }
       const body = await res.json().catch(() => null) as { error?: string } | null
-      setMemberActionError(body?.error ?? t('updateError'))
+      setMemberActionError(body?.error ?? t('inviteError'))
+    } catch {
+      setMemberActionError(t('inviteError'))
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  const handleInvitation = async (invitationId: string, action: 'resend' | 'revoke') => {
+    setProcessingId(invitationId)
+    setMemberActionError(null)
+    try {
+      const res = await fetch(`/api/settings/members/invitations/${invitationId}`, {
+        method: action === 'resend' ? 'PATCH' : 'DELETE',
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { error?: string } | null
+        setMemberActionError(body?.error ?? t('updateError'))
+      } else {
+        await load()
+      }
     } catch {
       setMemberActionError(t('updateError'))
     } finally {
@@ -4167,28 +3883,47 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
   }
 
   return (
-    <Section title={t('title')}>
+    <Section id="members" title={t('title')}>
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('loading')}
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Members list */}
+          {isAdmin && (
+            <div className="rounded-lg border bg-muted/20 p-4">
+              <p className="text-sm font-medium">{t('inviteTitle')}</p>
+              <p id="fund-invite-description" className="mt-1 text-xs leading-5 text-muted-foreground">{t('inviteDescription')}</p>
+              <form className="mt-3 space-y-2" onSubmit={event => { event.preventDefault(); void handleInvite() }}>
+                <Label htmlFor="fund-invite-email">{t('emailPlaceholder')}</Label>
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_auto]"><Input id="fund-invite-email" type="email" value={inviteEmail} onChange={event => setInviteEmail(event.target.value)} placeholder={t('emailPlaceholder')} autoComplete="off" aria-describedby="fund-invite-description" />
+                <Select value={inviteRole} onValueChange={value => setInviteRole(value as 'admin' | 'member')}>
+                  <SelectTrigger aria-label={t('role')}><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="member">{t('member')}</SelectItem>{isFounder && <SelectItem value="admin">{t('admin')}</SelectItem>}</SelectContent>
+                </Select>
+                <Button type="submit" disabled={inviting || !inviteEmail.trim()}>
+                  {inviting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}{t('sendInvite')}
+                </Button>
+                </div>
+              </form>
+            </div>
+          )}
+          {memberActionError && <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">{memberActionError}</p>}
+
+          <div>
+            <p className="mb-2 text-xs font-medium">{t('members')}</p>
           <div className="border rounded-lg divide-y">
             {members.map(m => (
-              <div key={m.id} className="flex items-center justify-between px-3 py-2">
-                <span className="text-sm">{m.email}</span>
-                <div className="flex items-center gap-2">
-                  {m.role === 'admin' ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary rounded-full px-2 py-0.5">
-                      <Shield className="h-2.5 w-2.5" />
-                      {t('admin')}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="text-xs text-muted-foreground">{t('member')}</span>
-                      {isAdmin && confirmRemoveId === m.id ? (
+              <div key={m.id} className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium">{m.name || t('unnamed')}</span>{m.isFounder && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('founder')}</span>}</div>
+                  <div className="mt-1 flex min-w-0 flex-col gap-0.5 text-xs text-muted-foreground"><span className="break-all">{m.businessEmail || t('noBusinessEmail')}</span>{isAdmin && m.externalEmail && <span className="break-all">{t('externalEmail')}: {m.externalEmail}</span>}</div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    {m.role === 'admin' && <Shield className="h-2.5 w-2.5" />}{m.role === 'admin' ? t('admin') : t('member')}
+                  </span>
+                  {!m.isFounder && isAdmin && (confirmRemoveId === m.id ? (
                         <div className="flex items-center gap-1">
                           <Button
                             size="sm"
@@ -4208,7 +3943,7 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                             {t('cancel')}
                           </Button>
                         </div>
-                      ) : isAdmin ? (
+                      ) : (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -4217,53 +3952,42 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
                         >
                           {t('remove')}
                         </Button>
-                      ) : null}
-                    </>
-                  )}
+                      ))}
                 </div>
               </div>
             ))}
           </div>
+          </div>
 
-          {/* Pending requests (admin only) */}
-          {isAdmin && pendingRequests.length > 0 && (
+          {isAdmin && invitations.length > 0 && (
             <div>
-              <p className="text-xs font-medium mb-2">{t('pending')}</p>
-              {memberActionError && (
-                <p className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">
-                  {memberActionError}
-                </p>
-              )}
+              <p className="text-xs font-medium mb-2">{t('invitations')}</p>
               <div className="border rounded-lg divide-y">
-                {pendingRequests.map(r => (
-                  <div key={r.id} className="flex items-center justify-between px-3 py-2">
-                    <div>
-                      <span className="text-sm">{r.email}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(r.createdAt))}
-                      </span>
+                {invitations.map(invitation => (
+                  <div key={invitation.id} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 break-all text-sm">{invitation.email}</span><span className="rounded-full bg-muted px-2 py-0.5 text-[10px]">{t(`statuses.${invitation.status}`)}</span></div>
+                      <span className="text-xs text-muted-foreground">{t('invitedAs', { role: invitation.role === 'admin' ? t('admin') : t('member'), date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(invitation.createdAt)) })}</span>
                     </div>
-                    <div className="flex gap-1">
+                    {invitation.status === 'pending' && <div className="flex gap-1">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleRequest(r.id, 'reject')}
-                        disabled={processingId === r.id || r.status === 'provisioning'}
+                        onClick={() => void handleInvitation(invitation.id, 'revoke')}
+                        disabled={processingId === invitation.id}
                         className="h-7 text-xs"
                       >
-                        {t('reject')}
+                        {t('revoke')}
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => handleRequest(r.id, 'approve')}
-                        disabled={processingId === r.id}
+                        onClick={() => void handleInvitation(invitation.id, 'resend')}
+                        disabled={processingId === invitation.id}
                         className="h-7 text-xs"
                       >
-                        {processingId === r.id
-                          ? <Loader2 className="h-3 w-3 animate-spin" />
-                          : r.status === 'provisioning' ? t('retryApproval') : t('approve')}
+                        {processingId === invitation.id ? <Loader2 className="h-3 w-3 animate-spin" /> : t('resend')}
                       </Button>
-                    </div>
+                    </div>}
                   </div>
                 ))}
               </div>
@@ -4282,75 +4006,6 @@ function TeamSection({ isAdmin, featureVisibility }: { isAdmin: boolean; feature
         </div>
       )}
     </Section>
-  )
-}
-
-// ──────────────────────────── Danger Zone ────────────────────────────
-
-function DangerZone({ onDeleted }: { onDeleted: () => void }) {
-  const t = useTranslations('Settings.page.danger')
-  const [open, setOpen] = useState(false)
-  const [confirm, setConfirm] = useState('')
-  const [deleting, setDeleting] = useState(false)
-
-  const handleDelete = async () => {
-    setDeleting(true)
-    const res = await fetch('/api/settings', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirm }),
-    })
-    setDeleting(false)
-    if (res.ok) {
-      setOpen(false)
-      onDeleted()
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-destructive/30 p-5">
-      <h2 className="text-sm font-medium text-destructive mb-1 flex items-center gap-1.5"><Lock className="h-3 w-3 text-destructive" />{t('title')}</h2>
-      <p className="text-xs text-muted-foreground mb-3">
-        {t('description')}
-      </p>
-      <Button variant="destructive" size="sm" onClick={() => setOpen(true)}>
-        {t('deleteAll')}
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('deleteAll')}</DialogTitle>
-            <DialogDescription>
-              {t('dialogDescription')}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div>
-            <Label>
-              {t.rich('confirmHelp', { code: chunks => <code className="text-xs bg-muted px-1 rounded">{chunks}</code> })}
-            </Label>
-            <Input
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="DELETE ALL DATA"
-              className="mt-1"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>{t('cancel')}</Button>
-            <Button
-              variant="destructive"
-              disabled={confirm !== 'DELETE ALL DATA' || deleting}
-              onClick={handleDelete}
-            >
-              {deleting ? t('deleting') : t('deleteEverything')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
   )
 }
 

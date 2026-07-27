@@ -1,7 +1,14 @@
+import { RESERVED_FUND_NAMESPACE_LABELS } from '@/lib/fund-namespace'
+
 export const FUND_TENANT_SLUG_HEADER = 'x-reporting-tenant-slug'
 const FORGED_TENANT_FUND_HEADER = 'x-reporting-tenant-fund-id'
 
-export const RESERVED_FUND_SLUGS = new Set([
+export const RESERVED_FUND_SLUGS = RESERVED_FUND_NAMESPACE_LABELS
+
+// These labels have always been owned by the platform Host router. The wider
+// namespace union above is enforced for every newly-created Fund, but cannot
+// be used to reclassify historical tenant Hosts that pre-date that union.
+const PLATFORM_HOST_LABELS = new Set([
   'www',
   'api',
   'auth',
@@ -35,11 +42,17 @@ interface RequestOriginSource extends RequestHostSource {
 }
 
 export function isValidFundSlug(value: string): boolean {
+  return isRoutableFundSlug(value)
+    && !RESERVED_FUND_SLUGS.has(value)
+}
+
+/** Accept a persisted legacy tenant label without weakening new-Fund rules. */
+export function isRoutableFundSlug(value: string): boolean {
   return value.length >= 3
     && value.length <= 63
     && DNS_LABEL.test(value)
     && !value.startsWith('xn--')
-    && !RESERVED_FUND_SLUGS.has(value)
+    && !PLATFORM_HOST_LABELS.has(value)
 }
 
 function normalizeRootDomain(rawRoot: string): string {
@@ -91,10 +104,10 @@ export function classifyFundHost(
   if (label.includes('.') || !DNS_LABEL.test(label) || label.startsWith('xn--')) {
     return { mode: 'invalid', reason: 'Invalid Fund tenant label' }
   }
-  if (RESERVED_FUND_SLUGS.has(label)) {
+  if (PLATFORM_HOST_LABELS.has(label)) {
     return { mode: 'reserved', hostname, rootDomain, label }
   }
-  if (!isValidFundSlug(label)) return { mode: 'invalid', reason: 'Invalid Fund tenant slug' }
+  if (!isRoutableFundSlug(label)) return { mode: 'invalid', reason: 'Invalid Fund tenant slug' }
   return { mode: 'tenant', hostname, rootDomain, slug: label }
 }
 
@@ -118,7 +131,7 @@ export function canonicalFundOrigin(
 ): string {
   const rawRoot = env.FUND_WORKSPACE_ROOT_DOMAIN
   if (!rawRoot?.trim()) throw new Error('Fund workspace root domain is not configured')
-  if (!isValidFundSlug(slug)) throw new Error('Invalid Fund slug')
+  if (!isRoutableFundSlug(slug)) throw new Error('Invalid Fund slug')
 
   const root = normalizeRootDomain(rawRoot)
   return canonicalOriginForHostname(`${slug}.${root}`, root, env)
@@ -139,7 +152,7 @@ export function canonicalFundRequestOrigin(
 ): string {
   const context = classifyFundRequestHost(request, env.FUND_WORKSPACE_ROOT_DOMAIN)
   const fallbackOrigin = new URL(request.url).origin
-  const requestEnv = withTrustedLocalRequestPort(request, context, env)
+  const requestEnv = fundWorkspaceEnvironmentForRequest(request, env)
   if (context.mode === 'legacy') return fallbackOrigin
   if (context.mode === 'tenant') return canonicalFundOrigin(context.slug, requestEnv)
   if (context.mode === 'platform') return canonicalPlatformOrigin(requestEnv)
@@ -147,6 +160,15 @@ export function canonicalFundRequestOrigin(
     return canonicalOriginForHostname(context.hostname, context.rootDomain, requestEnv)
   }
   throw new Error('Invalid Fund request Host')
+}
+
+/** Carry a validated localhost listener port into links for sibling tenant Hosts. */
+export function fundWorkspaceEnvironmentForRequest(
+  request: RequestOriginSource,
+  env: FundWorkspaceEnvironment = process.env,
+): FundWorkspaceEnvironment {
+  const context = classifyFundRequestHost(request, env.FUND_WORKSPACE_ROOT_DOMAIN)
+  return withTrustedLocalRequestPort(request, context, env)
 }
 
 function withTrustedLocalRequestPort(

@@ -11,21 +11,22 @@ const SETTINGS_ROUTE = readFileSync(
 )
 
 describe('Fund email settings API contract', () => {
-  it('derives user and Fund identity from Session and separates member from admin actions', () => {
+  it('derives user and Fund identity from Session and keeps mailbox writes on the Personal API', () => {
     expect(ROUTE).toMatch(/auth\.getUser\(\)/)
     expect(ROUTE).toMatch(/assertReadAccess\(admin, user\.id\)/)
     expect(ROUTE).toMatch(/assertWriteAccess\(admin, user\.id\)/)
     expect(ROUTE).toMatch(/assertAdminAccess\(admin, user\.id\)/)
-    expect(ROUTE).toMatch(/setCurrentUserMailbox[\s\S]*fundId: access\.fundId[\s\S]*userId: user\.id/)
+    expect(ROUTE).not.toMatch(/setCurrentUserMailbox|action === 'set_mailbox'/)
     expect(ROUTE).not.toMatch(/body\.(?:fundId|userId|from|replyTo)/)
   })
 
   it('never returns or selects stored secrets and manages webhook secrets server-side', () => {
     expect(ROUTE).not.toMatch(/select\([^)]*(?:api_key_encrypted|webhook_secret_encrypted|route_token_hash)/i)
     expect(ROUTE).not.toMatch(/sendingApiKey\s*[:,]\s*(?:status|connection)|receivingApiKey\s*[:,]\s*(?:status|connection)/)
-    expect(ROUTE).toMatch(/action === 'configure_identity'/)
+    expect(ROUTE).not.toMatch(/action === 'configure_identity'/)
     expect(ROUTE).not.toMatch(/action === 'configure_outbound'/)
     expect(ROUTE).toMatch(/action === 'configure_inbound'/)
+    expect(ROUTE).toMatch(/requiredExistingIdentity\(status\.emailSubdomain\)/)
     expect(ROUTE).toMatch(/action === 'recreate_inbound_webhook'/)
     expect(ROUTE).not.toMatch(/requiredString\(body\.webhookSecret\)/)
     expect(ROUTE).not.toMatch(/action === 'rotate_route'/)

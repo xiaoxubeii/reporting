@@ -15,6 +15,11 @@ describe('Fund email domain and identity validation', () => {
     expect(normalizeFundEmailSlug('Fund-42')).toBe('fund-42')
   })
 
+  it('renders an immutable legacy domain without reopening it for new Funds', () => {
+    expect(deriveFundEmailDomain('mail', 'fundworkspace.com')).toBe('mail.fundworkspace.com')
+    expect(() => normalizeFundEmailSlug('mail')).toThrow(/reserved/i)
+  })
+
   it.each(['www', 'api', 'mail', 'auth', 'admin', 'support', 'postmaster', 'abuse']) (
     'rejects reserved Fund slug %s',
     (value) => expect(() => normalizeFundEmailSlug(value)).toThrow(/reserved/i),

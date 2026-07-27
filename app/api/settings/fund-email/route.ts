@@ -16,11 +16,9 @@ import {
 import { FundEmailError } from '@/lib/email/errors'
 import {
   createSupabaseFundEmailMailboxStore,
-  setCurrentUserMailbox,
 } from '@/lib/email/mailboxes'
 import {
   configureFundEmailInboundSettings,
-  configureFundEmailIdentity,
   resolveFundEmailWebhookBaseUrl,
 } from '@/lib/email/fund-settings'
 import {
@@ -34,8 +32,6 @@ import { rateLimit } from '@/lib/rate-limit'
 
 const MAX_SETTINGS_BODY_BYTES = 8 * 1024
 const SETTINGS_ACTIONS = new Set([
-  'set_mailbox',
-  'configure_identity',
   'configure_inbound',
   'recreate_inbound_webhook',
   'refresh_status',
@@ -101,43 +97,14 @@ export async function PATCH(request: NextRequest) {
     }
     const limited = await limitSettingsAction(access.fundId, user.id, action)
     if (limited) return limited
-    if (action === 'set_mailbox') {
-      const mailbox = await setCurrentUserMailbox(admin, {
-        fundId: access.fundId,
-        userId: user.id,
-        localPart: requiredString(body.localPart),
-        displayName: requiredString(body.displayName),
-      })
-      const status = await getFundEmailConnectionStatus(admin, access.fundId)
-      return NextResponse.json({
-        mailbox: {
-          localPart: mailbox.localPart,
-          displayName: mailbox.displayName,
-          active: mailbox.active,
-          address: status.domain
-            ? `${mailbox.localPart}@${status.domain}`
-            : null,
-        },
-      })
-    }
-
     const adminAccess = await assertAdminAccess(admin, user.id)
     if (adminAccess instanceof NextResponse) return adminAccess
     const status = await getFundEmailConnectionStatus(admin, adminAccess.fundId)
-    if (action === 'configure_identity') {
-      return NextResponse.json(
-        await configureFundEmailIdentity(admin, {
-          fundId: adminAccess.fundId,
-          actorUserId: user.id,
-          slug: configurationSlug(status.emailSubdomain, body.slug),
-        }),
-      )
-    }
     if (action === 'configure_inbound') {
       const configured = await configureFundEmailInboundSettings(admin, {
         fundId: adminAccess.fundId,
         actorUserId: user.id,
-        slug: configurationSlug(status.emailSubdomain, body.slug),
+        slug: requiredExistingIdentity(status.emailSubdomain),
         receivingApiKey: requiredString(body.receivingApiKey),
         publicBaseUrl: publicBaseUrl(request),
       })
@@ -160,7 +127,7 @@ export async function PATCH(request: NextRequest) {
         await configureFundEmailInboundSettings(admin, {
           fundId: adminAccess.fundId,
           actorUserId: user.id,
-          slug: configurationSlug(status.emailSubdomain, body.slug),
+          slug: requiredExistingIdentity(status.emailSubdomain),
           receivingApiKey: current.receivingApiKey,
           publicBaseUrl: publicBaseUrl(request),
         }),
@@ -275,7 +242,7 @@ async function limitSettingsAction(
 ): Promise<NextResponse | null> {
   return rateLimit({
     key: `fund-email-settings:${fundId}:${userId}:${action}`,
-    limit: action === 'refresh_status' || action === 'set_mailbox' ? 30 : 10,
+    limit: action === 'refresh_status' ? 30 : 10,
     windowSeconds: 300,
     databaseFailure: 'deny',
   })
@@ -289,8 +256,15 @@ function connectionChangedDuringDelete(): FundEmailError {
   )
 }
 
-function configurationSlug(existing: string | null, input: unknown): string {
-  return existing ?? requiredString(input)
+function requiredExistingIdentity(existing: string | null): string {
+  if (!existing) {
+    throw new FundEmailError(
+      'invalid_configuration',
+      'Fund email identity must be reserved during Fund creation.',
+      409,
+    )
+  }
+  return existing
 }
 
 async function authenticatedContext() {

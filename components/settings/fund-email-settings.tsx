@@ -48,172 +48,17 @@ interface FundEmailStatus {
 
 const STATUS_CHANGED_EVENT = 'fund-email-status-changed'
 
-export function FundResendOutboundProviderFields({
-  onChanged,
-}: {
-  onChanged?: () => void
-}) {
+export function FundResendOutboundProviderFields() {
   const t = useTranslations('Settings.fundEmail')
-  const { status, loading, loadError, reload } = useFundEmailStatus()
-  const [slug, setSlug] = useState('')
-  const [localPart, setLocalPart] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!status) return
-    if (status.emailSubdomain) setSlug(status.emailSubdomain)
-    setLocalPart(status.mailbox?.localPart ?? '')
-    setDisplayName(status.mailbox?.displayName ?? '')
-  }, [status])
-
-  async function run(action: string, operation: () => Promise<void>) {
-    setBusy(action)
-    setError(null)
-    setNotice(null)
-    try {
-      await operation()
-    } catch (cause) {
-      setError(errorMessage(cause, t('errors.save')))
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function configureIdentity() {
-    await run('identity', async () => {
-      await settingsRequest(
-        'PATCH',
-        {
-          action: 'configure_identity',
-          slug,
-        },
-        t('errors.save'),
-      )
-      setNotice(t('outboundSaved'))
-      notifyStatusChanged()
-      await reload()
-      onChanged?.()
-    })
-  }
-
-  async function saveMailbox() {
-    await run('mailbox', async () => {
-      await settingsRequest(
-        'PATCH',
-        {
-          action: 'set_mailbox',
-          localPart,
-          displayName,
-        },
-        t('errors.save'),
-      )
-      setNotice(t('mailbox.saved'))
-      notifyStatusChanged()
-      await reload()
-    })
-  }
+  const { status, loading, loadError } = useFundEmailStatus()
 
   if (loading) return <LoadingSection />
   if (!status) return <LoadError message={loadError ?? t('errors.load')} />
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
-      {status.isAdmin && (
-        <>
-          <DomainField
-            id="fund-email-outbound-slug"
-            slug={slug}
-            baseDomain={status.baseDomain}
-            locked={Boolean(status.emailSubdomain)}
-            onChange={setSlug}
-            label={t('slug')}
-            help={t('slugHelp')}
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={configureIdentity}
-              disabled={busy !== null || !slug.trim()}
-            >
-              {busy === 'identity' && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {status.emailSubdomain
-                ? t('domainConfigured')
-                : t('configureDomain')}
-            </Button>
-            <StatusBadge
-              label={t('domain')}
-              status={status.domainStatus}
-              statusText={translatedStatus(t, status.domainStatus)}
-            />
-          </div>
-        </>
-      )}
-
-      <div className="border-t pt-4">
-        <h3 className="text-sm font-medium">{t('mailbox.title')}</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t('mailbox.description')}
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="fund-email-local-part">
-              {t('mailbox.localPart')}
-            </Label>
-            <div className="flex items-center rounded-md border bg-background focus-within:ring-1 focus-within:ring-ring">
-              <Input
-                id="fund-email-local-part"
-                className="border-0 focus-visible:ring-0"
-                value={localPart}
-                onChange={(event) => setLocalPart(event.target.value)}
-                placeholder="alice"
-              />
-              <span className="pr-3 text-sm text-muted-foreground">
-                @{status.domain ?? t('mailbox.domainPending')}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="fund-email-display-name">
-              {t('mailbox.displayName')}
-            </Label>
-            <Input
-              id="fund-email-display-name"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder={t('mailbox.displayNamePlaceholder')}
-            />
-          </div>
-        </div>
-        {status.mailbox?.address && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('mailbox.current', { address: status.mailbox.address })}
-          </p>
-        )}
-        <Button
-          className="mt-3"
-          size="sm"
-          variant="outline"
-          onClick={saveMailbox}
-          disabled={
-            busy !== null ||
-            !status.domain ||
-            !localPart.trim() ||
-            !displayName.trim()
-          }
-        >
-          {busy === 'mailbox' && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          {t('mailbox.save')}
-        </Button>
-      </div>
-      <Feedback notice={notice} error={error} />
+      <ImmutableDomain status={status} />
+      <StatusBadge label={t('sending')} status={status.sendingStatus} statusText={translatedStatus(t, status.sendingStatus)} />
     </div>
   )
 }
@@ -225,15 +70,10 @@ export function FundResendInboundProviderFields({
 }) {
   const t = useTranslations('Settings.fundEmail')
   const { status, loading, loadError, reload } = useFundEmailStatus()
-  const [slug, setSlug] = useState('')
   const [receivingKey, setReceivingKey] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (status?.emailSubdomain) setSlug(status.emailSubdomain)
-  }, [status?.emailSubdomain])
 
   async function run(action: string, operation: () => Promise<void>) {
     setBusy(action)
@@ -254,7 +94,6 @@ export function FundResendInboundProviderFields({
         'PATCH',
         {
           action: 'configure_inbound',
-          slug,
           receivingApiKey: receivingKey,
         },
         t('errors.save'),
@@ -310,15 +149,7 @@ export function FundResendInboundProviderFields({
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
-      <DomainField
-        id="fund-email-inbound-slug"
-        slug={slug}
-        baseDomain={status.baseDomain}
-        locked={Boolean(status.emailSubdomain)}
-        onChange={setSlug}
-        label={t('slug')}
-        help={t('slugHelp')}
-      />
+      <ImmutableDomain status={status} />
       <div className="space-y-1.5">
         <Label htmlFor="fund-email-receiving-key">{t('receivingKey')}</Label>
         <Input
@@ -334,7 +165,7 @@ export function FundResendInboundProviderFields({
         <Button
           size="sm"
           onClick={configureInbound}
-          disabled={busy !== null || !slug.trim() || !receivingKey.trim()}
+          disabled={busy !== null || !status.emailSubdomain || !receivingKey.trim()}
         >
           {busy === 'inbound' && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -478,32 +309,13 @@ function notifyStatusChanged(): void {
   window.dispatchEvent(new Event(STATUS_CHANGED_EVENT))
 }
 
-function DomainField(props: {
-  id: string
-  slug: string
-  baseDomain: string
-  locked: boolean
-  onChange(value: string): void
-  label: string
-  help: string
-}) {
+function ImmutableDomain({ status }: { status: FundEmailStatus }) {
+  const t = useTranslations('Settings.fundEmail')
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={props.id}>{props.label}</Label>
-      <div className="flex items-center rounded-md border bg-background focus-within:ring-1 focus-within:ring-ring">
-        <Input
-          id={props.id}
-          className="border-0 focus-visible:ring-0"
-          value={props.slug}
-          onChange={(event) => props.onChange(event.target.value)}
-          placeholder="cci"
-          disabled={props.locked}
-        />
-        <span className="pr-3 text-sm text-muted-foreground">
-          .{props.baseDomain}
-        </span>
-      </div>
-      <p className="text-xs text-muted-foreground">{props.help}</p>
+      <Label>{t('immutableDomain')}</Label>
+      <Input value={status.domain ?? ''} readOnly />
+      <p className="text-xs text-muted-foreground">{t('immutableDomainHelp')}</p>
     </div>
   )
 }

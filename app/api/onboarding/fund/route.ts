@@ -1,178 +1,79 @@
+import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { encrypt } from '@/lib/crypto'
-import { rateLimit, getClientIp } from '@/lib/rate-limit'
-import { randomBytes } from 'crypto'
-import { headers } from 'next/headers'
 import { getTrustedRequestTenant } from '@/lib/tenancy/request'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { bootstrapFundIdentity } from '@/lib/identity/fund-bootstrap'
+import { identityErrorResponse, readIdentityJson } from '@/lib/identity/http'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
+import { fundWorkspaceEnvironmentForRequest } from '@/lib/tenancy/host'
 
-// GET — check onboarding status so the UI can resume where the user left off
-export async function GET() {
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
   const tenant = await getTrustedRequestTenant(admin as never, new Headers(headers()))
-
-  // Check if user already has a fund
-  const { data: membership } = await admin
+  const { data: membership, error } = await admin
     .from('fund_members')
     .select('fund_id')
     .eq('user_id', user.id)
     .maybeSingle()
-
-  if (!membership) {
-    return NextResponse.json({ step: 1, fundId: null, webhookToken: null })
-  }
-
-  if (tenant && membership.fund_id !== tenant.id) {
+  if (error) return NextResponse.json({ error: 'Identity service is temporarily unavailable.' }, { status: 503 })
+  if (!membership) return NextResponse.json({ state: 'create', fundId: null })
+  if (tenant && tenant.id !== membership.fund_id) {
     return NextResponse.json({ error: 'Fund not found' }, { status: 404 })
   }
-
-  const fundId = membership.fund_id
-
-  // Get fund settings to determine progress
-  const { data: settings } = await admin
-    .from('fund_settings')
-    .select('postmark_inbound_address, postmark_webhook_token, inbound_email_provider, mailgun_inbound_domain')
-    .eq('fund_id', fundId)
-    .maybeSingle()
-
-  if (!settings) {
-    return NextResponse.json({ step: 1, fundId: null, webhookToken: null })
-  }
-
-  // Check if senders are configured
-  const { count: senderCount } = await admin
-    .from('authorized_senders')
-    .select('id', { count: 'exact', head: true })
-    .eq('fund_id', fundId)
-
-  const webhookToken = settings.postmark_webhook_token
-
-  // Step 2 is complete if either Postmark or Mailgun inbound is configured
-  const inboundConfigured =
-    (settings.inbound_email_provider === 'postmark' && settings.postmark_inbound_address) ||
-    (settings.inbound_email_provider === 'mailgun' && settings.mailgun_inbound_domain) ||
-    // Legacy: postmark address set without explicit provider
-    (!settings.inbound_email_provider && settings.postmark_inbound_address)
-
-  if (!inboundConfigured) {
-    return NextResponse.json({ step: 2, fundId, webhookToken })
-  }
-
-  if (!senderCount || senderCount === 0) {
-    return NextResponse.json({ step: 3, fundId, webhookToken })
-  }
-
-  // Fully complete — redirect to dashboard
-  return NextResponse.json({ step: 'complete', fundId, webhookToken })
+  return NextResponse.json({
+    state: 'created',
+    fundId: membership.fund_id,
+    canonicalOrigin: await canonicalFundOriginForId(
+      admin as never,
+      membership.fund_id,
+      fundWorkspaceEnvironmentForRequest(req),
+    ),
+  })
 }
 
-// POST — create fund (idempotent: returns existing fund if user already has one)
 export async function POST(req: NextRequest) {
-  // Rate limit: 5 requests per 5 minutes per IP
-  const limited = await rateLimit({ key: `onboard-fund:${getClientIp(req)}`, limit: 5, windowSeconds: 300 })
+  const limited = await rateLimit({
+    key: `onboard-fund:${getClientIp(req)}`,
+    limit: 5,
+    windowSeconds: 300,
+    databaseFailure: 'deny',
+  })
   if (limited) return limited
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { fundName, claudeApiKey } = await req.json()
-  if (!fundName?.trim() || !claudeApiKey?.trim()) {
-    return NextResponse.json({ error: 'Fund name and API key are required' }, { status: 400 })
-  }
-
   const admin = createAdminClient()
   if (await getTrustedRequestTenant(admin as never, new Headers(headers()))) {
     return NextResponse.json({ error: 'Fund creation is unavailable on a Fund workspace' }, { status: 404 })
   }
 
-  // Check if user already has a fund — return it instead of creating a duplicate
-  const { data: existing } = await admin
-    .from('fund_members')
-    .select('fund_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (existing) {
-    // Update fund name and API key on the existing fund
-    await admin.from('funds').update({ name: fundName.trim() }).eq('id', existing.fund_id)
-
-    const kek = process.env.ENCRYPTION_KEY
-    if (kek) {
-      const dek = randomBytes(32).toString('hex')
-      await admin
-        .from('fund_settings')
-        .update({
-          claude_api_key_encrypted: encrypt(claudeApiKey.trim(), dek),
-          encryption_key_encrypted: encrypt(dek, kek),
-        })
-        .eq('fund_id', existing.fund_id)
+  try {
+    const body = await readIdentityJson(req)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
-
-    const { data: settings } = await admin
-      .from('fund_settings')
-      .select('postmark_webhook_token')
-      .eq('fund_id', existing.fund_id)
-      .single()
-
-    return NextResponse.json({
-      fundId: existing.fund_id,
-      webhookToken: settings?.postmark_webhook_token,
-    })
+    const result = await bootstrapFundIdentity(
+      admin,
+      {
+        actorUserId: user.id,
+        fundName: (body as Record<string, unknown>).fundName,
+        slug: (body as Record<string, unknown>).slug,
+        claudeApiKey: (body as Record<string, unknown>).claudeApiKey,
+      },
+      fundWorkspaceEnvironmentForRequest(req),
+    )
+    return NextResponse.json(result)
+  } catch (error) {
+    return identityErrorResponse(error, 'onboarding-fund')
   }
-
-  // Extract email domain for fund-level domain matching
-  const emailDomain = user.email?.split('@')[1]?.toLowerCase() || null
-
-  // Create the fund — the trigger auto-adds the creator to fund_members
-  const { data: fund, error: fundError } = await admin
-    .from('funds')
-    .insert({ name: fundName.trim(), created_by: user.id, email_domain: emailDomain })
-    .select('id')
-    .single()
-
-  if (fundError || !fund) {
-    console.error('[onboarding/fund] Failed to create fund:', fundError)
-    return NextResponse.json({ error: 'Failed to create fund' }, { status: 500 })
-  }
-
-  // Envelope encryption:
-  //   1. Generate a random per-fund DEK (data encryption key)
-  //   2. Encrypt the DEK with the master KEK from ENCRYPTION_KEY env var
-  //   3. Encrypt the Claude API key with the DEK
-  const kek = process.env.ENCRYPTION_KEY
-  if (!kek) {
-    await admin.from('funds').delete().eq('id', fund.id)
-    return NextResponse.json({ error: 'Server misconfiguration: ENCRYPTION_KEY not set' }, { status: 500 })
-  }
-
-  const dek = randomBytes(32).toString('hex')
-  const encryptionKeyEncrypted = encrypt(dek, kek)
-  const claudeApiKeyEncrypted = encrypt(claudeApiKey.trim(), dek)
-
-  // Generate a random webhook token for Postmark URL validation
-  const webhookToken = randomBytes(32).toString('hex')
-  const webhookTokenEncrypted = encrypt(webhookToken, dek)
-
-  const { error: settingsError } = await admin
-    .from('fund_settings')
-    .insert({
-      fund_id: fund.id,
-      claude_api_key_encrypted: claudeApiKeyEncrypted,
-      encryption_key_encrypted: encryptionKeyEncrypted,
-      postmark_webhook_token_encrypted: webhookTokenEncrypted,
-    })
-
-  if (settingsError) {
-    console.error('[onboarding/fund] Failed to create fund_settings:', settingsError)
-    await admin.from('funds').delete().eq('id', fund.id)
-    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 })
-  }
-
-  return NextResponse.json({ fundId: fund.id, webhookToken })
 }

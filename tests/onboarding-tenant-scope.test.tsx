@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { NextIntlClientProvider } from 'next-intl'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import OnboardingPage from '@/app/onboarding/page'
@@ -37,41 +37,34 @@ function renderTenantOnboarding(fetchMock: ReturnType<typeof vi.fn>) {
 }
 
 describe('tenant-hosted onboarding', () => {
-  it('never offers Fund creation when the signed-in email cannot join the Host Fund', async () => {
+  it('never offers Fund creation or domain matching on a tenant host', async () => {
     const fetchMock = vi.fn(async (input: string) => {
       if (input === '/api/onboarding/fund') {
-        return { ok: true, json: async () => ({ step: 1, fundId: null, webhookToken: null }) }
-      }
-      if (input === '/api/onboarding/check-domain') {
-        return { ok: true, json: async () => ({ fund: null }) }
+        return { ok: true, json: async () => ({ state: 'unaffiliated' }) }
       }
       throw new Error(`unexpected request ${input}`)
     })
 
     renderTenantOnboarding(fetchMock)
 
-    expect(await screen.findByRole('heading', { name: 'Alpha Fund workspace' })).toBeDefined()
-    expect(screen.getByText('Your account cannot join this workspace.')).toBeDefined()
+    expect(await screen.findByText('Alpha Fund is invitation-only')).toBeDefined()
+    expect(screen.getByText(/Email-domain matching is no longer used/)).toBeDefined()
     expect(screen.queryByLabelText('Fund name')).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/onboarding/check-domain')
   })
 
-  it('shows only the matching Host Fund join action without a create alternative', async () => {
+  it('offers only the exact-invitation entry point on a tenant host', async () => {
     const fetchMock = vi.fn(async (input: string) => {
       if (input === '/api/onboarding/fund') {
-        return { ok: true, json: async () => ({ step: 1, fundId: null, webhookToken: null }) }
-      }
-      if (input === '/api/onboarding/check-domain') {
-        return {
-          ok: true,
-          json: async () => ({ fund: { id: '82000000-0000-4000-8000-000000000001', name: 'Alpha Fund' } }),
-        }
+        return { ok: true, json: async () => ({ state: 'unaffiliated' }) }
       }
       throw new Error(`unexpected request ${input}`)
     })
 
     renderTenantOnboarding(fetchMock)
 
-    expect(await screen.findByRole('button', { name: 'Request to join' })).toBeDefined()
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Create a new fund instead' })).toBeNull())
+    const inviteLink = await screen.findByRole('link', { name: 'Open an invitation' })
+    expect(inviteLink.getAttribute('href')).toBe('/invite')
+    expect(screen.queryByRole('button', { name: /create/i })).toBeNull()
   })
 })

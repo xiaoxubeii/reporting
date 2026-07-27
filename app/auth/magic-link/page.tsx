@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -11,8 +12,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { OtpCodeForm } from '@/components/auth/otp-code-form'
 import { useLocale, useTranslations } from 'next-intl'
+import { safeNextPath } from '@/lib/safe-redirect'
 
 export default function MagicLinkPage() {
+  return <Suspense><MagicLinkForm /></Suspense>
+}
+
+function MagicLinkForm() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
@@ -20,6 +26,9 @@ export default function MagicLinkPage() {
   const [sent, setSent] = useState(false)
   const t = useTranslations('Auth')
   const locale = useLocale()
+  const searchParams = useSearchParams()
+  const nextPath = safeNextPath(searchParams.get('next'))
+  const destination = nextPath ?? '/'
 
   const supabase = createClient()
 
@@ -53,7 +62,7 @@ export default function MagicLinkPage() {
       setVerifying(false)
     } else {
       // Run server-side post-login side effects, then land the user.
-      window.location.href = '/auth/post-login?method=magic_link&next=/'
+      window.location.href = `/auth/post-login?method=magic_link&next=${encodeURIComponent(destination)}`
     }
   }
 
@@ -105,7 +114,7 @@ export default function MagicLinkPage() {
             )}
 
             <p className="text-center text-sm text-muted-foreground">
-              <Link href="/auth" className="text-primary underline underline-offset-4 hover:text-primary/80">
+              <Link href={`/auth${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`} className="text-primary underline underline-offset-4 hover:text-primary/80">
                 {t('signInPassword')}
               </Link>
             </p>

@@ -1,21 +1,5 @@
 import { FundEmailError } from './errors'
-
-const RESERVED_FUND_SLUGS = new Set([
-  'abuse',
-  'admin',
-  'api',
-  'app',
-  'auth',
-  'billing',
-  'docs',
-  'mail',
-  'postmaster',
-  'security',
-  'smtp',
-  'status',
-  'support',
-  'www',
-])
+import { RESERVED_FUND_NAMESPACE_LABELS } from '@/lib/fund-namespace'
 
 const RESERVED_USER_MAILBOXES = new Set([
   'abuse',
@@ -51,18 +35,29 @@ export function normalizeFundEmailSlug(input: string): string {
   if (!DNS_LABEL.test(slug)) {
     throw new FundEmailError('invalid_slug', 'A valid Fund email slug is required.')
   }
-  if (RESERVED_FUND_SLUGS.has(slug)) {
+  if (RESERVED_FUND_NAMESPACE_LABELS.has(slug)) {
     throw new FundEmailError('invalid_slug', 'This Fund email slug is reserved.')
   }
   return slug
 }
 
 export function deriveFundEmailDomain(slugInput: string, baseDomainInput?: string): string {
-  const slug = normalizeFundEmailSlug(slugInput)
+  // Stored legacy identities may pre-date the current reserved-label union.
+  // Creation paths call normalizeFundEmailSlug first; rendering an immutable
+  // persisted identity only needs DNS validation.
+  const slug = normalizePersistedFundEmailSlug(slugInput)
   const baseDomain = baseDomainInput === undefined
     ? fundEmailBaseDomain()
     : normalizeDnsDomain(baseDomainInput)
   return `${slug}.${baseDomain}`
+}
+
+function normalizePersistedFundEmailSlug(input: string): string {
+  const slug = input.trim().toLowerCase()
+  if (!DNS_LABEL.test(slug) || slug.startsWith('xn--')) {
+    throw new FundEmailError('invalid_slug', 'A valid Fund email slug is required.')
+  }
+  return slug
 }
 
 export function normalizeUserMailboxLocalPart(input: string): string {

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 /**
@@ -134,36 +135,41 @@ export function AffinityConnect() {
               </div>
             )}
 
-            <div className="flex gap-2">
-              <Input
+            <form className="space-y-2" onSubmit={event => { event.preventDefault(); void connect() }}>
+              <Label htmlFor="affinity-replacement-key">{t('replaceKey')}</Label>
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row"><Input
+                id="affinity-replacement-key"
                 type="password"
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 placeholder={t('replaceKey')}
                 autoComplete="off"
               />
-              <Button onClick={connect} disabled={saving || !apiKey.trim()}>
+              <Button type="submit" disabled={saving || !apiKey.trim()}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('update')}
               </Button>
-              <Button variant="outline" onClick={disconnect} disabled={saving}>
+              <Button type="button" variant="outline" onClick={disconnect} disabled={saving}>
                 {t('disconnect')}
               </Button>
-            </div>
+              </div>
+            </form>
           </>
         ) : (
-          <div className="flex gap-2">
-            <Input
+          <form className="space-y-2" onSubmit={event => { event.preventDefault(); void connect() }}>
+            <Label htmlFor="affinity-api-key">{t('apiKey')}</Label>
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row"><Input
+              id="affinity-api-key"
               type="password"
               value={apiKey}
               onChange={e => setApiKey(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && apiKey.trim()) connect() }}
               placeholder={t('apiKey')}
               autoComplete="off"
             />
-            <Button onClick={connect} disabled={saving || !apiKey.trim()}>
+            <Button type="submit" disabled={saving || !apiKey.trim()}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('connect')}
             </Button>
-          </div>
+            </div>
+          </form>
         )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}

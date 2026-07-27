@@ -44,6 +44,7 @@ function AuthForm() {
   // check misses `/\evil.com` (a backslash is a slash for http(s), so it resolves
   // off-origin). See lib/safe-redirect.ts.
   const nextPath = safeNextPath(searchParams.get('next'))
+  const nextQuery = nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''
 
   const supabase = createClient()
 
@@ -164,7 +165,7 @@ function AuthForm() {
               <Separator className="flex-1" />
             </div>
 
-            <Link href="/auth/magic-link">
+            <Link href={`/auth/magic-link${nextQuery}`}>
               <Button variant="outline" className="w-full">
                 {t('oneTimeCodeSignIn')}
               </Button>
@@ -172,7 +173,7 @@ function AuthForm() {
 
             <p className="text-center text-sm text-muted-foreground">
               {t('noAccount')}{' '}
-              <Link href="/auth/signup" className="text-primary underline underline-offset-4 hover:text-primary/80">
+              <Link href={`/auth/signup${nextQuery}`} className="text-primary underline underline-offset-4 hover:text-primary/80">
                 {t('createAccount')}
               </Link>
             </p>

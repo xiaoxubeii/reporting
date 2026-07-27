@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   FUND_TENANT_SLUG_HEADER,
   canonicalFundOrigin,
+  fundWorkspaceEnvironmentForRequest,
   canonicalFundRequestOrigin,
   canonicalPlatformOrigin,
   classifyFundHost,
@@ -133,6 +134,12 @@ describe('fund tenant host classification', () => {
     expect(canonicalFundRequestOrigin(request, {
       FUND_WORKSPACE_ROOT_DOMAIN: 'localhost',
     })).toBe('http://alpha.localhost:5040')
+    expect(fundWorkspaceEnvironmentForRequest(request, {
+      FUND_WORKSPACE_ROOT_DOMAIN: 'localhost',
+    })).toMatchObject({
+      FUND_WORKSPACE_ROOT_DOMAIN: 'localhost',
+      FUND_WORKSPACE_DEV_PORT: '5040',
+    })
   })
 
   it('normalizes readable ASCII names and returns null when no DNS-safe text remains', () => {

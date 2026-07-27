@@ -1,180 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { assertWriteAccess } from '@/lib/api-helpers'
-import { sendApprovalEmail } from '@/lib/email'
+import { assertAdminAccess } from '@/lib/api-helpers'
 import { dbError } from '@/lib/api-error'
-import { automaticMinifluxProvisioningEnabled } from '@/lib/feeds/config'
-import { toFeedApiError } from '@/lib/feeds/errors'
-import { ensureMinifluxConnection } from '@/lib/feeds/provisioning'
-import {
-  approveFundJoinRequest,
-  claimFundJoinRequestApproval,
-  rejectFundJoinRequest,
-  releaseFundJoinRequestApproval,
-} from '@/lib/members/approval'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const admin = createAdminClient()
-
-  const writeCheck = await assertWriteAccess(admin, user.id)
-  if (writeCheck instanceof NextResponse) return writeCheck
-
-  // Verify user is an admin of their fund
-  const { data: membership } = await admin
-    .from('fund_members')
-    .select('fund_id, role')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (!membership || membership.role !== 'admin') {
-    return NextResponse.json({ error: 'Only fund administrators can manage members' }, { status: 403 })
-  }
-
-  const { action } = await req.json()
-  if (!['approve', 'reject'].includes(action)) {
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-  }
-
-  // Get the join request
-  const { data: request } = await admin
-    .from('fund_join_requests')
-    .select('id, fund_id, user_id, email, status, approval_claimed_at, funds(name)')
-    .eq('id', params.id)
-    .eq('fund_id', membership.fund_id)
-    .in('status', ['pending', 'provisioning'])
-    .single()
-
-  if (!request) {
-    return NextResponse.json({ error: 'Join request not found' }, { status: 404 })
-  }
-
-  if (action === 'approve') {
-    const claimId = randomUUID()
-    try {
-      const claimed = await claimFundJoinRequestApproval(admin, {
-        requestId: request.id,
-        fundId: request.fund_id,
-        reviewedBy: user.id,
-        claimId,
-      })
-      if (!claimed) {
-        return NextResponse.json({ error: 'This approval is already being processed.' }, { status: 409 })
-      }
-    } catch {
-      return NextResponse.json({ error: 'Unable to start this approval right now.' }, { status: 500 })
-    }
-
-    if (automaticMinifluxProvisioningEnabled()) {
-      try {
-        await ensureMinifluxConnection(admin, request.user_id)
-      } catch (error) {
-        await releaseFundJoinRequestApproval(admin, { requestId: request.id, claimId }).catch(() => {
-          console.error('[settings-members] unable to release approval claim')
-        })
-        const safe = toFeedApiError(error)
-        return NextResponse.json({ error: safe.safeMessage, code: safe.code }, { status: safe.status })
-      }
-    }
-    try {
-      await approveFundJoinRequest(admin, {
-        requestId: request.id,
-        fundId: request.fund_id,
-        reviewedBy: user.id,
-        claimId,
-      })
-    } catch {
-      await releaseFundJoinRequestApproval(admin, { requestId: request.id, claimId }).catch(() => {
-        console.error('[settings-members] unable to release approval claim')
-      })
-      return NextResponse.json({ error: 'Unable to approve this member right now.' }, { status: 500 })
-    }
-  } else {
-    try {
-      const rejected = await rejectFundJoinRequest(admin, {
-        requestId: request.id,
-        fundId: request.fund_id,
-        reviewedBy: user.id,
-      })
-      if (!rejected) {
-        return NextResponse.json({ error: 'This request is already being processed.' }, { status: 409 })
-      }
-    } catch {
-      return NextResponse.json({ error: 'Unable to reject this request right now.' }, { status: 500 })
-    }
-  }
-
-  // Send approval notification email (fire-and-forget)
-  if (action === 'approve' && request.email) {
-    const fundName = (request as any).funds?.name || 'your fund'
-    sendApprovalEmail(admin, request.fund_id, request.email, fundName).catch(() => {})
-  }
-
-  revalidateTag('pending-requests')
-  revalidateTag('membership')
-
-  return NextResponse.json({ ok: true })
+export async function PATCH() {
+  return NextResponse.json(
+    {
+      error: 'Domain-based join approvals have been retired. Use exact-email invitations.',
+      code: 'domain_join_retired',
+    },
+    { status: 410 },
+  )
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const admin = createAdminClient()
+  const gate = await assertAdminAccess(admin, user.id)
+  if (gate instanceof NextResponse) return gate
 
-  const writeCheck = await assertWriteAccess(admin, user.id)
-  if (writeCheck instanceof NextResponse) return writeCheck
-
-  // Verify user is an admin of their fund
-  const { data: membership } = await admin
-    .from('fund_members')
-    .select('fund_id, role')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (!membership || membership.role !== 'admin') {
-    return NextResponse.json({ error: 'Only fund administrators can remove members' }, { status: 403 })
+  const [{ data: target }, { data: fund }] = await Promise.all([
+    admin.from('fund_members')
+      .select('id,user_id,role')
+      .eq('id', params.id)
+      .eq('fund_id', gate.fundId)
+      .maybeSingle(),
+    admin.from('funds').select('created_by').eq('id', gate.fundId).single(),
+  ])
+  if (!target || !fund) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+  if (target.user_id === user.id || target.user_id === fund.created_by) {
+    return NextResponse.json({ error: 'The Fund founder cannot be removed.' }, { status: 400 })
   }
-
-  // Get the member to remove — must be in the same fund
-  const { data: target } = await admin
-    .from('fund_members')
-    .select('id, user_id, role')
-    .eq('id', params.id)
-    .eq('fund_id', membership.fund_id)
-    .single()
-
-  if (!target) {
-    return NextResponse.json({ error: 'Member not found' }, { status: 404 })
-  }
-
-  // Prevent removing yourself
-  if (target.user_id === user.id) {
-    return NextResponse.json({ error: 'You cannot remove yourself' }, { status: 400 })
-  }
-
-  // Prevent removing other admins
   if (target.role === 'admin') {
-    return NextResponse.json({ error: 'Cannot remove an admin' }, { status: 400 })
+    return NextResponse.json({ error: 'Demote this administrator before removing them.' }, { status: 400 })
   }
-
-  const { error } = await admin
-    .from('fund_members')
-    .delete()
-    .eq('id', params.id)
-
-  if (error) {
-    return dbError(error, 'settings-members')
-  }
-
+  const { error } = await admin.from('fund_members').delete().eq('id', target.id).eq('fund_id', gate.fundId)
+  if (error) return dbError(error, 'settings-members-delete')
   revalidateTag('membership')
-
   return NextResponse.json({ ok: true })
 }
