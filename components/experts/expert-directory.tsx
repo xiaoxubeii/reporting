@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -146,13 +147,23 @@ export function ExpertDirectory(props: {
             <div className="mb-4 flex justify-end"><Button onClick={() => setManualOpen(value => !value)}>{t('manual.add')}</Button></div>
           )}
           {tab === 'fund' && manualOpen && <ManualExpertForm busy={Boolean(busy)} onSubmit={addManual} />}
-          <Label className="sr-only" htmlFor="expert-directory-search">{t('directorySearch')}</Label>
-          <Input id="expert-directory-search" className="mb-4 max-w-md" value={directoryQuery} onChange={event => setDirectoryQuery(event.target.value)} placeholder={t('directorySearch')} />
+          <DirectorySearchToolbar
+            value={directoryQuery}
+            onChange={setDirectoryQuery}
+            countLabel={t('results.count', { count: visibleExperts.length })}
+            label={t('directorySearch')}
+          />
           <div className="grid gap-3 md:grid-cols-2">
             {visibleExperts.map(expert => expert.scope === 'fund' && props.isAdmin
               ? <EditableExpertCard key={expert.id} expert={expert} busy={busy === `edit:${expert.id}`} onUpdate={updateExpert} />
               : <ExpertCard key={expert.id} expert={expert} />)}
-            {visibleExperts.length === 0 && <Empty>{tab === 'fund' ? t('empty.fund') : t('empty.platform')}</Empty>}
+            {visibleExperts.length === 0 && (
+              <Empty>
+                {directoryQuery.trim()
+                  ? t('empty.search')
+                  : tab === 'fund' ? t('empty.fund') : t('empty.platform')}
+              </Empty>
+            )}
           </div>
         </section>
       )}
@@ -177,6 +188,29 @@ export function ExpertDirectory(props: {
           </div>
         </section>
       )}
+    </div>
+  )
+}
+
+function DirectorySearchToolbar(props: {
+  value: string
+  onChange: (value: string) => void
+  countLabel: string
+  label: string
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="relative min-w-0 flex-1 sm:max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Input
+          aria-label={props.label}
+          className="h-10 pl-9"
+          value={props.value}
+          onChange={event => props.onChange(event.target.value)}
+          placeholder={props.label}
+        />
+      </div>
+      <span className="text-sm text-muted-foreground" aria-live="polite">{props.countLabel}</span>
     </div>
   )
 }

@@ -6558,7 +6558,8 @@
     "badges": { "platform": "平台认证", "fundManual": "基金确认 · 手动", "fundDiscovery": "基金确认 · Discovery", "pending": "待基金确认", "confirmed": "已确认", "rejected": "已拒绝", "inactive": "已停用" },
     "manual": { "add": "手动添加专家", "edit": "管理", "cancel": "取消", "name": "姓名", "email": "工作邮箱", "title": "职称/角色", "organization": "机构", "profile": "专业方向和经验", "save": "保存为基金专家", "update": "保存更改", "inactive": "停用" },
     "discovery": { "query": "Discovery 查询", "sources": "专业来源", "placeholder": "疾病、技术、器械或临床问题", "search": "发现专家", "searching": "搜索中…", "hint": "候选人不会自动成为专家，也不会自动发送邀请。基金管理员确认身份并填写邮箱后，才会加入基金专家库。", "partial": "部分来源暂时不可用，以下仍显示可用来源的结果。", "noOrganization": "来源未提供机构", "email": "由基金确认的工作邮箱", "confirm": "确认并加入基金专家", "confirmedNotice": "候选人已成为基金专家，现在可以在尽职调查中使用。", "viewFundExperts": "查看基金专家", "reject": "拒绝", "rejectConfirm": "确定拒绝该候选人？该决定会保留在审核记录中。", "disclaimer": "由贵基金确认，未经平台认证。", "status": "状态", "allStatuses": "全部状态" },
-    "empty": { "platform": "目前没有可用的平台认证专家。", "fund": "暂无基金专家。可以手动添加，或通过“发现候选”审核外部专业人士。", "candidates": "暂无待确认候选人。输入关键词从专业来源发现。" },
+    "results": { "count": "{count} 位专家" },
+    "empty": { "platform": "暂无可用的平台认证专家。", "fund": "暂无基金专家。你可以手动添加，或通过“发现候选人”审核外部专业人士。", "candidates": "暂无待处理候选人。请输入查询，从专业来源发现专家。", "search": "没有符合当前搜索条件的专家。" },
     "errors": { "discovery": "专家发现失败", "add": "无法添加专家", "confirm": "无法确认候选人", "reject": "无法拒绝候选人" }
   },
   "Support": {
