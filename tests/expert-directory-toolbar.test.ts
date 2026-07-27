@@ -21,4 +21,20 @@ describe('Expert Directory search toolbar', () => {
     expect(zh.ExpertDirectory.results.count).toBeTruthy()
     expect(zh.ExpertDirectory.empty.search).toBeTruthy()
   })
+
+  it('separates discovery parameters from candidate result filters', () => {
+    expect(source).toContain('PopoverContent')
+    expect(source).toContain('checked={sources.pubmed}')
+    expect(source).toContain('checked={sources.clinical_trials}')
+    expect(source).toContain('aria-labelledby="expert-discovery-sources-label"')
+    expect(source).toContain('id="expert-discovery-sources-label"')
+    expect(source).toContain('<Select value={candidateStatus}')
+    expect(source).toContain("t('discovery.candidateCount', { count: visibleCandidates.length })")
+    expect(source).not.toContain('<select id="expert-candidate-status"')
+  })
+
+  it('localizes the candidate result count', () => {
+    expect(en.ExpertDirectory.discovery.candidateCount).toBeTruthy()
+    expect(zh.ExpertDirectory.discovery.candidateCount).toBeTruthy()
+  })
 })
