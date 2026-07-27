@@ -14,13 +14,13 @@ describe('platform public layout contract', () => {
     expect(layout).toContain('<PublicLayoutClient')
   })
 
-  it('waits for the auth check before rendering the platform root', () => {
+  it('renders the public platform root before the legacy public-shell auth check', () => {
     const client = source('app/(public)/public-layout-client.tsx')
 
     expect(client).toContain('startLegacyPublicAuthCheck({')
     expect(client).toContain('surface,')
-    expect(client.indexOf('if (!authChecked) return null')).toBeLessThan(
-      client.indexOf("if (surface === 'platform-landing') return <>{children}</>"),
+    expect(client.indexOf("if (surface === 'platform-landing') return <>{children}</>")).toBeLessThan(
+      client.indexOf('if (!authChecked) return null'),
     )
     expect(client).toContain('<PublicShell>{children}</PublicShell>')
   })
