@@ -15,6 +15,7 @@ dependency and ownership checks.
 
 | Feature ID | Goal | Lane | OpenSpec | Acceptance | Parallel Class | Dependencies | Owner | Worktree | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| fund-identity-onboarding | Separate platform login identity from immutable per-Fund business identity, reserve the Fund subdomain at creation, add invitation-only membership and internal mailboxes, and split personal from Fund settings | feature-planning | `openspec/changes/add-fund-identity-onboarding` | External verified email remains the only login/recovery identity; Fund creation atomically reserves an immutable unique slug and owner membership; global personal profile, Fund-scoped immutable mailbox, invitation acceptance, role authorization, resumable setup, and existing Resend routing work across English/Chinese desktop/mobile flows without email-domain auto-join | serial-required | completed Fund subdomain isolation and multi-tenant Resend mail, current Supabase Auth/onboarding/membership/settings contracts, local Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding` | in_progress |
 | multi-tenant-resend-mail | Add isolated FundWorkspace platform mail and per-Fund BYOK Resend business mail with secure outbound threads, tokenized replies, inbound routing, Pitch intake, and expert invitations | feature-planning | `openspec/changes/add-multi-tenant-resend-mail` | Platform and Fund credentials never cross; each Fund has an exact derived subdomain and Fund-scoped mailboxes; signed/idempotent Resend inbound routes deterministic replies; Pitch enters Deal screening; expert replies remain thread mail; Settings, focused tests, security review, and real local flows pass | serial-required | current email adapters, Fund envelope encryption, Supabase Auth SMTP operations, Deal intake, expert validation, local Supabase | main-agent | current checkout | in_progress |
 | background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
 | investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
@@ -38,6 +39,64 @@ dependency and ownership checks.
 
 Copy this block for each planned feature. Keep it short; it is the shared
 contract for self-check, review, testing, and merge.
+
+### Feature: fund-identity-onboarding
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible, security-sensitive authentication, tenancy, persistence, invitation, email-identity, localization, and authorization contract change.
+- Change: `openspec/changes/add-fund-identity-onboarding`
+- Classification: `serial-required`; schema and identity contracts must land before APIs, settings, invitation, mailbox, and browser work, and all later slices share the same Fund authority boundary.
+
+#### Acceptance
+
+- Every user and administrator registers, signs in, verifies, and recovers with an external Supabase Auth email; an internal Fund address is never accepted as an authentication identifier.
+- A global personal profile owns real name and other person-level preferences, while Fund membership owns role and one optional immutable internal mailbox identity.
+- Fund creation validates and atomically reserves one unique immutable slug, creates the founder as owner, initializes required settings, and never derives membership from an external email domain.
+- Settings has distinct Personal and Current Fund navigation and authorization; the current Fund and immutable domain are always explicit.
+- Administrators invite an exact external email with a bounded role and expiring single-use token; acceptance requires the same verified email and never performs domain matching.
+- A live Fund member may claim one available non-reserved local part once; the address is derived from the trusted Fund slug, remains immutable, and inactive memberships cannot send or receive as that mailbox.
+- Existing platform and Fund Resend connections, reserved business mailboxes, inbound routing, outbound sending, reply routing, and provider-secret isolation continue through the new identity model.
+- A resumable localized setup checklist leads the founder through personal profile, mailbox, Fund branding, mail connection, and member invitations without making optional integrations a login gate.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-fund-identity-onboarding/**`, `docs/superpowers/**`, and focused HarnessKit plan/progress/evidence.
+- Focused Supabase migrations, generated database types, tenancy/profile/invitation/mailbox repositories, and security tests.
+- Fund onboarding, authentication guards, member/invitation APIs, personal and Fund settings APIs/components/layout, setup workflow, and localization messages.
+- Existing Fund email settings/routing only where required to consume immutable Fund identity and membership-owned mailboxes.
+- Focused unit, API, database integration, component, access, localization, and browser E2E tests.
+
+#### Shared Contract Changes
+
+- Add one global profile per auth user; external Auth email remains the login key and is not copied into a tenant-derived authorization rule.
+- Treat the existing stable Fund slug/email subdomain as the immutable tenant business identifier and reserve it atomically during Fund creation.
+- Replace email-domain join requests with exact-address invitation records whose token verifier is hashed, expiring, single-use, and Fund/role bound.
+- Bind a normalized unique local part to one Fund membership and derive the full address server-side from the trusted Fund identifier.
+- Split Settings DTOs/routes into personal and Fund authority domains; never accept a client-selected Fund id where Host/session membership already supplies authority.
+- Reuse the completed multi-tenant Resend provider, webhook, reply-route, and secret-isolation contracts instead of creating a second email stack.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec, migration/security contracts, HarnessKit fast, TypeScript, changed-scope lint, diff/secret scans.
+- targeted: profile, slug reservation/concurrency, owner bootstrap, invitation replay/expiry/wrong-email/cross-Fund denial, mailbox uniqueness/immutability/reserved names, settings authorization, and existing email regressions.
+- full: full Vitest, production build, code/security review, and real English/Chinese desktop/mobile browser flows from external signup through Fund creation, setup, invite acceptance, mailbox claim, and Fund email status.
+
+#### Review Required
+
+- planner/architect: yes, before implementation for identity ownership, migration, invitation, and tenancy contracts.
+- reviewer: yes, after every implementation slice and for the whole branch.
+- security-reviewer: yes, authentication separation, token hashing/replay, Host/Fund authority, RLS, role escalation, mailbox spoofing, and provider secrets.
+- browser/QA: yes, creation/setup/invitation/settings are user-visible and require real authenticated validation.
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch: `codex/add-fund-identity-onboarding`
+- worktree: `/home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding`
+- baseline: full Vitest passes 285 files/1967 tests with 4 files/8 environment-gated tests skipped.
+- evidence: pending implementation and verification.
 
 ### Feature: fund-public-site-templates
 

@@ -3,6 +3,30 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "fund-identity-onboarding",
+      "title": "External-login identity, immutable Fund onboarding, invitations, and business mailboxes",
+      "status": "in_progress",
+      "current_task": "OpenSpec and architecture contracts",
+      "definition_of_done": [
+        "External verified email is the only login and recovery identity; global personal profile is independent of Fund membership",
+        "Fund creation atomically reserves an immutable unique slug, bootstraps the founder as administrator, and initializes required settings and reserved mailboxes",
+        "Exact-email expiring single-use invitations replace email-domain joining and fail closed for wrong email, replay, expiry, revocation, role escalation, and cross-Fund use",
+        "Each active member can claim one immutable non-reserved internal mailbox local part whose full address is derived server-side",
+        "Settings clearly separates Personal and Current Fund scopes and provides a resumable localized setup workflow",
+        "Existing platform and Fund Resend providers, inbound/outbound routing, reply routes, and secret isolation continue under the new identity contracts",
+        "Focused database, API, UI, authorization, security, full-suite, build, and authenticated browser verification pass"
+      ],
+      "evidence": [
+        "Isolated worktree created at /home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding on codex/add-fund-identity-onboarding",
+        "Baseline full Vitest passed 285 files and 1967 tests with 4 files and 8 environment-gated tests skipped"
+      ],
+      "open_risks": [
+        "Existing Funds may have different stable web slug and configured email_subdomain; migration must preserve both identities without silent renaming",
+        "The current signup allowlist and one-user-one-Fund constraints must compose atomically with invitation acceptance",
+        "Repository dependency audit currently reports 24 existing advisories including 19 high-severity findings"
+      ]
+    },
+    {
       "id": "expert-directory-discovery",
       "title": "Platform and fund expert directory with source-backed discovery",
       "status": "passing",
