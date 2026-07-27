@@ -4,7 +4,7 @@
 
 - Started `add-fund-identity-onboarding` in `/home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding` on `codex/add-fund-identity-onboarding` from main `ed77fdc`.
 - Contract: external verified email remains the only platform login/recovery identity; Fund creation reserves the immutable business identity; exact-email invitations replace email-domain joining; active members claim one immutable Fund mailbox; Settings separates Personal from Current Fund scope while reusing the existing Resend stack.
-- Baseline: full Vitest passes 285 files/1967 tests with 4 files/8 environment-gated tests skipped. OpenSpec planning and independent planner/security architecture review are in progress.
+- Baseline: full Vitest passes 285 files/1967 tests with 4 files/8 environment-gated tests skipped. OpenSpec planning, task-by-task implementation plan, and independent planner/security architecture review are complete; persistence and security RED tests are next.
 - Completed feature: `add-fund-public-site-templates` in the completed Fund-subdomain worktree. Platform `/` remains product marketing; tenant `/` becomes a Fund public site selected from Focus, Institutional, or Minimal.
 - Public-site contract: one strict bilingual structured draft, private authenticated preview, explicit atomic publish/unpublish snapshot, and a least-privilege anonymous published resolver. No free-form HTML/CSS/JS or automatic private workspace data publication.
 - Planning evidence: proposal, design, specification, and 25-task implementation plan pass strict OpenSpec validation. Read-only planner/architect/TDD reviews align on a separate `fund_public_sites` boundary, Host-derived admin scope, optimistic revisions, shared render contract, and tenant-root shell split.

@@ -6,7 +6,7 @@
       "id": "fund-identity-onboarding",
       "title": "External-login identity, immutable Fund onboarding, invitations, and business mailboxes",
       "status": "in_progress",
-      "current_task": "OpenSpec and architecture contracts",
+      "current_task": "Persistence and security RED tests",
       "definition_of_done": [
         "External verified email is the only login and recovery identity; global personal profile is independent of Fund membership",
         "Fund creation atomically reserves an immutable unique slug, bootstraps the founder as administrator, and initializes required settings and reserved mailboxes",

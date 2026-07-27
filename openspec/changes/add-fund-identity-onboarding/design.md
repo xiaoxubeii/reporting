@@ -87,7 +87,7 @@ Alternatives rejected:
 
 ### 6. Settings uses route-level scope separation
 
-`/settings` redirects to `/settings/personal`. The Settings layout renders two navigation groups: Personal and `Current Fund: <name>`. `/settings/personal` contains global profile, external login email, MFA/security, current language/theme controls, and current Fund mailbox claim/status. `/settings/fund` contains the existing Fund settings, with nested existing appearance, public site, email routing, members/invitations, AI, and integration routes grouped beneath it.
+The existing `/settings` route remains the Current Fund settings root for deep-link compatibility, while the application Settings entry points to `/settings/personal`. The Settings layout renders two navigation groups: Personal and `Current Fund: <name>`. `/settings/personal` contains global profile, external login email, MFA/security, current language/theme controls, and current Fund mailbox claim/status. `/settings` and its existing nested appearance, public site, email routing, members, AI, and integration routes form the Current Fund group.
 
 Personal reads/writes use a new `/api/settings/personal` contract and require only the authenticated owner. Fund APIs retain live membership/domain access checks; administrator-only controls remain denied to members. The old mixed `/api/settings` response is narrowed over a compatibility period rather than making Personal writes pass through an admin-oriented Fund DTO.
 

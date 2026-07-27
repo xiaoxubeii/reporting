@@ -3,7 +3,7 @@
 - [x] 1.1 Create the isolated feature worktree and record the Feature Requirement Contract, machine-readable feature state, and progress ledger.
 - [x] 1.2 Capture external-login, global-profile, immutable Fund identity, exact invitation, immutable mailbox, scoped Settings, migration, and verification requirements in OpenSpec.
 - [x] 1.3 Complete independent planner and security architecture reviews and incorporate direct-write, Host/Fund, token, owner-role, mailbox-retention, and legacy-domain findings.
-- [ ] 1.4 Write and self-review the task-by-task Superpowers implementation plan with exact files, interfaces, tests, commands, and commit boundaries.
+- [x] 1.4 Write and self-review the task-by-task Superpowers implementation plan with exact files, interfaces, tests, commands, and commit boundaries.
 
 ## 2. Persistence and Security Contracts
 
@@ -40,10 +40,10 @@
 
 ## 5. Scoped Settings and Member Administration
 
-- [ ] 5.1 Add RED settings access/UI/localization tests for distinct Personal and Current Fund navigation, default redirect, read-only identities, member/admin visibility, and mobile behavior.
+- [ ] 5.1 Add RED settings access/UI/localization tests for distinct Personal and Current Fund navigation, the Personal application entry plus legacy Fund-root compatibility, read-only identities, member/admin visibility, and mobile behavior.
 - [ ] 5.2 Refactor the Settings layout into Personal and `Current Fund: <name>` groups while preserving existing nested Fund setting routes and deep links.
 - [ ] 5.3 Move profile, external login email, MFA/security, language/theme, and current Fund mailbox claim/status to `/settings/personal` backed only by the personal API.
-- [ ] 5.4 Move the existing mixed Fund settings root to `/settings/fund`, remove personal writes from the Fund DTO, and display immutable tenant/email identities read-only.
+- [ ] 5.4 Keep the existing Fund settings root at `/settings`, remove personal writes from the Fund DTO, and display immutable tenant/email identities read-only.
 - [ ] 5.5 Replace member join-request controls with exact-email invitation creation, role selection, pending status, resend, revoke, accepted history, and administrator-only external email visibility.
 - [ ] 5.6 Remove editable Resend slug/domain identity controls while retaining existing inbound/outbound provider selection, encrypted keys, DNS status, webhook lifecycle, and secret-free DTOs.
 - [ ] 5.7 Complete English and Simplified Chinese messages and UI inventory coverage for all new routes, dialogs, status, errors, and responsive navigation.
