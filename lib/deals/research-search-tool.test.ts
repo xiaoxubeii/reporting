@@ -59,6 +59,10 @@ describe('reporting_search Research tool', () => {
     const output = await tool.execute({ id: 'provider_call_1', name: 'reporting_search', input: { topic: 'company' } })
     expect(JSON.parse(output)).toMatchObject({
       security: { untrustedExternalEvidence: true },
+      citation_contract: {
+        required_final_field: 'evidence_source_ids',
+        allowed_source_ids: ['web-1'],
+      },
       evidence: { results: [{ title: 'Example Health raises seed' }] },
     })
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [RequestInfo | URL, RequestInit]
