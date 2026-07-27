@@ -124,7 +124,13 @@ export async function middleware(request: NextRequest) {
   // FundWorkspace marketing deployment. It remains reachable for signed-out
   // and signed-in visitors even when the platform marketing flag is disabled.
   const isPublicFundHomepage = Boolean(tenant && pathname === '/')
-  const isPublicMarketingRoute = isPublicFundHomepage || (marketingEnabled && isMarketingRoute)
+  // The canonical hosted platform root is the FundWorkspace landing itself,
+  // not the optional legacy marketing deployment. Keep only that exact Host
+  // and path public; route authority has already rejected other platform paths.
+  const isPublicPlatformHomepage = hostContext.mode === 'platform' && pathname === '/'
+  const isPublicMarketingRoute = isPublicFundHomepage
+    || isPublicPlatformHomepage
+    || (marketingEnabled && isMarketingRoute)
 
   // Token-gated public surfaces — always reachable regardless of the marketing
   // site flag. The token in the URL is the auth: a fund admin generates it

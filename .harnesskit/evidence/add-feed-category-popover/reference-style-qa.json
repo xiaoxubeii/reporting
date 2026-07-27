@@ -1,0 +1,43 @@
+{
+  "runtime": {
+    "url": "http://localhost:58338/feeds/sources",
+    "checkout": "/home/ubuntu/workspace/reporting",
+    "note": "Port 3001 belonged to the separate add-search-product worktree and was not modified."
+  },
+  "desktop": {
+    "viewport": { "width": 1280, "height": 800 },
+    "popover": { "side": "bottom", "width": 448, "height": 368, "bottom": 797 },
+    "checks": [
+      "green 180x48 Follow trigger",
+      "trigger-aligned top arrow",
+      "white rounded panel with reference shadow",
+      "80px green-outlined focused filter",
+      "folder rows and separated green New Folder footer"
+    ]
+  },
+  "manyCategories": {
+    "listScrollsInternally": true,
+    "newFolderRemainsFixedAndVisible": true
+  },
+  "lowDesktopSpace": {
+    "viewport": { "width": 1280, "height": 600 },
+    "popover": { "side": "top", "y": 2, "height": 339, "bottom": 341 },
+    "automaticCollisionFlip": true
+  },
+  "mobileZhCN": {
+    "viewport": { "width": 390, "height": 640 },
+    "popover": { "side": "top", "x": 4, "y": 89, "width": 358, "height": 368, "bottom": 457 },
+    "documentScrollWidth": 375,
+    "focusedControl": "搜索文件夹",
+    "withinViewport": true,
+    "horizontalOverflow": false
+  },
+  "interactions": {
+    "filterNarrowsRows": true,
+    "newFolderStartsBlank": true,
+    "blankCreateDisabled": true,
+    "cancelRestoresNewFolderFocus": true
+  },
+  "browserConsoleErrors": 0,
+  "qaIdentityRemoved": true
+}

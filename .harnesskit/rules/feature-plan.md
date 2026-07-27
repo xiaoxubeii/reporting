@@ -17,6 +17,7 @@ dependency and ownership checks.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | global-assistant-context | Replace page-local Analyst mounts with one authenticated global assistant and let supported front-end content become bounded conversation context | feature-planning | `openspec/changes/add-global-assistant-context` | One responsive assistant works across authenticated routes; desktop uses a 400px right dock that reflows content, narrower screens use full-height drawers, and supported snapshots use a full-height right-edge drag target plus accessible send action without changing trusted scope | main-agent-only | current Analyst shell/panel/API/conversations, Search, Feeds, Expert Directory, Dashboard Companies, Deals | main-agent | `/home/ubuntu/workspace/reporting.worktrees/global-assistant-context` | ready_to_merge |
 | fund-identity-onboarding | Separate platform login identity from immutable per-Fund business identity, reserve the Fund subdomain at creation, add invitation-only membership and internal mailboxes, and split personal from Fund settings | feature-planning | `openspec/changes/add-fund-identity-onboarding` | External verified email remains the only login/recovery identity; Fund creation atomically reserves an immutable unique slug and owner membership; global personal profile, Fund-scoped immutable mailbox, invitation acceptance, role authorization, resumable setup, and existing Resend routing work across English/Chinese desktop/mobile flows without email-domain auto-join | serial-required | completed Fund subdomain isolation and multi-tenant Resend mail, current Supabase Auth/onboarding/membership/settings contracts, local Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding` | in_progress |
+| institutional-platform-landing | Redesign the platform root as an institutional FundWorkspace investment-decision landing with real product evidence, optional expert validation, a configured demo CTA, and a non-enumerating workspace entry | feature-planning | `openspec/changes/redesign-platform-landing` | Platform `/` communicates Signal → Research → optional Expert Validation → IC → Portfolio/LP in English and Chinese with real screenshots and accessible responsive behavior; configured demo links are HTTPS-only; workspace entry performs syntax-only canonical tenant `/auth` navigation; tenant `/`, auth/app/portal, other public pages, and private-data boundaries remain unchanged; focused, build, review, and real browser verification pass | main-agent-only | current platform/tenant root split, public layout/auth redirect, next-intl, canonical Fund host helpers, verified expert-validation evidence | main-agent | current checkout | in_progress |
 | multi-tenant-resend-mail | Add isolated FundWorkspace platform mail and per-Fund BYOK Resend business mail with secure outbound threads, tokenized replies, inbound routing, Pitch intake, and expert invitations | feature-planning | `openspec/changes/add-multi-tenant-resend-mail` | Platform and Fund credentials never cross; each Fund has an exact derived subdomain and Fund-scoped mailboxes; signed/idempotent Resend inbound routes deterministic replies; Pitch enters Deal screening; expert replies remain thread mail; Settings, focused tests, security review, and real local flows pass | serial-required | current email adapters, Fund envelope encryption, Supabase Auth SMTP operations, Deal intake, expert validation, local Supabase | main-agent | current checkout | in_progress |
 | background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
 | investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
@@ -155,6 +156,61 @@ contract for self-check, review, testing, and merge.
 - worktree: `/home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding`
 - baseline: full Vitest passes 285 files/1967 tests with 4 files/8 environment-gated tests skipped.
 - evidence: pending implementation and verification.
+
+### Feature: institutional-platform-landing
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible, localized, security-sensitive host-routing and anonymous-navigation contract change.
+- Change: `openspec/changes/redesign-platform-landing`
+- Classification: `main-agent-only`; the platform root, tenant-root bypass, public auth redirect, and shared landing localization must change under one owner.
+- Selected task: `1.1` — add focused tests for demo URL and workspace-entry validation before implementation.
+
+#### Acceptance
+
+- Unauthenticated platform `/` renders the approved full-width institutional FundWorkspace landing; valid tenant `/` continues to render only the existing Fund public site/private state, and other public pages keep their existing chrome.
+- The narrative is Signal → AI Research → Expert Validation when required → IC Decision → Portfolio & LP; expert validation is prominent but never described as mandatory for every Research run.
+- Product evidence comes from verified non-sensitive real screenshots; overlays may explain but do not invent UI, metrics, customers, or results.
+- `FUND_WORKSPACE_DEMO_URL` renders demo actions only for an absolute HTTPS value; missing or invalid configuration leaves no broken CTA.
+- Existing-workspace input accepts only a valid slug or canonical tenant address, performs no Fund/membership lookup, and navigates to canonical `/auth` with generic invalid-input messaging.
+- English/Chinese, 320px/mobile, 200% zoom, keyboard, visible focus, and reduced-motion behavior pass.
+
+#### Architecture Path
+
+- Existing trusted Host resolution in `app/(public)/page.tsx` remains authoritative and runs before platform content.
+- `app/(public)/layout.tsx` classifies trusted Host mode on the server and delegates to `app/(public)/public-layout-client.tsx`; only hosted platform `/` receives the full-width shell, while tenant `/`, legacy self-host `/`, and non-root public routes retain their existing branches.
+- Static localized sections live under `components/platform-landing/`; pure configuration and workspace-address parsing live under `lib/platform-landing/`.
+- The public landing reads no Fund records, membership directory, Research/Expert services, feeds, external metrics, or new API.
+
+#### Allowed Change Scope
+
+- `openspec/changes/redesign-platform-landing/**`
+- `docs/superpowers/plans/*platform-landing*.md`
+- `.harnesskit/rules/feature-plan.md`, `.harnesskit/state/feature_list.json`, `.harnesskit/state/progress.md`, and feature evidence
+- `app/(public)/page.tsx`, `app/(public)/layout.tsx`, `app/(public)/public-layout-client.tsx`
+- `components/platform-landing/**`, `lib/platform-landing/**`
+- focused tests, `messages/en.json`, `messages/zh-CN.json`, `public/landing/**`
+- `.env.example` and existing deployment/readme documentation for the one optional setting
+
+#### Shared Contract Changes
+
+- New optional server setting: `FUND_WORKSPACE_DEMO_URL`, absolute HTTPS only.
+- New platform-root shell branch and syntax-only workspace navigation to the existing canonical tenant `/auth` contract.
+- No database, API, authentication, tenant descriptor, Fund public-site, or product-service contract change.
+
+#### Verification Plan
+
+- Contract-first Vitest for demo URL, workspace parsing, platform/tenant/public layout branching, localization, and static/no-private-dependency boundaries.
+- HarnessKit fast after every edit; changed-scope ESLint/type checks, strict OpenSpec, targeted/full risk-routed tests, and production build.
+- Real Chromium on platform desktop/mobile English/Chinese plus configured/unconfigured demo, keyboard workspace entry, reduced motion, console/network audit, tenant public site, tenant auth, GP app, LP Portal, and one other public page.
+- Planner and TDD read-only review before edits; correctness, UI/accessibility, and security review before completion.
+
+#### Merge Order
+
+1. Implement in the current `main` checkout under the main agent.
+2. Complete focused and browser verification without creating a feature worktree.
+3. Commit only this feature's tracked files; preserve unrelated untracked evidence/assets.
 
 ### Feature: fund-public-site-templates
 

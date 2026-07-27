@@ -58,6 +58,28 @@
       "notes": "HarnessKit fast was run but stops before this feature at the unrelated legacy feed-discovery status value 'complete'; changed-scope checks and all feature verification pass. Normal repository build remains affected by pre-existing global lint debt, while production compilation and route generation pass with next build --no-lint."
     },
     {
+      "id": "institutional-platform-landing",
+      "title": "Institutional FundWorkspace platform landing",
+      "status": "passing",
+      "current_task": "Implementation and landing-specific verification complete; authenticated GP/LP browser regression remains tracked in OpenSpec 4.4",
+      "definition_of_done": [
+        "Platform root communicates the complete investment-decision workflow with optional expert validation and real product evidence",
+        "Tenant public sites, auth, GP app, LP Portal, and other public routes retain their existing host-specific behavior",
+        "Configured demo CTA and syntax-only workspace entry are safe, localized, accessible, and non-enumerating",
+        "English and Chinese desktop/mobile/reduced-motion browser acceptance passes without product runtime errors",
+        "Focused tests, type/lint/build, strict OpenSpec, HarnessKit, correctness, design/accessibility, and security review pass"
+      ],
+      "evidence": [
+        "OpenSpec redesign-platform-landing is strict-valid; implementation tasks and landing verification are complete except the separately tracked authenticated GP/LP browser regression",
+        "Full Vitest passed 291 files and 2008 tests with four environment-gated files skipped; focused landing suite passed 75 tests",
+        "TypeScript, changed-scope ESLint, git diff check, and next build --no-lint passed; normal build remains blocked only by repository-wide existing lint debt",
+        "Real production Chromium passed English and Chinese desktop, 390px mobile, 320px and 200 percent text zoom, reduced motion, workspace validation and focus restoration, configured and unconfigured demo CTA, image loading, SSR content, and tenant homepage/auth isolation",
+        "Correctness, accessibility, and security review findings for SSR rendering, OG branding, configurable host labeling, and small-text contrast were resolved and retested"
+      ],
+      "blocked_by": [],
+      "notes": "Main-agent-only in the current checkout because platform and tenant root rendering share the public route and layout boundary. Authenticated GP and LP Portal browser regression remains an explicit OpenSpec 4.4 follow-up; host contracts and the full suite pass. HarnessKit fast is blocked by the unrelated feed-discovery status value, and targeted/normal build are blocked by repository-wide existing lint debt. Evidence is under .harnesskit/evidence/redesign-platform-landing/."
+    },
+    {
       "id": "expert-directory-discovery",
       "title": "Platform and fund expert directory with source-backed discovery",
       "status": "passing",

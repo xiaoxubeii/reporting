@@ -1,0 +1,49 @@
+.landing {
+  --hm-ink: #1f2022;
+  --hm-copy: #262222;
+  --hm-muted: rgba(0, 0, 0, 0.45);
+  --hm-soft: #f5f6fa;
+  --hm-dark: #121214;
+  --hm-coral: #f65c50;
+  --hm-green: #06351e;
+  --hm-heading: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --hm-body: Inter, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --hm-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  min-height: 100vh;
+  overflow: clip;
+  background: #ffffff;
+  color: var(--hm-ink);
+  font-family: var(--hm-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.landing *,
+.landing *::before,
+.landing *::after {
+  box-sizing: border-box;
+}
+
+.landing :where(h1, h2, h3, p, figure, blockquote) {
+  margin: 0;
+}
+
+.landing :where(a, button) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.landing :where(a, button):focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #1f2022;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

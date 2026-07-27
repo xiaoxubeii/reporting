@@ -78,6 +78,8 @@ Add `https://*.fundworkspace.com/**` to the Supabase Auth redirect allowlist bef
 
 The platform root exposes only marketing, authentication, setup, and Fund onboarding routes. Fund data/API routes require a matching tenant hostname; inbound-email/provider webhooks use the registered platform or `hooks` host and retain their provider/token authentication. Keep `FUND_WORKSPACE_ROOT_DOMAIN` unset for legacy self-host behavior.
 
+Set the optional `FUND_WORKSPACE_DEMO_URL` to an absolute credential-free HTTPS scheduling URL to show Demo actions on the hosted platform landing. Missing or invalid values hide those actions and emit one bounded process-local configuration warning instead of rendering a broken link.
+
 Platform and per-Fund Resend setup, DNS, webhook rotation, and rollback: [FundWorkspace Resend email deployment](./docs/fund-email-resend.md)
 
 ## Local development

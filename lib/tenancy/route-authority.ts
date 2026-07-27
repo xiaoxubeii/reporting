@@ -71,7 +71,8 @@ function isWebhookRoute(pathname: string, method: string): boolean {
     )
 }
 
-function isPlatformRoute(pathname: string): boolean {
+function isPlatformRoute(pathname: string, method: string): boolean {
+  if (pathname === '/api/og') return method === 'GET' || method === 'HEAD'
   if (PLATFORM_PAGE_PATHS.has(pathname) || pathname.endsWith('-explainer')) return true
   if (pathname.startsWith('/.well-known/')) return true
   if (pathname === '/api/setup' || pathname === '/api/locale') return true
@@ -114,7 +115,7 @@ export function admitFundHostRoute(
   if (host.mode === 'platform') {
     if (worker) return { allowed: true, authority: 'worker' }
     if (webhook) return { allowed: true, authority: 'webhook' }
-    if (isPlatformRoute(pathname)) return { allowed: true, authority: 'platform' }
+    if (isPlatformRoute(pathname, method)) return { allowed: true, authority: 'platform' }
     return { allowed: false, reason: 'tenant-route-on-platform' }
   }
 

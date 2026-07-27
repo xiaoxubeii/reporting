@@ -41,7 +41,9 @@ import { getTrustedRequestTenant, trustedTenantSlugFromHeaders } from '@/lib/ten
 import { resolvePublishedFundPublicSite } from '@/lib/fund-public-site/store'
 import { resolveLocalizedText, type FundPublicSiteLocale } from '@/lib/fund-public-site/content'
 import { isSupportedLocale } from '@/i18n/locales'
-import { canonicalFundOrigin } from '@/lib/tenancy/host'
+import { canonicalFundOrigin, canonicalPlatformOrigin, classifyFundHost } from '@/lib/tenancy/host'
+import { createPlatformLandingConfig } from '@/lib/platform-landing/config'
+import { PlatformLanding } from '@/components/platform-landing/platform-landing'
 import { cache } from 'react'
 
 type StepDefinition = {
@@ -104,6 +106,22 @@ export async function generateMetadata(): Promise<Metadata> {
       twitter: { card: 'summary', title, description, images: [] },
     }
   }
+  const { hostContext } = currentPublicHost()
+  if (hostContext.mode === 'platform') {
+    const t = await getTranslations('PlatformLanding.metadata')
+    const platformOrigin = platformOriginForRequest()
+    return {
+      ...ogMetadata({
+        title: t('title'),
+        description: t('description'),
+        baseUrl: platformOrigin,
+        siteName: 'FundWorkspace',
+        brand: 'FundWorkspace',
+        siteLabel: new URL(platformOrigin).host,
+      }),
+      alternates: { canonical: `${platformOrigin}/` },
+    }
+  }
   const t = await getTranslations('PublicHome.metadata')
   return ogMetadata({ title: t('title'), description: t('description') })
 }
@@ -124,6 +142,16 @@ export default async function HomePage() {
         locale={locale}
       />
     )
+  }
+
+  const { hostContext } = currentPublicHost()
+  if (hostContext.mode === 'platform') {
+    const platformConfig = createPlatformLandingConfig({
+      demoUrl: process.env.FUND_WORKSPACE_DEMO_URL,
+      hosted: true,
+      platformOrigin: platformOriginForRequest(),
+    })
+    return <PlatformLanding config={platformConfig} />
   }
 
   const t = await getTranslations('PublicHome')
@@ -321,4 +349,23 @@ const loadTenantHome = cache(async function loadTenantHome() {
 async function currentFundSiteLocale(): Promise<FundPublicSiteLocale> {
   const locale = await getLocale()
   return isSupportedLocale(locale) && locale === 'zh-CN' ? 'zh-CN' : 'en'
+}
+
+function currentPublicHost() {
+  const requestHeaders = new Headers(headers())
+  const rawHost = requestHeaders.get('host') ?? ''
+  return { rawHost, hostContext: classifyFundHost(rawHost) }
+}
+
+function platformOriginForRequest(): string {
+  const { rawHost, hostContext } = currentPublicHost()
+  if (hostContext.mode !== 'platform' || hostContext.rootDomain !== 'localhost') {
+    return canonicalPlatformOrigin()
+  }
+
+  const port = rawHost.match(/:(\d{1,5})$/)?.[1]
+  return canonicalPlatformOrigin({
+    ...process.env,
+    FUND_WORKSPACE_DEV_PORT: port ?? process.env.FUND_WORKSPACE_DEV_PORT,
+  })
 }

@@ -114,6 +114,26 @@ describe('middleware Fund Host boundary', () => {
     expect((await middleware(request('alpha-fund.localhost', '/'))).status).toBe(200)
   })
 
+  it('keeps the hosted platform landing public without enabling the legacy marketing site', async () => {
+    delete process.env.NEXT_PUBLIC_ENABLE_MARKETING_SITE
+    delete process.env.MARKETING_DEPLOYMENT_KEY
+    getUser.mockResolvedValue({ data: { user: null } })
+
+    const response = await middleware(request('localhost', '/'))
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('allows only read access to the public OG image route on the platform Host', async () => {
+    getUser.mockResolvedValue({ data: { user: null } })
+
+    const response = await middleware(request('localhost', '/api/og?title=FundWorkspace'))
+
+    expect(response.status).toBe(200)
+    expect((await middleware(request('localhost', '/api/og', 'POST'))).status).toBe(404)
+  })
+
   it('keeps anonymous authentication redirects on the trusted tenant Host behind a proxy', async () => {
     getUser.mockResolvedValue({ data: { user: null } })
 

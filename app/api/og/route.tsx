@@ -7,6 +7,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const title = searchParams.get('title') || 'Portfolio Reporting'
   const subtitle = searchParams.get('subtitle') || ''
+  const brand = searchParams.get('brand') || 'Analyst by Hemrock'
+  const requestedSite = searchParams.get('site')?.trim().slice(0, 80)
+  const site = requestedSite || (brand === 'FundWorkspace' ? 'fundworkspace.com' : 'portfolio.hemrock.com')
 
   return new ImageResponse(
     (
@@ -38,7 +41,7 @@ export async function GET(req: NextRequest) {
               letterSpacing: '-0.01em',
             }}
           >
-            Analyst by Hemrock
+            {brand}
           </div>
           <div
             style={{
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
           }}
         >
           <div style={{ fontSize: 18, color: '#71717a' }}>
-            portfolio.hemrock.com
+            {site}
           </div>
           <div
             style={{

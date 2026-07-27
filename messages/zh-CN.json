@@ -157,6 +157,187 @@
     "menuTitle": "产品导航",
     "menuDescription": "在公开产品页面之间导航。"
   },
+  "PlatformLanding": {
+    "metadata": {
+      "title": "FundWorkspace｜贯穿全基金的投资智能工作台",
+      "description": "将市场信号、研究、行业专家验证、投资决策、投后工作与 LP 沟通连接起来的私有投资工作空间。"
+    },
+    "nav": {
+      "label": "平台首页导航",
+      "platform": "平台",
+      "workflow": "工作流程",
+      "experts": "专家验证",
+      "trust": "信任与控制"
+    },
+    "actions": { "demo": "预约演示" },
+    "hero": {
+      "eyebrow": "投资智能基础设施",
+      "title": "从第一条市场信号，到形成投资决策。",
+      "description": "FundWorkspace 将机会发现、Deal 情报、尽职调查、投资决策、投后工作与 LP 沟通连接在同一个私有基金工作系统中。",
+      "figureLabel": "一个彼此连接的基金工作空间",
+      "proofs": {
+        "private": "默认私有",
+        "connected": "连续、可追溯的证据链",
+        "branded": "每家基金都有独立工作空间"
+      }
+    },
+    "evidence": {
+      "eyebrow": "展示真实产品，而非概念承诺",
+      "title": "让投资工作始终与证据保持连接。",
+      "description": "从第一条信号到有记录的决策，无需反复在订阅、表格、文档、邮箱和彼此割裂的 AI 工具之间重建上下文。",
+      "researchTitle": "研究与行业专家验证",
+      "researchCaption": "研究缺口、矛盾、来源和可选的专家审阅都保留在同一份尽调记录中。",
+      "dealsTitle": "Deal 情报",
+      "dealsCaption": "判断机会优先级，保留原始信号，并把符合条件的项目推进到尽调。",
+      "lpTitle": "LP 沟通",
+      "lpCaption": "将获批的基金信息带入独立的投资人体验，同时隔离基金内部的私有工作空间。"
+    },
+    "difference": {
+      "eyebrow": "为投资机构而设计",
+      "title": "基金工作系统，而不是又一个 AI 助手。",
+      "items": {
+        "context": { "title": "基金上下文始终完整", "description": "项目、研究、决策、投后记录和投资人报告共享一个受控工作空间。" },
+        "evidence": { "title": "先有证据，再有输出", "description": "AI 加速综合分析，但来源、矛盾和人的判断仍然可以被检查。" },
+        "continuity": { "title": "会议结束，记录仍然存在", "description": "决策依据与后续工作持续相连，不会消失在聊天历史或演示文稿里。" }
+      }
+    },
+    "workflow": {
+      "eyebrow": "连续工作流程",
+      "title": "从信号到长期管理，始终保留同一条线索。",
+      "description": "每个阶段都向同一份投资记录补充上下文。团队可以提高速度，而不必以机构记忆为代价。",
+      "steps": {
+        "signals": { "title": "市场信号", "description": "从关注来源和更广阔的市场中发现主题与机会。" },
+        "research": { "title": "AI 研究", "description": "组织证据、识别缺口，并向团队呈现矛盾。" },
+        "expert": { "title": "专家验证", "description": "当证据需要外部审视时，引入合适的行业专家。" },
+        "decision": { "title": "投委会决策", "description": "在同一份记录中保留 Thesis、证据、判断和决策。" },
+        "portfolio": { "title": "投后与 LP", "description": "投资完成后，继续维系运营与投资人关系。" }
+      }
+    },
+    "experts": {
+      "eyebrow": "在关键处引入人的判断",
+      "title": "行业专家验证",
+      "description": "AI 可以寻找并综合证据。FundWorkspace 帮助团队判断何时确实需要专家、匹配合适的人，并把验证结论保留在尽调记录中。",
+      "calloutTitle": "按需触发，而不是走形式",
+      "calloutDescription": "只有出现实质性证据缺口、矛盾或行业特有的不确定性时才触发专家审阅，而不是强制用于每个项目。"
+    },
+    "capabilities": {
+      "eyebrow": "机构级能力",
+      "title": "覆盖从项目发现到基金报告之间全部工作的一个空间。",
+      "items": {
+        "discover": { "title": "发现", "description": "关注信息源、监测新兴主题、搜索知识，并识别可信的 Deal 信号。" },
+        "diligence": { "title": "尽调", "description": "组织数据室、运行基于证据的研究、引入专家验证、评分并起草投资备忘录。" },
+        "decide": { "title": "决策", "description": "为投委会提供一份可追溯的证据、开放问题、判断与批准记录。" },
+        "operate": { "title": "运营", "description": "管理投后活动、基金运营、报告和独立 LP 门户，同时保持记录连续。" }
+      }
+    },
+    "trust": {
+      "title": "为私有、负责的投资工作而构建。",
+      "items": {
+        "privacy": { "title": "默认私有", "description": "平台公开站、各基金工作空间与 LP 体验被明确隔离。" },
+        "control": { "title": "基金级控制", "description": "Provider、工作流程和访问决策归属各自基金，而不是共享的全局工作区。" },
+        "brand": { "title": "机构身份", "description": "每家基金都能维护自己的名称、视觉身份、公开页面和投资人体验。" },
+        "audit": { "title": "来源清晰可见", "description": "原始来源、AI 辅助工作、专家意见和人的决策在记录中保持可区分。" }
+      }
+    },
+    "final": { "eyebrow": "FundWorkspace", "title": "让投资流程沉淀为持久的机构记忆。" },
+    "workspace": {
+      "trigger": "查找工作空间",
+      "title": "打开你的 FundWorkspace",
+      "description": "输入基金标识或 FundWorkspace 地址。这里不会检查成员身份，只会将你带到规范的登录页面。",
+      "label": "工作空间",
+      "placeholder": "northstar 或 northstar.fundworkspace.example",
+      "help": "仅输入 FundWorkspace 标识或地址，请勿输入密码或访问令牌。",
+      "error": "请输入 FundWorkspace 标识或工作空间地址。",
+      "continue": "继续",
+      "close": "关闭工作空间查找"
+    },
+    "images": {
+      "logo": "FundWorkspace 蓝绿色折叠标志",
+      "research": "FundWorkspace 尽调研究与专家验证控件",
+      "deals": "FundWorkspace 项目管线",
+      "lpPortal": "FundWorkspace LP 门户"
+    },
+    "harmonic": {
+      "connectedLabel": "一个工作区，贯穿团队决策",
+      "surfaces": {
+        "signals": "市场信号",
+        "feeds": "订阅与趋势",
+        "search": "全局搜索",
+        "deals": "Deal 管线",
+        "companies": "公司档案",
+        "research": "AI 研究",
+        "experts": "专家验证",
+        "evidence": "证据库",
+        "tracking": "持续跟踪",
+        "decisions": "决策记录",
+        "portfolio": "投资组合",
+        "reports": "报告中心",
+        "lpPortal": "LP 门户",
+        "fundOps": "基金运营",
+        "notes": "团队笔记",
+        "sources": "信息源",
+        "thesis": "Thesis",
+        "audit": "审计轨迹",
+        "team": "协作空间",
+        "knowledge": "机构知识"
+      },
+      "statement": {
+        "label": "机构决策工作台",
+        "copy": "把市场发现、研究分析与投资决策放到同一条可审计链路里。AI 加速证据整理，行业专家在关键处验证，团队保留最终判断。"
+      },
+      "story": {
+        "eyebrow": "遇见 Insight Copilot",
+        "title": "洞察不是一段聊天，而是发生在投资工作流里的连续动作。",
+        "signalTitle": "先发现真正值得研究的信号",
+        "signalCopy": "从订阅、趋势与市场事件中识别主题、公司和 Deal 机会。",
+        "researchTitle": "让每个结论都回到证据",
+        "researchCopy": "综合来源、标出矛盾与缺口，并在需要时触发行业专家验证。",
+        "actionTitle": "把判断变成可执行的机构记录",
+        "actionCopy": "决策、跟进、投后与 LP 沟通沿用同一份上下文。"
+      },
+      "quote": {
+        "prefix": "从第一次发现，到最终形成投资备忘录，",
+        "highlight": "关键判断都有证据、有作者、有时间线。",
+        "source": "— FundWorkspace 工作流"
+      },
+      "sectionDescriptions": {
+        "discover": "在市场噪声中识别值得进入研究流程的主题与机会。",
+        "research": "用 AI 组织证据，并把行业专家判断留在同一份尽调记录中。",
+        "act": "让投委会决策、后续行动和投后工作共享一条连续记录。",
+        "ready": "私有、可控、可审计，适合长期积累机构知识。"
+      },
+      "cards": {
+        "signals": { "title": "趋势与信号", "description": "跟踪文章量、来源数与增长率，发现正在升温的主题。" },
+        "dealIntelligence": { "title": "Deal Signals", "description": "从信息源识别融资、创始人、产品与市场机会信号。" },
+        "sourceNetwork": { "title": "信息源网络", "description": "把订阅、市场数据和团队关注对象组织到同一个入口。" },
+        "aiResearch": { "title": "基于证据的 AI 研究", "description": "自动整理来源、矛盾、缺口与下一步验证问题。" },
+        "expertValidation": { "title": "行业专家验证", "description": "在关键不确定性出现时引入合适专家，并保留验证结论。" },
+        "decisionTrail": { "title": "决策轨迹", "description": "让 Thesis、证据、意见与批准记录保持可追溯。" },
+        "portfolioContinuity": { "title": "投后连续性", "description": "投资完成后继续连接运营、报告与 LP 沟通。" },
+        "collaboration": { "title": "团队协作画布", "description": "研究对象、上下文和行动项在同一工作空间持续流转。" },
+        "privacy": { "title": "基金级私有控制", "description": "每家基金拥有独立的 Provider、数据与访问边界。" },
+        "provenance": { "title": "可见来源", "description": "区分原始证据、AI 辅助、专家意见与人的最终判断。" },
+        "institutionalMemory": { "title": "机构记忆", "description": "会议结束后，判断依据和后续工作仍然留在系统中。" }
+      },
+      "stories": {
+        "eyebrow": "团队如何使用 FundWorkspace",
+        "title": "让研究成果跨越一次会议",
+        "firstTitle": "从 AI 研究到行业专家验证",
+        "firstCopy": "团队先让 AI 汇集证据、识别缺口；只有关键不确定性出现时，才把问题交给合适的行业专家。",
+        "secondTitle": "从投资决策到投后与 LP",
+        "secondCopy": "同一份投资记录继续承载后续行动、组合跟踪与获批的投资人沟通内容。"
+      },
+      "footer": {
+        "subtle": "开始使用 FundWorkspace",
+        "title": "让下一次投资决策，从完整上下文开始。",
+        "platform": "平台",
+        "workflow": "工作流",
+        "company": "FundWorkspace",
+        "copyright": "私有投资工作，从信号到长期管理始终连接。"
+      }
+    },
+    "footer": "从信号到长期管理，连接私有投资工作的每一步。"
+  },
   "PortalChrome": {
     "overview": "概览",
     "library": "资料库",

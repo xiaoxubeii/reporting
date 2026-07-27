@@ -14,7 +14,7 @@ describe('navigation chrome', () => {
 
   it('does not surface Support or the branded footer links', () => {
     const appSidebar = readFileSync(projectFile('components/app-sidebar.tsx'), 'utf8')
-    const publicLayout = readFileSync(projectFile('app/(public)/layout.tsx'), 'utf8')
+    const publicLayout = readFileSync(projectFile('app/(public)/public-layout-client.tsx'), 'utf8')
 
     expect(appSidebar).not.toContain("href: '/support'")
     expect(publicLayout).not.toContain("href: '/support-explainer'")

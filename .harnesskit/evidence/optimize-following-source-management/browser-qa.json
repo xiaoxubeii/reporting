@@ -1,0 +1,122 @@
+{
+  "checks": [
+    {
+      "name": "seed followed source (201)",
+      "passed": true
+    },
+    {
+      "name": "English Following tab",
+      "passed": true
+    },
+    {
+      "name": "English local-search placeholder",
+      "passed": true
+    },
+    {
+      "name": "Add source links to Explore",
+      "passed": true
+    },
+    {
+      "name": "category disclosure open by default",
+      "passed": true
+    },
+    {
+      "name": "personal category rendered",
+      "passed": true
+    },
+    {
+      "name": "compact source row rendered",
+      "passed": true
+    },
+    {
+      "name": "raw RSS URL hidden from default row",
+      "passed": true
+    },
+    {
+      "name": "category can collapse",
+      "passed": true
+    },
+    {
+      "name": "URL-shaped query filters locally",
+      "passed": true
+    },
+    {
+      "name": "domain query matches endpoint source",
+      "passed": true
+    },
+    {
+      "name": "open action available",
+      "passed": true
+    },
+    {
+      "name": "copy action available",
+      "passed": true
+    },
+    {
+      "name": "unfollow action available",
+      "passed": true
+    },
+    {
+      "name": "copy success announced ({\"clipboardAvailable\":true,\"liveRegions\":[\"RSS link for Nature Reviews Cardiology copied\",\"\"],\"alerts\":[]})",
+      "passed": true
+    },
+    {
+      "name": "desktop has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "locale API accepted Simplified Chinese",
+      "passed": true
+    },
+    {
+      "name": "Chinese local-search placeholder",
+      "passed": true
+    },
+    {
+      "name": "Chinese add-source action",
+      "passed": true
+    },
+    {
+      "name": "Chinese view retains personal category",
+      "passed": true
+    },
+    {
+      "name": "mobile Following content has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "mobile disclosure remains open and usable",
+      "passed": true
+    },
+    {
+      "name": "mobile Chinese actions open",
+      "passed": true
+    }
+  ],
+  "consoleErrors": [
+    "Loading the image 'http://localhost:5000/auth?next=%2Ficon%3Ff605c3ee05a4d232%3D' violates the following Content Security Policy directive: \"img-src 'self' data: blob: https:\". The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to fetch RSC payload for http://127.0.0.1:5000/dashboard. Falling back to browser navigation. TypeError: Failed to fetch",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to fetch RSC payload for http://127.0.0.1:5000/feeds/sources?view=following. Falling back to browser navigation. TypeError: Failed to fetch",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Loading the script 'https://va.vercel-scripts.com/v1/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Loading the script 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js' violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.usefathom.com https://www.googletagmanager.com https://www.google-analytics.com https://assets.calendly.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "pageErrors": []
+}

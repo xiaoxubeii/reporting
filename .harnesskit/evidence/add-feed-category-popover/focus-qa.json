@@ -1,0 +1,14 @@
+{
+  "checks": [
+    {
+      "name": "successful follow focuses the new Following control",
+      "passed": true
+    },
+    {
+      "name": "initially followed sources do not steal focus after reload",
+      "passed": true,
+      "activeElement": "BODY"
+    }
+  ],
+  "qaIdentityRemoved": true
+}

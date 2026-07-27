@@ -406,7 +406,7 @@ describe('UI locale contract', () => {
     const appSidebar = readFileSync(resolve(process.cwd(), 'components/app-sidebar.tsx'), 'utf8')
     const appLayout = readFileSync(resolve(process.cwd(), 'app/(app)/layout.tsx'), 'utf8')
     const appHeader = readFileSync(resolve(process.cwd(), 'components/app-header.tsx'), 'utf8')
-    const publicLayout = readFileSync(resolve(process.cwd(), 'app/(public)/layout.tsx'), 'utf8')
+    const publicLayout = readFileSync(resolve(process.cwd(), 'app/(public)/public-layout-client.tsx'), 'utf8')
 
     expect(languageSwitcher).toContain("t('labelWithCurrent'")
     expect(languageSwitcher).toContain('window.location.pathname')

@@ -157,6 +157,187 @@
     "menuTitle": "Product navigation",
     "menuDescription": "Navigate between public product pages."
   },
+  "PlatformLanding": {
+    "metadata": {
+      "title": "FundWorkspace | Investment intelligence for the whole fund",
+      "description": "A private investment workspace connecting market signals, research, expert validation, decisions, portfolio work, and LP communication."
+    },
+    "nav": {
+      "label": "Platform landing navigation",
+      "platform": "Platform",
+      "workflow": "Workflow",
+      "experts": "Expert validation",
+      "trust": "Trust"
+    },
+    "actions": { "demo": "Request a demo" },
+    "hero": {
+      "eyebrow": "Investment intelligence infrastructure",
+      "title": "Turn market signals into investment decisions.",
+      "description": "FundWorkspace connects discovery, deal intelligence, diligence, decisions, portfolio work, and LP communication in one private operating system for the fund.",
+      "figureLabel": "One connected fund workspace",
+      "proofs": {
+        "private": "Private by default",
+        "connected": "A continuous evidence trail",
+        "branded": "A distinct workspace for every fund"
+      }
+    },
+    "evidence": {
+      "eyebrow": "The product, not a promise",
+      "title": "Investment work stays connected to its evidence.",
+      "description": "Move from the first signal to a documented decision without rebuilding context across feeds, spreadsheets, documents, inboxes, and disconnected AI tools.",
+      "researchTitle": "Research and expert validation",
+      "researchCaption": "Research gaps, contradictions, sources, and optional expert review remain visible inside the diligence record.",
+      "dealsTitle": "Deal intelligence",
+      "dealsCaption": "Prioritize opportunities, preserve the original signal, and move qualified work into diligence.",
+      "lpTitle": "LP communication",
+      "lpCaption": "Carry approved fund information into a dedicated investor experience without exposing the private workspace."
+    },
+    "difference": {
+      "eyebrow": "Designed for investment institutions",
+      "title": "A fund operating system, not another AI assistant.",
+      "items": {
+        "context": { "title": "Fund context stays intact", "description": "Deals, research, decisions, portfolio records, and investor reporting share one controlled workspace." },
+        "evidence": { "title": "Evidence before output", "description": "AI accelerates synthesis, while source material, contradictions, and human judgment remain inspectable." },
+        "continuity": { "title": "The record survives the meeting", "description": "Decision rationale and follow-up work remain connected instead of disappearing into chat history or slide decks." }
+      }
+    },
+    "workflow": {
+      "eyebrow": "Continuous workflow",
+      "title": "From signal to stewardship, without losing the thread.",
+      "description": "Each stage adds context to the same investment record. Teams can move quickly without turning speed into institutional amnesia.",
+      "steps": {
+        "signals": { "title": "Market signals", "description": "Discover themes and opportunities across followed sources and the wider market." },
+        "research": { "title": "AI research", "description": "Structure evidence, identify gaps, and surface contradictions for the team." },
+        "expert": { "title": "Expert validation", "description": "Bring in domain experts when the evidence needs external scrutiny." },
+        "decision": { "title": "IC decision", "description": "Preserve the thesis, evidence, judgment, and decision in one record." },
+        "portfolio": { "title": "Portfolio and LPs", "description": "Continue the operating relationship after the investment is made." }
+      }
+    },
+    "experts": {
+      "eyebrow": "Human judgment where it matters",
+      "title": "Industry expert validation",
+      "description": "AI can find and synthesize evidence. FundWorkspace helps the team identify when the evidence needs it, match the right expert, and retain that validation alongside the diligence record.",
+      "calloutTitle": "Needs-based, not ceremonial",
+      "calloutDescription": "Expert review is triggered by material gaps, contradictions, or domain-specific uncertainty—not forced into every deal."
+    },
+    "capabilities": {
+      "eyebrow": "Institutional capability",
+      "title": "One workspace for the work between sourcing and reporting.",
+      "items": {
+        "discover": { "title": "Discover", "description": "Follow sources, monitor emerging themes, search across knowledge, and identify credible deal signals." },
+        "diligence": { "title": "Diligence", "description": "Organize the data room, run evidence-grounded research, validate with experts, score, and draft the investment memo." },
+        "decide": { "title": "Decide", "description": "Give the investment committee a traceable record of evidence, open questions, judgment, and approval." },
+        "operate": { "title": "Operate", "description": "Manage portfolio activity, fund operations, reporting, and a separate LP portal without fragmenting the record." }
+      }
+    },
+    "trust": {
+      "title": "Built for private, accountable investment work.",
+      "items": {
+        "privacy": { "title": "Private by default", "description": "The public platform, each fund workspace, and the LP experience are deliberately separated." },
+        "control": { "title": "Fund-level control", "description": "Provider, workflow, and access decisions remain scoped to the fund rather than a shared global workspace." },
+        "brand": { "title": "Institutional identity", "description": "Each fund can maintain its own name, visual identity, public presence, and investor experience." },
+        "audit": { "title": "Visible provenance", "description": "Sources, AI-assisted work, expert input, and human decisions stay distinguishable in the record." }
+      }
+    },
+    "final": { "eyebrow": "FundWorkspace", "title": "Give your investment process a durable institutional memory." },
+    "workspace": {
+      "trigger": "Find your workspace",
+      "title": "Open your FundWorkspace",
+      "description": "Enter your fund slug or its FundWorkspace address. We will take you to the canonical sign-in page without checking membership here.",
+      "label": "Workspace",
+      "placeholder": "northstar or northstar.fundworkspace.example",
+      "help": "Use only your FundWorkspace slug or address. Do not enter a password or access token.",
+      "error": "Enter your FundWorkspace slug or workspace address.",
+      "continue": "Continue",
+      "close": "Close workspace finder"
+    },
+    "images": {
+      "logo": "FundWorkspace blue and green folded mark",
+      "research": "FundWorkspace diligence research with expert validation controls",
+      "deals": "FundWorkspace deal pipeline",
+      "lpPortal": "FundWorkspace LP portal"
+    },
+    "harmonic": {
+      "connectedLabel": "One workspace, across every team decision",
+      "surfaces": {
+        "signals": "Market signals",
+        "feeds": "Feeds and trends",
+        "search": "Global search",
+        "deals": "Deal pipeline",
+        "companies": "Company profiles",
+        "research": "AI research",
+        "experts": "Expert validation",
+        "evidence": "Evidence library",
+        "tracking": "Continuous tracking",
+        "decisions": "Decision record",
+        "portfolio": "Portfolio",
+        "reports": "Report center",
+        "lpPortal": "LP portal",
+        "fundOps": "Fund operations",
+        "notes": "Team notes",
+        "sources": "Sources",
+        "thesis": "Thesis",
+        "audit": "Audit trail",
+        "team": "Team workspace",
+        "knowledge": "Institutional knowledge"
+      },
+      "statement": {
+        "label": "Institutional decision workspace",
+        "copy": "Put market discovery, research, and investment decisions on one auditable path. AI accelerates evidence work, industry experts validate what matters, and the team retains final judgment."
+      },
+      "story": {
+        "eyebrow": "Meet Insight Copilot",
+        "title": "Insight is not a chat. It is a continuous action inside the investment workflow.",
+        "signalTitle": "Find the signals worth researching",
+        "signalCopy": "Identify themes, companies, and deal opportunities across feeds, trends, and market events.",
+        "researchTitle": "Bring every conclusion back to evidence",
+        "researchCopy": "Synthesize sources, expose contradictions and gaps, and trigger expert validation when it is needed.",
+        "actionTitle": "Turn judgment into an institutional record",
+        "actionCopy": "Decisions, follow-up, portfolio work, and LP communication retain the same context."
+      },
+      "quote": {
+        "prefix": "From first discovery to the final investment memo, ",
+        "highlight": "every key judgment has evidence, an owner, and a timeline.",
+        "source": "— The FundWorkspace workflow"
+      },
+      "sectionDescriptions": {
+        "discover": "Identify the themes and opportunities that deserve research amid market noise.",
+        "research": "Use AI to structure evidence and keep expert judgment in the same diligence record.",
+        "act": "Give IC decisions, follow-up, and portfolio work one continuous record.",
+        "ready": "Private, controlled, and auditable infrastructure for durable institutional knowledge."
+      },
+      "cards": {
+        "signals": { "title": "Trends and signals", "description": "Track article volume, source count, and growth to see which themes are heating up." },
+        "dealIntelligence": { "title": "Deal Signals", "description": "Identify financing, founder, product, and market opportunity signals across sources." },
+        "sourceNetwork": { "title": "Source network", "description": "Organize feeds, market data, and team watchlists behind one discovery surface." },
+        "aiResearch": { "title": "Evidence-grounded AI research", "description": "Structure sources, contradictions, gaps, and the next questions to validate." },
+        "expertValidation": { "title": "Industry expert validation", "description": "Bring in the right expert at material uncertainty and retain the result." },
+        "decisionTrail": { "title": "Decision trail", "description": "Keep thesis, evidence, opinions, and approvals traceable." },
+        "portfolioContinuity": { "title": "Portfolio continuity", "description": "Continue into operations, reporting, and LP communication after investment." },
+        "collaboration": { "title": "Team collaboration canvas", "description": "Research objects, context, and actions move through one shared workspace." },
+        "privacy": { "title": "Fund-level private control", "description": "Each fund owns its providers, data, and access boundary." },
+        "provenance": { "title": "Visible provenance", "description": "Distinguish source evidence, AI assistance, expert input, and human judgment." },
+        "institutionalMemory": { "title": "Institutional memory", "description": "Rationale and follow-up remain after the meeting ends." }
+      },
+      "stories": {
+        "eyebrow": "How teams use FundWorkspace",
+        "title": "Make research outlive the meeting",
+        "firstTitle": "From AI research to expert validation",
+        "firstCopy": "AI gathers evidence and exposes gaps first. Only material uncertainty is routed to the right industry expert.",
+        "secondTitle": "From investment decision to portfolio and LPs",
+        "secondCopy": "The same investment record carries follow-up, portfolio monitoring, and approved investor communication."
+      },
+      "footer": {
+        "subtle": "Try FundWorkspace",
+        "title": "Start the next investment decision with complete context.",
+        "platform": "Platform",
+        "workflow": "Workflow",
+        "company": "FundWorkspace",
+        "copyright": "Private investment work, connected from signal to stewardship."
+      }
+    },
+    "footer": "Private investment work, connected from signal to stewardship."
+  },
   "PortalChrome": {
     "overview": "Overview",
     "library": "Library",
