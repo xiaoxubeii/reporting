@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Globe2 } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'

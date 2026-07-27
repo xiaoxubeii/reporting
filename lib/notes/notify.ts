@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 import { sendPlatformEmail } from '@/lib/email/system'
 import type { Database } from '@/lib/types/database'
 
@@ -98,7 +99,7 @@ export async function sendNoteNotifications(
     if (recipientUserIds.length === 0) return
 
     // Look up emails for recipients
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || ''
+    const siteUrl = await canonicalFundOriginForId(admin as never, fundId)
     const fromName = fund?.name || 'Portfolio'
 
     const subject = note.companyName

@@ -26,7 +26,7 @@ import { DefaultMetricsSettings } from '@/components/settings/default-metrics-se
 import { StyleAnchorsInline } from './memo-agent/style-anchors/style-anchors-inline'
 import { SchemasInline } from './memo-agent/schemas/schemas-inline'
 import { AppearanceEditor } from './appearance/editor'
-import { AlertCircle, Check, ChevronDown, ChevronRight, Loader2, Plus, Trash2, Copy, FolderOpen, Unlink, Shield, ImagePlus, X, Lock } from 'lucide-react'
+import { AlertCircle, Check, ChevronDown, ChevronRight, Loader2, Plus, Trash2, Copy, FolderOpen, Unlink, Shield, ImagePlus, X, Lock, Globe2 } from 'lucide-react'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
 import type { FeatureKey, FeatureVisibility, FeatureVisibilityMap } from '@/lib/types/features'
 import { FEATURE_META } from '@/lib/types/feature-meta'
@@ -35,6 +35,7 @@ import { SettingsCard, SettingsCardGrid } from '@/components/settings-card'
 import { AffinityConnect } from '@/components/settings/affinity-connect'
 import { HeartbeatConnect } from '@/components/settings/heartbeat-connect'
 import { DealResearchSettings } from '@/components/settings/deal-research-settings'
+import { useTenantBranding } from '@/components/tenant-branding-provider'
 import {
   FundResendInboundProviderFields,
   FundResendOutboundProviderFields,
@@ -120,6 +121,7 @@ interface Settings {
 }
 
 export default function SettingsPage() {
+  const tenantBranding = useTenantBranding()
   const router = useRouter()
   const t = useTranslations('Settings')
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -189,6 +191,15 @@ export default function SettingsPage() {
           <Section title={t('sections.appearance')}>
             <AppearanceEditor />
           </Section>
+          {tenantBranding && <Section title={t('sections.publicSite')}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-muted p-2"><Globe2 className="h-4 w-4 text-muted-foreground" /></div>
+                <p className="text-sm leading-6 text-muted-foreground">{t('publicSiteEntry.description')}</p>
+              </div>
+              <Button variant="outline" size="sm" asChild className="shrink-0"><Link href="/settings/public-site">{t('publicSiteEntry.action')}</Link></Button>
+            </div>
+          </Section>}
           <CurrencySection currency={settings.currency} onSaved={load} />
           <FeatureVisibilitySection featureVisibility={settings.featureVisibility} lpPortalEnabled={settings.lpPortalEnabled} onSaved={load} />
           <Section title={t('sections.investmentVehicles')}>

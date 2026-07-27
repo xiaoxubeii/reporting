@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { dbError } from '@/lib/api-error'
+import { headers } from 'next/headers'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export async function POST(req: NextRequest) {
   // Rate limit: 10 requests per 5 minutes per IP
@@ -17,6 +19,10 @@ export async function POST(req: NextRequest) {
   if (!fundId) return NextResponse.json({ error: 'fundId is required' }, { status: 400 })
 
   const admin = createAdminClient()
+
+  if (!(await fundMatchesTrustedRequestTenant(admin as never, new Headers(headers()), fundId))) {
+    return NextResponse.json({ error: 'Fund not found' }, { status: 404 })
+  }
 
   // Verify the fund exists and the user's email domain matches
   const { data: fund } = await admin

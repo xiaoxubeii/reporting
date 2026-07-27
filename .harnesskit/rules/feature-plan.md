@@ -32,6 +32,8 @@ dependency and ownership checks.
 | feed-discovery | Add reusable semantic tags, deterministic Trending, evidence-gated Deal Signals, and a confirmed Feed-to-Deal handoff over the public Explore collector | feature-planning | `openspec/changes/add-feed-discovery` | Latest remains available; deployment-owned refresh atomically publishes explainable Trending and open Deal Signals through one fixed owner fund's validated default provider; authorized users can prefill and confirm the existing manual Deal flow from an article | single-feature | curated-explore, feeds-product, Croner, fixed owner-fund AI provider, Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-feed-discovery` | in_progress |
 | croner-node-runtime | Replace Vercel Cron with one persistent Croner process while running the existing Next.js API routes on a persistent Node server | feature-planning | `openspec/changes/replace-vercel-cron-with-croner` | Production exposes separate Web and Cron start commands; the Cron process schedules the existing five authenticated routes with overlap protection, health reporting, bounded requests, and graceful shutdown; Vercel schedules are removed | main-agent-only | existing Next.js cron routes, `CRON_SECRET`, production process supervisor | main-agent | current checkout | complete |
 | search-product | Add bounded federated Search across personal Feeds, Reporting SearXNG, and five direct professional sources | feature-planning | `openspec/changes/add-search-product` | Authorized users select fund-configured categories that resolve to code-reviewed adapters, receive safe normalized partial results with exact provenance, and use origin-correct result actions | serial-required | merged feeds-product, Reporting auth/access, dedicated SearXNG, five public source contracts | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-search-product` | complete |
+| fund-subdomain-isolation | Preserve every route and access rule while binding each hosted Fund to `<fund-slug>.fundworkspace.com` across Landing, auth, GP app, LP Portal, APIs, tokens, and storage | feature-planning | `openspec/changes/add-fund-subdomain-isolation` | Same-Fund requests retain current behavior and paths; unknown/malformed/cross-Fund hosts, sessions, tokens, resource IDs, and cache entries fail closed; legacy self-host mode remains unchanged | main-agent-only | current Fund membership/RLS/access context, auth, LP links, public tokens, OAuth/MCP, background jobs, Storage, wildcard DNS/TLS | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation` | complete |
+| fund-public-site-templates | Give every hosted Fund a safe public homepage selected from three built-in templates while preserving platform marketing and product routes | feature-planning | `openspec/changes/add-fund-public-site-templates` | Fund admins author one structured bilingual draft, preview it privately, and explicitly publish an isolated immutable snapshot rendered as Focus, Institutional, or Minimal; platform `/`, tenant auth/app/portal, unknown hosts, and private data remain unchanged or fail closed | serial-required | completed fund-subdomain-isolation, current localization and Settings surfaces, local Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation` | complete |
 
 ## Feature Requirement Contract
 
@@ -94,6 +96,122 @@ contract for self-check, review, testing, and merge.
 - Correctness, security, and UI/UX re-reviews report no remaining High/Medium or P1/P2 finding.
 - HarnessKit fast is blocked by the unrelated `feed-discovery: complete` state value; targeted is blocked by pre-existing repository-wide ESLint debt. Feature-scoped replacements pass.
 - Evidence: `.harnesskit/evidence/add-global-assistant-context/verification.md` and captured browser artifacts in the same directory.
+
+### Feature: fund-public-site-templates
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible, security-sensitive persistence, publication, anonymous-data, tenancy, localization, and routing contract change.
+- Change: `openspec/changes/add-fund-public-site-templates`
+- Classification: `serial-required`; it directly depends on the uncommitted completed Fund-subdomain implementation in this worktree, so the main agent owns shared schema/API/routing contracts and read-only reviewers verify the plan and result.
+
+#### Acceptance
+
+- The platform hostname keeps the current FundWorkspace product site, while a valid tenant hostname's `/` renders only that Fund's published site or a uniform branded private state.
+- Administrators select exactly Focus, Institutional, or Minimal; every template consumes the same strict bilingual structured content and template changes never discard content.
+- Draft saves are private and revision-checked; publish atomically snapshots template and content, and unpublish hides the site without deleting the draft.
+- Draft, publish, unpublish, and preview require an authenticated administrator whose Fund equals the trusted Host Fund; request data cannot choose a Fund.
+- Anonymous resolution exposes only allowlisted published branding/content and never private settings, Deals, companies, LPs, performance, memberships, or draft history.
+- Settings provides discoverable template selection, structured editing, desktop/mobile production preview, explicit publication state, and localized feedback.
+- Existing tenant `/auth`, GP app, and `/portal` paths keep their current access and isolation behavior.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-fund-public-site-templates/**` and focused HarnessKit plan/progress/evidence.
+- `supabase/migrations/**`, focused database types and public-site database tests.
+- `lib/fund-public-site/**`, focused tenant request/access helpers, and authenticated public-site settings APIs.
+- Tenant/platform root page and public layout branch, built-in public-site components, Settings entry/editor/preview, and localization messages.
+- Focused schema, migration/RLS, route, component, settings, build, and browser tests.
+
+#### Shared Contract Changes
+
+- Add an isolated one-row-per-Fund `fund_public_sites` record with separate revisioned draft and published snapshots.
+- Add one least-privilege exact-slug anonymous resolver plus atomic service-only publish/unpublish functions; deny direct table access.
+- Add one strict versioned structured content contract shared by all three built-in templates and locale fallback helpers.
+- Reuse the trusted Host-to-Fund administrator guard; never accept a client-selected Fund id.
+- Branch exact tenant `/` away from platform product chrome and authenticated-user redirect while preserving all other paths.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec, schema/migration contracts, HarnessKit fast, TypeScript, and diff/secret checks.
+- targeted: strict content parser, real database RLS/RPC behavior, Host/Fund admin APIs, atomic revisions, template/render/routing, settings workflow, and localization parity.
+- full: production build, code/security/accessibility review, and real platform plus two-Fund desktop/mobile browser flows through save, preview, publish, language switch, isolation, and unpublish.
+
+#### Review Required
+
+- planner/architect: yes, data boundary, publication lifecycle, and host routing before implementation.
+- reviewer: yes, concurrency, content preservation, server/client route behavior, localization, and regression risk.
+- security-reviewer: yes, definer functions, RLS/grants, Host/Fund confused deputy, XSS/URL validation, draft leakage, and cache isolation.
+- browser/QA: yes, the tenant homepage and Settings workflow are user-visible and require real host-based verification.
+
+#### Progress / Evidence
+
+- status: complete
+- branch: `codex/add-fund-subdomain-isolation`
+- worktree: `/home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation`
+- evidence: strict OpenSpec, full Vitest (216 files/1618 tests), TypeScript, changed-scope ESLint, database audits, production compilation/route generation, correctness/security reviews, and 11/11 real browser checks pass.
+- browser: platform marketing, two unpublished tenants, three-template lossless authoring, desktop/390px preview, publish, English/Chinese switch, two-Fund isolation, copied-session 404, and unpublish/draft preservation passed with zero feature-scope HTTP failures or page errors.
+- build boundary: `next build --no-lint` passes with the local Supabase environment; normal build remains blocked by pre-existing repository-wide ESLint debt outside this change.
+
+### Feature: fund-subdomain-isolation
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a security-sensitive, browser-visible, cross-module tenancy contract spanning database identity, Host parsing, authentication, API authorization, public tokens, OAuth/MCP, Storage, links, and deployment.
+- Change: `openspec/changes/add-fund-subdomain-isolation`
+- Classification: `main-agent-only`; the central Host/Fund contract and shared middleware cannot be split safely across independent workers.
+
+#### Acceptance
+
+- External paths and current Landing, authentication, GP, LP Portal, feature, grant, and LP-status rules remain unchanged.
+- Every configured `<fund-slug>.<root-domain>` resolves to one stable Fund; malformed, reserved, unknown, and attacker-suffix hosts fail closed.
+- GP and LP browser/session requests proceed only when their live authorized Fund equals the Host Fund; one auth user is limited to one Fund across GP, direct LP, delegated LP, and dual-role graphs, and cookies remain host-only.
+- Tenant-hosted signup, join, and onboarding cannot create or switch to a different Fund; wrong-Fund login clears the newly written host session before denial.
+- Public Fund tokens, API keys, OAuth/MCP credentials, service-role resources, Storage operations, generated Fund links, and caches cannot cross Fund host boundaries.
+- Background workers and inbound webhooks retain their stronger job/token/provider-derived Fund authority and never trust arbitrary Host for authorization.
+- Legacy self-host deployments behave as before when tenant hosting is not configured.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-fund-subdomain-isolation/**` and focused HarnessKit plan/progress/evidence.
+- `supabase/migrations/**`, generated database types, environment/deployment documentation.
+- `lib/tenancy/**`, middleware, central access/API helpers, Supabase cookie/request helpers.
+- Public/auth/root layouts and branding components, GP application layout, LP Portal resolver/layout.
+- Focused public token, API key, OAuth/MCP, email/link, background-job/webhook, and Storage boundary integrations.
+- Focused unit, migration-contract, integration, browser E2E, and security tests.
+
+#### Shared Contract Changes
+
+- Add stable constrained `funds.slug`, a cross-graph historical audit and write-time invariant, plus least-privilege exact-slug public descriptor and single-Fund LP context functions.
+- Add explicit `FUND_WORKSPACE_ROOT_DOMAIN` tenant-hosting mode and one pure canonical Host classifier.
+- Add one tested Host-class x route-authority registry before any current ungated route bypass.
+- Add a trusted middleware-supplied tenant slug and require Host Fund equality before existing permissions.
+- Keep route paths, one-account-one-Fund membership, roles/grants, LP statuses, and host-only session cookies unchanged.
+- Build canonical Fund links from persisted slug and configured root domain; internal workers/webhooks keep non-Host authority.
+
+#### Verification Plan
+
+- smoke: strict OpenSpec, migration/static contracts, host parser, TypeScript, HarnessKit fast, and diff/secret checks.
+- targeted: host parser attacks, middleware GP/LP matrix, auth mismatch, public tokens, OAuth/MCP, canonical links, service-role resource IDs, Storage, background/webhook exception behavior, and cache isolation.
+- full: production build, HarnessKit full, code/security/UX review, and real browser same-Fund plus cross-Fund negative flows on local tenant hostnames.
+
+#### Review Required
+
+- planner/architect: yes, shared Host/Fund authority and migration sequence before implementation.
+- reviewer: yes, middleware lifecycle, backward compatibility, cache behavior, callback/link correctness, and regression risk.
+- security-reviewer: yes, Host spoofing, confused deputy, service-role/RLS, cross-Fund tokens/resources, cookie scope, OAuth, Storage, and webhook/job exceptions.
+- browser/QA: yes, Landing, authentication, Dashboard, LP Portal, wrong-Fund login, and sibling-host cookie behavior are user-visible.
+
+#### Progress / Evidence
+
+- status: complete
+- branch: `codex/add-fund-subdomain-isolation`
+- worktree: `/home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation`
+- planning: proposal, design, three capability specs, and tasks pass strict validation.
+- implementation: Fund identity/Host resolution 2.1-2.6, central request boundary 3.1-3.6, request-scoped branding/auth/onboarding 4.1-4.6, and non-session authority/canonical-link 5.1-5.6 are complete. Invited LP activation is checked against its persisted direct/delegated Fund before mutation; tenant onboarding never offers Fund creation; Portal chrome prefers the exact Host descriptor and rejects mismatched LP branding while legacy mode remains intact.
+- verification: full Vitest (209 passed files, 1573 passed tests), disposable local PostgreSQL migration tests, production build with type validation, strict OpenSpec, HarnessKit fast, `git diff --check`, lint-delta comparison, and real Chromium Alpha/Beta tenant acceptance pass. HarnessKit targeted/full were run and remain blocked by repository-wide pre-existing ESLint debt; the changed files add no lint diagnostics versus `HEAD`.
 
 ### Feature: multi-tenant-resend-mail
 
@@ -1024,6 +1142,7 @@ unmerged worktrees intact if a merge or verification fails.
 2. ui-localization (serial-required in current checkout; no merge split)
 3. feeds-product and curated-explore (one shared feature branch because curated-explore depends on the personal Feeds BFF and Today UI)
 4. search-product (serial after feeds-product; merged from its isolated feature worktree)
+5. fund-subdomain-isolation (single security-sensitive feature on `codex/add-fund-subdomain-isolation`; merge only after full cross-Fund and browser verification)
 
 ## Final Evidence
 

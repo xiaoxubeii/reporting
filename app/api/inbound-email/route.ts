@@ -11,6 +11,7 @@ import { isAuthorizedSender } from '@/lib/pipeline/isAuthorizedSender'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { scanFileAsync } from '@/lib/security/scan-file'
 import { emailFingerprint } from '@/lib/pipeline/emailFingerprint'
+import { admitsRegisteredSystemRequest } from '@/lib/tenancy/system-request'
 
 function safeTokenCompare(a: string, b: string): boolean {
   try {
@@ -25,6 +26,9 @@ function safeTokenCompare(a: string, b: string): boolean {
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
+  if (!admitsRegisteredSystemRequest(req)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   // Rate limit inbound webhook: 60 per minute per IP
   const limited = await rateLimit({ key: `inbound:${getClientIp(req)}`, limit: 60, windowSeconds: 60 })
   if (limited) return limited

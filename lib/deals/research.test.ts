@@ -91,6 +91,8 @@ describe('runDealResearch', () => {
     expect(call.tools?.[0].name).toBe('reporting_search')
     expect(String(call.content)).not.toContain(PARAMS.founderEmail)
     expect(call.system).toContain('untrusted external evidence')
+    expect(call.system).toContain('citation_contract.allowed_source_ids')
+    expect(call.system).toContain('copy the ids exactly')
     expect(deps.persist).toHaveBeenCalledWith(CONTEXT, expect.objectContaining({
       status: 'done',
       sources: [SOURCE],

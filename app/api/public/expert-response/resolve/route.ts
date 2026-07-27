@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientIp, rateLimit } from '@/lib/rate-limit'
 import { readJson } from '@/lib/expert-validation/api'
 import { PUBLIC_INVITATION_ERROR, rateKey, resolvePublicInvitation, validateRawToken } from '@/lib/expert-validation/public'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export async function POST(req: NextRequest) {
   const ipLimited = await rateLimit({ key: rateKey('ip', getClientIp(req)), limit: 30, windowSeconds: 900 })
@@ -12,7 +13,9 @@ export async function POST(req: NextRequest) {
     const token = validateRawToken(body.token)
     const tokenLimited = await rateLimit({ key: rateKey('token', token), limit: 20, windowSeconds: 900 })
     if (tokenLimited) return secure(tokenLimited)
-    const invitation = await resolvePublicInvitation(createAdminClient() as never, token)
+    const admin = createAdminClient()
+    const tenant = await getTrustedRequestTenant(admin as never, req.headers)
+    const invitation = await resolvePublicInvitation(admin as never, token, tenant?.id)
     return secure(NextResponse.json({ invitation }))
   } catch {
     return secure(NextResponse.json({ error: PUBLIC_INVITATION_ERROR }, { status: 404 }))

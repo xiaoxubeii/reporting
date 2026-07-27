@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { encrypt } from '@/lib/crypto'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { randomBytes } from 'crypto'
+import { headers } from 'next/headers'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 
 // GET — check onboarding status so the UI can resume where the user left off
 export async function GET() {
@@ -12,6 +14,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
+  const tenant = await getTrustedRequestTenant(admin as never, new Headers(headers()))
 
   // Check if user already has a fund
   const { data: membership } = await admin
@@ -22,6 +25,10 @@ export async function GET() {
 
   if (!membership) {
     return NextResponse.json({ step: 1, fundId: null, webhookToken: null })
+  }
+
+  if (tenant && membership.fund_id !== tenant.id) {
+    return NextResponse.json({ error: 'Fund not found' }, { status: 404 })
   }
 
   const fundId = membership.fund_id
@@ -80,6 +87,9 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient()
+  if (await getTrustedRequestTenant(admin as never, new Headers(headers()))) {
+    return NextResponse.json({ error: 'Fund creation is unavailable on a Fund workspace' }, { status: 404 })
+  }
 
   // Check if user already has a fund — return it instead of creating a duplicate
   const { data: existing } = await admin

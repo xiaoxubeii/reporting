@@ -61,6 +61,7 @@ export default function PortalWelcomePage() {
     setError(null); setActivating(true)
     const res = await fetch('/api/portal/activate', { method: 'POST' })
     if (res.ok) { window.location.href = '/portal/overview'; return }
+    if (await clearWrongWorkspaceSession(res)) return
     const b = await res.json().catch(() => ({}))
     setError(typeof b.error === 'string' ? { detail: b.error } : { code: 'activationFailed' })
     setActivating(false)
@@ -89,17 +90,36 @@ export default function PortalWelcomePage() {
     if (verify.error) verify = await supabase.auth.verifyOtp({ type: 'invite', email: normEmail, token: code })
     if (verify.error) { setError({ detail: verify.error.message }); setBusy(false); return }
 
+    // Validate the newly issued OTP session against the Host Fund before it
+    // can change the user's password or activate an LP account.
+    const context = await fetch('/api/portal/activate?validate_only=true', { method: 'POST' })
+    if (!context.ok) {
+      if (await clearWrongWorkspaceSession(context)) return
+      const body = await context.json().catch(() => ({}))
+      setError(typeof body.error === 'string' ? { detail: body.error } : { code: 'activationFailed' })
+      setBusy(false)
+      return
+    }
+
     const { error: pwErr } = await supabase.auth.updateUser({ password })
     if (pwErr) { setError({ detail: pwErr.message }); setBusy(false); return }
 
     const res = await fetch('/api/portal/activate', { method: 'POST' })
     if (!res.ok) {
+      if (await clearWrongWorkspaceSession(res)) return
       const b = await res.json().catch(() => ({}))
       setError(typeof b.error === 'string' ? { detail: b.error } : { code: 'activationFailed' })
       setBusy(false)
       return
     }
     window.location.href = '/portal/overview'
+  }
+
+  async function clearWrongWorkspaceSession(res: Response): Promise<boolean> {
+    if (res.status !== 404) return false
+    await supabase.auth.signOut({ scope: 'local' })
+    window.location.href = '/auth?error=workspace_mismatch'
+    return true
   }
 
   if (checking) {

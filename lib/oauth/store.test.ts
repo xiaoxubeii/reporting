@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import crypto from 'crypto'
-import { pkceValid, grantableScope, redirectUriAllowed, clientSecretValid, hashToken } from './store'
+import { pkceValid, grantableScope, redirectUriAllowed, clientSecretValid, consumeAuthorizationCode, hashToken } from './store'
 
 /**
  * The pure guards in the OAuth flow. Each of these is the *only* thing standing
@@ -126,5 +126,38 @@ describe('client authentication', () => {
     expect(clientSecretValid(conf, secret)).toBe(true)
     expect(clientSecretValid(conf, 'mcs_wrong')).toBe(false)
     expect(clientSecretValid(conf, null)).toBe(false)
+  })
+})
+
+describe('authorization code consumption', () => {
+  it('puts client, redirect, trusted Fund, and resource checks in the atomic consume update', async () => {
+    const calls: Array<readonly [string, unknown]> = []
+    const query = {
+      update: vi.fn(() => query),
+      eq: vi.fn((column: string, value: unknown) => {
+        calls.push([column, value])
+        return query
+      }),
+      is: vi.fn(() => query),
+      gt: vi.fn(() => query),
+      select: vi.fn(() => query),
+      maybeSingle: vi.fn(async () => ({ data: null })),
+    }
+    const admin = { from: vi.fn(() => query) }
+
+    await consumeAuthorizationCode(admin as never, 'mcc_code', {
+      clientId: 'client-1',
+      redirectUri: 'https://client.example/callback',
+      expectedFundId: 'fund-alpha',
+      expectedResource: 'https://alpha.fundworkspace.com/api/mcp',
+    })
+
+    expect(calls).toEqual(expect.arrayContaining([
+      ['client_id', 'client-1'],
+      ['redirect_uri', 'https://client.example/callback'],
+      ['fund_id', 'fund-alpha'],
+      ['resource', 'https://alpha.fundworkspace.com/api/mcp'],
+    ]))
+    expect(query.update).toHaveBeenCalledOnce()
   })
 })

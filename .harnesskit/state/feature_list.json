@@ -133,7 +133,7 @@
       "id": "investment-decision-e2e",
       "title": "End-to-end investment decision workflow",
       "status": "in_progress",
-      "current_task": "Create an isolated worktree and prove Pitch through expert evidence in the real browser flow",
+      "current_task": "Re-run the complete workflow after synchronizing the current main branch",
       "definition_of_done": [
         "One uniquely tagged public pitch creates exactly one fund-scoped inbound Deal",
         "Deal Research is requested through the UI and executed through the real Cron path to a recorded terminal result",
@@ -144,11 +144,15 @@
         "Every in-scope blocker fixed in code has focused regression coverage",
         "Focused tests, changed-scope checks, production build, security review, and real browser acceptance pass"
       ],
-      "evidence": [],
-      "blocked_by": [
-        "No outbound email provider is configured, so invitation acceptance must verify the documented copy-link fallback"
+      "evidence": [
+        "Pre-merge run: real browser flow passed from public pitch through Deal conversion, research, promotion, Diligence, expert response, evidence ingestion, checklist, scoring, and memo",
+        "Pre-merge run: the expert response materialized once as an industry_expert document and contributed 10 claims and 10 citations after re-ingestion",
+        "Pre-merge run: focused verification passed 118 tests across 11 files; full Vitest passed 1128 tests with 4 skips; TypeScript passed",
+        ".harnesskit/evidence/investment-decision-e2e/results.md records the pre-merge sanitized linkage assertions and verification outcomes",
+        "Pre-merge changed-scope ESLint, secret scan, and git diff check passed"
       ],
-      "notes": "Run only in /home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e with unique test data and cookie namespace. Do not reset the shared local Supabase stack."
+      "blocked_by": [],
+      "notes": "The earlier isolated CardioSignal fixture completed the system workflow, but current-main revalidation and browser evidence are still required. No outbound email provider is configured, so invitation acceptance must verify the product's documented copy-link fallback without claiming provider delivery."
     },
     {
       "id": "harness-bootstrap",
@@ -387,6 +391,57 @@
       ],
       "blocked_by": [],
       "notes": "The fund-configured Category to code-owned Adapter increment is implemented, verified, and merged. V1 remains a bounded live federation only: no Reporting-owned index/history, paid APIs, arbitrary crawling, federated pagination, quota ledger, fuzzy/AI deduplication, or AI ranking."
+    },
+    {
+      "id": "fund-public-site-templates",
+      "title": "Built-in Fund public site templates",
+      "status": "passing",
+      "current_task": "Complete; ready for review and integration",
+      "definition_of_done": [
+        "Platform root keeps FundWorkspace marketing while exact tenant root renders only published Fund content or a branded private state",
+        "Fund administrators choose Focus, Institutional, or Minimal over one strict bilingual structured content contract without content loss",
+        "Draft save, authenticated preview, atomic publish, and unpublish are revisioned and Host-to-Fund administrator scoped",
+        "Anonymous callers can resolve only allowlisted published snapshots and cannot read drafts, private settings, or workspace records",
+        "Settings offers accessible structured editing, desktop/mobile production preview, explicit publication state, and localized feedback",
+        "Focused database, API, rendering, localization, build, security, and two-Fund browser verification pass"
+      ],
+      "evidence": [
+        "OpenSpec proposal, design, specification, and 25-task plan pass strict validation",
+        "Read-only planner, architect, and TDD reviews agree on a separate table, atomic snapshots, strict shared schema, least-privilege resolver, and tenant-root shell split",
+        "Full Vitest passes 216 files and 1618 tests with five environment-gated skips; TypeScript, changed-scope ESLint with zero errors, database audit runner, strict OpenSpec, and git diff checks pass",
+        "Production compilation, type validation, page-data collection, and all 269 route generations pass with next build --no-lint; the normal build remains stopped only by repository-wide pre-existing ESLint debt",
+        "Correctness and security reviews have no remaining blocker, high, or critical finding; browser roles cannot read the table directly and service_role writes are column-limited with no DELETE or published-field grant",
+        "Real Chromium passes 11 of 11 platform and two-Fund flows: private state, three templates, lossless editing, desktop and 390px preview, publish, English to Chinese switch, tenant isolation, copied-session 404, and unpublish with draft preservation",
+        "Feature-scope browser HTTP failures and page errors are zero; all two-Fund and two-user disposable fixtures were deleted"
+      ],
+      "blocked_by": [],
+      "notes": "Implementation is complete in /home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation on codex/add-fund-subdomain-isolation because it directly depends on the completed but uncommitted Host/Fund isolation contract. Browser evidence is local and untracked. Production rollout still requires the Fund-subdomain wildcard DNS/TLS, trusted Host proxy, redirect allowlist, and migration gates."
+    },
+    {
+      "id": "fund-subdomain-isolation",
+      "title": "Fund subdomain logical isolation",
+      "status": "passing",
+      "current_task": "Complete; ready for review and integration",
+      "definition_of_done": [
+        "Every Fund has one stable constrained slug and configured tenant hosts resolve exactly one Fund",
+        "Landing, auth, Dashboard, LP management, and LP Portal retain their current visible paths and access rules",
+        "GP and LP sessions are denied when their authorized Fund does not equal the Host Fund, and one auth identity cannot span Funds across GP, direct LP, delegated LP, or dual-role graphs",
+        "Public tokens, API credentials, service-role resources, Storage operations, generated links, and caches cannot cross Fund hosts",
+        "Background jobs and inbound webhooks keep signed job or provider-derived Fund authority rather than trusting Host",
+        "Tenant branding uses only whitelisted public Fund fields and host-only cookies remain unchanged",
+        "Legacy self-host mode remains unchanged when tenant hosting is not configured",
+        "Focused, cross-Fund, security, build, HarnessKit, and real browser verification pass"
+      ],
+      "evidence": [
+        "OpenSpec proposal, design, three capability specs, and 34-task implementation plan pass strict validation",
+        "Host parser and explicit Host-class x route-authority registry pass 39 focused unit tests",
+        "Isolated PostgreSQL tests prove slug constraints, minimal resolvers, historical cross-graph audit failure, and write-time one-Fund enforcement",
+        "Full Vitest passes 209 files and 1573 tests; production build with type validation, OpenSpec strict validation, HarnessKit fast, database runner, and git diff checks pass",
+        "Real Chromium proves distinct Alpha/Beta branding, correct-Fund GP and LP flows, explicit wrong-Fund denial, host-only sibling-cookie isolation, mobile rendering, and preservation of the valid Alpha session",
+        "Direct HTTP checks prove platform, unknown, reserved, attacker-suffix, and forged-forwarded-host requests fail closed or retain the canonical Host authority"
+      ],
+      "blocked_by": [],
+      "notes": "Implementation is isolated in /home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation on codex/add-fund-subdomain-isolation. Migration and browser acceptance used a disposable local Supabase stack only; production still requires wildcard DNS/TLS, proxy Host preservation, redirect allowlisting, approved Fund slugs, and an explicit migration rollout. HarnessKit targeted/full were executed but stop at repository-wide pre-existing ESLint debt; lint comparison shows the changed files add no diagnostics versus HEAD."
     }
   ]
 }

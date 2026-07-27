@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isSupportedLocale, LOCALE_COOKIE_NAME } from '@/i18n/locales'
 import { isDevelopmentLoopbackForward } from '@/i18n/origin'
+import { canonicalFundRequestOrigin } from '@/lib/tenancy/host'
 
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365
 const MAX_BODY_BYTES = 100
@@ -27,6 +28,14 @@ function isSameOrigin(request: NextRequest): boolean {
 
   const requestOrigin = getHttpOrigin(origin)
   if (!requestOrigin) return false
+
+  if (process.env.FUND_WORKSPACE_ROOT_DOMAIN?.trim()) {
+    try {
+      return requestOrigin === canonicalFundRequestOrigin(request)
+    } catch {
+      return false
+    }
+  }
 
   const allowedOrigins = new Set([request.nextUrl.origin])
   const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL

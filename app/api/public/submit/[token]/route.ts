@@ -6,6 +6,7 @@ import { extractAttachmentText, type PostmarkPayload } from '@/lib/parsing/extra
 import { processDeal } from '@/lib/pipeline/processDeal'
 import type { PostmarkPayload as PipelinePayload } from '@/lib/pipeline/processEmail'
 import { rateLimit } from '@/lib/rate-limit'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
 
 import {
   MAX_NAME_LEN, MAX_EMAIL_LEN, MAX_URL_LEN, MAX_PITCH_LEN,
@@ -33,6 +34,9 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     return NextResponse.json({ error: 'Submission form is not active' }, { status: 404 })
   }
   const fundId = (settings as any).fund_id as string
+  if (!(await fundMatchesTrustedRequestTenant(admin as never, req.headers, fundId))) {
+    return NextResponse.json({ error: 'Submission form is not active' }, { status: 404 })
+  }
 
   let body: {
     companyName?: string

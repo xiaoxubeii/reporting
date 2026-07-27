@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 import { sendPlatformEmail } from '@/lib/email/system'
 
 export interface EmailAttachment {
@@ -338,7 +339,7 @@ export async function sendApprovalEmail(
       .eq('fund_id', fundId)
       .single()
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const siteUrl = await canonicalFundOriginForId(admin as never, fundId)
     const vars: Record<string, string> = { fundName, siteUrl }
     const interpolate = (template: string) =>
       template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '')

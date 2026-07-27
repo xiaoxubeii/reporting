@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { assertWriteAccess } from '@/lib/api-helpers'
 import { encrypt } from '@/lib/crypto'
 import { randomBytes } from 'crypto'
+import { headers } from 'next/headers'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export async function PATCH(req: NextRequest) {
   const supabase = createClient()
@@ -19,6 +21,9 @@ export async function PATCH(req: NextRequest) {
 
   if (!fundId || !provider) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+  if (!(await fundMatchesTrustedRequestTenant(admin as never, new Headers(headers()), fundId))) {
+    return NextResponse.json({ error: 'Fund not found' }, { status: 404 })
   }
 
   if (provider !== 'postmark' && provider !== 'mailgun') {

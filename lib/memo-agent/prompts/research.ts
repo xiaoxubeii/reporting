@@ -97,17 +97,33 @@ function summarizeForCompetitors(out: IngestionOutput): string {
       if (doc.summary) parts.push(doc.summary)
     }
   }
-  // Any claim that smells like a competitor mention.
-  const competitorClaims = out.documents.flatMap(d =>
-    d.claims.filter(c => /competit|market|landscape|alternative|incumbent/i.test(c.field + ' ' + c.context + ' ' + c.value))
-  )
-  if (competitorClaims.length > 0) {
-    parts.push('# Competitor-related claims')
-    for (const c of competitorClaims) {
+  const isCompetitorClaim = (claim: IngestionOutput['documents'][number]['claims'][number]) =>
+    /competit|market|landscape|alternative|incumbent/i.test(claim.field + ' ' + claim.context + ' ' + claim.value)
+  // Expert responses are external evidence. Treating their competitor names as
+  // company-named competitors creates a contradictory prompt whenever the expert
+  // explicitly says the company omitted those names.
+  const companyCompetitorClaims = out.documents
+    .filter(document => document.detected_type !== 'industry_expert')
+    .flatMap(document => document.claims.filter(isCompetitorClaim))
+  const expertCompetitorClaims = out.documents
+    .filter(document => document.detected_type === 'industry_expert')
+    .flatMap(document => document.claims.filter(isCompetitorClaim))
+
+  if (companyCompetitorClaims.length > 0) {
+    parts.push('# Company-mentioned competitor claims')
+    for (const c of companyCompetitorClaims) {
       parts.push(`  • ${c.field}: ${c.value} (${c.context})`)
     }
+  } else {
+    parts.push('# Company-named competitors')
+    parts.push('(No explicit competitor mentions in ingestion. Do not infer company-named competitors from product or market context.)')
   }
-  if (parts.length === 0) parts.push('(No explicit competitor mentions in ingestion. Identify competitors based on product/market positioning if web search is enabled.)')
+  if (expertCompetitorClaims.length > 0) {
+    parts.push('# Expert-evidence competitor context (not company-named)')
+    for (const claim of expertCompetitorClaims) {
+      parts.push(`  • ${claim.field}: ${claim.value} (${claim.context})`)
+    }
+  }
   return parts.join('\n')
 }
 
@@ -180,7 +196,7 @@ Web search is NOT available. You may use your training-time knowledge only — a
 const COMPETITORS_COMMON = `STAGE 2 — COMPETITIVE MAP
 
 Build a competitive map. Two buckets:
-  - named_by_company: competitors the company itself mentions in the ingestion. Quote them faithfully.
+  - named_by_company: competitors the company itself explicitly mentions in the ingestion. Quote only those explicit mentions faithfully. If ingestion names none, return named_by_company as an empty array. Do not invent company-named competitors from product or market context.
   - named_by_research: competitors you identify from product/market positioning that the company did not name.
 
 Return JSON ONLY:

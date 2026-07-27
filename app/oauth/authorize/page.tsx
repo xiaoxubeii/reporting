@@ -9,6 +9,9 @@ import { agentApiEnabled } from '@/lib/oauth/enabled'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AuthShell } from '@/components/auth-shell'
 import { ConsentForm } from './consent-form'
+import { headers } from 'next/headers'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
+import { canonicalFundOrigin } from '@/lib/tenancy/host'
 
 /**
  * The OAuth consent screen — where a human decides whether an agent may act on
@@ -76,6 +79,7 @@ export default async function AuthorizePage({ searchParams }: Props) {
   }
 
   const admin = createAdminClient()
+  const tenant = await getTrustedRequestTenant(admin as never, new Headers(headers()))
   const client = await getClient(admin, clientId)
   if (!client) {
     return <Problem title={t('problems.unknownApplication.title')} detail={t('problems.unknownApplication.detail')} />
@@ -94,6 +98,13 @@ export default async function AuthorizePage({ searchParams }: Props) {
     return <Problem title={t('problems.noFund.title')} detail={t('problems.noFund.detail')} />
   }
   const { fund_id: fundId, role } = membership as { fund_id: string; role: string }
+  if (tenant && tenant.id !== fundId) {
+    return <Problem title={t('problems.noFund.title')} detail={t('problems.noFund.detail')} />
+  }
+  const canonicalResource = tenant ? `${canonicalFundOrigin(tenant.slug)}/api/mcp` : resource
+  if (tenant && resource && resource !== canonicalResource) {
+    return <Problem title={t('problems.invalidRequest.title')} detail={t('problems.invalidRequest.detail')} />
+  }
 
   if (role === 'viewer') {
     return <Problem title={t('problems.readOnlyDemo.title')} detail={t('problems.readOnlyDemo.detail')} />
@@ -129,7 +140,7 @@ export default async function AuthorizePage({ searchParams }: Props) {
         code_challenge: codeChallenge,
         scope: granted,
         state,
-        resource,
+        resource: canonicalResource,
       }}
     />
   )

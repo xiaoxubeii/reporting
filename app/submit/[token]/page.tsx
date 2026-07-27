@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SubmitForm } from './submit-form'
+import { headers } from 'next/headers'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
 
 type IntakeSettings = {
   fund_id: string
@@ -31,6 +33,9 @@ export default async function SubmitPage({ params }: { params: { token: string }
 
   const intakeSettings = settings as IntakeSettings | null
   if (!intakeSettings?.deal_intake_enabled) notFound()
+  if (!(await fundMatchesTrustedRequestTenant(admin as never, new Headers(headers()), intakeSettings.fund_id))) {
+    notFound()
+  }
 
   const { data: fund } = await admin
     .from('funds')

@@ -30,6 +30,7 @@ import { APP_VERSION } from '@/lib/version'
 import { useTranslations } from 'next-intl'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import type englishMessages from '@/messages/en.json'
+import { useTenantBranding } from '@/components/tenant-branding-provider'
 
 const THEME_CYCLE = ['system', 'light', 'dark'] as const
 const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon }
@@ -263,6 +264,7 @@ function PublicShell({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebar()
   const [starCount, setStarCount] = useState<number | null>(null)
   const t = useTranslations('PublicChrome')
+  const tenant = useTenantBranding()
 
   useEffect(() => {
     fetch('/api/github-stars')
@@ -286,14 +288,27 @@ function PublicShell({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5" />
             <span className="sr-only">{t('openMenu')}</span>
           </Button>
-          <a href="https://www.hemrock.com" target="_blank" rel="noopener noreferrer" aria-label="Hemrock">
-            <HemrockIcon className="h-7 w-7 text-foreground" />
-          </a>
+          {tenant?.logoUrl ? (
+            <Link href="/" aria-label={tenant.name}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={tenant.logoUrl} alt="" referrerPolicy="no-referrer" className="h-7 max-w-[120px] object-contain" />
+            </Link>
+          ) : (
+            <a href="https://www.hemrock.com" target="_blank" rel="noopener noreferrer" aria-label="Hemrock">
+              <HemrockIcon className="h-7 w-7 text-foreground" />
+            </a>
+          )}
           {!collapsed && (
             <>
-              <a href="https://www.hemrock.com" target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-muted-foreground tracking-tight truncate hover:text-foreground transition-colors">
-                Hemrock
-              </a>
+              {tenant ? (
+                <Link href="/" className="font-medium text-sm text-muted-foreground tracking-tight truncate hover:text-foreground transition-colors">
+                  {tenant.name}
+                </Link>
+              ) : (
+                <a href="https://www.hemrock.com" target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-muted-foreground tracking-tight truncate hover:text-foreground transition-colors">
+                  Hemrock
+                </a>
+              )}
               <span className="hidden md:inline-block text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded">v{APP_VERSION}</span>
             </>
           )}
@@ -365,9 +380,13 @@ function PublicShell({ children }: { children: React.ReactNode }) {
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const tenant = useTenantBranding()
+  const isTenantHomepage = Boolean(tenant && pathname === '/')
   const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
+    if (isTenantHomepage) return
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
@@ -376,7 +395,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         setAuthChecked(true)
       }
     })
-  }, [router])
+  }, [isTenantHomepage, router])
+
+  if (isTenantHomepage) return <>{children}</>
 
   if (!authChecked) return null
 

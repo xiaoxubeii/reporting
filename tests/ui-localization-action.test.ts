@@ -158,6 +158,36 @@ describe('POST /api/locale', () => {
     }
   })
 
+  it('accepts the exact trusted Fund origin when Next uses an internal origin', async () => {
+    vi.stubEnv('FUND_WORKSPACE_ROOT_DOMAIN', 'localhost')
+    const response = await POST(localeRequest(
+      JSON.stringify({ locale: 'zh-CN' }),
+      {
+        host: 'alpha.localhost:5040',
+        origin: 'http://alpha.localhost:5040',
+      },
+      'http://127.0.0.1:5040/api/locale',
+    ))
+
+    expect(response.status).toBe(200)
+    expect(response.cookies.get('NEXT_LOCALE')?.value).toBe('zh-CN')
+  })
+
+  it('rejects a sibling Fund origin even though it shares the root domain', async () => {
+    vi.stubEnv('FUND_WORKSPACE_ROOT_DOMAIN', 'localhost')
+    const response = await POST(localeRequest(
+      JSON.stringify({ locale: 'zh-CN' }),
+      {
+        host: 'alpha.localhost:5040',
+        origin: 'http://beta.localhost:5040',
+      },
+      'http://127.0.0.1:5040/api/locale',
+    ))
+
+    expect(response.status).toBe(403)
+    expect(response.headers.get('set-cookie')).toBeNull()
+  })
+
   it('ignores an invalid configured site URL for direct same-origin requests', async () => {
     const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL
     process.env.NEXT_PUBLIC_SITE_URL = 'not a valid URL'

@@ -4,6 +4,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getClient, redirectUriAllowed, issueAuthorizationCode, grantableScope } from '@/lib/oauth/store'
 import { canWriteAnywhere, loadAccessContext } from '@/lib/access/effective'
 import { agentApiEnabled } from '@/lib/oauth/enabled'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
+import { canonicalFundOrigin } from '@/lib/tenancy/host'
+import { authorizationResponseUrl, issuerFor } from '@/lib/oauth/metadata'
 
 /**
  * The user's decision on the consent screen. This is the ONLY place an
@@ -37,6 +40,8 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient()
+  const tenant = await getTrustedRequestTenant(admin as never, req.headers)
+  const issuer = issuerFor(req)
   const client = await getClient(admin, clientId)
   if (!client) return NextResponse.json({ error: 'Unknown client' }, { status: 400 })
 
@@ -50,7 +55,9 @@ export async function POST(req: NextRequest) {
   // Denial is a normal OAuth outcome, and it DOES redirect back — the client needs
   // to learn the user said no. (Safe: the URI is now known-registered.)
   if (!approve) {
-    return NextResponse.json({ redirect: withParams(redirectUri, { error: 'access_denied', state }) })
+    return NextResponse.json({
+      redirect: authorizationResponseUrl(redirectUri, { error: 'access_denied', state }, issuer),
+    })
   }
 
   if (!codeChallenge) {
@@ -65,6 +72,13 @@ export async function POST(req: NextRequest) {
 
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
   const { fund_id: fundId, role } = membership as { fund_id: string; role: string }
+  if (tenant && tenant.id !== fundId) {
+    return NextResponse.json({ error: 'No fund found' }, { status: 403 })
+  }
+  const canonicalResource = tenant ? `${canonicalFundOrigin(tenant.slug)}/api/mcp` : resource
+  if (tenant && resource && resource !== canonicalResource) {
+    return NextResponse.json({ error: 'Invalid resource' }, { status: 400 })
+  }
 
   // The read-only demo may not hand an agent the keys to a fund.
   if (role === 'viewer') {
@@ -89,18 +103,12 @@ export async function POST(req: NextRequest) {
     redirectUri,
     scope,
     codeChallenge,
-    resource,
+    resource: canonicalResource,
   })
 
-  return NextResponse.json({ redirect: withParams(redirectUri, { code, state }) })
-}
-
-function withParams(uri: string, params: Record<string, string | null>): string {
-  const url = new URL(uri)
-  for (const [k, v] of Object.entries(params)) {
-    if (v) url.searchParams.set(k, v)
-  }
-  return url.toString()
+  return NextResponse.json({
+    redirect: authorizationResponseUrl(redirectUri, { code, state }, issuer),
+  })
 }
 
 function str(v: unknown): string | null {

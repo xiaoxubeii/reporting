@@ -9,8 +9,10 @@ export function hashInvitationToken(rawToken: string): string {
   return createHash('sha256').update(rawToken, 'utf8').digest('hex')
 }
 
-export function invitationUrl(rawToken: string): string {
-  const base = validatedInvitationBaseUrl(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001')
+export function invitationUrl(rawToken: string, canonicalOrigin?: string): string {
+  const base = validatedInvitationBaseUrl(
+    canonicalOrigin || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001',
+  )
   return `${base}/expert-response#token=${encodeURIComponent(rawToken)}`
 }
 

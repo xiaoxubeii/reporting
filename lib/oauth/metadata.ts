@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server'
+import { canonicalFundOrigin, canonicalPlatformOrigin, classifyFundRequestHost } from '@/lib/tenancy/host'
 
 /**
  * The OAuth issuer identity for this deployment.
@@ -21,6 +22,13 @@ import type { NextRequest } from 'next/server'
  * remains as a last resort for contexts with no host header at all.
  */
 export function issuerFor(req: NextRequest): string {
+  const hostContext = classifyFundRequestHost(req)
+  if (hostContext.mode === 'tenant') return canonicalFundOrigin(hostContext.slug)
+  if (hostContext.mode === 'platform') return canonicalPlatformOrigin()
+  if (hostContext.mode !== 'legacy') {
+    throw new Error('Cannot determine the OAuth issuer for this Host')
+  }
+
   const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host')
   if (host) {
     const proto = req.headers.get('x-forwarded-proto')
@@ -37,6 +45,19 @@ export function issuerFor(req: NextRequest): string {
 /** The MCP resource this authorization server guards. */
 export function resourceFor(req: NextRequest): string {
   return `${issuerFor(req)}/api/mcp`
+}
+
+/** Build a JARM-lite authorization response with the RFC 9207 issuer marker. */
+export function authorizationResponseUrl(
+  redirectUri: string,
+  params: Readonly<Record<string, string | null>>,
+  issuer: string,
+): string {
+  const url = new URL(redirectUri)
+  for (const [key, value] of Object.entries({ ...params, iss: issuer })) {
+    if (value) url.searchParams.set(key, value)
+  }
+  return url.toString()
 }
 
 /**

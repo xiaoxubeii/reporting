@@ -16,7 +16,7 @@ describe('UI localization surface inventory', () => {
 
     expect([...UI_PAGE_FILES].sort()).toEqual(discoveredPages)
     expect(new Set(UI_PAGE_FILES).size).toBe(UI_PAGE_FILES.length)
-    expect(UI_PAGE_FILES).toHaveLength(103)
+    expect(UI_PAGE_FILES).toHaveLength(105)
   })
 
   it('classifies every visual page with a semantic namespace', () => {

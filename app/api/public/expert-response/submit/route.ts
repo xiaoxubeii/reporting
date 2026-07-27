@@ -5,6 +5,7 @@ import { readJson } from '@/lib/expert-validation/api'
 import { materializeExpertResponse, recordMaterializationError } from '@/lib/expert-validation/materialize'
 import { PUBLIC_INVITATION_ERROR, rateKey, submitPublicResponse, validateRawToken } from '@/lib/expert-validation/public'
 import { parseResponse } from '@/lib/expert-validation/validation'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 
 export async function POST(req: NextRequest) {
   const ipLimited = await rateLimit({ key: rateKey('ip', getClientIp(req)), limit: 12, windowSeconds: 900 })
@@ -15,8 +16,15 @@ export async function POST(req: NextRequest) {
     const tokenLimited = await rateLimit({ key: rateKey('token', token), limit: 8, windowSeconds: 900 })
     if (tokenLimited) return secure(tokenLimited)
     const responseMarkdown = parseResponse(body)
-    const admin = createAdminClient() as never
-    const submission = await submitPublicResponse({ admin, rawToken: token, responseMarkdown })
+    const adminClient = createAdminClient()
+    const tenant = await getTrustedRequestTenant(adminClient as never, req.headers)
+    const admin = adminClient as never
+    const submission = await submitPublicResponse({
+      admin,
+      rawToken: token,
+      responseMarkdown,
+      expectedFundId: tenant?.id,
+    })
     if (!submission.alreadySubmitted) {
       try {
         await materializeExpertResponse({ admin, requestId: submission.requestId })

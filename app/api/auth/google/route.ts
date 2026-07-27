@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getGoogleCredentials } from '@/lib/google/credentials'
+import { canonicalProviderOriginForFundId } from '@/lib/tenancy/links'
+import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
+import { safeNextPath } from '@/lib/safe-redirect'
+import {
+  createProviderOAuthState,
+  providerOAuthStateCookieName,
+  providerOAuthStateSecret,
+} from '@/lib/provider-oauth-state'
 
 export async function GET(req: NextRequest) {
   const supabase = createClient()
@@ -11,11 +19,15 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   const { data: membership } = await admin
     .from('fund_members')
-    .select('fund_id')
+    .select('fund_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
 
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
+  if (membership.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+  if (!await fundMatchesTrustedRequestTenant(admin, req.headers, membership.fund_id)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   const creds = await getGoogleCredentials(admin, membership.fund_id)
   if (!creds) {
@@ -24,18 +36,7 @@ export async function GET(req: NextRequest) {
     }, { status: 400 })
   }
 
-  // Build the redirect URI. Google's OAuth requires HTTPS in production; if
-  // NEXT_PUBLIC_APP_URL was misconfigured as http://, upgrade it. Trailing
-  // slashes are stripped so the redirect URI matches what's registered.
-  let baseUrl = process.env.NEXT_PUBLIC_APP_URL
-    ? process.env.NEXT_PUBLIC_APP_URL
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000'
-  baseUrl = baseUrl.replace(/\/$/, '')
-  if (baseUrl.startsWith('http://') && !baseUrl.startsWith('http://localhost')) {
-    baseUrl = baseUrl.replace(/^http:\/\//, 'https://')
-  }
+  const baseUrl = await canonicalProviderOriginForFundId(admin as never, membership.fund_id)
   const redirectUri = `${baseUrl}/api/auth/google/callback`
 
   // Pass return_to in state so callback knows where to redirect.
@@ -43,14 +44,20 @@ export async function GET(req: NextRequest) {
   // malformed `return_to` query param can't blow past Google's URL-length
   // limit on the auth request (silent OAuth failure) or smuggle a protocol-
   // relative redirect target.
-  const rawReturnTo = req.nextUrl.searchParams.get('return_to') ?? ''
-  const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//')
-    ? rawReturnTo.slice(0, 200)
-    : '/settings'
-  const state = Buffer.from(JSON.stringify({
-    fund_id: membership.fund_id,
-    return_to: returnTo,
-  })).toString('base64url')
+  const rawReturnTo = req.nextUrl.searchParams.get('return_to')
+  const returnTo = safeNextPath(rawReturnTo?.slice(0, 200)) ?? '/settings'
+  let state: string
+  try {
+    state = createProviderOAuthState({
+      provider: 'google',
+      fundId: membership.fund_id,
+      userId: user.id,
+      returnTo,
+      secret: providerOAuthStateSecret(),
+    })
+  } catch {
+    return NextResponse.json({ error: 'Google OAuth is not available' }, { status: 503 })
+  }
 
   const params = new URLSearchParams({
     client_id: creds.clientId,
@@ -73,5 +80,13 @@ export async function GET(req: NextRequest) {
     state,
   })
 
-  return NextResponse.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
+  const response = NextResponse.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`)
+  response.cookies.set(providerOAuthStateCookieName('google'), state, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: true,
+    path: '/',
+    maxAge: 600,
+  })
+  return response
 }

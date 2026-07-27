@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { generateApiKey, hashApiKey, bearerToken, authorizeToolUse, type ResolvedKey } from './api-keys'
+import { describe, it, expect, vi } from 'vitest'
+import { generateApiKey, hashApiKey, bearerToken, authorizeToolUse, resolveFundFromApiKey, type ResolvedKey } from './api-keys'
 import { AGENT_TOOLS, getTool, accessDomainFor, accessDomainForCall, accessFeatureFor } from './agent-tools'
 import type { AccessContext, AccessLevel } from '@/lib/access/effective'
 import type { Domain } from '@/lib/access/domains'
@@ -156,6 +156,37 @@ describe('api-keys', () => {
     const req = new Request('https://x.test', { headers: { Authorization: 'Bearer lk_abc123' } })
     expect(bearerToken(req)).toBe('lk_abc123')
     expect(bearerToken(new Request('https://x.test'))).toBeNull()
+  })
+
+  it('rejects a key from another trusted Fund before membership lookup or usage stamping', async () => {
+    const update = vi.fn()
+    const from = vi.fn((table: string) => {
+      if (table !== 'fund_api_keys') throw new Error(`Unexpected table: ${table}`)
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({
+              data: {
+                id: 'key-1',
+                fund_id: 'fund-beta',
+                user_id: 'user-1',
+                scopes: 'read',
+                revoked_at: null,
+              },
+            }),
+          }),
+        }),
+        update,
+      }
+    })
+    const req = new Request('https://alpha.example/api/agent', {
+      headers: { Authorization: 'Bearer lk_wrong_fund' },
+    })
+
+    await expect(resolveFundFromApiKey({ from } as never, req, { expectedFundId: 'fund-alpha' }))
+      .resolves.toBeNull()
+    expect(update).not.toHaveBeenCalled()
+    expect(from).toHaveBeenCalledTimes(1)
   })
 })
 

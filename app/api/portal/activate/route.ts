@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbError } from '@/lib/api-error'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
+import { resolveLpActivationFundId } from '@/lib/tenancy/lp-activation'
 
 /**
  * Bind + activate the signed-in user's LP account (called at the end of portal
@@ -11,7 +13,7 @@ import { dbError } from '@/lib/api-error'
  * email match (the invite may not have pre-bound the auth user), then sets
  * auth_user_id + status = 'active'. Idempotent.
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   const supabase = createClient()
   const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -43,6 +45,30 @@ export async function POST() {
   // Guard: don't hijack an account already bound to a different auth user.
   if (account.auth_user_id && account.auth_user_id !== user.id) {
     return NextResponse.json({ error: 'This invitation is linked to a different account.' }, { status: 409 })
+  }
+
+  // Invited accounts are not visible to resolve_my_lp_fund() until activation.
+  // Bind this one exceptional route to the Host Fund from the account's
+  // persisted direct/delegated links before any idempotent response or write.
+  const tenant = await getTrustedRequestTenant(admin as never, req.headers)
+  if (tenant) {
+    let activationFundId: string | null
+    try {
+      activationFundId = await resolveLpActivationFundId(admin as never, account.id)
+    } catch (error) {
+      console.error('[portal-activate] unable to resolve tenant Fund', error)
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
+    }
+    if (activationFundId !== tenant.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+  }
+
+  // Used immediately after client-side OTP verification so the new session is
+  // Host-bound before the browser updates a password. All identity checks above
+  // run; no LP state changes below run.
+  if (req.nextUrl.searchParams.get('validate_only') === 'true') {
+    return NextResponse.json({ ok: true })
   }
 
   // Already activated for this same user — idempotent no-op.

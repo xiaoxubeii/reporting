@@ -60,21 +60,17 @@ function AuthForm() {
       }
       // Check if this is a recovery session — redirect to set new password
       const { data: { session } } = await supabase.auth.getSession()
-      let destination = session?.user?.recovery_sent_at ? '/auth/reset-password' : (nextPath ?? '/')
-      // If user has no fund, send to onboarding. A password recovery keeps its own
-      // destination; everything else (including a pending OAuth authorization)
-      // still needs a fund to land in.
-      if (destination !== '/auth/reset-password') {
-        const { data: fund } = await supabase.from('funds').select('id').limit(1).maybeSingle()
-        if (!fund) destination = '/onboarding?confirmed=true'
+      const recoveryDestination = '/auth/reset-password'
+      let destination = session?.user?.recovery_sent_at ? recoveryDestination : (nextPath ?? '/')
+      if (destination === recoveryDestination) {
+        // Preserve MFA for recovery, but validate the newly issued session
+        // against the Host Fund before either auth page can consume it.
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+        if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+          destination = `/auth/mfa-verify?next=${encodeURIComponent(recoveryDestination)}`
+        }
       }
-      // If MFA is enrolled, verify first then continue to destination
-      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-      if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
-        router.replace(`/auth/mfa-verify?next=${encodeURIComponent(destination)}`)
-      } else {
-        router.replace(destination)
-      }
+      window.location.href = `/auth/post-login?method=code&next=${encodeURIComponent(destination)}`
     }
     exchangeCode()
   }, [searchParams, supabase, router, nextPath, t])
@@ -86,25 +82,16 @@ function AuthForm() {
     if (error) {
       setError(locale === 'en' ? error.message : t('genericError'))
     } else {
-      fetch('/api/auth/activity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'password' }) }).catch(() => {})
-      // Check if user has a fund — if not, go to onboarding. A pending `next`
-      // (e.g. an OAuth authorization to resume) wins, but only for a user who
-      // actually has a fund — there is nothing to authorize otherwise.
-      const { data: fund } = await supabase.from('funds').select('id').limit(1).maybeSingle()
-      const destination = fund ? (nextPath ?? '/') : '/onboarding'
-      // Check if user has MFA enrolled and needs to verify
-      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-      if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
-        router.push(`/auth/mfa-verify?next=${encodeURIComponent(destination)}`)
-      } else {
-        router.push(destination)
-      }
-      router.refresh()
+      const destination = nextPath ?? '/'
+      window.location.href = `/auth/post-login?method=password&next=${encodeURIComponent(destination)}`
+      return
     }
     setLoading(false)
   }
 
-  const visibleUrlError = urlError ? (locale === 'en' ? urlError : t('genericError')) : null
+  const visibleUrlError = urlError
+    ? (urlError === 'workspace_mismatch' ? t('workspaceMismatch') : (locale === 'en' ? urlError : t('genericError')))
+    : null
 
   return (
     <AuthShell

@@ -70,6 +70,14 @@ See [LICENSE](./LICENSE.md) for full terms.
 
 Full deployment guide with detailed steps, optional services, and local development setup: [DOCS](./DOCS.md)
 
+### Hosted Fund workspaces
+
+Set `FUND_WORKSPACE_ROOT_DOMAIN=fundworkspace.com` to enable logical Fund isolation on one deployment without changing any application paths. Configure the platform root, wildcard DNS/TLS (`*.fundworkspace.com`), and the reserved `hooks.fundworkspace.com` hostname to reach the same application. Each persisted Fund slug then owns its canonical Landing, `/auth`, Dashboard, and `/portal` origin, for example `https://alpha-fund.fundworkspace.com`.
+
+Add `https://*.fundworkspace.com/**` to the Supabase Auth redirect allowlist before enabling hosted mode. Google and Dropbox integration callback registrations must include each Fund's canonical callback origin because those providers may not accept wildcard redirects. `FUND_WORKSPACE_DEV_PORT` only affects local `*.localhost` origins; `devctl` injects its selected Web port automatically, while a manually started non-default local server must set it explicitly so generated email and OAuth callback links retain the port.
+
+The platform root exposes only marketing, authentication, setup, and Fund onboarding routes. Fund data/API routes require a matching tenant hostname; inbound-email/provider webhooks use the registered platform or `hooks` host and retain their provider/token authentication. Keep `FUND_WORKSPACE_ROOT_DOMAIN` unset for legacy self-host behavior.
+
 Platform and per-Fund Resend setup, DNS, webhook rotation, and rollback: [FundWorkspace Resend email deployment](./docs/fund-email-resend.md)
 
 ## Local development

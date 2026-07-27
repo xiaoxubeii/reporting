@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hashToken } from '@/lib/oauth/store'
+import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 
 /**
  * RFC 7009 — token revocation. A client that logs out should be able to hand back
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
 
   if (token) {
     const admin = createAdminClient()
+    const tenant = await getTrustedRequestTenant(admin as never, req.headers)
     // Scoped to the presenting client, so one client cannot revoke another's
     // tokens by guessing. Revoking the refresh token of a pair leaves its access
     // token to expire on its own (≤1h), which is the RFC's expected behavior.
@@ -40,6 +42,7 @@ export async function POST(req: NextRequest) {
       .is('revoked_at', null)
 
     if (clientId) q = q.eq('client_id', clientId)
+    if (tenant) q = q.eq('fund_id', tenant.id)
     await q
   }
 

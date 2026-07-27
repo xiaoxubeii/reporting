@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPlatformEmail } from '@/lib/email/system'
 
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
       continue
     }
 
-    const html = renderDigest(archived)
+    const html = renderDigest(archived, await canonicalFundOriginForId(admin as never, fundId))
     const subject = `Out-of-thesis deals (${archived.length}), last 7 days`
 
     let sent = 0
@@ -97,8 +98,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, results })
 }
 
-function renderDigest(deals: Array<{ id: string; company_name: string | null; founder_name: string | null; founder_email: string | null; thesis_fit_analysis: string | null; created_at: string | null }>): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+function renderDigest(
+  deals: Array<{ id: string; company_name: string | null; founder_name: string | null; founder_email: string | null; thesis_fit_analysis: string | null; created_at: string | null }>,
+  baseUrl: string,
+): string {
   const items = deals.map(d => `
     <li style="margin: 0 0 12px 0;">
       <strong>${escapeHtml(d.company_name ?? 'Unknown company')}</strong>

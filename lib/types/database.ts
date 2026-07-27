@@ -1174,6 +1174,65 @@ export type Database = {
           },
         ];
       };
+      fund_public_sites: {
+        Row: {
+          fund_id: string;
+          draft_template_key: string;
+          draft_content: Json;
+          draft_revision: number;
+          lifecycle_revision: number;
+          published_template_key: string | null;
+          published_content: Json | null;
+          published_version: number;
+          published_from_draft_revision: number | null;
+          is_published: boolean;
+          published_at: string | null;
+          published_by: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          fund_id: string;
+          draft_template_key?: string;
+          draft_content: Json;
+          draft_revision?: number;
+          lifecycle_revision?: number;
+          published_template_key?: string | null;
+          published_content?: Json | null;
+          published_version?: number;
+          published_from_draft_revision?: number | null;
+          is_published?: boolean;
+          published_at?: string | null;
+          published_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          fund_id?: string;
+          draft_template_key?: string;
+          draft_content?: Json;
+          draft_revision?: number;
+          lifecycle_revision?: number;
+          published_template_key?: string | null;
+          published_content?: Json | null;
+          published_version?: number;
+          published_from_draft_revision?: number | null;
+          is_published?: boolean;
+          published_at?: string | null;
+          published_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fund_public_sites_fund_id_fkey";
+            columns: ["fund_id"];
+            isOneToOne: true;
+            referencedRelation: "funds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       firm_schemas: {
         Row: {
           id: string;
@@ -2071,6 +2130,7 @@ export type Database = {
           id: string;
           logo_url: string | null;
           name: string;
+          slug: string;
           updated_at: string | null;
         };
         Insert: {
@@ -2083,6 +2143,7 @@ export type Database = {
           id?: string;
           logo_url?: string | null;
           name: string;
+          slug?: string;
           updated_at?: string | null;
         };
         Update: {
@@ -2095,6 +2156,7 @@ export type Database = {
           id?: string;
           logo_url?: string | null;
           name?: string;
+          slug?: string;
           updated_at?: string | null;
         };
         Relationships: [];
@@ -4689,6 +4751,59 @@ export type Database = {
         Returns: Json;
       };
       get_my_fund_ids: { Args: never; Returns: string[] };
+      resolve_my_lp_fund: { Args: never; Returns: string | null };
+      resolve_public_fund_host: {
+        Args: { p_slug: string };
+        Returns: {
+          id: string;
+          logo_url: string | null;
+          name: string;
+          slug: string;
+          theme: Json | null;
+        }[];
+      };
+      resolve_published_fund_site: {
+        Args: { p_slug: string };
+        Returns: {
+          fund_id: string;
+          slug: string;
+          name: string;
+          logo_url: string | null;
+          template_key: string;
+          content: Json;
+          published_version: number;
+          published_at: string;
+        }[];
+      };
+      publish_fund_public_site: {
+        Args: {
+          p_fund_id: string;
+          p_expected_draft_revision: number;
+          p_expected_lifecycle_revision: number;
+          p_user_id: string;
+        };
+        Returns: {
+          draft_revision: number;
+          published_version: number;
+          published_from_draft_revision: number;
+          is_published: boolean;
+          published_at: string;
+        }[];
+      };
+      unpublish_fund_public_site: {
+        Args: {
+          p_fund_id: string;
+          p_expected_lifecycle_revision: number;
+          p_user_id: string;
+        };
+        Returns: {
+          draft_revision: number;
+          published_version: number;
+          published_from_draft_revision: number | null;
+          is_published: boolean;
+          published_at: string | null;
+        }[];
+      };
       hook_before_user_created: { Args: { event: Json }; Returns: Json };
       is_fund_admin: { Args: { check_fund_id: string }; Returns: boolean };
       is_fund_member_by_email: {

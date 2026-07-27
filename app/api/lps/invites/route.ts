@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertWriteAccess } from '@/lib/api-helpers'
 import { dbError } from '@/lib/api-error'
+import { canonicalFundOriginForId } from '@/lib/tenancy/links'
 
 /**
  * Admin-only LP invites (Phase 1 of LP reporting).
@@ -88,8 +89,12 @@ export async function POST(req: NextRequest) {
   // Bind the auth user when available; otherwise onboarding binds it by email.
   // Pass the fund name as metadata so the invite email can name the fund.
   const { data: fund } = await admin.from('funds').select('name').eq('id', writeCheck.fundId).maybeSingle()
+  const redirectTo = `${await canonicalFundOriginForId(admin as never, writeCheck.fundId)}/portal/welcome`
   try {
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, { data: { fund_name: fund?.name ?? null } })
+    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+      data: { fund_name: fund?.name ?? null },
+      redirectTo,
+    })
     if (inviteErr) console.warn('[lp invite] inviteUserByEmail:', inviteErr.message)
     else if (invited?.user?.id && !existing?.auth_user_id) {
       await (admin as any)

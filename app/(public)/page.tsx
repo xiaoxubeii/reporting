@@ -1,7 +1,10 @@
 import { ogMetadata } from '@/lib/og-metadata'
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { headers } from 'next/headers'
+import { notFound } from 'next/navigation'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import {
   Github,
@@ -32,6 +35,14 @@ import {
 } from 'lucide-react'
 import { CalendlyButton } from '@/components/calendly-button'
 import { SubscriptionInquiryButton } from '@/components/subscription-inquiry-modal'
+import { FundPublicSite, FundPublicSitePrivateState } from '@/components/fund-public-site/fund-public-site'
+import { createClient } from '@/lib/supabase/server'
+import { getTrustedRequestTenant, trustedTenantSlugFromHeaders } from '@/lib/tenancy/request'
+import { resolvePublishedFundPublicSite } from '@/lib/fund-public-site/store'
+import { resolveLocalizedText, type FundPublicSiteLocale } from '@/lib/fund-public-site/content'
+import { isSupportedLocale } from '@/i18n/locales'
+import { canonicalFundOrigin } from '@/lib/tenancy/host'
+import { cache } from 'react'
 
 type StepDefinition = {
   icon: LucideIcon
@@ -71,12 +82,50 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
+  const tenantHome = await loadTenantHome()
+  if (tenantHome) {
+    const locale = await currentFundSiteLocale()
+    const title = tenantHome.site
+      ? resolveLocalizedText(tenantHome.site.content.seo.title, locale, tenantHome.site.content.defaultLocale) ?? tenantHome.tenant.name
+      : tenantHome.tenant.name
+    const description = tenantHome.site
+      ? resolveLocalizedText(tenantHome.site.content.seo.description, locale, tenantHome.site.content.defaultLocale)
+        ?? resolveLocalizedText(tenantHome.site.content.hero.summary, locale, tenantHome.site.content.defaultLocale)
+        ?? ''
+      : ''
+    const canonical = `${canonicalFundOrigin(tenantHome.tenant.slug)}/`
+    return {
+      title: { absolute: title },
+      description,
+      alternates: { canonical },
+      robots: tenantHome.site ? { index: true, follow: true } : { index: false, follow: false },
+      openGraph: { title, description, type: 'website', siteName: tenantHome.tenant.name, url: canonical, images: [] },
+      twitter: { card: 'summary', title, description, images: [] },
+    }
+  }
   const t = await getTranslations('PublicHome.metadata')
   return ogMetadata({ title: t('title'), description: t('description') })
 }
 
 export default async function HomePage() {
+  const tenantHome = await loadTenantHome()
+  if (tenantHome) {
+    const locale = await currentFundSiteLocale()
+    if (!tenantHome.site) {
+      return <FundPublicSitePrivateState fundName={tenantHome.tenant.name} logoUrl={tenantHome.tenant.logoUrl} locale={locale} />
+    }
+    return (
+      <FundPublicSite
+        fundName={tenantHome.site.fundName}
+        logoUrl={tenantHome.site.logoUrl}
+        templateKey={tenantHome.site.templateKey}
+        content={tenantHome.site.content}
+        locale={locale}
+      />
+    )
+  }
+
   const t = await getTranslations('PublicHome')
   const faqItems = [1, 2, 3, 4, 5, 6, 7] as const
 
@@ -256,4 +305,20 @@ export default async function HomePage() {
       </section>
     </div>
   )
+}
+
+const loadTenantHome = cache(async function loadTenantHome() {
+  const requestHeaders = new Headers(headers())
+  const slug = trustedTenantSlugFromHeaders(requestHeaders)
+  if (!slug) return null
+  const client = createClient()
+  const tenant = await getTrustedRequestTenant(client as never, requestHeaders)
+  if (!tenant) notFound()
+  const site = await resolvePublishedFundPublicSite(client as never, slug, tenant.id)
+  return { tenant, site }
+})
+
+async function currentFundSiteLocale(): Promise<FundPublicSiteLocale> {
+  const locale = await getLocale()
+  return isSupportedLocale(locale) && locale === 'zh-CN' ? 'zh-CN' : 'en'
 }

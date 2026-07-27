@@ -1,14 +1,18 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import { Hanken_Grotesk, Plus_Jakarta_Sans } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import { getLocale, getMessages, getTranslations } from 'next-intl/server'
 import { I18nClientProvider } from '@/i18n/client-provider'
 import { DEFAULT_LOCALE, isSupportedLocale } from '@/i18n/locales'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/toaster'
 import { ConfirmProvider } from '@/components/confirm-dialog'
+import { headers } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { getTrustedRequestTenant, trustedTenantSlugFromHeaders } from '@/lib/tenancy/request'
+import { themeCssVars, type FundTheme } from '@/lib/theme'
+import { TenantBrandingProvider } from '@/components/tenant-branding-provider'
+import { PlatformTelemetry } from '@/components/platform-telemetry'
 import './globals.css'
 
 // Curated UI font options. Loaded as CSS variables so the per-fund theme can
@@ -48,12 +52,25 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()])
+  const requestHeaders = new Headers(headers())
+  const tenantSlug = trustedTenantSlugFromHeaders(requestHeaders)
+  const [locale, messages, tenant] = await Promise.all([
+    getLocale(),
+    getMessages(),
+    tenantSlug
+      ? getTrustedRequestTenant(createClient() as never, requestHeaders)
+      : Promise.resolve(null),
+  ])
   const resolvedLocale = isSupportedLocale(locale) ? locale : DEFAULT_LOCALE
+  const tenantTheme = themeCssVars((tenant?.theme ?? null) as FundTheme | null)
+  const tenantBranding = tenant
+    ? { slug: tenant.slug, name: tenant.name, logoUrl: tenant.logoUrl }
+    : null
 
   return (
     <html lang={resolvedLocale} suppressHydrationWarning className={`${hankenGrotesk.variable} ${plusJakarta.variable}`}>
       <body className="font-sans">
+        {tenantTheme && <style dangerouslySetInnerHTML={{ __html: `:root{${tenantTheme}}` }} />}
         <I18nClientProvider locale={resolvedLocale} messages={messages}>
           <ThemeProvider
             attribute="class"
@@ -62,13 +79,14 @@ export default async function RootLayout({
             storageKey="portfolio-theme"
           >
             <ConfirmProvider>
-              {children}
+              <TenantBrandingProvider value={tenantBranding}>
+                {children}
+              </TenantBrandingProvider>
             </ConfirmProvider>
             <Toaster />
           </ThemeProvider>
         </I18nClientProvider>
-        <Analytics />
-        <SpeedInsights />
+        <PlatformTelemetry />
         {/* Unregister any stale service workers from prior deployments */}
         <Script id="sw-cleanup" strategy="afterInteractive">{`
           if ('serviceWorker' in navigator) {
