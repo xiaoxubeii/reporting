@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isAuthSessionMissingError } from '@supabase/auth-js'
+import { isAuthSessionMissingError } from '@supabase/supabase-js'
 import {
   canonicalizeTimeZone,
   parseTimeZoneCookie,

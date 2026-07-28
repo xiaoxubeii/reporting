@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { AuthSessionMissingError } from '@supabase/auth-js'
+import { AuthSessionMissingError } from '@supabase/supabase-js'
 
 const getUser = vi.hoisted(() => vi.fn())
 const createAdminClient = vi.hoisted(() => vi.fn(() => ({ admin: true })))
