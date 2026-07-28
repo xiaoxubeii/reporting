@@ -33,16 +33,6 @@ const readRule = (source: string, selector: string, offset = 0) => {
   return source.slice(ruleStart + 1, ruleEnd)
 }
 
-const readRulesMatching = (source: string, selectorPattern: RegExp) => {
-  const declarations: string[] = []
-
-  for (const match of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    if (selectorPattern.test(match[1])) declarations.push(match[2])
-  }
-
-  return declarations
-}
-
 const readPngMetadata = (path: string) => {
   const png = readFileSync(resolve(process.cwd(), path))
   return {
@@ -61,7 +51,6 @@ describe('platform landing logo assets', () => {
     const mobileStyles = readBlock(navigationStyles, '@media (max-width: 480px)')
 
     const displayContexts = [
-      { context: 'footer', rules: readRulesMatching(footerStyles, /\.footer/i), size: 24, retinaSize: 48 },
       { context: 'mobile', rules: [readRule(mobileStyles, '.logoMark')], size: 26, retinaSize: 52 },
       { context: 'desktop', rules: [readRule(navigationStyles, '.logoMark')], size: 32, retinaSize: 64 },
     ] as const
@@ -73,7 +62,7 @@ describe('platform landing logo assets', () => {
       expect(rules.some(rule => pairPattern.test(rule)), `${context} logo pair`).toBe(true)
     }
 
-    for (const size of [24, 26, 32, 48, 52, 64]) {
+    for (const size of [26, 32, 52, 64]) {
       const metadata = readPngMetadata(`public/landing/fundworkspace-icon-${size}.png`)
       expect(metadata).toEqual({
         signature: '89504e470d0a1a0a',

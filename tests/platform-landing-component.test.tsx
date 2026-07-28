@@ -23,7 +23,7 @@ function renderLocalized(node: React.ReactNode) {
 }
 
 describe('PlatformLanding', () => {
-  it('presents the compact executive narrative and one active product view', () => {
+  it('presents the connected investment narrative and primary actions', () => {
     renderLocalized(
       <PlatformLanding
         config={{ demoUrl: 'https://calendar.example/demo', platformOrigin: 'https://fundworkspace.example' }}
@@ -31,28 +31,23 @@ describe('PlatformLanding', () => {
     )
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
-      "One workspace for the fund's investment and operating workflow.",
+      'Turn market signals into investment decisions.',
     )
-    expect(screen.getByRole('region', { name: 'Management outcomes' })).not.toBeNull()
-    expect(screen.getAllByRole('tab')).toHaveLength(5)
-    expect(screen.getByRole('tab', { name: 'Market signals' }).getAttribute('aria-selected')).toBe('true')
-    expect(screen.getAllByRole('tabpanel')).toHaveLength(1)
-    expect(screen.getByText('Expert validation when it matters', { selector: 'h2' })).not.toBeNull()
-    expect(screen.getByText(/when material gaps or contradictions need external scrutiny/i)).not.toBeNull()
-    expect(screen.queryByText('One workspace, every operating surface')).toBeNull()
-    expect(document.querySelector('[data-floating-navigation]')).toBeNull()
+    expect(screen.getByRole('region', { name: 'One workspace, across every team decision' })).not.toBeNull()
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    expect(screen.getByText('Industry expert validation', { selector: 'h2' })).not.toBeNull()
+    expect(screen.getByText('Turn judgment into an institutional record', { selector: 'h3' })).not.toBeNull()
     expect(screen.getAllByRole('link', { name: 'Request a demo' })).toHaveLength(3)
-    expect(screen.getAllByRole('button', { name: 'Enter workspace' })).toHaveLength(3)
+    expect(screen.getAllByRole('button', { name: 'Find your workspace' })).toHaveLength(3)
   })
 
-  it('switches the workflow product view from the keyboard-accessible tabs', () => {
+  it('keeps portfolio continuity in the same product narrative', () => {
     renderLocalized(
       <PlatformLanding config={{ demoUrl: null, platformOrigin: 'https://fundworkspace.example' }} />,
     )
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Portfolio and LPs' }))
-    expect(screen.getByRole('tab', { name: 'Portfolio and LPs' }).getAttribute('aria-selected')).toBe('true')
-    expect(screen.getByRole('tabpanel').textContent).toContain('Continue the operating relationship')
+    expect(screen.getByText('Portfolio continuity', { selector: 'h3' })).not.toBeNull()
+    expect(screen.getByText(/continue into operations, reporting, and LP communication after investment/i)).not.toBeNull()
     expect(screen.getByRole('img', { name: 'FundWorkspace LP portal' })).not.toBeNull()
   })
 
@@ -62,7 +57,7 @@ describe('PlatformLanding', () => {
     )
 
     expect(screen.queryAllByRole('link', { name: 'Request a demo' })).toHaveLength(0)
-    expect(screen.getAllByRole('button', { name: 'Enter workspace' })).toHaveLength(3)
+    expect(screen.getAllByRole('button', { name: 'Find your workspace' })).toHaveLength(3)
   })
 })
 
