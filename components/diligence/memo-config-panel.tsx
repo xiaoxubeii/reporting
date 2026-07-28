@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDown, Loader2, Save, Trash2, GripVertical, Plus } from 'lucide-react'
+import { Loader2, Save, Settings2, Trash2, GripVertical, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirm } from '@/components/confirm-dialog'
@@ -67,7 +67,7 @@ interface MemoPreset {
   default_for_stage: NonNullable<MemoTemplateConfig['style_override']> | null
 }
 
-export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defaultOpen?: boolean }) {
+export function MemoConfigPanel({ dealId }: { dealId: string }) {
   const t = useTranslations('Diligence.memoConfig')
   const sectionTitles: Record<string, string> = {
     executive_summary: t('sections.executive_summary'), recommendation: t('sections.recommendation'), company_overview: t('sections.company_overview'),
@@ -79,7 +79,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
   }
   const personaLabels = [t('persona.presets.0'), t('persona.presets.1'), t('persona.presets.2'), t('persona.presets.3'), t('persona.presets.4'), t('persona.presets.5')]
   const confirm = useConfirm()
-  const [open, setOpen] = useState(!!defaultOpen)
+  const [open, setOpen] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -95,6 +95,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
 
   // Presets — fund-level saved configs.
   const [presets, setPresets] = useState<MemoPreset[]>([])
+  const [selectedPresetId, setSelectedPresetId] = useState('')
   const [savePresetOpen, setSavePresetOpen] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [presetDefaultFor, setPresetDefaultFor] = useState<'' | NonNullable<MemoTemplateConfig['style_override']>>('')
@@ -177,6 +178,7 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
     const p = presets.find(p => p.id === presetId)
     if (!p) return
     applyConfigToForm(p.partner_memo_guidance ?? '', p.memo_template_config ?? {})
+    setSelectedPresetId(presetId)
   }
 
   async function savePreset() {
@@ -220,7 +222,10 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
     })
     if (!ok) return
     const res = await fetch(`/api/diligence/memo-presets/${presetId}`, { method: 'DELETE' })
-    if (res.ok) setPresets(prev => prev.filter(p => p.id !== presetId))
+    if (res.ok) {
+      setPresets(prev => prev.filter(p => p.id !== presetId))
+      if (selectedPresetId === presetId) setSelectedPresetId('')
+    }
   }
 
   async function save() {
@@ -283,251 +288,304 @@ export function MemoConfigPanel({ dealId, defaultOpen }: { dealId: string; defau
   }
 
   const includedCount = sections.filter(s => s.included).length
-  const summary = !loaded
-    ? t('loading')
-    : [
-        styleOverride && styleLabels[styleOverride],
-        persona ? t('summary.persona', { persona: persona.length > 30 ? persona.slice(0, 30) + '…' : persona }) : null,
-        t('summary.sections', { included: includedCount, total: sections.length }),
-      ].filter(Boolean).join(' · ')
+  const selectedPreset = presets.find(preset => preset.id === selectedPresetId)
+  const personaPresetIndex = PERSONA_PRESETS.indexOf(persona)
+  const effectivePersona = !persona
+    ? t('persona.none')
+    : personaPresetIndex >= 0
+      ? personaLabels[personaPresetIndex]
+      : persona.length > 36 ? `${persona.slice(0, 36)}…` : persona
+  const summaryItems = [
+    { label: t('summary.preset'), value: selectedPreset?.name ?? t('summary.projectPreset') },
+    { label: t('summary.style'), value: styleLabels[styleOverride] },
+    { label: t('summary.persona'), value: effectivePersona },
+    { label: t('summary.sections'), value: t('summary.sectionsEnabled', { count: includedCount }) },
+  ]
 
   return (
-    <div className="rounded-md border bg-card">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
-      >
-        <span className="flex items-center gap-2">
-          <ChevronDown className={`h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
-          <span className="font-medium text-sm">{t('title')}</span>
-        </span>
-        <span className="text-xs text-muted-foreground truncate ml-4">{summary}</span>
-      </button>
+    <div className="rounded-lg border bg-card">
+      <div className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-medium">{t('title')}</h3>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 shrink-0"
+            onClick={() => setOpen(current => !current)}
+            aria-expanded={open}
+          >
+            <Settings2 className="mr-1.5 h-3.5 w-3.5" />
+            {open ? t('closeSettings') : t('editSettings')}
+          </Button>
+        </div>
 
-      {open && (
-        <div className="px-4 pb-4 pt-1 border-t space-y-4">
-          {error && <div className="text-xs text-destructive">{error}</div>}
-
-          {/* Preset toolbar, load a saved fund preset into the form, or save
-              the current form state as a new preset. The form below is still
-              the source of truth that gets PATCHed to the deal on Save. */}
-          <div className="rounded-md border bg-muted/20 px-3 py-2 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="text-xs font-medium">{t('preset.label')}</label>
-              <select
-                onChange={e => { if (e.target.value) loadPreset(e.target.value) }}
-                defaultValue=""
-                className="h-7 rounded border border-input bg-background px-2 text-xs min-w-[200px]"
-              >
-                <option value="">{t('preset.load')}</option>
-                {presets.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}{p.default_for_stage ? ` (${t('preset.defaultFor', { stage: styleLabels[p.default_for_stage] })})` : ''}
-                  </option>
-                ))}
-              </select>
-              <Button size="sm" variant="outline" onClick={() => setSavePresetOpen(o => !o)}>
-                {t('preset.saveAs')}
-              </Button>
-              {presets.length > 0 && (
-                <span className="text-[11px] text-muted-foreground ml-auto">{t('preset.count', { count: presets.length })}</span>
-              )}
-            </div>
-            {savePresetOpen && (
-              <div className="space-y-2 pt-2 border-t">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Input
-                    value={presetName}
-                    onChange={e => setPresetName(e.target.value)}
-                    placeholder={t('preset.namePlaceholder')}
-                    className="h-8 text-sm flex-1 min-w-[200px]"
-                  />
-                  <select
-                    value={presetDefaultFor}
-                    onChange={e => setPresetDefaultFor(e.target.value as '' | NonNullable<MemoTemplateConfig['style_override']>)}
-                    className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-                    title={t('preset.autoApplyHelp')}
-                  >
-                    <option value="">{t('preset.notDefault')}</option>
-                    {STYLE_VALUES.filter((value): value is NonNullable<MemoTemplateConfig['style_override']> => Boolean(value)).map(value => <option key={value} value={value}>{t('preset.defaultFor', { stage: styleLabels[value] })}</option>)}
-                  </select>
-                  <Button size="sm" onClick={savePreset} disabled={saving || !presetName.trim()}>
-                    {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />} {t('preset.save')}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setSavePresetOpen(false); setPresetName(''); setPresetDefaultFor('') }}>{t('cancel')}</Button>
-                </div>
-                <p className="text-[10px] text-muted-foreground">
-                  {t('preset.help')}
-                </p>
-              </div>
-            )}
-            {presets.length > 0 && (
-              <details className="text-xs">
-                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('preset.manage')}</summary>
-                <div className="mt-2 space-y-1 pl-2">
-                  {presets.map(p => (
-                    <div key={p.id} className="flex items-center gap-2">
-                      <span className="font-medium truncate flex-1">{p.name}</span>
-                      {p.default_for_stage && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('preset.defaultBadge', { stage: styleLabels[p.default_for_stage] })}</span>}
-                      <button onClick={() => deletePreset(p.id)} className="text-muted-foreground hover:text-destructive" aria-label={t('preset.delete')} title={t('preset.delete')}>
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium mb-1">{t('style.label')}</label>
-              <select
-                value={styleOverride}
-                onChange={e => setStyleOverride(e.target.value as '' | NonNullable<MemoTemplateConfig['style_override']>)}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-              >
-                {STYLE_VALUES.map(value => <option key={value || 'default'} value={value}>{styleLabels[value]}</option>)}
-              </select>
-              <p className="text-[10px] text-muted-foreground mt-1">{t('style.help')}</p>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">{t('persona.label')}</label>
-              <select
-                value={personaCustom ? '__custom__' : (persona && PERSONA_PRESETS.includes(persona) ? persona : (persona ? '__custom__' : ''))}
-                onChange={e => {
-                  const v = e.target.value
-                  if (v === '') { setPersonaCustom(false); setPersona('') }
-                  else if (v === '__custom__') { setPersonaCustom(true) }
-                  else { setPersonaCustom(false); setPersona(v) }
-                }}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="">{t('persona.none')}</option>
-                {PERSONA_PRESETS.map((p, index) => <option key={p} value={p}>{personaLabels[index]}</option>)}
-                <option value="__custom__">{t('persona.custom')}</option>
-              </select>
-              {personaCustom && (
-                <Input
-                  value={persona}
-                  onChange={e => setPersona(e.target.value)}
-                  placeholder={t('persona.placeholder')}
-                  className="h-8 text-sm mt-1.5"
-                  autoFocus
-                />
-              )}
-              <p className="text-[10px] text-muted-foreground mt-1">{t('persona.help')}</p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">{t('firstPage.label')}</label>
-            {anchors.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground">{t('firstPage.empty')}</p>
-            ) : (
-              <select
-                value={firstPageAnchorId}
-                onChange={e => setFirstPageAnchorId(e.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="">{t('firstPage.none')}</option>
-                {anchors.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
-              </select>
-            )}
-            <p className="text-[10px] text-muted-foreground mt-1">{t('firstPage.help')}</p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">{t('guidance.label')}</label>
-            <textarea
-              value={partnerGuidance}
-              onChange={e => setPartnerGuidance(e.target.value)}
-              rows={4}
-              placeholder={t('guidance.placeholder')}
-              className="w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-            <p className="text-[10px] text-muted-foreground mt-1">{t('guidance.help')}</p>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium">{t('sectionEditor.label')}</label>
-              <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={addSection}>
-                <Plus className="h-3 w-3 mr-1" /> {t('sectionEditor.add')}
-              </Button>
-            </div>
-            <div className="rounded-md border divide-y">
-              {sections.map(s => (
-                <div
-                  key={s.id}
-                  onDragOver={dragId && dragId !== s.id ? (e) => { e.preventDefault(); if (overId !== s.id) setOverId(s.id) } : undefined}
-                  onDrop={dragId ? (e) => { e.preventDefault(); dropSectionOnto(s.id) } : undefined}
-                  className={`px-2 py-2 ${dragId && dragId !== s.id && overId === s.id ? 'border-t-2 border-primary' : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      draggable
-                      onDragStart={() => setDragId(s.id)}
-                      onDragEnd={() => { setDragId(null); setOverId(null) }}
-                      className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground shrink-0"
-                      title={t('sectionEditor.drag')}
-                      aria-label={t('sectionEditor.drag')}
-                    >
-                      <GripVertical className="h-3.5 w-3.5" />
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={s.included}
-                      onChange={e => patchSection(s.id, { included: e.target.checked })}
-                      className="h-3.5 w-3.5 shrink-0"
-                      title={s.included ? t('sectionEditor.included') : t('sectionEditor.omitted')}
-                    />
-                    <Input
-                      value={s.title}
-                      onChange={e => patchSection(s.id, { title: e.target.value })}
-                      className={`h-7 text-sm flex-1 ${s.included ? '' : 'opacity-50'}`}
-                    />
-                    <select
-                      value={s.complexity ?? 'standard'}
-                      onChange={e => patchSection(s.id, { complexity: e.target.value as MemoComplexity })}
-                      disabled={!s.included}
-                      title={t('sectionEditor.depthHelp')}
-                      aria-label={t('sectionEditor.depthFor', { title: s.title })}
-                      className={`h-7 rounded-md border border-input bg-background px-1.5 text-xs shrink-0 ${s.included ? '' : 'opacity-50'}`}
-                    >
-                      {COMPLEXITY_VALUES.map(value => <option key={value} value={value}>{t(`complexity.${value}`)}</option>)}
-                    </select>
-                    {s.custom && <span className="text-[9px] uppercase tracking-wide text-muted-foreground shrink-0">{t('sectionEditor.custom')}</span>}
-                    {s.custom && (
-                      <button onClick={() => removeSection(s.id)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label={t('sectionEditor.remove')} title={t('sectionEditor.remove')}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  {s.custom && s.included && (
-                    <Input
-                      value={s.cover ?? ''}
-                      onChange={e => patchSection(s.id, { cover: e.target.value })}
-                      placeholder={t('sectionEditor.coverPlaceholder')}
-                      className="h-7 text-xs mt-1.5 ml-7"
-                    />
-                  )}
+        {!open && (
+          loaded ? (
+            <dl className="mt-3 grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
+              {summaryItems.map(item => (
+                <div key={item.label} className="min-w-0">
+                  <dt className="text-[11px] text-muted-foreground">{item.label}</dt>
+                  <dd className="truncate text-sm font-medium" title={item.value}>{item.value}</dd>
                 </div>
               ))}
+            </dl>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">{t('loading')}</p>
+          )
+        )}
+      </div>
+
+      {open && (
+        <div className="space-y-4 border-t p-4">
+          {error && <div className="text-xs text-destructive">{error}</div>}
+
+          <section className="space-y-4 rounded-lg border p-4" aria-labelledby="memo-generation-template-heading">
+            <div>
+              <h4 id="memo-generation-template-heading" className="text-sm font-medium">{t('groups.template.title')}</h4>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t('groups.template.help')}</p>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">{t('sectionEditor.help')}</p>
-          </div>
+
+            {/* Loading a preset copies its effective values into the deal-level
+                form; the existing PATCH contract remains the source of truth. */}
+            <div className="space-y-2 rounded-md bg-muted/30 px-3 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs font-medium">{t('preset.label')}</label>
+                <select
+                  value={selectedPresetId}
+                  onChange={e => {
+                    setSelectedPresetId(e.target.value)
+                    if (e.target.value) loadPreset(e.target.value)
+                  }}
+                  className="h-8 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm sm:min-w-[220px]"
+                >
+                  <option value="">{t('preset.load')}</option>
+                  {presets.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.default_for_stage ? ` (${t('preset.defaultFor', { stage: styleLabels[p.default_for_stage] })})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <Button size="sm" variant="outline" onClick={() => setSavePresetOpen(o => !o)}>
+                  {t('preset.saveAs')}
+                </Button>
+                {presets.length > 0 && (
+                  <span className="text-[11px] text-muted-foreground sm:ml-auto">{t('preset.count', { count: presets.length })}</span>
+                )}
+              </div>
+              {savePresetOpen && (
+                <div className="space-y-2 border-t pt-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      value={presetName}
+                      onChange={e => setPresetName(e.target.value)}
+                      placeholder={t('preset.namePlaceholder')}
+                      className="h-8 min-w-0 flex-1 text-sm sm:min-w-[200px]"
+                    />
+                    <select
+                      value={presetDefaultFor}
+                      onChange={e => setPresetDefaultFor(e.target.value as '' | NonNullable<MemoTemplateConfig['style_override']>)}
+                      className="h-8 max-w-full rounded-md border border-input bg-background px-2 text-sm"
+                      title={t('preset.autoApplyHelp')}
+                    >
+                      <option value="">{t('preset.notDefault')}</option>
+                      {STYLE_VALUES.filter((value): value is NonNullable<MemoTemplateConfig['style_override']> => Boolean(value)).map(value => <option key={value} value={value}>{t('preset.defaultFor', { stage: styleLabels[value] })}</option>)}
+                    </select>
+                    <Button size="sm" onClick={savePreset} disabled={saving || !presetName.trim()}>
+                      {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />} {t('preset.save')}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setSavePresetOpen(false); setPresetName(''); setPresetDefaultFor('') }}>{t('cancel')}</Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{t('preset.help')}</p>
+                </div>
+              )}
+              {presets.length > 0 && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('preset.manage')}</summary>
+                  <div className="mt-2 space-y-1 pl-2">
+                    {presets.map(p => (
+                      <div key={p.id} className="flex items-center gap-2">
+                        <span className="font-medium truncate flex-1">{p.name}</span>
+                        {p.default_for_stage && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('preset.defaultBadge', { stage: styleLabels[p.default_for_stage] })}</span>}
+                        <button onClick={() => deletePreset(p.id)} className="text-muted-foreground hover:text-destructive" aria-label={t('preset.delete')} title={t('preset.delete')}>
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium mb-1">{t('style.label')}</label>
+                <select
+                  value={styleOverride}
+                  onChange={e => setStyleOverride(e.target.value as '' | NonNullable<MemoTemplateConfig['style_override']>)}
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  {STYLE_VALUES.map(value => <option key={value || 'default'} value={value}>{styleLabels[value]}</option>)}
+                </select>
+                <p className="text-[10px] text-muted-foreground mt-1">{t('style.help')}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">{t('persona.label')}</label>
+                <select
+                  value={personaCustom ? '__custom__' : (persona && PERSONA_PRESETS.includes(persona) ? persona : (persona ? '__custom__' : ''))}
+                  onChange={e => {
+                    const value = e.target.value
+                    if (value === '') { setPersonaCustom(false); setPersona('') }
+                    else if (value === '__custom__') { setPersonaCustom(true) }
+                    else { setPersonaCustom(false); setPersona(value) }
+                  }}
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  <option value="">{t('persona.none')}</option>
+                  {PERSONA_PRESETS.map((preset, index) => <option key={preset} value={preset}>{personaLabels[index]}</option>)}
+                  <option value="__custom__">{t('persona.custom')}</option>
+                </select>
+                {personaCustom && (
+                  <Input
+                    value={persona}
+                    onChange={e => setPersona(e.target.value)}
+                    placeholder={t('persona.placeholder')}
+                    className="h-9 text-sm mt-1.5"
+                    autoFocus
+                  />
+                )}
+                <p className="text-[10px] text-muted-foreground mt-1">{t('persona.help')}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1">{t('firstPage.label')}</label>
+              {anchors.length === 0 ? (
+                <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">{t('firstPage.empty')}</p>
+              ) : (
+                <>
+                  <select
+                    value={firstPageAnchorId}
+                    onChange={e => setFirstPageAnchorId(e.target.value)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    <option value="">{t('firstPage.none')}</option>
+                    {anchors.map(anchor => <option key={anchor.id} value={anchor.id}>{anchor.label}</option>)}
+                  </select>
+                  <p className="text-[10px] text-muted-foreground mt-1">{t('firstPage.help')}</p>
+                </>
+              )}
+            </div>
+
+            {/* Memo export formatting (font + size) remains fund-level. */}
+            <div className="border-t pt-4">
+              <DefaultsEditor embedded section="export" />
+            </div>
+          </section>
+
+          <section className="space-y-3 rounded-lg border p-4" aria-labelledby="memo-project-guidance-heading">
+            <div>
+              <h4 id="memo-project-guidance-heading" className="text-sm font-medium">{t('groups.guidance.title')}</h4>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t('groups.guidance.help')}</p>
+            </div>
+            <div>
+              <label className="sr-only" htmlFor="memo-partner-guidance">{t('guidance.label')}</label>
+              <textarea
+                id="memo-partner-guidance"
+                value={partnerGuidance}
+                onChange={e => setPartnerGuidance(e.target.value)}
+                rows={4}
+                placeholder={t('guidance.placeholder')}
+                className="w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">{t('guidance.help')}</p>
+            </div>
+          </section>
+
+          <details className="rounded-lg border" data-memo-section-editor>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30">
+              <span>
+                <span className="block text-sm font-medium">{t('groups.sections.title')}</span>
+                <span className="block text-xs text-muted-foreground">{t('groups.sections.help')}</span>
+              </span>
+              <span className="shrink-0 text-xs text-muted-foreground">{t('summary.sectionsEnabled', { count: includedCount })}</span>
+            </summary>
+            <div className="space-y-3 border-t p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-medium">{t('sectionEditor.label')}</span>
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={addSection}>
+                  <Plus className="h-3 w-3 mr-1" /> {t('sectionEditor.add')}
+                </Button>
+              </div>
+              <div className="rounded-md border divide-y">
+                {sections.map(section => (
+                  <div
+                    key={section.id}
+                    onDragOver={dragId && dragId !== section.id ? (event) => { event.preventDefault(); if (overId !== section.id) setOverId(section.id) } : undefined}
+                    onDrop={dragId ? (event) => { event.preventDefault(); dropSectionOnto(section.id) } : undefined}
+                    className={`px-2 py-2 ${dragId && dragId !== section.id && overId === section.id ? 'border-t-2 border-primary' : ''}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        draggable
+                        onDragStart={() => setDragId(section.id)}
+                        onDragEnd={() => { setDragId(null); setOverId(null) }}
+                        className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground shrink-0"
+                        title={t('sectionEditor.drag')}
+                        aria-label={t('sectionEditor.drag')}
+                      >
+                        <GripVertical className="h-3.5 w-3.5" />
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={section.included}
+                        onChange={event => patchSection(section.id, { included: event.target.checked })}
+                        className="h-3.5 w-3.5 shrink-0"
+                        title={section.included ? t('sectionEditor.included') : t('sectionEditor.omitted')}
+                      />
+                      <Input
+                        value={section.title}
+                        onChange={event => patchSection(section.id, { title: event.target.value })}
+                        className={`h-8 min-w-[12rem] flex-1 text-sm ${section.included ? '' : 'opacity-50'}`}
+                      />
+                      <select
+                        value={section.complexity ?? 'standard'}
+                        onChange={event => patchSection(section.id, { complexity: event.target.value as MemoComplexity })}
+                        disabled={!section.included}
+                        title={t('sectionEditor.depthHelp')}
+                        aria-label={t('sectionEditor.depthFor', { title: section.title })}
+                        className={`h-8 rounded-md border border-input bg-background px-2 text-xs shrink-0 ${section.included ? '' : 'opacity-50'}`}
+                      >
+                        {COMPLEXITY_VALUES.map(value => <option key={value} value={value}>{t(`complexity.${value}`)}</option>)}
+                      </select>
+                      {section.custom && <span className="text-[9px] uppercase tracking-wide text-muted-foreground shrink-0">{t('sectionEditor.custom')}</span>}
+                      {section.custom && (
+                        <button onClick={() => removeSection(section.id)} className="text-muted-foreground hover:text-destructive shrink-0" aria-label={t('sectionEditor.remove')} title={t('sectionEditor.remove')}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {section.custom && section.included && (
+                      <Input
+                        value={section.cover ?? ''}
+                        onChange={event => patchSection(section.id, { cover: event.target.value })}
+                        placeholder={t('sectionEditor.coverPlaceholder')}
+                        className="ml-7 mt-1.5 h-8 w-[calc(100%-1.75rem)] text-xs"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">{t('sectionEditor.help')}</p>
+            </div>
+          </details>
 
           <div className="flex justify-end">
-            <Button size="sm" onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : saved ? <Save className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+            <Button size="sm" onClick={save} disabled={saving || !loaded}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
               {saved ? t('saved') : t('saveSettings')}
             </Button>
           </div>
-
-          {/* Memo export formatting (font + size) — fund-level, editable here. */}
-          <DefaultsEditor embedded section="export" />
         </div>
       )}
     </div>
