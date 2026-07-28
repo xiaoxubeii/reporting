@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "targetUrl": "http://cci-7b2d62d758cf46848c317e4c43b9949e.localhost:3020/diligence/c321df20-ef87-4b9d-ad8e-c48f8e64a63a",
+  "projectPreferenceCount": 0,
+  "ingestSavedAndReopened": true,
+  "researchRemainedIsolated": true,
+  "originalIngestRestored": true,
+  "runtimeErrors": [],
+  "knownShellResponses": [
+    "http 404: /api/portal/me",
+    "http 403: /api/accounting/vehicle-index",
+    "http 403: /api/time-zone"
+  ]
+}

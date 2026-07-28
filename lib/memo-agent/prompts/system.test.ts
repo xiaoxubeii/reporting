@@ -11,15 +11,26 @@ vi.mock('@/lib/memo-agent/style-anchors', () => ({
 
 import { buildSystemPrompt, type StageName } from './system'
 
-function fakeAdmin() {
+function fakeAdmin(guidanceByStage: Partial<Record<StageName, string>> = {}) {
+  let selectedStage: StageName | null = null
   const chain = {
     select: vi.fn(),
     eq: vi.fn(),
-    maybeSingle: vi.fn(async () => ({ data: null })),
+    maybeSingle: vi.fn(async () => ({
+      data: selectedStage && guidanceByStage[selectedStage]
+        ? { guidance: guidanceByStage[selectedStage] }
+        : null,
+    })),
   }
   chain.select.mockReturnValue(chain)
-  chain.eq.mockReturnValue(chain)
-  return { from: vi.fn(() => chain) } as any
+  chain.eq.mockImplementation((field: string, value: string) => {
+    if (field === 'stage') selectedStage = value as StageName
+    return chain
+  })
+  return { from: vi.fn((table: string) => {
+    expect(table).toBe('memo_agent_prompts')
+    return chain
+  }) } as any
 }
 
 describe('buildSystemPrompt output language contract', () => {
@@ -50,5 +61,31 @@ describe('buildSystemPrompt output language contract', () => {
       outputLanguage: 'en',
     })
     expect(prompt).toContain('English (en)')
+  })
+
+  it('injects only guidance for the active stage', async () => {
+    const { prompt } = await buildSystemPrompt({
+      admin: fakeAdmin({
+        ingest: 'INGEST-ONLY-GUIDANCE',
+        research: 'RESEARCH-ONLY-GUIDANCE',
+      }),
+      fundId: 'fund-1',
+      stage: 'research',
+      outputLanguage: 'en',
+    })
+
+    expect(prompt).toContain('RESEARCH-ONLY-GUIDANCE')
+    expect(prompt).not.toContain('INGEST-ONLY-GUIDANCE')
+  })
+
+  it('omits the partner-authored guidance block when the active stage is empty', async () => {
+    const { prompt } = await buildSystemPrompt({
+      admin: fakeAdmin({ research: '   ' }),
+      fundId: 'fund-1',
+      stage: 'research',
+      outputLanguage: 'en',
+    })
+
+    expect(prompt).not.toContain('FUND GUIDANCE FOR THIS STAGE')
   })
 })

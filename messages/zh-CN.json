@@ -5247,47 +5247,10 @@
     },
     "stageGuidance": {
       "loading": "正在加载指引…",
-      "description": "您为本次分析提供的补充指引，将与基础提示词共同使用。",
+      "description": "本阶段的基金级指引，将叠加到基础提示词并应用于该基金的所有项目。",
       "placeholder": "调整本阶段的语气、深度和重点。留空则使用系统默认设置。",
       "saved": "已保存",
       "save": "保存指引"
-    },
-    "analysisPreferences": {
-      "trigger": "分析偏好",
-      "title": "分析偏好",
-      "description": "设置当前项目尽调分析的重点和深度。",
-      "focus": {
-        "title": "重点关注",
-        "help": "选择需要额外关注的分析领域，可多选。",
-        "areas": {
-          "technology": "技术与产品",
-          "market": "市场与竞争",
-          "financials": "财务与单位经济",
-          "regulatory": "监管与合规"
-        }
-      },
-      "depth": {
-        "title": "分析深度",
-        "help": "控制智能体核验证据和识别风险的深入程度。",
-        "options": {
-          "quick": "快速",
-          "standard": "标准",
-          "deep": "深入"
-        }
-      },
-      "instructions": {
-        "title": "补充指引",
-        "help": "填写当前项目特有的背景或问题，系统评估规则不会因此改变。",
-        "placeholder": "例如：重点关注临床验证质量和监管申报路径……"
-      },
-      "scopeHelp": "这些偏好仅作用于当前项目，不会改变基金的默认分析规则。",
-      "save": "保存",
-      "saved": "已保存",
-      "saveAndReanalyze": "保存并重新分析",
-      "errors": {
-        "save": "无法保存分析偏好。",
-        "reanalyze": "偏好已保存，但无法启动重新分析。"
-      }
     },
     "emailIntake": {
       "addFailed": "无法将邮件加入资料室。",
