@@ -12,6 +12,7 @@ import { AnalystProposals, type Proposal } from '@/components/analyst-proposals'
 import { AnalystPendingActions, type StagedAction } from '@/components/analyst-pending-actions'
 import {
   ASSISTANT_CONTEXT_MIME,
+  normalizeAnalystCitations,
   prepareAnalystMessagesForRequest,
   type AnalystConversationMessage,
 } from '@/lib/analyst/context-snapshot'
@@ -39,11 +40,14 @@ export function AnalystPanel() {
     dealId,
     vehicle,
     domain,
+    diligenceDealId,
+    diligenceProjectName,
     selectedModel,
     setSelectedModel,
     availableModels,
     conversationId,
     setConversationId,
+    readOnlyHistory,
     conversations,
     loadConversations,
     loadConversation,
@@ -138,7 +142,7 @@ export function AnalystPanel() {
 
   async function handleSend() {
     // With a document attached, "record this" is implied — no typing required.
-    if ((!input.trim() && !doc) || loading) return
+    if ((!input.trim() && !doc) || loading || readOnlyHistory) return
     const userMessage = {
       role: 'user' as const,
       content: input.trim() || t('documentDraftPrompt', {
@@ -173,6 +177,7 @@ export function AnalystPanel() {
           dealId: dealId ?? undefined,
           vehicle: vehicle ?? undefined,
           domain: domain ?? undefined,
+          diligenceDealId: diligenceDealId ?? undefined,
           document: doc ?? undefined,
           model: selectedModel ? { id: selectedModel.id, provider: selectedModel.provider } : undefined,
           conversationId: conversationId ?? undefined,
@@ -187,7 +192,21 @@ export function AnalystPanel() {
         setError(data.error ?? t('errors.requestFailed'))
         return
       }
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+      let citations: AnalystConversationMessage['citations']
+      try {
+        const normalized = normalizeAnalystCitations(data.citations)
+        citations = normalized.length > 0 ? normalized : undefined
+      } catch {
+        citations = undefined
+      }
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.reply,
+        ...(citations ? { citations } : {}),
+      }])
+      if (data.historyPersisted === false) {
+        setError(t('errors.historyNotSaved'))
+      }
       if (Array.isArray(data.proposals) && data.proposals.length > 0) {
         setProposals(prev => ({ ...prev, [newMessages.length]: data.proposals }))
       }
@@ -260,8 +279,10 @@ export function AnalystPanel() {
         ? t('empty.vehicle', { vehicle: scope.vehicle })
         : scope.domain === 'lps'
           ? t('empty.lps')
-          : scope.domain === 'diligence'
-            ? t('empty.diligence')
+          : scope.domain === 'diligence' && diligenceProjectName
+            ? t('empty.diligenceProject', { project: diligenceProjectName })
+            : scope.domain === 'diligence'
+              ? t('empty.diligence')
             : t('empty.portfolio')
   const inputPlaceholderText = scope.dealId
     ? t('placeholder.deal')
@@ -271,8 +292,10 @@ export function AnalystPanel() {
         ? t('placeholder.vehicle', { vehicle: scope.vehicle })
         : scope.domain === 'lps'
           ? t('placeholder.lps')
-          : scope.domain === 'diligence'
-            ? t('placeholder.diligence')
+          : scope.domain === 'diligence' && diligenceProjectName
+            ? t('placeholder.diligenceProject', { project: diligenceProjectName })
+            : scope.domain === 'diligence'
+              ? t('placeholder.diligence')
             : t('placeholder.portfolio')
 
   function hasContextToken(event: DragEvent): boolean {
@@ -316,11 +339,18 @@ export function AnalystPanel() {
     <div className={`flex min-h-0 flex-1 flex-col bg-card transition-colors ${dragActive ? 'ring-2 ring-inset ring-primary/30' : ''}`}>
         {/* Header */}
         <div className="px-4 py-3 flex items-center gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 shrink-0">
-            <Sparkles className="h-3.5 w-3.5" />
-            {t('title')}
-          </h2>
-          {availableModels.length > 0 && !showHistory && (
+          <div className="min-w-0 shrink">
+            <h2 className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              {t('title')}
+            </h2>
+            {diligenceProjectName && (
+              <p className="mt-0.5 truncate text-[10px] text-muted-foreground" title={diligenceProjectName}>
+                {t('currentProject', { project: diligenceProjectName })}
+              </p>
+            )}
+          </div>
+          {availableModels.length > 0 && !showHistory && !diligenceDealId && (
             <Select
               value={modelKey}
               onValueChange={(val) => {
@@ -393,19 +423,22 @@ export function AnalystPanel() {
                     }`}
                   >
                     <button type="button" className="min-w-0 flex-1 px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => loadConversation(conv.id)}>
-                      <p className="text-sm truncate">{conv.title}</p>
+                      <p className="text-sm truncate">{conv.read_only ? t('legacyDiligenceHistory') : conv.title}</p>
                       <p className="text-[10px] text-muted-foreground">
                         {t('messageCount', { count: conv.message_count })} &middot; {formatDate(conv.updated_at)}
+                        {conv.read_only ? ` · ${t('readOnly')}` : ''}
                       </p>
                     </button>
-                    <button
-                      onClick={() => deleteConversation(conv.id)}
-                      className="m-1 grid min-h-9 min-w-9 place-items-center rounded opacity-100 hover:bg-destructive/10 focus:opacity-100 md:min-h-0 md:min-w-0 md:p-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                      aria-label={t('deleteConversation')}
-                      title={t('deleteConversation')}
-                    >
-                      <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                    </button>
+                    {conv.read_only ? null : (
+                      <button
+                        onClick={() => deleteConversation(conv.id)}
+                        className="m-1 grid min-h-9 min-w-9 place-items-center rounded opacity-100 hover:bg-destructive/10 focus:opacity-100 md:min-h-0 md:min-w-0 md:p-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                        aria-label={t('deleteConversation')}
+                        title={t('deleteConversation')}
+                      >
+                        <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -428,9 +461,34 @@ export function AnalystPanel() {
                     </span>
                   </div>
                   {msg.role === 'assistant' ? (
-                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-pre:my-1">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
+                    <>
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-2 prose-pre:my-1">
+                        <ReactMarkdown components={{
+                          img: () => null,
+                          a: ({ href, children }) => {
+                            const safeHref = typeof href === 'string' && /^(https?:|mailto:)/i.test(href) ? href : undefined
+                            return safeHref
+                              ? <a href={safeHref} target="_blank" rel="noopener noreferrer">{children}</a>
+                              : <span>{children}</span>
+                          },
+                        }}>{msg.content}</ReactMarkdown>
+                      </div>
+                      {msg.citations && msg.citations.length > 0 && (
+                        <div className="mt-2 rounded-md border bg-muted/30 p-2" aria-label={t('evidenceSources')}>
+                          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {t('evidenceSources')}
+                          </p>
+                          <div className="space-y-1.5">
+                            {msg.citations.map(citation => (
+                              <div key={`${citation.documentId}:${citation.label}`} className="min-w-0 border-l-2 border-border pl-2 text-[11px]">
+                                <p className="truncate font-medium text-foreground" title={citation.label}>{citation.label}</p>
+                                {citation.summary && <p className="mt-0.5 text-muted-foreground">{citation.summary}</p>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <>
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -505,6 +563,14 @@ export function AnalystPanel() {
                   </div>
                 </div>
               )}
+              {readOnlyHistory && (
+                <div className="mb-2 rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">
+                  <p>{t('legacyReadOnlyNotice')}</p>
+                  <button type="button" onClick={startNewConversation} className="mt-1 font-medium text-foreground underline-offset-2 hover:underline">
+                    {t('startFromLegacy')}
+                  </button>
+                </div>
+              )}
               {/* Attaching a document only means something where entries can be drafted from it. */}
               {vehicle && (
                 <div className="mb-2">
@@ -539,13 +605,14 @@ export function AnalystPanel() {
                     }
                   }}
                   placeholder={inputPlaceholderText}
+                  disabled={readOnlyHistory}
                   rows={2}
                   className="w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
                 <Button
                   size="icon"
                   onClick={handleSend}
-                  disabled={(!input.trim() && !doc) || loading}
+                  disabled={(!input.trim() && !doc) || loading || readOnlyHistory}
                   aria-label={t('sendMessage')}
                   className="h-auto self-end px-2 py-2"
                 >

@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { AnalystProvider, useAnalystContext } from '@/components/analyst-context'
 import { AnalystContextActions } from '@/components/analyst-context-actions'
 import { AnalystFloatingHost } from '@/components/analyst-floating-host'
+import { AnalystDiligenceScope } from '@/components/analyst-scope'
 import { MobileDrawerPanel } from '@/components/mobile-drawer-panel'
 import { ASSISTANT_CONTEXT_MIME, type AssistantContextSnapshot } from '@/lib/analyst/context-snapshot'
 
@@ -45,6 +46,44 @@ function Surface({ withAction = false }: { withAction?: boolean }) {
       </AnalystFloatingHost>
       {withAction && <AnalystContextActions snapshot={snapshot} />}
       <Probe />
+    </AnalystProvider>
+  )
+}
+
+const diligenceDealId = '11111111-1111-4111-8111-111111111111'
+
+function DiligenceProbe() {
+  const {
+    conversationId,
+    diligenceDealId: currentDealId,
+    diligenceProjectName,
+    domain,
+    loadConversation,
+    loadConversations,
+    messages,
+    scopeRevision,
+  } = useAnalystContext()
+  return (
+    <>
+      <output data-testid="diligence-domain">{domain ?? ''}</output>
+      <output data-testid="diligence-deal-id">{currentDealId ?? ''}</output>
+      <output data-testid="diligence-project-name">{diligenceProjectName ?? ''}</output>
+      <output data-testid="diligence-scope-revision">{scopeRevision}</output>
+      <output data-testid="diligence-conversation-id">{conversationId ?? ''}</output>
+      <output data-testid="diligence-messages">{messages.map(message => message.content).join('|')}</output>
+      <button type="button" onClick={() => void loadConversations()}>load project history</button>
+      <button type="button" onClick={() => void loadConversation(`legacy-diligence:${diligenceDealId}`)}>load legacy history</button>
+    </>
+  )
+}
+
+function DiligenceSurface() {
+  const [showScope, setShowScope] = React.useState(true)
+  return (
+    <AnalystProvider hasAIKey configuredProviders={[]} defaultAIProvider="anthropic" fundName="Fund">
+      {showScope && <AnalystDiligenceScope dealId={diligenceDealId} dealName="Laconia" />}
+      <DiligenceProbe />
+      <button type="button" onClick={() => setShowScope(false)}>leave diligence</button>
     </AnalystProvider>
   )
 }
@@ -152,6 +191,71 @@ describe('docked global assistant host', () => {
     render(<Surface />)
     fireEvent.dragEnter(window, { dataTransfer: { types: ['text/plain'] } })
     expect(screen.queryByTestId('assistant-edge-drop-zone')).toBeNull()
+  })
+})
+
+describe('diligence project scope', () => {
+  it('sets and clears the project atomically with one reset per scope transition', async () => {
+    const user = userEvent.setup()
+    render(<DiligenceSurface />)
+
+    await waitFor(() => expect(screen.getByTestId('diligence-domain').textContent).toBe('diligence'))
+    expect(screen.getByTestId('diligence-deal-id').textContent).toBe(diligenceDealId)
+    expect(screen.getByTestId('diligence-project-name').textContent).toBe('Laconia')
+    expect(screen.getByTestId('diligence-scope-revision').textContent).toBe('1')
+
+    await user.click(screen.getByRole('button', { name: 'leave diligence' }))
+    await waitFor(() => expect(screen.getByTestId('diligence-domain').textContent).toBe(''))
+    expect(screen.getByTestId('diligence-deal-id').textContent).toBe('')
+    expect(screen.getByTestId('diligence-project-name').textContent).toBe('')
+    expect(screen.getByTestId('diligence-scope-revision').textContent).toBe('2')
+  })
+
+  it('lists history by diligence scope instead of the inbound deal foreign key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ conversations: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<DiligenceSurface />)
+
+    await waitFor(() => expect(screen.getByTestId('diligence-domain').textContent).toBe('diligence'))
+    await user.click(screen.getByRole('button', { name: 'load project history' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    const requestUrl = new URL(String(fetchMock.mock.calls[0][0]), 'http://localhost')
+    expect(requestUrl.searchParams.get('scope')).toBe(`diligence:${diligenceDealId}`)
+    expect(requestUrl.searchParams.get('portfolio')).toBe('true')
+    expect(requestUrl.searchParams.has('dealId')).toBe(false)
+  })
+
+  it('loads legacy shared Q&A without adopting its virtual id for follow-up writes', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        conversation: {
+          id: `legacy-diligence:${diligenceDealId}`,
+          read_only: true,
+          messages: [
+            { role: 'user', content: 'Legacy question' },
+            { role: 'assistant', content: 'Legacy answer' },
+          ],
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<DiligenceSurface />)
+
+    await waitFor(() => expect(screen.getByTestId('diligence-domain').textContent).toBe('diligence'))
+    await user.click(screen.getByRole('button', { name: 'load legacy history' }))
+    await waitFor(() => expect(screen.getByTestId('diligence-messages').textContent).toBe('Legacy question|Legacy answer'))
+
+    expect(screen.getByTestId('diligence-conversation-id').textContent).toBe('')
+    const requestUrl = new URL(String(fetchMock.mock.calls[0][0]), 'http://localhost')
+    expect(requestUrl.pathname).toBe(`/api/analyst/conversations/legacy-diligence:${diligenceDealId}`)
+    expect(requestUrl.searchParams.get('scope')).toBe(`diligence:${diligenceDealId}`)
   })
 })
 

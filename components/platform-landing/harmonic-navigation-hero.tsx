@@ -13,16 +13,7 @@ import styles from './harmonic-navigation-hero.module.css'
 function Wordmark() {
   return (
     <a href="#top" className={styles.wordmark} aria-label="FundWorkspace">
-      <span className={styles.logoMark} aria-hidden="true">
-        <Image
-          src="/landing/fundworkspace-logo-transparent.png"
-          alt=""
-          fill
-          priority
-          sizes="32px"
-          className={styles.logoImage}
-        />
-      </span>
+      <span className={styles.logoMark} aria-hidden="true" />
       <span>FundWorkspace</span>
     </a>
   )

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { QAChat } from './qa-chat'
 import { getTranslations } from 'next-intl/server'
+import { AnalystDiligenceScope } from '@/components/analyst-scope'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Diligence.metadata')
@@ -42,5 +43,10 @@ export default async function QAPage({ params }: { params: { id: string } }) {
     .maybeSingle()
   if (!deal) notFound()
 
-  return <QAChat dealId={params.id} dealName={(deal as any).name} />
+  return (
+    <>
+      <AnalystDiligenceScope dealId={params.id} dealName={(deal as any).name} />
+      <QAChat dealId={params.id} dealName={(deal as any).name} />
+    </>
+  )
 }

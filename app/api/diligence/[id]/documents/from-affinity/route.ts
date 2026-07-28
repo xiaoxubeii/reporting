@@ -5,6 +5,7 @@ import { getAffinityKey, markAffinityKeyError } from '@/lib/affinity/credentials
 import { importAffinityIntoDataRoom, type ImportEvent } from '@/lib/affinity/import'
 import { enqueueIngestForDocuments } from '@/lib/diligence/enqueue-ingest'
 import { AffinityError } from '@/lib/affinity/client'
+import { hasAccess, loadAccessContext } from '@/lib/access/effective'
 
 /**
  * Manual "Import from Affinity" — pulls the linked organization's notes and
@@ -28,11 +29,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const admin = createAdminClient()
   const { data: membership } = await admin
     .from('fund_members')
-    .select('fund_id')
+    .select('fund_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
+  const access = await loadAccessContext(admin, fundId, user.id, membership.role)
+  if (
+    !hasAccess(access, 'diligence', 'write')
+    || !hasAccess(access, 'relationships', 'read', 'interactions')
+    || !hasAccess(access, 'relationships', 'read', 'notes')
+  ) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { data: deal } = await admin
     .from('diligence_deals')
@@ -50,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     )
   }
 
-  const apiKey = await getAffinityKey(admin, user.id)
+  const apiKey = await getAffinityKey(admin, user.id, fundId)
   if (!apiKey) {
     return NextResponse.json(
       { error: 'Connect your Affinity account in Settings first.', needs_connection: true },
@@ -105,7 +114,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
       } catch (err) {
         if (err instanceof AffinityError && err.status === 401) {
-          await markAffinityKeyError(admin, userId, err.message).catch(() => {})
+          await markAffinityKeyError(admin, userId, fundId, err.message).catch(() => {})
         }
         emit({
           type: 'error',

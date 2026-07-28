@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, ClipboardCheck, ListChecks, Mail, Settings, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Lock, Users, ArrowDownCircle, Crown, Lightbulb, Microscope, BookOpen, Rss, Search } from 'lucide-react'
+import { Building2, ListChecks, Mail, Settings, PanelLeftClose, PanelLeftOpen, Monitor, Sun, Moon, Lock, Users, ArrowDownCircle, Crown, Lightbulb, Microscope, BookOpen, Rss, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
@@ -40,7 +40,8 @@ interface NavItem {
   href: string
   labelKey: NavigationKey
   icon: LucideIcon
-  badgeKey?: 'review' | 'settings' | 'notes'
+  group: 'work' | 'discovery' | 'lifecycle' | 'system'
+  badgeKey?: 'settings' | 'notes'
   adminOnly?: boolean
   featureKey?: FeatureKey
   /** Only where the featureKey can't imply it (or there is no featureKey). */
@@ -78,21 +79,20 @@ function canSee(
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/review', labelKey: 'review', icon: ClipboardCheck, badgeKey: 'review', domain: 'portfolio' },
-  // The queue spans domains; gate the nav on portfolio (like Review) and let the list filter rows.
-  { href: '/pending-actions', labelKey: 'pendingActions', icon: ListChecks, domain: 'portfolio' },
-  { href: '/emails', labelKey: 'inbound', icon: Mail, domain: 'dealflow' },
-  { href: '/deals', labelKey: 'deals', icon: Lightbulb, featureKey: 'deals' },
+  // The queue spans domains; gate the nav on portfolio and let the list filter rows.
+  { href: '/pending-actions', labelKey: 'pendingActions', icon: ListChecks, group: 'work', domain: 'portfolio' },
+  { href: '/emails', labelKey: 'inbound', icon: Mail, group: 'work', domain: 'dealflow' },
   {
-    href: '/feeds', labelKey: 'feeds', icon: Rss, featureKey: 'feeds',
+    href: '/feeds', labelKey: 'feeds', icon: Rss, group: 'discovery', featureKey: 'feeds',
     children: [
       { href: '/feeds', labelKey: 'today', featureKey: 'feeds', exact: true },
       { href: '/feeds/sources', labelKey: 'followSources', featureKey: 'feeds' },
     ],
   },
-  { href: '/search', labelKey: 'search', icon: Search, featureKey: 'search' },
+  { href: '/search', labelKey: 'search', icon: Search, group: 'discovery', featureKey: 'search' },
+  { href: '/deals', labelKey: 'deals', icon: Lightbulb, group: 'lifecycle', featureKey: 'deals' },
   {
-    href: '/diligence', labelKey: 'diligence', icon: Microscope, featureKey: 'diligence',
+    href: '/diligence', labelKey: 'diligence', icon: Microscope, group: 'lifecycle', featureKey: 'diligence',
     children: [
       { href: '/diligence/inbox',     labelKey: 'inbox' },
       { href: '/diligence/analytics', labelKey: 'analytics', adminOnly: true },
@@ -100,7 +100,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    href: '/dashboard', labelKey: 'portfolio', icon: Building2, domain: 'portfolio',
+    href: '/dashboard', labelKey: 'portfolio', icon: Building2, group: 'lifecycle', domain: 'portfolio',
     children: [
       { href: '/import',       labelKey: 'import',       featureKey: 'imports' },
       { href: '/investments',  labelKey: 'investments',  featureKey: 'investments' },
@@ -116,7 +116,18 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    href: '/lps', labelKey: 'lps', icon: Crown, featureKey: 'lps',
+    // Relabelled from "Accounting" to "Funds": the landing page is now the fund overview —
+    // performance per vehicle, derived from the ledger — and the ledger pages are what you
+    // click into. The old /funds page (typed-in numbers, estimated carry) redirects here.
+    //
+    // No `adminOnly` — the featureKey already gates it (defaults to 'off', and a fund
+    // that turns it on to 'admin' still only shows it to admins). Hard-coding adminOnly
+    // on top of that also hid it from the read-only demo viewer, who should see the books.
+    href: '/funds', labelKey: 'funds', icon: BookOpen, group: 'lifecycle', featureKey: 'accounting',
+    children: ACCOUNTING_SECTIONS.map(({ href, label, domain }) => ({ href, label, domain })),
+  },
+  {
+    href: '/lps', labelKey: 'lps', icon: Crown, group: 'lifecycle', featureKey: 'lps',
     children: [
       { href: '/lps/capital',   labelKey: 'capitalAccounts', featureKey: 'lp_tracking' },
       { href: '/lp-portal',     labelKey: 'documents',        featureKey: 'lp_portal' },
@@ -126,19 +137,8 @@ const NAV_ITEMS: NavItem[] = [
       { href: '/lp-activity',   labelKey: 'activity',         featureKey: 'lp_activity' },
     ],
   },
-  {
-    // Relabelled from "Accounting" to "Funds": the landing page is now the fund overview —
-    // performance per vehicle, derived from the ledger — and the ledger pages are what you
-    // click into. The old /funds page (typed-in numbers, estimated carry) redirects here.
-    //
-    // No `adminOnly` — the featureKey already gates it (defaults to 'off', and a fund
-    // that turns it on to 'admin' still only shows it to admins). Hard-coding adminOnly
-    // on top of that also hid it from the read-only demo viewer, who should see the books.
-    href: '/funds', labelKey: 'funds', icon: BookOpen, featureKey: 'accounting',
-    children: ACCOUNTING_SECTIONS.map(({ href, label, domain }) => ({ href, label, domain })),
-  },
-  { href: '/usage', labelKey: 'usage', icon: Users, adminOnly: true, domain: 'admin' },
-  { href: '/settings/personal', labelKey: 'settings', icon: Settings, badgeKey: 'settings' },
+  { href: '/usage', labelKey: 'usage', icon: Users, group: 'system', adminOnly: true, domain: 'admin' },
+  { href: '/settings/personal', labelKey: 'settings', icon: Settings, group: 'system', badgeKey: 'settings' },
 ]
 
 const ACCOUNTING_LABEL_KEYS: Record<string, NavigationKey> = {
@@ -161,7 +161,7 @@ interface AppSidebarProps {
   onNavigate?: () => void
 }
 
-export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, updateAvailable, featureVisibility, onNavigate }: AppSidebarProps) {
+export function AppSidebar({ settingsBadge, notesBadge, isAdmin, updateAvailable, featureVisibility, onNavigate }: AppSidebarProps) {
   const pathname = usePathname()
   const access = useAccess()
   const { collapsed, toggle } = useSidebar()
@@ -200,16 +200,16 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
     setTheme(THEME_CYCLE[(idx + 1) % THEME_CYCLE.length])
   }
 
+  const visibleItems = NAV_ITEMS.filter(item => canSee(item, !!isAdmin, access))
+
   return (
     <div className="flex flex-col flex-1">
       <nav className={`flex-1 p-2 space-y-0.5 ${collapsed ? 'md:px-1' : ''}`}>
-        {NAV_ITEMS.filter(item => {
-          if (!canSee(item, !!isAdmin, access)) return false
-          if (item.badgeKey === 'review' && reviewBadge === 0) return false
-          return true
-        }).map((item) => {
+        {visibleItems.map((item, itemIndex) => {
           const { href, labelKey, icon: Icon, badgeKey, adminOnly, featureKey, beta } = item
           const label = t(labelKey)
+          const startsGroup = itemIndex > 0 && item.group !== visibleItems[itemIndex - 1].group
+          const startsSystemGroup = startsGroup && item.group === 'system'
           // The Funds children are computed per-render from the current fund (fund-first hrefs);
           // every other section uses its static children.
           const children = item.href === '/funds' ? fundsChildren : item.children
@@ -221,8 +221,7 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
           // lit the parent. Exact-match makes every section behave the same: one pill, on the
           // page you're actually on, with section context coming from the expanded children.
           const isActive = pathname === href
-          const badgeCount = badgeKey === 'review' ? reviewBadge
-            : badgeKey === 'settings' ? (settingsBadge ?? 0)
+          const badgeCount = badgeKey === 'settings' ? (settingsBadge ?? 0)
             : badgeKey === 'notes' ? (notesBadge ?? 0)
             : 0
           const showLock = adminOnly || (featureKey && featureVisibility?.[featureKey] === 'admin')
@@ -244,7 +243,10 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
           const showChildren = !collapsed && visibleChildren.length > 0 && (isActive || childActive || underSection)
 
           return (
-            <div key={href}>
+            <div
+              key={href}
+              className={startsSystemGroup ? 'mt-3 border-t border-border pt-3' : startsGroup ? 'pt-3' : undefined}
+            >
               <Link
                 href={href}
                 onClick={onNavigate}
@@ -357,11 +359,21 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
           )
         })()}
 
+        {/* Language selector: full label on mobile/expanded sidebar, icon-only when desktop-collapsed. */}
+        <div className={collapsed ? 'md:hidden' : undefined}>
+          <LanguageSwitcher className="h-9 w-full text-xs font-normal text-muted-foreground/60 hover:text-muted-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring" />
+        </div>
+        {collapsed && (
+          <div className="hidden md:block">
+            <LanguageSwitcher compact className="h-9 w-full hover:text-muted-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring" />
+          </div>
+        )}
+
         {/* Theme toggle */}
         <button
           onClick={cycleTheme}
           title={collapsed ? themeLabel : undefined}
-          className={`flex w-full items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent ${
+          className={`flex w-full items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             collapsed ? 'md:justify-center md:px-0' : ''
           }`}
         >
@@ -371,22 +383,12 @@ export function AppSidebar({ reviewBadge, settingsBadge, notesBadge, isAdmin, up
           </span>
         </button>
 
-        {/* Language selector: full label on mobile/expanded sidebar, icon-only when desktop-collapsed. */}
-        <div className={collapsed ? 'md:hidden' : undefined}>
-          <LanguageSwitcher className="w-full" />
-        </div>
-        {collapsed && (
-          <div className="hidden md:block">
-            <LanguageSwitcher compact className="h-9 w-full" />
-          </div>
-        )}
-
         {/* Hide Sidebar toggle, only shown on desktop */}
         <button
           onClick={toggle}
           title={collapsed ? t('showSidebar') : t('hideSidebar')}
           aria-label={collapsed ? t('showSidebar') : t('hideSidebar')}
-          className={`hidden md:flex w-full items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent ${
+          className={`hidden md:flex w-full items-center gap-3 px-3 py-2 rounded-md text-xs transition-colors text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             collapsed ? 'md:justify-center md:px-0' : ''
           }`}
         >

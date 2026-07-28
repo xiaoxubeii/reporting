@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAIUsage } from '@/lib/ai/usage'
+import type { MessageContent } from '@/lib/ai/types'
+import type { Json } from '@/lib/types/database'
 import { getStageProvider } from '@/lib/memo-agent/stage-provider'
 import { buildSystemPrompt } from '@/lib/memo-agent/prompts/system'
 import {
@@ -9,9 +11,18 @@ import {
 } from '@/lib/memo-agent/prompts/research'
 import { extractJsonObject } from '@/lib/memo-agent/parse-ai-json'
 import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
+import {
+  mergeFounderDossiers,
+  parseFounderDossiers,
+  type FounderDossier,
+} from './research-founder-dossiers'
 import type { IngestionOutput } from './ingest'
 
 type Admin = ReturnType<typeof createAdminClient>
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
 export interface ResearchOutput {
   findings: Array<{
@@ -35,14 +46,7 @@ export interface ResearchOutput {
     named_by_company: Array<{ name: string; note: string; dismissed?: boolean }>
     named_by_research: Array<{ name: string; rationale: string; sources: Array<{ title: string; url: string | null }>; dismissed?: boolean }>
   }
-  founder_dossiers: Array<{
-    founder_name: string
-    role: string
-    background_summary: string
-    sources: Array<{ title: string; url: string | null }>
-    open_questions: string[]
-    dismissed?: boolean
-  }>
+  founder_dossiers: FounderDossier[]
   research_gaps: Array<{ topic: string; rationale: string; criticality: 'blocker' | 'important' | 'nice_to_have'; dismissed?: boolean }>
   research_mode: 'with_web_search' | 'no_web_search'
   /** URLs the agent cited via the web_search tool, across all sub-calls. Deduped.
@@ -113,7 +117,7 @@ export async function runResearch(params: {
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
 
   await note('Building research prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'research', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'research', outputLanguage })
 
   const { provider, model, providerType, webSearchAvailable, webSearchOptIn } = await getStageProvider(admin, fundId, 'research')
   const webSearchEnabled = webSearchAvailable
@@ -148,7 +152,7 @@ export async function runResearch(params: {
 
   // Sub-call helper — runs one focused AI call, logs usage, parses JSON.
   // Each catches its own errors so a single failure doesn't kill siblings.
-  type SubCall<T> = { name: string; content: any; maxTokens: number; parse: (obj: Record<string, unknown>) => T; fallback: T }
+  type SubCall<T> = { name: string; content: MessageContent; maxTokens: number; parse: (obj: Record<string, unknown>) => T; fallback: T }
   const runSubCall = async <T>(s: SubCall<T>): Promise<T> => {
     const startedAt = Date.now()
     try {
@@ -211,10 +215,14 @@ export async function runResearch(params: {
       content: buildResearchCompetitorsContent(promptInput),
       maxTokens: 6144,
       parse: (obj) => {
-        const cm = (obj.competitive_map as any) ?? {}
+        const cm = isRecord(obj.competitive_map) ? obj.competitive_map : {}
         return {
-          named_by_company: Array.isArray(cm.named_by_company) ? cm.named_by_company : [],
-          named_by_research: Array.isArray(cm.named_by_research) ? cm.named_by_research : [],
+          named_by_company: Array.isArray(cm.named_by_company)
+            ? cm.named_by_company as ResearchOutput['competitive_map']['named_by_company']
+            : [],
+          named_by_research: Array.isArray(cm.named_by_research)
+            ? cm.named_by_research as ResearchOutput['competitive_map']['named_by_research']
+            : [],
         }
       },
       fallback: { named_by_company: [], named_by_research: [] },
@@ -223,7 +231,13 @@ export async function runResearch(params: {
       name: 'founders',
       content: buildResearchFoundersContent(promptInput),
       maxTokens: 8192,
-      parse: (obj) => Array.isArray(obj.founder_dossiers) ? obj.founder_dossiers as ResearchOutput['founder_dossiers'] : [],
+      parse: (obj) => {
+        const parsed = parseFounderDossiers(obj.founder_dossiers)
+        if (parsed.discarded > 0) {
+          warnings.push(`Founder research discarded ${parsed.discarded} malformed dossier entr${parsed.discarded === 1 ? 'y' : 'ies'}.`)
+        }
+        return parsed.dossiers
+      },
       fallback: [] as ResearchOutput['founder_dossiers'],
     }),
   ])
@@ -260,9 +274,26 @@ export async function runResearch(params: {
   }
 
   await note('Writing research output to draft…')
+  // Re-read immediately before persistence. Research can take several minutes,
+  // and a partner may have edited a dossier after the initial draft snapshot.
+  const { data: latestDraft, error: latestDraftError } = await admin
+    .from('diligence_memo_drafts')
+    .select('research_output')
+    .eq('id', draftRow.id)
+    .eq('deal_id', dealId)
+    .eq('fund_id', fundId)
+    .eq('is_draft', true)
+    .maybeSingle()
+  if (latestDraftError) throw new Error(`Failed to refresh current founder dossiers: ${latestDraftError.message}`)
+
+  const latestResearch = (latestDraft as { research_output: ResearchOutput | null } | null)?.research_output
+  const persistedOutput: ResearchOutput = {
+    ...output,
+    founder_dossiers: mergeFounderDossiers(latestResearch?.founder_dossiers, foundersResult),
+  }
   const { error: updateErr } = await admin
     .from('diligence_memo_drafts')
-    .update({ research_output: output as any })
+    .update({ research_output: persistedOutput as unknown as Json })
     .eq('id', draftRow.id)
     .eq('deal_id', dealId)
     .eq('fund_id', fundId)
@@ -279,7 +310,7 @@ export async function runResearch(params: {
 
   return {
     draft_id: draftRow.id,
-    research_output: output,
+    research_output: persistedOutput,
     warnings,
   }
 }
@@ -291,22 +322,26 @@ async function loadDraftWithIngestion(
   fundId: string,
   dealId: string,
   draftId?: string,
-): Promise<{ id: string; ingestion_output: unknown } | null> {
+): Promise<{ id: string; ingestion_output: unknown; research_output: ResearchOutput | null } | null> {
   if (draftId) {
     const { data } = await admin
       .from('diligence_memo_drafts')
-      .select('id, ingestion_output')
+      .select('id, ingestion_output, research_output')
       .eq('id', draftId)
       .eq('deal_id', dealId)
       .eq('fund_id', fundId)
       .eq('is_draft', true)
       .maybeSingle()
-    return (data as any) ?? null
+    return (data as unknown as {
+      id: string
+      ingestion_output: unknown
+      research_output: ResearchOutput | null
+    } | null) ?? null
   }
 
   const { data } = await admin
     .from('diligence_memo_drafts')
-    .select('id, ingestion_output')
+    .select('id, ingestion_output, research_output')
     .eq('deal_id', dealId)
     .eq('fund_id', fundId)
     .eq('is_draft', true)
@@ -314,5 +349,9 @@ async function loadDraftWithIngestion(
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  return (data as any) ?? null
+  return (data as unknown as {
+    id: string
+    ingestion_output: unknown
+    research_output: ResearchOutput | null
+  } | null) ?? null
 }

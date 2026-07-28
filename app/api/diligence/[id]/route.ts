@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbError } from '@/lib/api-error'
 import { draftHasGeneratedArtifacts } from '@/lib/diligence/draft-artifacts'
+import { normalizeAnalysisPreferences } from '@/lib/diligence/analysis-preferences'
 
 // 'invested' is the current label for a closed/won deal; 'won'/'lost'/'on_hold'
 // are retained for back-compat with rows written before the relabel.
@@ -82,6 +83,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Invalid current_memo_stage' }, { status: 400 })
     }
     updates.current_memo_stage = body.current_memo_stage
+  }
+  if (body.analysis_preferences !== undefined) {
+    if (!body.analysis_preferences || typeof body.analysis_preferences !== 'object' || Array.isArray(body.analysis_preferences)) {
+      return NextResponse.json({ error: 'Invalid analysis_preferences' }, { status: 400 })
+    }
+    updates.analysis_preferences = normalizeAnalysisPreferences(body.analysis_preferences)
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })

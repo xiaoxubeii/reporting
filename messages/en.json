@@ -360,6 +360,12 @@
     "yesterday": "Yesterday",
     "daysAgo": "{count}d ago",
     "deleteConversation": "Delete conversation",
+    "currentProject": "Project: {project}",
+    "evidenceSources": "Evidence sources",
+    "legacyDiligenceHistory": "Earlier diligence Q&A",
+    "readOnly": "Read only",
+    "legacyReadOnlyNotice": "This is preserved legacy history. It cannot be continued as the same thread.",
+    "startFromLegacy": "Start a new project conversation",
     "you": "You",
     "saving": "Saving…",
     "saveAsSummary": "Save as summary",
@@ -420,6 +426,7 @@
       "company": "Ask about this company’s metrics, performance, documents, or portfolio position. You can also ask the AI to draft a summary.",
       "vehicle": "Ask about {vehicle}’s financials or ask me to draft a journal entry for you to review. You can attach a capital-call notice, invoice, or wire confirmation and I’ll draft the entry from it.",
       "lps": "Ask about your LPs — who’s furthest behind on funding, who has the largest unfunded commitment, or how DPI and TVPI look across the fund.",
+      "diligenceProject": "Ask about {project}. Answers use this project's data room, research, Q&A library, and checklist, with supporting evidence shown below the response.",
       "diligence": "Ask about your diligence pipeline — what’s active, what’s stalled mid-memo, or how deals break down by sector or stage.",
       "portfolio": "Ask about your portfolio, compare companies, or get high-level insights across all investments."
     },
@@ -428,6 +435,7 @@
       "company": "Ask about this company…",
       "vehicle": "Ask about {vehicle}…",
       "lps": "Ask about your LPs…",
+      "diligenceProject": "Ask about {project}…",
       "diligence": "Ask about your pipeline…",
       "portfolio": "Ask about your portfolio…"
     },
@@ -436,6 +444,7 @@
       "messageTooLong": "This message is too long. Shorten it and try again.",
       "requestFailed": "Request failed",
       "network": "Network error. Please try again.",
+      "historyNotSaved": "The answer was returned, but this turn could not be saved to history.",
       "saveSummary": "Failed to save summary"
     }
   },
@@ -4891,7 +4900,8 @@
       "sectionEditor": { "label": "Sections", "add": "Add section", "drag": "Drag to reorder", "included": "Included", "omitted": "Omitted", "depthHelp": "Depth and length for this section", "depthFor": "Depth for {title}", "custom": "Custom", "remove": "Remove section", "coverPlaceholder": "What should the agent cover in this section?", "help": "Drag to reorder, omit unchecked sections, and set each section’s depth independently." }, "schema": { "title": "Base memo schema", "description": "The section structure, guidance, and sourcing rules used to build the draft." }
     },
     "dealDetail": {
-      "back": "Back to diligence", "comingSoon": "Coming in {phase}.", "tabs": { "checklist": "Checklist", "dataRoom": "Data Room", "research": "Research", "founders": "Founders", "scoring": "Scoring", "memo": "Memo", "settings": "Settings" }, "statuses": { "invested": "Invested", "active": "Active", "passed": "Passed" }, "common": { "save": "Save", "cancel": "Cancel", "edit": "Edit", "delete": "Delete" }, "header": { "rename": "Rename deal", "sectorPlaceholder": "Sector / type", "stagePlaceholder": "Stage", "created": "Created {date}", "editMeta": "Edit sector and stage", "outputLanguage": "Diligence language", "languages": { "en": "English", "zh-CN": "Simplified Chinese" }, "languageVersionConfirm": { "title": "Generate {language} version?", "description": "The current version and its evidence will be preserved. A new version will be created and the diligence workflow will run again in the selected language.", "confirm": "Generate {language} version" }, "languageVersionCreated": "The preserved source is now linked to a new {language} version.", "languageRegenerationStarted": "A new {language} version was created and full analysis has started.", "languageRegenerationFailed": "The new language version was preserved, but regeneration could not start: {reason}", "languageSaved": "Diligence language changed to {language}.", "languageSwitchFailed": "Could not change the diligence language.", "unknownError": "Unknown error" },
+      "tabListLabel": "Diligence workspace",
+      "back": "Back to diligence", "comingSoon": "Coming in {phase}.", "tabs": { "checklist": "Checklist", "dataRoom": "Data Room", "research": "Research", "expertValidation": "Expert Validation", "scoring": "Scoring", "memo": "Memo", "settings": "Settings" }, "statuses": { "invested": "Invested", "active": "Active", "passed": "Passed" }, "common": { "save": "Save", "cancel": "Cancel", "edit": "Edit", "delete": "Delete" }, "header": { "rename": "Rename deal", "sectorPlaceholder": "Sector / type", "stagePlaceholder": "Stage", "created": "Created {date}", "editMeta": "Edit sector and stage", "outputLanguage": "Diligence language", "languages": { "en": "English", "zh-CN": "Simplified Chinese" }, "languageVersionConfirm": { "title": "Generate {language} version?", "description": "The current version and its evidence will be preserved. A new version will be created and the diligence workflow will run again in the selected language.", "confirm": "Generate {language} version" }, "languageVersionCreated": "The preserved source is now linked to a new {language} version.", "languageRegenerationStarted": "A new {language} version was created and full analysis has started.", "languageRegenerationFailed": "The new language version was preserved, but regeneration could not start: {reason}", "languageSaved": "Diligence language changed to {language}.", "languageSwitchFailed": "Could not change the diligence language.", "unknownError": "Unknown error" },
       "checklist": {
         "common": { "save": "Save", "cancel": "Cancel", "edit": "Edit", "delete": "Delete" }, "loading": "Loading checklist…", "empty": "No checklist yet for this deal.", "emptyHelp": "Apply your fund’s default checklist or paste your own.", "hideCompleted": "Hide completed", "applyDefault": "Apply fund default", "resetDefault": "Reset from fund default", "queued": "Queued…", "errors": { "addSection": "Failed to add section.", "assessment": "Could not queue the assessment." },
         "deleteSection": { "title": "Delete section?", "withItems": "Removes the section and its {count, plural, one {# item} other {# items}} from this deal.", "empty": "Removes the section from this deal." }, "deleteItem": { "title": "Delete item?", "description": "This removes the row from this deal only.", "confirm": "Delete" },
@@ -4911,12 +4921,13 @@
         "analysis": { "errors": { "enqueue": "Failed to queue data-room analysis." }, "title": "Data room analysis", "help": "Reads documents, checks the checklist, and surfaces gaps and inconsistencies.", "reanalyze": "Re-analyze data room", "options": "Re-analyze options", "incremental": { "title": "Re-analyze new and open", "description": "Process new files and open checklist items only." }, "full": { "title": "Re-analyze everything", "description": "Re-ingest all files and re-check every item." }, "analyze": "Analyze data room", "uploadFirst": "Upload at least one document to enable analysis.", "failedFiles": "{count, plural, one {# file failed to parse. Re-analyze to retry it.} other {# files failed to parse. Re-analyze to retry them.}}" }
       },
       "research": {
-        "notes": { "title": "Notes", "help": "Your fund’s notes and research on this deal." }, "runAnalysisFirst": "Run data-room analysis first.", "internal": { "title": "Internal diligence", "inconsistencies": "Inconsistencies and contradictions", "noInconsistencies": "No contradictions or cross-document inconsistencies found.", "across": "Across: {sources}", "gaps": "Research gaps and open questions", "noGaps": "No material gaps. Optional follow-ups appear under External research." }, "expert": { "title": "Expert validation", "help": "Turn a research gap or contradiction into one focused external expert question." }, "external": { "title": "External research", "help": "Verify findings with web research, surface competitors, and list gaps.", "searchOff": "Last run: web search was off.", "searchOn": "Last run: web search was on." }, "competitive": { "title": "Competitive landscape", "empty": "No competitors mapped yet. Run external research to populate.", "namedByCompany": "Named by company", "foundByResearch": "Found by research" }, "dismissed": { "title": "Dismissed", "hidden": "{count} hidden" }, "restore": "Restore", "dismiss": "Dismiss", "agent": { "title": "How the agent works", "subtitle": "Research", "description": "What external research sources and verifies, and how evidence quality is rated." }, "kinds": { "contradiction": "Contradiction", "crossDoc": "Cross-document flag", "gap": "Research gap", "finding": "Finding", "competitor": "Competitor" }, "levels": { "blocker": "Blocker", "high": "High", "material": "Material", "important": "Important", "medium": "Medium", "minor": "Minor", "nice_to_have": "Nice to have", "low": "Low" }, "diagnostic": { "title": "Web search diagnostic", "searches": "Searches performed: {count}", "urls": "URLs cited: {count}", "sourced": "Findings with URLs: {count}/{total}", "noUrls": "Searches ran but no URLs appeared in the output. Re-run the stage.", "sources": "Sources consulted ({count})" }, "findings": "Findings", "followUpGaps": "Follow-up research gaps", "verification": { "verified": "Verified", "contradicted": "Contradicted", "company_stated": "Company stated", "unverified": "Unverified", "inconclusive": "Inconclusive" }
+        "notes": { "title": "Notes", "help": "Your fund’s notes and research on this deal." }, "runAnalysisFirst": "Run data-room analysis first.", "internal": { "title": "Internal diligence", "inconsistencies": "Inconsistencies and contradictions", "noInconsistencies": "No contradictions or cross-document inconsistencies found.", "across": "Across: {sources}", "gaps": "Research gaps and open questions", "noGaps": "No material gaps. Optional follow-ups appear under External research." }, "expert": { "title": "Expert validation", "help": "Turn a research gap or contradiction into one focused external expert question." }, "external": { "title": "External research", "help": "Verify claims from the data room and add findings and research gaps. When web search is enabled, public sources are included.", "notRun": "No external research results yet. Run research to verify key claims and add market, competitor, and team context.", "noEvidence": "This research run did not find enough credible external evidence.", "searchOff": "Last run: web search was off.", "searchOn": "Last run: web search was on." }, "competitive": { "title": "Competitive landscape", "empty": "This research run did not identify any clear competitors.", "namedByCompany": "Named by company", "foundByResearch": "Found by research" }, "team": { "title": "Founders & Core Team", "help": "Team dossiers generated as Research evidence. Review backgrounds, sources, and questions that still need confirmation.", "runResearchFirst": "Run Research to generate and edit team dossiers.", "emptyEditable": "No team dossiers yet. Add a founder or core team member to begin.", "empty": "No team dossiers were generated for this Research output.", "roleMissing": "Role not recorded", "backgroundMissing": "No background summary yet.", "sourcesCount": "{count, plural, one {# source} other {# sources}}", "questionsCount": "{count, plural, one {# open question} other {# open questions}}", "openProfile": "Open team profile for {name}" }, "dismissed": { "title": "Dismissed", "hidden": "{count} hidden" }, "restore": "Restore", "dismiss": "Dismiss", "agent": { "title": "How the agent works", "subtitle": "Research", "description": "What external research sources and verifies, and how evidence quality is rated." }, "kinds": { "contradiction": "Contradiction", "crossDoc": "Cross-document flag", "gap": "Research gap", "finding": "Finding", "competitor": "Competitor" }, "levels": { "blocker": "Blocker", "high": "High", "material": "Material", "important": "Important", "medium": "Medium", "minor": "Minor", "nice_to_have": "Nice to have", "low": "Low" }, "diagnostic": { "title": "Web search diagnostic", "searches": "Searches performed: {count}", "urls": "URLs cited: {count}", "sourced": "Findings with URLs: {count}/{total}", "noUrls": "Searches ran but no URLs appeared in the output. Re-run the stage.", "sources": "Sources consulted ({count})" }, "findings": "Findings", "followUpGaps": "Follow-up research gaps", "verification": { "verified": "Verified", "contradicted": "Contradicted", "company_stated": "Company stated", "unverified": "Unverified", "inconclusive": "Inconclusive" }
       },
+      "expertTab": { "runResearchFirst": "Run Research first to identify a gap or contradiction for expert validation.", "goToResearch": "Go to Research" },
       "qaLibrary": { "delete": { "title": "Delete Q&A entry?", "description": "Removes this question and answer permanently.", "confirm": "Delete" }, "errors": { "add": "Failed to add Q&A." }, "addTitle": "Add a Q&A entry", "questionPlaceholder": "Question", "answerPlaceholder": "Answer, judgment, or conversation notes", "add": "Add Q&A", "empty": "No Q&A entries yet.", "excluded": "Excluded from evaluation", "includeHelp": "Include in memo and scoring", "excludeHelp": "Exclude from memo and scoring", "include": "Include", "exclude": "Exclude" },
       "job": { "elapsedRunning": "{duration} running", "elapsedQueued": "{duration} queued", "queued": "Queued; the worker usually starts within one minute.", "running": "Running…", "failed": "Job failed.", "finished": "Last {kind} run finished {date}.", "justNow": "Just now", "duration": { "seconds": "{count}s", "minutesSeconds": "{minutes}m {seconds}s", "hoursMinutes": "{hours}h {minutes}m" } },
       "chat": { "errors": { "load": "Failed to load the conversation.", "send": "Chat failed." }, "clear": { "title": "Clear conversation?", "description": "Deletes every chat message without changing deal evidence.", "confirm": "Clear" }, "title": "Ask anything about this deal", "description": "The agent answers from the data room, research, Q&A library, and checklist.", "loading": "Loading conversation…", "empty": "No questions yet. Ask about metrics, evidence, research, or founders.", "thinking": "Thinking…", "placeholder": "Ask a question. Enter to send; Shift+Enter for a new line", "send": "Send" },
-      "founders": { "newFounder": "New founder", "loading": "Loading…", "title": "Founders", "help": "Founder dossiers from external research. Edit fields and capture open questions.", "add": "Add founder", "noDraft": "No research draft yet. Run external research to build founder dossiers.", "emptyEditable": "No founder dossiers yet. Add one to begin.", "empty": "No founder dossiers yet.", "agent": { "title": "How the agent works", "subtitle": "Founder research", "description": "How the agent builds founder dossiers and rates evidence quality." }, "unnamed": "Unnamed", "edit": "Edit", "openQuestions": "Open questions", "namePlaceholder": "Founder name", "rolePlaceholder": "Role", "backgroundPlaceholder": "Background summary…", "questionsLabel": "Open questions (one per line)", "questionsPlaceholder": "One question per line…", "remove": "Remove", "cancel": "Cancel", "save": "Save" },
+      "founders": { "add": "Add team member", "editorTitle": "Founder and team profile", "editorDescription": "Review the research summary, preserve source context, and record questions for follow-up.", "readOnly": "Read only", "unnamed": "Unnamed", "nameLabel": "Team member name", "nameRequired": "Enter the team member's name.", "roleLabel": "Role", "backgroundLabel": "Background summary", "namePlaceholder": "Team member name", "rolePlaceholder": "Role", "backgroundPlaceholder": "Background summary…", "questionsLabel": "Open questions (one per line)", "questionsHelp": "Use one line per question that still needs verification.", "questionsPlaceholder": "One question per line…", "sourcesLabel": "Research sources", "sourcesEmpty": "No source links were captured for this profile.", "opensInNewTab": "Opens in a new tab.", "remove": "Remove", "deleteTitle": "Remove team profile?", "deleteDescription": "Remove {name} from this Research output?", "deleteConfirm": "Remove profile", "discardTitle": "Discard unsaved changes?", "discardDescription": "Your edits to this team profile have not been saved.", "discardConfirm": "Discard changes", "saveFailed": "Could not save the team profile. Try again.", "removeFailed": "Could not remove the team profile. Try again.", "cancel": "Cancel", "saving": "Saving…", "save": "Save" },
       "notes": { "placeholder": "Write a note. Enter to save; Shift+Enter for a new line", "add": "Add note", "loading": "Loading notes…", "empty": "No notes yet.", "unknown": "Unknown", "delete": "Delete note" },
       "settings": { "deleteConfirm": { "title": "Delete deal?", "description": "Permanently delete {name} and all of its diligence data?", "confirm": "Delete deal" }, "usage": { "title": "AI usage", "help": "Token, cost, and processing usage for this deal.", "loading": "Loading usage…", "empty": "No AI usage was recorded for this deal in this period.", "ranges": { "all": "All time", "days": "{count} days" }, "duration": { "seconds": "{count}s", "minutesSeconds": "{minutes}m {seconds}s", "hoursMinutes": "{hours}h {minutes}m" }, "stats": { "cost": "Cost", "cacheSaved": "{amount} cache savings", "tokens": "Total tokens", "inputOutput": "{input} in · {output} out", "processing": "Processing", "runs": "{count} runs", "calls": "AI calls", "cached": "{count} cached" }, "table": { "stage": "Stage", "calls": "Calls", "tokens": "Tokens", "cost": "Cost", "model": "Model", "inputOutput": "In / out", "audioMinutes": "{count}m audio", "tokenPair": "{input} / {output}" } }, "danger": { "title": "Danger zone", "deleteTitle": "Delete this deal", "deleteDescription": "Permanently removes the deal and all documents, analysis, drafts, notes, and Q&A.", "deleteButton": "Delete deal" } },
       "scoring": { "title": "Scoring", "help": "Score the deal against the fund’s criteria.", "empty": "No scorecard yet. Run scoring to generate one.", "noRationale": "No rationale provided.", "edit": "Edit", "scoreLabel": "Score for {dimension}", "confidenceLabel": "Confidence for {dimension}", "rationalePlaceholder": "Rationale…", "cancel": "Cancel", "save": "Save", "agent": { "title": "How the agent works", "subtitle": "Scoring rubric", "description": "The rubric and evidence rules used to score this deal." }, "confidence": { "low": "Low", "medium": "Medium", "high": "High" } },
@@ -5245,6 +5256,43 @@
       "placeholder": "Tune voice, depth, and what to emphasize at this stage. Leave blank to use the shipped defaults.",
       "saved": "Saved",
       "save": "Save guidance"
+    },
+    "analysisPreferences": {
+      "trigger": "Analysis preferences",
+      "title": "Analysis preferences",
+      "description": "Set the focus and depth for this project's diligence analysis.",
+      "focus": {
+        "title": "Areas to emphasize",
+        "help": "Select any areas that deserve extra attention.",
+        "areas": {
+          "technology": "Technology",
+          "market": "Market",
+          "financials": "Financials",
+          "regulatory": "Regulatory"
+        }
+      },
+      "depth": {
+        "title": "Analysis depth",
+        "help": "This controls how thoroughly the agent tests evidence and surfaces risks.",
+        "options": {
+          "quick": "Quick",
+          "standard": "Standard",
+          "deep": "Deep"
+        }
+      },
+      "instructions": {
+        "title": "Additional guidance",
+        "help": "Add context or questions specific to this project. The system's evaluation rules remain unchanged.",
+        "placeholder": "For example: Pay particular attention to clinical validation and the regulatory path…"
+      },
+      "scopeHelp": "These preferences apply only to this project. They do not change the fund's default analysis rules.",
+      "save": "Save",
+      "saved": "Saved",
+      "saveAndReanalyze": "Save and reanalyze",
+      "errors": {
+        "save": "Could not save analysis preferences.",
+        "reanalyze": "Preferences were saved, but reanalysis could not be started."
+      }
     },
     "emailIntake": {
       "addFailed": "Could not add the email to the data room.",

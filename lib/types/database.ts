@@ -85,6 +85,7 @@ export type Database = {
           id: string;
           message_count: number;
           messages: Json;
+          server_trusted_at: string | null;
           scope: string | null;
           summary: string | null;
           title: string;
@@ -99,6 +100,7 @@ export type Database = {
           id?: string;
           message_count?: number;
           messages?: Json;
+          server_trusted_at?: string | null;
           scope?: string | null;
           summary?: string | null;
           title?: string;
@@ -113,6 +115,7 @@ export type Database = {
           id?: string;
           message_count?: number;
           messages?: Json;
+          server_trusted_at?: string | null;
           scope?: string | null;
           summary?: string | null;
           title?: string;
@@ -1722,6 +1725,7 @@ export type Database = {
           id: string;
           deal_id: string;
           fund_id: string;
+          draft_id: string | null;
           stage: string | null;
           title: string | null;
           messages: Json;
@@ -1735,6 +1739,7 @@ export type Database = {
           id?: string;
           deal_id: string;
           fund_id: string;
+          draft_id?: string | null;
           stage?: string | null;
           title?: string | null;
           messages?: Json;
@@ -1748,6 +1753,7 @@ export type Database = {
           id?: string;
           deal_id?: string;
           fund_id?: string;
+          draft_id?: string | null;
           stage?: string | null;
           title?: string | null;
           messages?: Json;
@@ -1757,7 +1763,15 @@ export type Database = {
           updated_at?: string;
           created_by?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "diligence_agent_sessions_draft_id_fkey";
+            columns: ["draft_id"];
+            isOneToOne: false;
+            referencedRelation: "diligence_memo_drafts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       background_job_tool_calls: {
         Row: {
@@ -4277,6 +4291,99 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      append_diligence_qa_session_messages: {
+        Args: {
+          p_deal_id: string;
+          p_expected_message_count: number;
+          p_fund_id: string;
+          p_messages: Json;
+          p_session_id: string;
+          p_draft_id: string;
+        };
+        Returns: string;
+      };
+      append_diligence_partner_answers: {
+        Args: {
+          p_answers: Json;
+          p_deal_id: string;
+          p_draft_id: string;
+          p_fund_id: string;
+          p_partner_id: string;
+          p_session_id: string;
+        };
+        Returns: string;
+      };
+      finish_diligence_qa_session: {
+        Args: {
+          p_deal_id: string;
+          p_draft_id: string;
+          p_fund_id: string;
+          p_question_metadata: Json;
+          p_session_id: string;
+        };
+        Returns: Json;
+      };
+      start_diligence_qa_session: {
+        Args: {
+          p_deal_id: string;
+          p_draft_id: string;
+          p_fund_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      append_analyst_conversation_turn: {
+        Args: {
+          p_assistant_message: Json;
+          p_conversation_id: string;
+          p_expected_company_id: string | null;
+          p_expected_deal_id: string | null;
+          p_expected_message_count: number;
+          p_expected_scope: string | null;
+          p_fund_id: string;
+          p_user_id: string;
+          p_user_message: Json;
+        };
+        Returns: string;
+      };
+      append_diligence_qa_answer: {
+        Args: {
+          p_deal_id: string;
+          p_entry: Json;
+          p_fund_id: string;
+          p_stable_id: string;
+        };
+        Returns: string;
+      };
+      delete_diligence_qa_answer: {
+        Args: {
+          p_deal_id: string;
+          p_draft_id: string;
+          p_fund_id: string;
+          p_question_id: string;
+        };
+        Returns: string;
+      };
+      replace_diligence_session_qa_answers: {
+        Args: {
+          p_deal_id: string;
+          p_draft_id: string;
+          p_fund_id: string;
+          p_session_ids: string[];
+          p_session_records: Json;
+        };
+        Returns: Json;
+      };
+      set_diligence_qa_answer_excluded: {
+        Args: {
+          p_deal_id: string;
+          p_draft_id: string;
+          p_excluded: boolean;
+          p_fund_id: string;
+          p_question_id: string;
+        };
+        Returns: string;
+      };
       accept_fund_member_invitation: {
         Args: { p_token_hash: string; p_user_id: string };
         Returns: { fund_id: string; invitation_id: string; role: string }[];

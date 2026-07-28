@@ -492,6 +492,30 @@
       "notes": "Implementation is complete in /home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation on codex/add-fund-subdomain-isolation because it directly depends on the completed but uncommitted Host/Fund isolation contract. Browser evidence is local and untracked. Production rollout still requires the Fund-subdomain wildcard DNS/TLS, trusted Host proxy, redirect allowlist, and migration gates."
     },
     {
+      "id": "diligence-research-team",
+      "title": "Founder and core-team dossiers inside Diligence Research",
+      "status": "passing",
+      "current_task": "Implementation and authenticated browser verification complete; ready to archive the OpenSpec change",
+      "definition_of_done": [
+        "Diligence navigation no longer exposes a top-level Founders tab",
+        "Research contains a compact localized Founders and Core Team section after Competitive Landscape",
+        "Authorized editors add, edit, and remove dossiers in an accessible right-side sheet through the existing Research draft contract",
+        "The pre-Research state exposes no ineffective add action",
+        "Research reruns preserve stored dossier values and order, merge unique sources, and append newly discovered founders",
+        "Focused checks, correctness and UI review, and authenticated English and Chinese browser verification pass"
+      ],
+      "evidence": [
+        "OpenSpec merge-founder-dossiers-into-research proposal, design, capability spec, and tasks pass strict validation",
+        "Focused navigation, localization, and deterministic rerun merge tests pass 2 files and 7 tests",
+        "Changed-scope ESLint, feature-scoped TypeScript, and git diff check pass",
+        "Authenticated English and Simplified Chinese Chromium verifies pre-Research state, section order, add/edit/remove through the existing draft API, localized side sheet, and 390px layout without overflow",
+        "Browser verification restores the original research_output in finally and records no feature-scope page error or same-origin 4xx/5xx response",
+        "Production Next.js compilation, type validation, page-data collection, and route generation pass with next build --no-lint"
+      ],
+      "blocked_by": [],
+      "notes": "Implemented directly in the current main checkout because it contains overlapping uncommitted Diligence, locale, and Research changes that were preserved. The production build and all changed-scope checks pass. The repository-wide test suite retains unrelated failures in auth/host, platform landing, middleware, locale, OAuth, tenant, and expert-validation areas; HarnessKit targeted reaches unrelated global lint debt, while HarnessKit fast is blocked by the legacy feed-discovery status value 'complete'. The authenticated app shell also retains its known portal/me 404 and accounting/vehicle-index 403 baselines outside this feature."
+    },
+    {
       "id": "fund-subdomain-isolation",
       "title": "Fund subdomain logical isolation",
       "status": "passing",

@@ -26,6 +26,8 @@ export interface ConversationListItem {
   title: string
   company_id: string | null
   deal_id: string | null
+  scope?: string | null
+  read_only?: boolean
   message_count: number
   created_at: string
   updated_at: string
@@ -59,6 +61,9 @@ interface AnalystContextValue {
    *  where they are, it doesn't assert what they may see. */
   domain: AnalystDomain | null
   setDomain: (domain: AnalystDomain | null) => void
+  diligenceDealId: string | null
+  diligenceProjectName: string | null
+  setDiligenceProject: (project: { id: string; name: string } | null) => void
   selectedModel: AnalystModel | null
   setSelectedModel: (model: AnalystModel | null) => void
   availableModels: AnalystModel[]
@@ -66,6 +71,7 @@ interface AnalystContextValue {
   hasAIKey: boolean
   conversationId: string | null
   setConversationId: (id: string | null) => void
+  readOnlyHistory: boolean
   conversations: ConversationListItem[]
   loadConversations: () => Promise<void>
   loadConversation: (id: string) => Promise<void>
@@ -105,9 +111,14 @@ export function AnalystProvider({
   const vehicleRef = useRef<string | null>(null)
   const [domain, setDomainState] = useState<AnalystDomain | null>(null)
   const domainRef = useRef<AnalystDomain | null>(null)
+  const [diligenceDealId, setDiligenceDealId] = useState<string | null>(null)
+  const diligenceDealIdRef = useRef<string | null>(null)
+  const [diligenceProjectName, setDiligenceProjectName] = useState<string | null>(null)
+  const diligenceProjectNameRef = useRef<string | null>(null)
   const [availableModels, setAvailableModels] = useState<AnalystModel[]>([])
   const [selectedModel, setSelectedModel] = useState<AnalystModel | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [readOnlyHistory, setReadOnlyHistory] = useState(false)
   const [conversations, setConversations] = useState<ConversationListItem[]>([])
   const [showHistory, setShowHistory] = useState(false)
 
@@ -155,6 +166,7 @@ export function AnalystProvider({
     conversationLoadId.current += 1
     scopeRevisionRef.current += 1
     setScopeRevision(scopeRevisionRef.current)
+    setReadOnlyHistory(false)
   }, [])
 
   const getScopeRevision = useCallback(() => scopeRevisionRef.current, [])
@@ -215,11 +227,48 @@ export function AnalystProvider({
     resetEphemeralConversationState()
   }, [resetEphemeralConversationState])
 
-  const loadConversations = useCallback(async () => {
-    const requestId = conversationLoadId.current + 1
-    conversationLoadId.current = requestId
+  // A diligence project is one trusted scope unit. Keep its domain, project id, and display name
+  // in one callback so consumers never observe a reset between three independent setters.
+  const setDiligenceProject = useCallback((project: { id: string; name: string } | null) => {
+    const nextId = project?.id ?? null
+    const nextName = project?.name ?? null
+    const nextDomain: AnalystDomain | null = project ? 'diligence' : null
+    if (
+      diligenceDealIdRef.current === nextId
+      && diligenceProjectNameRef.current === nextName
+      && domainRef.current === nextDomain
+    ) return
+
+    diligenceDealIdRef.current = nextId
+    diligenceProjectNameRef.current = nextName
+    domainRef.current = nextDomain
+    setDiligenceDealId(nextId)
+    setDiligenceProjectName(nextName)
+    setDomainState(nextDomain)
+
+    if (project) {
+      // Diligence ids belong to diligence_deals, never analyst_conversations.deal_id (inbound_deals).
+      companyIdRef.current = null
+      dealIdRef.current = null
+      vehicleRef.current = null
+      setCompanyIdState(null)
+      setDealIdState(null)
+      setVehicleState(null)
+    }
+
+    setMessages([])
+    setConversationId(null)
+    setShowHistory(false)
+    setConversations([])
+    resetEphemeralConversationState()
+  }, [resetEphemeralConversationState])
+
+  const conversationQueryParams = useCallback(() => {
     const params = new URLSearchParams()
-    if (dealId) {
+    if (domain === 'diligence' && diligenceDealId) {
+      params.set('portfolio', 'true')
+      params.set('scope', `diligence:${diligenceDealId}`)
+    } else if (dealId) {
       params.set('dealId', dealId)
     } else if (companyId) {
       params.set('companyId', companyId)
@@ -230,6 +279,13 @@ export function AnalystProvider({
       const scope = vehicle ? `accounting:${vehicle}` : domain
       if (scope) params.set('scope', scope)
     }
+    return params
+  }, [companyId, dealId, vehicle, domain, diligenceDealId])
+
+  const loadConversations = useCallback(async () => {
+    const requestId = conversationLoadId.current + 1
+    conversationLoadId.current = requestId
+    const params = conversationQueryParams()
     try {
       const res = await fetch(`/api/analyst/conversations?${params}`)
       if (res.ok && conversationLoadId.current === requestId) {
@@ -240,7 +296,7 @@ export function AnalystProvider({
     } catch {
       // Silently fail
     }
-  }, [companyId, dealId, vehicle, domain])
+  }, [conversationQueryParams])
 
   const loadConversation = useCallback(async (id: string) => {
     setMessages([])
@@ -249,12 +305,14 @@ export function AnalystProvider({
     const requestId = conversationLoadId.current + 1
     conversationLoadId.current = requestId
     try {
-      const res = await fetch(`/api/analyst/conversations/${id}`)
+      const params = conversationQueryParams()
+      const res = await fetch(`/api/analyst/conversations/${id}?${params}`)
       if (res.ok && conversationLoadId.current === requestId) {
         const data = await res.json()
         if (conversationLoadId.current !== requestId) return
         const conv = data.conversation
-        setConversationId(conv.id)
+        setConversationId(conv.read_only === true ? null : conv.id)
+        setReadOnlyHistory(conv.read_only === true)
         const storedMessages = [...tryNormalizeStoredAnalystMessages(conv.messages)]
         setMessages(storedMessages)
         const restoredContexts = activeContextsFromMessages(storedMessages)
@@ -265,7 +323,7 @@ export function AnalystProvider({
     } catch {
       // Silently fail
     }
-  }, [resetEphemeralConversationState])
+  }, [conversationQueryParams, resetEphemeralConversationState])
 
   const startNewConversation = useCallback(() => {
     setMessages([])
@@ -275,6 +333,7 @@ export function AnalystProvider({
   }, [resetEphemeralConversationState])
 
   const deleteConversation = useCallback(async (id: string) => {
+    if (id.startsWith('legacy-diligence:')) return
     try {
       const res = await fetch(`/api/analyst/conversations/${id}`, { method: 'DELETE' })
       if (res.ok) {
@@ -349,6 +408,9 @@ export function AnalystProvider({
       setVehicle,
       domain,
       setDomain,
+      diligenceDealId,
+      diligenceProjectName,
+      setDiligenceProject,
       selectedModel,
       setSelectedModel,
       availableModels,
@@ -356,6 +418,7 @@ export function AnalystProvider({
       hasAIKey,
       conversationId,
       setConversationId,
+      readOnlyHistory,
       conversations,
       loadConversations,
       loadConversation,

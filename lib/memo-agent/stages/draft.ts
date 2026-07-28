@@ -158,7 +158,7 @@ export async function runDraft(params: {
   }
 
   await note('Building draft prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'draft', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'draft', outputLanguage })
   const { provider, model, providerType } = await getStageProvider(admin, fundId, 'draft')
   // Fund memo template — first-page exemplar + structural reference from the
   // fund's own sample memos.
@@ -365,7 +365,7 @@ export async function runDraftReview(params: {
     .maybeSingle()
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
   const dealStage = (dealRow as { stage_at_consideration: string | null } | null)?.stage_at_consideration ?? null
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'draft', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'draft', outputLanguage })
   const { provider, model, providerType } = await getStageProvider(admin, fundId, 'draft_review')
 
   // Chunk the reviewable paragraphs so each review call's edit output is

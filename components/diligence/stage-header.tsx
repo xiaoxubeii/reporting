@@ -69,11 +69,13 @@ export function StageHeader({
   dealId,
   stageKey,
   onRan,
+  secondaryAction,
   children,
 }: {
   dealId: string
   stageKey: StageKey
   onRan?: () => void
+  secondaryAction?: React.ReactNode
   children?: React.ReactNode
 }) {
   const t = useTranslations('Diligence.stageHeader')
@@ -145,22 +147,27 @@ export function StageHeader({
           <p className="text-xs text-muted-foreground mt-0.5">{localizedHint}</p>
         </div>
 
-        {stage.action && (
-          // Outline regardless of state — every other run button on these tabs is an
-          // outline button, and a primary-filled one here just made the stage that
-          // happened to be next look louder than the rest of the page.
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={run}
-            disabled={submitting || running || blocked}
-            title={blocked ? localizedHint : undefined}
-          >
-            {(submitting || running)
-              ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-              : <Play className="h-3.5 w-3.5 mr-1" />}
-            {running ? t('running') : actionLabels[stageKey]}
-          </Button>
+        {(secondaryAction || stage.action) && (
+          <div className="flex shrink-0 items-center gap-2">
+            {secondaryAction}
+            {stage.action && (
+              // Outline regardless of state — every other run button on these tabs is an
+              // outline button, and a primary-filled one here just made the stage that
+              // happened to be next look louder than the rest of the page.
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={run}
+                disabled={submitting || running || blocked}
+                title={blocked ? localizedHint : undefined}
+              >
+                {(submitting || running)
+                  ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  : <Play className="h-3.5 w-3.5 mr-1" />}
+                {running ? t('running') : actionLabels[stageKey]}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

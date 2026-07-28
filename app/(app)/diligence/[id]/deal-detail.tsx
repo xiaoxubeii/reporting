@@ -3,18 +3,21 @@
 import { useEffect, useRef, useState, type ComponentProps } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, Trash2, Upload, FolderInput, Check, Play, RefreshCw, AlertCircle, ChevronDown, GripVertical, Pencil, Plus, Info } from 'lucide-react'
+import { ArrowLeft, Loader2, Trash2, Upload, FolderInput, Check, Play, RefreshCw, AlertCircle, ChevronDown, GripVertical, Pencil, Plus, Info, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useConfirm } from '@/components/confirm-dialog'
 import { IngestionSummary } from '@/components/diligence/ingestion-summary'
 import { StageHeader, DiligenceStageBar } from '@/components/diligence/stage-header'
 import { DataRoomBar } from '@/components/diligence/progress-bars'
 import { countDocuments } from '@/lib/diligence/progress'
-import { SchemaViewer } from '@/components/diligence/schema-viewer'
+import { AnalysisPreferencesSheet } from '@/components/diligence/analysis-preferences-sheet'
+import type { AnalysisPreferences } from '@/lib/diligence/analysis-preferences'
+import { AnalystDiligenceScope } from '@/components/analyst-scope'
 import { AffinityPanel } from '@/components/diligence/affinity-panel'
 import { EmailIntakeTray } from '@/components/diligence/email-intake-tray'
 import type { IngestionOutput } from '@/lib/memo-agent/stages/ingest'
@@ -40,6 +43,7 @@ interface Deal {
   lead_partner_id: string | null
   promoted_company_id: string | null
   drive_folder_url: string | null
+  analysis_preferences: AnalysisPreferences
   created_at: string
   updated_at: string
 }
@@ -69,11 +73,10 @@ type LatestDraft = {
   finalized_at: string | null
 } | null
 
-// Tabs follow the actual workflow: Overview is the partner-facing landing
-// (DDP status, details, finalize/promote), then the pipeline goes Data Room →
-// Diligence (external research) → Partner Q&A → Memo. Notes live in a
-// right-side slide-in panel, mirroring the Companies notes UX.
-const TABS = ['Checklist', 'Data Room', 'Research', 'Founders', 'Scoring', 'Memo', 'Settings'] as const
+// Workspace tabs follow the partner's review flow. Expert Validation has its
+// own interaction surface after Research, but remains evidence acquisition —
+// it is not a new Memo Agent or DiligenceStageBar execution stage.
+const TABS = ['Checklist', 'Data Room', 'Research', 'Expert Validation', 'Scoring', 'Memo', 'Settings'] as const
 type Tab = typeof TABS[number]
 
 // Deal stages: Invested, Active, Passed. No color accents — the label alone
@@ -93,7 +96,8 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
   const confirm = useConfirm()
   const tabLabels: Record<Tab, string> = {
     Checklist: t('tabs.checklist'), 'Data Room': t('tabs.dataRoom'), Research: t('tabs.research'),
-    Founders: t('tabs.founders'), Scoring: t('tabs.scoring'), Memo: t('tabs.memo'), Settings: t('tabs.settings'),
+    'Expert Validation': t('tabs.expertValidation'), Scoring: t('tabs.scoring'),
+    Memo: t('tabs.memo'), Settings: t('tabs.settings'),
   }
   const router = useRouter()
   const [deal, setDeal] = useState(initial)
@@ -280,6 +284,7 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
 
   return (
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
+      <AnalystDiligenceScope dealId={deal.id} dealName={deal.name} />
       <Link href="/diligence" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowLeft className="h-3.5 w-3.5" /> {t('back')}
       </Link>
@@ -352,8 +357,13 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <AnalysisPreferencesSheet
+            dealId={deal.id}
+            preferences={deal.analysis_preferences}
+            onSaved={analysis_preferences => setDeal(current => ({ ...current, analysis_preferences }))}
+          />
           <div className="flex items-center gap-1.5">
-            <span id="deal-output-language-label" className="text-xs text-muted-foreground">
+            <span id="deal-output-language-label" className="text-xs font-medium text-foreground">
               {t('header.outputLanguage')}
             </span>
             <Select
@@ -362,7 +372,7 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
               disabled={changingLanguage}
             >
               <SelectTrigger
-                className="h-8 w-32"
+                className="h-8 w-32 text-xs font-medium"
                 aria-labelledby="deal-output-language-label"
               >
                 {changingLanguage
@@ -390,13 +400,15 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
           to the tab that runs it. */}
       <DiligenceStageBar dealId={deal.id} onJump={tab => setActiveTab(tab as Tab)} />
 
-      <div className="border-b mb-4">
-        <nav className="flex gap-4 -mb-px">
+      <div className="border-b mb-4 overflow-x-auto">
+        <nav className="flex w-max min-w-full gap-4 -mb-px" aria-label={t('tabListLabel')}>
           {TABS.map(t => (
             <button
               key={t}
+              type="button"
+              aria-current={activeTab === t ? 'page' : undefined}
               onClick={() => setActiveTab(t)}
-              className={`pb-2 px-1 text-sm border-b-2 ${activeTab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+              className={`pb-2 px-1 text-sm whitespace-nowrap border-b-2 ${activeTab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
             >
               {tabLabels[t]}
             </button>
@@ -413,7 +425,9 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
             <DealRoomTab dealId={deal.id} dealName={deal.name} documents={documents} setDocuments={setDocuments} initialDriveFolderUrl={deal.drive_folder_url} focusDocId={focusDocId} onFocusConsumed={() => setFocusDocId(null)} />
           )}
           {activeTab === 'Research' && <ResearchTab dealId={deal.id} userId={currentUserId} isAdmin={isAdmin} />}
-          {activeTab === 'Founders' && <FoundersTab dealId={deal.id} />}
+          {activeTab === 'Expert Validation' && (
+            <ExpertValidationTab dealId={deal.id} onJumpToResearch={() => setActiveTab('Research')} />
+          )}
           {activeTab === 'Scoring' && <ScoringTab dealId={deal.id} />}
           {activeTab === 'Memo' && <MemoTab dealId={deal.id} dealName={deal.name} isAdmin={isAdmin} />}
           {activeTab === 'Settings' && <SettingsTab dealId={deal.id} dealName={deal.name} isAdmin={isAdmin} />}
@@ -936,14 +950,6 @@ function ChecklistTab({ deal, onJumpToDoc }: {
         </Accordion>
       )}
 
-      <SchemaViewer
-        schemaName="data_room_ingestion"
-        title={t('agent.title')}
-        subtitle={t('agent.subtitle')}
-        guidanceStage="ingest"
-        description={t('agent.description')}
-        defaultOpen={!ingestionDraft?.ingestion_output}
-      />
     </div>
   )
 }
@@ -2352,7 +2358,7 @@ function InfoHint({ text }: { text: string }) {
   return (
     <span className="relative inline-flex group/hint align-middle">
       <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground cursor-help" />
-      <span role="tooltip" className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-md border bg-popover px-3 py-2 text-xs leading-snug font-normal text-popover-foreground shadow-md opacity-0 group-hover/hint:opacity-100 transition-opacity">
+      <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-md border bg-popover px-3 py-2 text-xs leading-snug font-normal text-popover-foreground shadow-md opacity-0 transition-opacity group-hover/hint:opacity-100 sm:left-0 sm:translate-x-0">
         {text}
       </span>
     </span>
@@ -2419,13 +2425,17 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
   const t = useTranslations('Diligence.dealDetail.research')
   const { status } = useAgentStatus(dealId)
   const [draft, setDraft] = useState<ResearchDraftRecord | null>(null)
+  const [draftLoaded, setDraftLoaded] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [noteCount, setNoteCount] = useState<number | null>(null)
   // Doc-name map so cross-document inconsistencies can render "Across: <file>, <file>".
   const [fileNamesById, setFileNamesById] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    setDraftLoaded(false)
     fetch(`/api/diligence/${dealId}/drafts`).then(r => r.ok ? r.json() : []).then(rows => {
       setDraft(((rows ?? [])[0] as ResearchDraftRecord | undefined) ?? null)
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setDraftLoaded(true))
     fetch(`/api/diligence/${dealId}/documents`).then(r => r.ok ? r.json() : []).then(docs => {
       const map: Record<string, string> = {}
       for (const d of docs ?? []) map[d.id] = d.file_name
@@ -2435,15 +2445,19 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
 
   const job = status?.latest_job
   const isResearchInFlight = job && (job.status === 'pending' || job.status === 'running') && job.kind === 'research'
+  const researchFailed = job?.kind === 'research' && job.status === 'failed'
   const ingestReady = !!status?.latest_draft?.has_ingestion
   const research: ResearchOutput | null = draft?.research_output ?? null
+  const hasPersistedResearch = !!status?.latest_draft?.has_research
   const draftId: string | undefined = draft?.id
   const editable = draft?.is_draft !== false
   const crossDocFlags: IngestionOutput['cross_doc_flags'] = draft?.ingestion_output?.cross_doc_flags ?? []
 
-  // Persist a research_output edit (dismiss flags), optimistically.
+  // Persist a research_output edit optimistically, but never leave a failed
+  // write looking successful in the UI.
   async function patchResearch(partial: Record<string, unknown>) {
-    if (!draftId) return
+    if (!draftId) throw new Error('Research draft is unavailable.')
+    const previousOutput = draft?.research_output ?? null
     setDraft(d => (d ? { ...d, research_output: { ...d.research_output, ...partial } as ResearchOutput } : d))
     try {
       const res = await fetch(`/api/diligence/${dealId}/drafts/${draftId}`, {
@@ -2451,11 +2465,14 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ research_output: partial }),
       })
-      if (res.ok) {
-        const body = await res.json()
-        if (body.research_output) setDraft(d => (d ? { ...d, research_output: body.research_output as ResearchOutput } : d))
-      }
-    } catch { /* keep optimistic value */ }
+      if (!res.ok) throw new Error(`Research update failed (${res.status}).`)
+      const body = await res.json()
+      if (!body.research_output) throw new Error('Research update returned no output.')
+      setDraft(d => (d ? { ...d, research_output: body.research_output as ResearchOutput } : d))
+    } catch (error) {
+      setDraft(d => (d ? { ...d, research_output: previousOutput } : d))
+      throw error
+    }
   }
 
   async function patchCrossFlags(next: IngestionOutput['cross_doc_flags']) {
@@ -2516,14 +2533,26 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
           the tab — the header knows if it's blocked and says why, and it reports the
           last run, so a second button and status line in the section below would only
           disagree with it. */}
-      <StageHeader dealId={dealId} stageKey="research" />
-
-      {/* Ask anything, moved here from its own tab so questions sit alongside the evidence. */}
-      <QATab dealId={dealId} />
-
-      <Section title={t('notes.title')} help={t('notes.help')}>
-        <NotesPanel dealId={dealId} userId={userId} isAdmin={isAdmin} />
-      </Section>
+      <StageHeader
+        dealId={dealId}
+        stageKey="research"
+        secondaryAction={
+          <Button
+            size="sm"
+            variant={notesOpen ? 'secondary' : 'ghost'}
+            className="text-muted-foreground"
+            onClick={() => setNotesOpen(open => !open)}
+            aria-expanded={notesOpen}
+            aria-controls="research-notes-panel"
+          >
+            {t('notes.title')} <span className="ml-1 tabular-nums">{noteCount ?? '…'}</span>
+          </Button>
+        }
+      >
+        <div id="research-notes-panel" hidden={!notesOpen} className="border-t pt-3">
+          <NotesPanel dealId={dealId} userId={userId} isAdmin={isAdmin} onCountChange={setNoteCount} />
+        </div>
+      </StageHeader>
 
       {!ingestReady && (
         <div className="rounded-md border border-amber-500/40 bg-amber-50/50 dark:bg-amber-900/10 p-3 text-sm">
@@ -2544,33 +2573,42 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
         />
       </Section>
 
-      <Section
-        title={t('expert.title')}
-        help={t('expert.help')}
-      >
-        <ExpertValidationPanel dealId={dealId} draftId={draftId} research={research} editable={editable} />
-      </Section>
+      {draftLoaded && status !== null && !hasPersistedResearch && !research && !isResearchInFlight && !researchFailed && (
+        <Section title={t('external.title')} help={t('external.help')}>
+          <p className="py-1 text-xs text-muted-foreground">{t('external.notRun')}</p>
+        </Section>
+      )}
 
-      <Section
-        title={t('external.title')}
-        count={activeFindings}
-        help={t('external.help')}
-      >
-        {research?.research_mode === 'no_web_search' && <p className="text-[11px] text-amber-700 dark:text-amber-400">{t('external.searchOff')}</p>}
-        {research?.research_mode === 'with_web_search' && <p className="text-[11px] text-emerald-700 dark:text-emerald-400">{t('external.searchOn')}</p>}
-        {research && !isResearchInFlight && (
-          <ExternalResearchView
-            research={research}
-            editable={editable}
-            onToggleFinding={(i) => toggleResearchDismiss('findings', i)}
-            onToggleGap={(i) => toggleResearchDismiss('research_gaps', i)}
-          />
-        )}
-      </Section>
+      {research && (
+        <>
+          <Section
+            title={t('external.title')}
+            count={activeFindings}
+            help={t('external.help')}
+          >
+            {research.research_mode === 'no_web_search' && <p className="text-[11px] text-amber-700 dark:text-amber-400">{t('external.searchOff')}</p>}
+            {research.research_mode === 'with_web_search' && <p className="text-[11px] text-emerald-700 dark:text-emerald-400">{t('external.searchOn')}</p>}
+            {!isResearchInFlight && (
+              <ExternalResearchView
+                research={research}
+                editable={editable}
+                onToggleFinding={(i) => toggleResearchDismiss('findings', i)}
+                onToggleGap={(i) => toggleResearchDismiss('research_gaps', i)}
+              />
+            )}
+          </Section>
 
-      <Section title={t('competitive.title')} count={activeCompetitors}>
-        <CompetitiveLandscape competitiveMap={cm} editable={editable} onToggle={toggleCompetitorDismiss} />
-      </Section>
+          <Section title={t('competitive.title')} count={activeCompetitors}>
+            <CompetitiveLandscape competitiveMap={cm} editable={editable} onToggle={toggleCompetitorDismiss} />
+          </Section>
+        </>
+      )}
+
+      <FounderTeamSection
+        research={research}
+        editable={editable && !isResearchInFlight}
+        onPatch={patchResearch}
+      />
 
       {dismissedItems.length > 0 && (
         <Disclosure title={t('dismissed.title')} subtitle={t('dismissed.hidden', { count: dismissedItems.length })}>
@@ -2591,14 +2629,58 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
         </Disclosure>
       )}
 
-      <SchemaViewer
-        schemaName="research_dossier"
-        title={t('agent.title')}
-        subtitle={t('agent.subtitle')}
-        guidanceStage="research"
-        description={t('agent.description')}
-        defaultOpen={!research}
-      />
+    </div>
+  )
+}
+
+// Expert validation is a dedicated workspace surface because request setup,
+// matching, invitation, response, and evidence materialization have their own
+// lifecycle. It still consumes Research output and does not add a pipeline stage.
+function ExpertValidationTab({ dealId, onJumpToResearch }: { dealId: string; onJumpToResearch: () => void }) {
+  const t = useTranslations('Diligence.dealDetail.research')
+  const expertTabT = useTranslations('Diligence.dealDetail.expertTab')
+  const { status } = useAgentStatus(dealId)
+  const [draft, setDraft] = useState<ResearchDraftRecord | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/diligence/${dealId}/drafts`)
+      .then(response => response.ok ? response.json() : [])
+      .then(rows => {
+        if (!cancelled) setDraft(((rows ?? [])[0] as ResearchDraftRecord | undefined) ?? null)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [dealId, status?.latest_draft?.id, status?.latest_job?.status])
+
+  const research = draft?.research_output ?? null
+  const ingestReady = !!status?.latest_draft?.has_ingestion
+  const researchReady = !!status?.latest_draft?.has_research
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      {status && !ingestReady && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-50/50 dark:bg-amber-900/10 p-3 text-sm">
+          <AlertCircle className="h-4 w-4 inline mr-1" />
+          {t('runAnalysisFirst')}
+        </div>
+      )}
+
+      {status && ingestReady && !researchReady && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-50/50 dark:bg-amber-900/10 p-3 text-sm">
+          <span><AlertCircle className="h-4 w-4 inline mr-1" />{expertTabT('runResearchFirst')}</span>
+          <Button size="sm" variant="outline" onClick={onJumpToResearch}>{expertTabT('goToResearch')}</Button>
+        </div>
+      )}
+
+      <Section title={t('expert.title')} help={t('expert.help')}>
+        <ExpertValidationPanel
+          dealId={dealId}
+          draftId={draft?.id}
+          research={research}
+          editable={draft?.is_draft !== false}
+        />
+      </Section>
     </div>
   )
 }
@@ -2711,10 +2793,16 @@ function ExternalResearchView({ research, editable, onToggleFinding, onToggleGap
   const sourcedFindings = research.findings.filter(f => f.sources.some(s => !!s.url)).length
   const searchCount = research.web_search_count ?? null
   const webSources = research.web_sources ?? []
+  const hasExternalEvidence = research.findings.length > 0
+    || webSources.length > 0
+    || (research.competitive_map?.named_by_research ?? []).some(competitor => (competitor.sources ?? []).some(source => !!source.url))
+    || (research.founder_dossiers ?? []).some(founder => (founder.sources ?? []).some(source => !!source.url))
   const activeFindings = research.findings.map((f, i) => ({ f, i })).filter(x => !x.f.dismissed).slice(0, 50)
   const followUpGaps = research.research_gaps.map((g, i) => ({ g, i })).filter(x => !x.g.dismissed && x.g.criticality === 'nice_to_have')
   return (
     <div className="space-y-4">
+      {!hasExternalEvidence && <p className="py-1 text-xs text-muted-foreground">{t('external.noEvidence')}</p>}
+
       {research.research_mode === 'with_web_search' && (
         <div className="rounded-md bg-muted/40 px-3 py-2 text-xs space-y-1">
           <div className="font-medium">{t('diagnostic.title')}</div>
@@ -3055,346 +3143,368 @@ function JobStatusLine({ job, kind, error }: { job: AgentStatus['latest_job']; k
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Q&A tab launcher — points at /diligence/[id]/qa
+// Founder and core-team dossiers are Research evidence, not a separate stage.
+// Keep summaries scannable here and move full editing into a contextual sheet.
 // ---------------------------------------------------------------------------
+type FounderDossier = ResearchOutput['founder_dossiers'][number]
 
-// ---------------------------------------------------------------------------
-// Q&A tab — free-form chat. Partner asks questions; the agent answers from
-// the data room, ingestion findings, research output, the Q&A library, and
-// the diligence checklist, citing documents where it relied on them.
-// ---------------------------------------------------------------------------
-interface QAChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  citations: Array<{ document_id: string; summary: string }>
-  created_at: string
+const EMPTY_FOUNDER_DOSSIER: FounderDossier = {
+  founder_name: '',
+  role: '',
+  background_summary: '',
+  sources: [],
+  open_questions: [],
 }
 
-function QATab({ dealId }: { dealId: string }) {
-  const t = useTranslations('Diligence.dealDetail.chat')
+function FounderTeamSection({ research, editable, onPatch }: {
+  research: ResearchOutput | null
+  editable: boolean
+  onPatch: (partial: Record<string, unknown>) => Promise<void>
+}) {
+  const t = useTranslations('Diligence.dealDetail.research')
+  const founderT = useTranslations('Diligence.dealDetail.founders')
   const confirm = useConfirm()
-  const [messages, setMessages] = useState<QAChatMessage[]>([])
-  const [loading, setLoading] = useState(true)
-  const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement | null>(null)
+  const dossiers = research?.founder_dossiers ?? []
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [creating, setCreating] = useState(false)
+  const selectedFounder = creating
+    ? EMPTY_FOUNDER_DOSSIER
+    : selectedIndex === null
+      ? null
+      : dossiers[selectedIndex] ?? null
+
+  const closeSheet = () => {
+    setCreating(false)
+    setSelectedIndex(null)
+  }
+  const saveFounder = async (founder: FounderDossier) => {
+    const next = creating
+      ? [...dossiers, founder]
+      : dossiers.map((current, index) => index === selectedIndex ? founder : current)
+    await onPatch({ founder_dossiers: next })
+    closeSheet()
+  }
+  const removeFounder = async () => {
+    if (selectedIndex === null || creating) return
+    const founder = dossiers[selectedIndex]
+    const accepted = await confirm({
+      title: founderT('deleteTitle'),
+      description: founderT('deleteDescription', { name: founder?.founder_name || founderT('unnamed') }),
+      confirmLabel: founderT('deleteConfirm'),
+      variant: 'destructive',
+    })
+    if (!accepted) return
+    await onPatch({ founder_dossiers: dossiers.filter((_, index) => index !== selectedIndex) })
+    closeSheet()
+  }
+
+  return (
+    <Section
+      title={t('team.title')}
+      count={dossiers.length}
+      help={t('team.help')}
+      action={research && editable ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="min-h-11 sm:min-h-9"
+          onClick={() => {
+            setSelectedIndex(null)
+            setCreating(true)
+          }}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" /> {founderT('add')}
+        </Button>
+      ) : undefined}
+    >
+      {!research ? (
+        <div className="flex items-center gap-3 rounded-md bg-muted/40 px-3 py-3 text-sm text-muted-foreground">
+          <Users className="h-4 w-4 shrink-0" />
+          <span>{t('team.runResearchFirst')}</span>
+        </div>
+      ) : dossiers.length === 0 ? (
+        <div className="flex items-center gap-3 rounded-md bg-muted/40 px-3 py-3 text-sm text-muted-foreground">
+          <Users className="h-4 w-4 shrink-0" />
+          <span>{editable ? t('team.emptyEditable') : t('team.empty')}</span>
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {dossiers.map((founder, index) => (
+            <button
+              key={`${founder.founder_name}-${founder.role}-${index}`}
+              type="button"
+              onClick={() => {
+                setCreating(false)
+                setSelectedIndex(index)
+              }}
+              aria-label={t('team.openProfile', { name: founder.founder_name || founderT('unnamed') })}
+              className="group rounded-md border bg-background px-3 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{founder.founder_name || founderT('unnamed')}</div>
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {founder.role || t('team.roleMissing')}
+                  </div>
+                </div>
+                {editable
+                  ? <Pencil aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
+                  : <Info aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />}
+              </div>
+              <p className="mt-2 line-clamp-2 min-h-8 text-xs leading-4 text-muted-foreground">
+                {founder.background_summary || t('team.backgroundMissing')}
+              </p>
+              <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <span>{t('team.sourcesCount', { count: founder.sources?.length ?? 0 })}</span>
+                <span>{t('team.questionsCount', { count: founder.open_questions?.length ?? 0 })}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selectedFounder && (
+        <FounderDossierSheet
+          open
+          founder={selectedFounder}
+          isNew={creating}
+          editable={editable}
+          onOpenChange={open => { if (!open) closeSheet() }}
+          onSave={saveFounder}
+          onRemove={creating ? undefined : removeFounder}
+        />
+      )}
+    </Section>
+  )
+}
+
+function FounderDossierSheet({ open, founder, isNew, editable, onOpenChange, onSave, onRemove }: {
+  open: boolean
+  founder: FounderDossier
+  isNew: boolean
+  editable: boolean
+  onOpenChange: (open: boolean) => void
+  onSave: (founder: FounderDossier) => Promise<void>
+  onRemove?: () => Promise<void>
+}) {
+  const t = useTranslations('Diligence.dealDetail.founders')
+  const confirm = useConfirm()
+  const nameRef = useRef<HTMLInputElement>(null)
+  const [name, setName] = useState(founder.founder_name)
+  const [role, setRole] = useState(founder.role)
+  const [background, setBackground] = useState(founder.background_summary)
+  const [questions, setQuestions] = useState((founder.open_questions ?? []).join('\n'))
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [nameError, setNameError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    fetch(`/api/diligence/${dealId}/qa-chat`)
-      .then(r => r.ok ? r.json() : Promise.reject(new Error(t('errors.load'))))
-      .then(j => { if (!cancelled) setMessages(j.messages ?? []) })
-      .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : t('errors.load')) })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [dealId, t])
+    setName(founder.founder_name)
+    setRole(founder.role)
+    setBackground(founder.background_summary)
+    setQuestions((founder.open_questions ?? []).join('\n'))
+    setSaveError(null)
+    setNameError(null)
+  }, [founder])
 
-  // Auto-scroll to the newest message — but NOT when the history first loads. Opening
-  // the Research tab hydrates this chat, which used to fire this effect (messages 0→N)
-  // and scroll the whole page down to the bottom of the conversation, past everything
-  // above it. Only a message arriving after the initial load should move the view.
-  const hydrated = useRef(false)
-  useEffect(() => {
-    if (loading) return
-    if (!hydrated.current) { hydrated.current = true; return }
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [messages.length, sending, loading])
+  const isDirty = name !== founder.founder_name
+    || role !== founder.role
+    || background !== founder.background_summary
+    || questions !== (founder.open_questions ?? []).join('\n')
 
-  async function send() {
-    const q = input.trim()
-    if (!q || sending) return
-    setSending(true)
-    setError(null)
-    // Optimistic user message — replaced by the server's persisted copy on response.
-    const tempId = `tmp-${Date.now()}`
-    setMessages(prev => [...prev, { id: tempId, role: 'user', content: q, citations: [], created_at: new Date().toISOString() }])
-    setInput('')
+  const requestClose = async () => {
+    if (saving) return
+    if (editable && isDirty) {
+      const accepted = await confirm({
+        title: t('discardTitle'),
+        description: t('discardDescription'),
+        confirmLabel: t('discardConfirm'),
+        variant: 'destructive',
+      })
+      if (!accepted) return
+    }
+    onOpenChange(false)
+  }
+
+  const save = async () => {
+    if (saving) return
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      setNameError(t('nameRequired'))
+      nameRef.current?.focus()
+      return
+    }
+    setNameError(null)
+    setSaveError(null)
+    setSaving(true)
     try {
-      const res = await fetch(`/api/diligence/${dealId}/qa-chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q }),
+      await onSave({
+        ...founder,
+        founder_name: trimmedName,
+        role: role.trim(),
+        background_summary: background.trim(),
+        open_questions: questions.split('\n').map(question => question.trim()).filter(Boolean),
       })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error ?? t('errors.send'))
-      setMessages(prev => {
-        const trimmed = prev.filter(m => m.id !== tempId)
-        const next = [...trimmed]
-        if (body.user_message) next.push(body.user_message as QAChatMessage)
-        if (body.assistant_message) next.push(body.assistant_message as QAChatMessage)
-        return next
-      })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('errors.send'))
-      setMessages(prev => prev.filter(m => m.id !== tempId))
+    } catch {
+      setSaveError(t('saveFailed'))
     } finally {
-      setSending(false)
+      setSaving(false)
     }
   }
 
-  async function clearAll() {
-    if (messages.length === 0) return
-    const ok = await confirm({
-      title: t('clear.title'), description: t('clear.description'), confirmLabel: t('clear.confirm'),
-      variant: 'destructive',
-    })
-    if (!ok) return
-    const res = await fetch(`/api/diligence/${dealId}/qa-chat`, { method: 'DELETE' })
-    if (res.ok) setMessages([])
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-medium">{t('title')}</h3>
-          <p className="text-xs text-muted-foreground">
-            {t('description')}
-          </p>
-        </div>
-        {messages.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearAll}>{t('clear.confirm')}</Button>
-        )}
-      </div>
-
-      <div className="overflow-y-auto rounded-md border bg-card p-4 space-y-4 max-h-[calc(100vh-260px)]">
-        {loading ? (
-          <div className="text-sm text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</div>
-        ) : messages.length === 0 ? (
-          <div className="text-sm text-muted-foreground italic">{t('empty')}</div>
-        ) : (
-          messages.map(m => <QAChatBubble key={m.id} message={m} />)
-        )}
-        {sending && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {t('thinking')}
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {error && <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">{error}</div>}
-
-      <div className="flex gap-2">
-        <textarea
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              send()
-            }
-          }}
-          placeholder={t('placeholder')}
-          rows={2}
-          className="flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          disabled={sending}
-        />
-        <Button onClick={send} disabled={sending || !input.trim()}>
-          {sending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
-          {t('send')}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function QAChatBubble({ message }: { message: QAChatMessage }) {
-  const isUser = message.role === 'user'
-  return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[85%] rounded-md px-3 py-2 text-sm ${isUser ? 'bg-primary/10 border border-primary/20' : 'bg-muted/40 border'}`}>
-        <div className="whitespace-pre-wrap">{message.content}</div>
-        {message.citations && message.citations.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-border/60 text-[11px] text-muted-foreground space-y-0.5">
-            {message.citations.map((c, i) => (
-              <div key={i} className="truncate">
-                <span className="text-foreground/70">↳</span> {c.summary || c.document_id}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Founders tab — founder dossiers from research, editable like the Scoring tab.
-// ---------------------------------------------------------------------------
-function FoundersTab({ dealId }: { dealId: string }) {
-  const t = useTranslations('Diligence.dealDetail.founders')
-  const { status } = useAgentStatus(dealId)
-  const [draft, setDraft] = useState<ResearchDraftRecord | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    fetch(`/api/diligence/${dealId}/drafts`).then(r => r.ok ? r.json() : []).then(rows => {
-      setDraft(((rows ?? [])[0] as ResearchDraftRecord | undefined) ?? null)
-    }).catch(() => {}).finally(() => setLoading(false))
-  }, [dealId, status?.latest_draft?.id, status?.latest_job?.status])
-
-  const research: ResearchOutput | null = draft?.research_output ?? null
-  const draftId: string | undefined = draft?.id
-  const editable = draft?.is_draft !== false
-  const dossiers: ResearchOutput['founder_dossiers'] = research?.founder_dossiers ?? []
-
-  async function persist(next: ResearchOutput['founder_dossiers']) {
-    if (!draftId) return
-    setDraft(d => (d?.research_output ? { ...d, research_output: { ...d.research_output, founder_dossiers: next } } : d))
+  const remove = async () => {
+    if (!onRemove || saving) return
+    setSaveError(null)
+    setSaving(true)
     try {
-      const res = await fetch(`/api/diligence/${dealId}/drafts/${draftId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ research_output: { founder_dossiers: next } }),
-      })
-      if (res.ok) {
-        const body = await res.json()
-        if (body.research_output) setDraft(d => (d ? { ...d, research_output: body.research_output as ResearchOutput } : d))
-      }
-    } catch { /* keep optimistic value */ }
+      await onRemove()
+    } catch {
+      setSaveError(t('removeFailed'))
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const saveDossier = (index: number, patch: Partial<ResearchOutput['founder_dossiers'][number]>) =>
-    persist(dossiers.map((d, i) => (i === index ? { ...d, ...patch } : d)))
-  const addFounder = () => persist([...dossiers, { founder_name: t('newFounder'), role: '', background_summary: '', sources: [], open_questions: [] }])
-  const removeFounder = (index: number) => persist(dossiers.filter((_, i) => i !== index))
-
-  if (loading) return <div className="text-sm text-muted-foreground"><Loader2 className="h-4 w-4 inline animate-spin mr-1" /> {t('loading')}</div>
-
   return (
-    <div className="space-y-6 max-w-6xl">
-      <Section
-        title={t('title')}
-        count={dossiers.length}
-        help={t('help')}
-        action={editable && draftId ? (
-          <Button variant="outline" size="sm" onClick={addFounder}><Plus className="h-3.5 w-3.5 mr-1" /> {t('add')}</Button>
-        ) : undefined}
+    <Sheet open={open} onOpenChange={nextOpen => { if (!nextOpen) void requestClose() }}>
+      <SheetContent
+        side="right"
+        className="flex w-[520px] max-w-[94vw] flex-col p-0"
+        dialogTitle={t('editorTitle')}
+        dialogDescription={t('editorDescription')}
+        closeButtonClassName="flex h-11 w-11 items-center justify-center sm:h-9 sm:w-9"
+        aria-busy={saving}
+        onEscapeKeyDown={event => { if (saving) event.preventDefault() }}
+        onPointerDownOutside={event => { if (saving) event.preventDefault() }}
       >
-        {!draftId ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            {t('noDraft')}
-          </p>
-        ) : dossiers.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            {editable ? t('emptyEditable') : t('empty')}
-          </p>
-        ) : (
-          <div className="divide-y mt-2">
-            {dossiers.map((f, i) => (
-              <FounderCard key={i} founder={f} editable={editable} onSave={(patch) => saveDossier(i, patch)} onRemove={() => removeFounder(i)} />
-            ))}
-          </div>
-        )}
-      </Section>
-
-      <SchemaViewer
-        schemaName="research_dossier"
-        title={t('agent.title')}
-        subtitle={t('agent.subtitle')}
-        guidanceStage="research"
-        description={t('agent.description')}
-        defaultOpen={dossiers.length === 0}
-      />
-    </div>
-  )
-}
-
-function FounderCard({ founder, editable, onSave, onRemove }: {
-  founder: ResearchOutput['founder_dossiers'][number]
-  editable?: boolean
-  onSave: (patch: Partial<ResearchOutput['founder_dossiers'][number]>) => void
-  onRemove: () => void
-}) {
-  const t = useTranslations('Diligence.dealDetail.founders')
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(founder.founder_name)
-  const [role, setRole] = useState(founder.role)
-  const [bg, setBg] = useState(founder.background_summary)
-  const [questions, setQuestions] = useState((founder.open_questions ?? []).join('\n'))
-  useEffect(() => {
-    if (editing) return
-    setName(founder.founder_name); setRole(founder.role); setBg(founder.background_summary)
-    setQuestions((founder.open_questions ?? []).join('\n'))
-  }, [founder.founder_name, founder.role, founder.background_summary, founder.open_questions, editing])
-
-  function save() {
-    onSave({
-      founder_name: name.trim() || t('unnamed'),
-      role: role.trim(),
-      background_summary: bg.trim(),
-      open_questions: questions.split('\n').map(q => q.trim()).filter(Boolean),
-    })
-    setEditing(false)
-  }
-  function cancel() {
-    setName(founder.founder_name); setRole(founder.role); setBg(founder.background_summary)
-    setQuestions((founder.open_questions ?? []).join('\n')); setEditing(false)
-  }
-
-  if (!editing) {
-    return (
-      <div className="py-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="font-medium">{founder.founder_name}</div>
-            {founder.role && <div className="text-xs text-muted-foreground">{founder.role}</div>}
-          </div>
-          {editable && <Button variant="ghost" size="sm" className="h-7 shrink-0" onClick={() => setEditing(true)}>{t('edit')}</Button>}
+        <div className="border-b px-6 pb-5 pt-6">
+          <h2 className="pr-8 text-lg font-semibold tracking-tight">
+            {isNew ? t('add') : founder.founder_name || t('unnamed')}
+          </h2>
+          <p className="mt-1 pr-6 text-sm text-muted-foreground">{t('editorDescription')}</p>
+          {!editable && <span className="mt-2 inline-flex rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t('readOnly')}</span>}
         </div>
-        {founder.background_summary && <p className="text-sm mt-2 whitespace-pre-wrap">{founder.background_summary}</p>}
-        {founder.open_questions.length > 0 && (
-          <div className="mt-2">
-            <div className="text-xs font-medium text-muted-foreground">{t('openQuestions')}</div>
-            <ul className="text-xs list-disc list-inside mt-0.5 space-y-0.5">
-              {founder.open_questions.map((q, j) => <li key={j}>{q}</li>)}
-            </ul>
-          </div>
-        )}
-        {founder.sources?.length > 0 && (
-          <div className="text-[11px] text-muted-foreground mt-2 space-y-0.5">
-            {founder.sources.map((s, j) => <div key={j} className="truncate">{s.url ? <a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.title}</a> : <span>{s.title}</span>}</div>)}
-          </div>
-        )}
-      </div>
-    )
-  }
 
-  return (
-    <div className="py-3 space-y-2">
-      <div className="flex gap-2">
-        <Input value={name} onChange={e => setName(e.target.value)} placeholder={t('namePlaceholder')} className="h-8 text-sm flex-1" />
-        <Input value={role} onChange={e => setRole(e.target.value)} placeholder={t('rolePlaceholder')} className="h-8 text-sm w-44" />
-      </div>
-      <textarea value={bg} onChange={e => setBg(e.target.value)} rows={4} placeholder={t('backgroundPlaceholder')} className="w-full resize-y rounded-md border border-input bg-transparent px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-      <div>
-        <div className="text-xs font-medium text-muted-foreground mb-1">{t('questionsLabel')}</div>
-        <textarea value={questions} onChange={e => setQuestions(e.target.value)} rows={3} placeholder={t('questionsPlaceholder')} className="w-full resize-y rounded-md border border-input bg-transparent px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-      </div>
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" className="h-7 text-muted-foreground hover:text-destructive" onClick={onRemove}>{t('remove')}</Button>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" className="h-7" onClick={cancel}>{t('cancel')}</Button>
-          <Button size="sm" className="h-7" onClick={save}>{t('save')}</Button>
+        <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="founder-name" className="text-sm font-medium">{t('nameLabel')}</label>
+              <Input
+                ref={nameRef}
+                id="founder-name"
+                value={name}
+                onChange={event => { setName(event.target.value); setNameError(null) }}
+                placeholder={t('namePlaceholder')}
+                className="mt-1.5"
+                readOnly={!editable}
+                disabled={saving}
+                aria-readonly={!editable}
+                aria-invalid={!!nameError}
+                aria-describedby={nameError ? 'founder-name-error' : undefined}
+              />
+              {nameError && <p id="founder-name-error" role="alert" className="mt-1 text-xs text-destructive">{nameError}</p>}
+            </div>
+            <div>
+              <label htmlFor="founder-role" className="text-sm font-medium">{t('roleLabel')}</label>
+              <Input
+                id="founder-role"
+                value={role}
+                onChange={event => setRole(event.target.value)}
+                placeholder={t('rolePlaceholder')}
+                className="mt-1.5"
+                readOnly={!editable}
+                disabled={saving}
+                aria-readonly={!editable}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="founder-background" className="text-sm font-medium">{t('backgroundLabel')}</label>
+            <textarea
+              id="founder-background"
+              value={background}
+              onChange={event => setBackground(event.target.value)}
+              rows={7}
+              placeholder={t('backgroundPlaceholder')}
+              readOnly={!editable}
+              disabled={saving}
+              aria-readonly={!editable}
+              className="mt-1.5 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="founder-questions" className="text-sm font-medium">{t('questionsLabel')}</label>
+            <p className="mt-1 text-xs text-muted-foreground">{t('questionsHelp')}</p>
+            <textarea
+              id="founder-questions"
+              value={questions}
+              onChange={event => setQuestions(event.target.value)}
+              rows={5}
+              placeholder={t('questionsPlaceholder')}
+              readOnly={!editable}
+              disabled={saving}
+              aria-readonly={!editable}
+              className="mt-1.5 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <div>
+            <div className="text-sm font-medium">{t('sourcesLabel')}</div>
+            {founder.sources.length === 0 ? (
+              <p className="mt-1.5 text-xs text-muted-foreground">{t('sourcesEmpty')}</p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {founder.sources.map((source, index) => (
+                  <div key={`${source.url ?? source.title}-${index}`} className="rounded-md border px-3 py-2 text-xs">
+                    {source.url ? (
+                      <a href={source.url} target="_blank" rel="noreferrer" className="break-words font-medium hover:underline">
+                        {source.title}<span className="sr-only"> {t('opensInNewTab')}</span>
+                      </a>
+                    ) : <span className="font-medium">{source.title}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+
+        {editable && (
+          <div className="flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            {saveError && <p role="alert" className="text-sm text-destructive sm:absolute sm:left-6 sm:-translate-y-10">{saveError}</p>}
+            <div>
+              {onRemove && (
+                <Button type="button" variant="ghost" className="min-h-11 text-destructive sm:min-h-9" onClick={remove} disabled={saving}>
+                  <Trash2 className="mr-1.5 h-4 w-4" /> {t('remove')}
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="min-h-11 sm:min-h-9" onClick={() => void requestClose()} disabled={saving}>{t('cancel')}</Button>
+              <Button type="button" className="min-h-11 sm:min-h-9" onClick={() => void save()} disabled={saving}>
+                {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                {saving ? t('saving') : t('save')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Notes panel — partner-authored notes/research, independent of the data-room
-// analysis. Lives in the Diligence tab as an accordion below the "ask anything"
-// chat (replacing the old standalone Q&A tab).
+// Compact partner-authored notes, expanded inside the Research stage header.
 // ---------------------------------------------------------------------------
 interface DealNote { id: string; body: string; authorId: string | null; authorName: string | null; authorEmail: string | null; createdAt: string }
 
-function NotesPanel({ dealId, userId, isAdmin }: { dealId: string; userId: string; isAdmin: boolean }) {
+function NotesPanel({ dealId, userId, isAdmin, onCountChange }: {
+  dealId: string
+  userId: string
+  isAdmin: boolean
+  onCountChange: (count: number) => void
+}) {
   const t = useTranslations('Diligence.dealDetail.notes')
   const format = useFormatter()
   const [notes, setNotes] = useState<DealNote[]>([])
@@ -3406,6 +3516,10 @@ function NotesPanel({ dealId, userId, isAdmin }: { dealId: string; userId: strin
     setLoading(true)
     fetch(`/api/diligence/${dealId}/notes`).then(r => r.ok ? r.json() : []).then(d => setNotes(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false))
   }, [dealId])
+
+  useEffect(() => {
+    if (!loading) onCountChange(notes.length)
+  }, [loading, notes.length, onCountChange])
 
   async function post() {
     if (!content.trim() || posting) return
@@ -3421,7 +3535,7 @@ function NotesPanel({ dealId, userId, isAdmin }: { dealId: string; userId: strin
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex gap-2">
         <textarea
           value={content}
@@ -3429,23 +3543,23 @@ function NotesPanel({ dealId, userId, isAdmin }: { dealId: string; userId: strin
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); post() } }}
           placeholder={t('placeholder')}
           rows={2}
-          className="flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="min-h-16 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
-        <Button onClick={post} disabled={!content.trim() || posting} className="self-end">
+        <Button size="sm" onClick={post} disabled={!content.trim() || posting} className="self-end">
           {posting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('add')}
         </Button>
       </div>
       {loading ? (
-        <div className="text-sm text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</div>
+        <p className="text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 inline animate-spin mr-1" /> {t('loading')}</p>
       ) : notes.length === 0 ? (
-        <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">{t('empty')}</div>
+        <p className="py-1 text-xs italic text-muted-foreground">{t('empty')}</p>
       ) : (
-        <div className="rounded-md border bg-card divide-y">
+        <div className="divide-y rounded-md border bg-background">
           {notes.map(n => {
             const canDelete = n.authorId === userId || isAdmin
             const name = n.authorName || n.authorEmail?.split('@')[0] || t('unknown')
             return (
-              <div key={n.id} className="p-3 group">
+              <div key={n.id} className="group p-2.5">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-xs font-medium">{name}</span>
                   <span className="text-xs text-muted-foreground">{format.dateTime(new Date(n.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</span>
@@ -3714,14 +3828,6 @@ function ScoringTab({ dealId }: { dealId: string }) {
         )}
       </Section>
 
-      <SchemaViewer
-        schemaName="rubric"
-        title={t('agent.title')}
-        subtitle={t('agent.subtitle')}
-        guidanceStage="score"
-        description={t('agent.description')}
-        defaultOpen={scores.length === 0}
-      />
     </div>
   )
 }
