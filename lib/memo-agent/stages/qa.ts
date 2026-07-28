@@ -281,7 +281,7 @@ export async function getNextBatch(params: {
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
 
   const outputLanguage = await loadDiligenceOutputLanguage({ admin, fundId, dealId, draftId })
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'qa', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'qa', outputLanguage })
   const userContent = buildQAUserContent({
     dealName,
     ingestion,

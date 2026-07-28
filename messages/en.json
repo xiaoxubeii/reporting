@@ -5270,47 +5270,10 @@
     },
     "stageGuidance": {
       "loading": "Loading guidance…",
-      "description": "Your guidance for this analysis, additive to the base prompt.",
+      "description": "Fund-wide guidance for this stage. It is added to the base prompt for every deal in this fund.",
       "placeholder": "Tune voice, depth, and what to emphasize at this stage. Leave blank to use the shipped defaults.",
       "saved": "Saved",
       "save": "Save guidance"
-    },
-    "analysisPreferences": {
-      "trigger": "Analysis preferences",
-      "title": "Analysis preferences",
-      "description": "Set the focus and depth for this project's diligence analysis.",
-      "focus": {
-        "title": "Areas to emphasize",
-        "help": "Select any areas that deserve extra attention.",
-        "areas": {
-          "technology": "Technology",
-          "market": "Market",
-          "financials": "Financials",
-          "regulatory": "Regulatory"
-        }
-      },
-      "depth": {
-        "title": "Analysis depth",
-        "help": "This controls how thoroughly the agent tests evidence and surfaces risks.",
-        "options": {
-          "quick": "Quick",
-          "standard": "Standard",
-          "deep": "Deep"
-        }
-      },
-      "instructions": {
-        "title": "Additional guidance",
-        "help": "Add context or questions specific to this project. The system's evaluation rules remain unchanged.",
-        "placeholder": "For example: Pay particular attention to clinical validation and the regulatory path…"
-      },
-      "scopeHelp": "These preferences apply only to this project. They do not change the fund's default analysis rules.",
-      "save": "Save",
-      "saved": "Saved",
-      "saveAndReanalyze": "Save and reanalyze",
-      "errors": {
-        "save": "Could not save analysis preferences.",
-        "reanalyze": "Preferences were saved, but reanalysis could not be started."
-      }
     },
     "emailIntake": {
       "addFailed": "Could not add the email to the data room.",

@@ -15,8 +15,7 @@ import { IngestionSummary } from '@/components/diligence/ingestion-summary'
 import { StageHeader, DiligenceStageBar } from '@/components/diligence/stage-header'
 import { DataRoomBar } from '@/components/diligence/progress-bars'
 import { countDocuments } from '@/lib/diligence/progress'
-import { AnalysisPreferencesSheet } from '@/components/diligence/analysis-preferences-sheet'
-import type { AnalysisPreferences } from '@/lib/diligence/analysis-preferences'
+import { SchemaViewer } from '@/components/diligence/schema-viewer'
 import { AnalystDiligenceScope } from '@/components/analyst-scope'
 import { AffinityPanel } from '@/components/diligence/affinity-panel'
 import { EmailIntakeTray } from '@/components/diligence/email-intake-tray'
@@ -43,7 +42,6 @@ interface Deal {
   lead_partner_id: string | null
   promoted_company_id: string | null
   drive_folder_url: string | null
-  analysis_preferences: AnalysisPreferences
   created_at: string
   updated_at: string
 }
@@ -374,11 +372,6 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <AnalysisPreferencesSheet
-            dealId={deal.id}
-            preferences={deal.analysis_preferences}
-            onSaved={analysis_preferences => setDeal(current => ({ ...current, analysis_preferences }))}
-          />
           <div className="flex items-center gap-1.5">
             <span id="deal-output-language-label" className="text-xs font-medium text-foreground">
               {t('header.outputLanguage')}
@@ -967,6 +960,15 @@ function ChecklistTab({ deal, onJumpToDoc }: {
           />
         </Accordion>
       )}
+
+      <SchemaViewer
+        schemaName="data_room_ingestion"
+        title={t('agent.title')}
+        subtitle={t('agent.subtitle')}
+        guidanceStage="ingest"
+        description={t('agent.description')}
+        defaultOpen={!ingestionDraft?.ingestion_output}
+      />
 
     </div>
   )
@@ -2648,6 +2650,15 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
         </Disclosure>
       )}
 
+      <SchemaViewer
+        schemaName="research_dossier"
+        title={t('agent.title')}
+        subtitle={t('agent.subtitle')}
+        guidanceStage="research"
+        description={t('agent.description')}
+        defaultOpen={!research}
+      />
+
     </div>
   )
 }
@@ -3846,6 +3857,15 @@ function ScoringTab({ dealId }: { dealId: string }) {
           </div>
         )}
       </Section>
+
+      <SchemaViewer
+        schemaName="rubric"
+        title={t('agent.title')}
+        subtitle={t('agent.subtitle')}
+        guidanceStage="score"
+        description={t('agent.description')}
+        defaultOpen={scores.length === 0}
+      />
 
     </div>
   )

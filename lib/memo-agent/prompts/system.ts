@@ -6,7 +6,6 @@ import {
   buildOutputLanguageInstruction,
   type DiligenceOutputLanguage,
 } from '@/lib/diligence/output-language'
-import { buildAnalysisPreferencesPrompt } from '@/lib/diligence/analysis-preferences'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -36,7 +35,6 @@ export interface SystemPromptResult {
 export async function buildSystemPrompt(params: {
   admin?: Admin
   fundId: string
-  dealId?: string
   stage: StageName
   outputLanguage: DiligenceOutputLanguage
 }): Promise<SystemPromptResult> {
@@ -66,18 +64,6 @@ export async function buildSystemPrompt(params: {
   const guidance = ((promptRow as { guidance: string } | null)?.guidance ?? '').trim()
   if (guidance) {
     sections.push(`=== FUND GUIDANCE FOR THIS STAGE (partner-authored — follow it) ===\n${guidance}`)
-  }
-
-  if (params.dealId) {
-    const { data: dealRow } = await (admin as any)
-      .from('diligence_deals')
-      .select('analysis_preferences')
-      .eq('id', params.dealId)
-      .eq('fund_id', params.fundId)
-      .maybeSingle()
-    sections.push(buildAnalysisPreferencesPrompt(
-      (dealRow as { analysis_preferences?: unknown } | null)?.analysis_preferences,
-    ))
   }
 
   // Schemas relevant to this stage.

@@ -117,7 +117,7 @@ export async function runResearch(params: {
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
 
   await note('Building research prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'research', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'research', outputLanguage })
 
   const { provider, model, providerType, webSearchAvailable, webSearchOptIn } = await getStageProvider(admin, fundId, 'research')
   const webSearchEnabled = webSearchAvailable
