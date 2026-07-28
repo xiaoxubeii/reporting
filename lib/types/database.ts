@@ -3818,18 +3818,21 @@ export type Database = {
         Row: {
           created_at: string;
           full_name: string | null;
+          time_zone: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           created_at?: string;
           full_name?: string | null;
+          time_zone?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           created_at?: string;
           full_name?: string | null;
+          time_zone?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -4325,6 +4328,10 @@ export type Database = {
       };
       update_user_profile: {
         Args: { p_full_name: string; p_user_id: string };
+        Returns: Database["public"]["Tables"]["user_profiles"]["Row"];
+      };
+      update_user_time_zone: {
+        Args: { p_time_zone: string | null; p_user_id: string };
         Returns: Database["public"]["Tables"]["user_profiles"]["Row"];
       };
       revoke_fund_member_invitation: {
