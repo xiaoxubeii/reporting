@@ -20,6 +20,7 @@ import { EmailIntakeTray } from '@/components/diligence/email-intake-tray'
 import type { IngestionOutput } from '@/lib/memo-agent/stages/ingest'
 import type { ResearchOutput } from '@/lib/memo-agent/stages/research'
 import { uploadDiligenceDocument } from '@/lib/diligence/upload-document'
+import { formatFileSize } from '@/lib/diligence/format-file-size'
 import { MemoEditor } from './drafts/[draftId]/memo-editor'
 import { MemoConfigPanel } from '@/components/diligence/memo-config-panel'
 import { ExpertValidationPanel } from '@/components/diligence/expert-validation-panel'
@@ -1693,7 +1694,7 @@ function DealRoomTab({ dealId, dealName, documents, setDocuments, initialDriveFo
                     )}
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">
-                    {d.file_size_bytes ? t('megabytes', { value: format.number(d.file_size_bytes / 1024 / 1024, { maximumFractionDigits: 1 }) }) : '—'}
+                    {formatFileSize(d.file_size_bytes, (value, options) => format.number(value, options))}
                   </td>
                   <td className="px-3 py-2 text-xs">
                     <span>{PARSE_STATUS_MESSAGE_KEYS[d.parse_status as keyof typeof PARSE_STATUS_MESSAGE_KEYS] ? t(PARSE_STATUS_MESSAGE_KEYS[d.parse_status as keyof typeof PARSE_STATUS_MESSAGE_KEYS]) : d.parse_status}</span>
