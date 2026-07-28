@@ -75,4 +75,27 @@ describe('diligence index localization', () => {
       ),
     ).toBe(true)
   })
+
+  it('formats a near-midnight diligence update in the provider timezone', () => {
+    render(
+      <NextIntlClientProvider
+        locale="en"
+        messages={englishMessages}
+        now={new Date('2026-07-26T00:00:00.000Z')}
+        timeZone="Asia/Shanghai"
+      >
+        <DiligenceIndex
+          initialDeals={[{
+            ...deal,
+            updated_at: '2026-07-25T18:00:00.000Z',
+          }]}
+          isAdmin={false}
+        />
+      </NextIntlClientProvider>,
+    )
+
+    const card = screen.getByRole('link', { name: /Localized Stage Deal/ })
+    expect(card.textContent).toContain('Updated Jul 26, 2026')
+    expect(card.textContent).not.toContain('Updated Jul 25, 2026')
+  })
 })

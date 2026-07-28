@@ -9,13 +9,13 @@
 
 - [x] 2.1 Add failing route tests for body bounds, exact mode/value validation, trusted Host/Origin, cookie flags, signed-out automatic writes, and authenticated manual lookup.
 - [x] 2.2 Implement the timezone API using the existing locale route's request and cookie security boundaries.
-- [ ] 2.3 Add failing bootstrap tests for first detection, no-op matching state, manual precedence, remote manual synchronization, and reload-loop prevention.
-- [ ] 2.4 Implement the root timezone bootstrap and synchronize only validated changed preferences.
+- [x] 2.3 Add failing bootstrap tests for first detection, no-op matching state, manual precedence, remote manual synchronization, and reload-loop prevention.
+- [x] 2.4 Implement the root timezone bootstrap and synchronize only validated changed preferences.
 
 ## 3. Deterministic Internationalization Runtime
 
-- [ ] 3.1 Add failing provider/request tests proving server and client formatters receive the same explicit timezone.
-- [ ] 3.2 Pass the resolved timezone through `i18n/request.ts`, the root layout, and `NextIntlClientProvider`.
+- [x] 3.1 Add failing provider/request tests proving server and client formatters receive the same explicit timezone.
+- [x] 3.2 Pass the resolved timezone through `i18n/request.ts`, the root layout, and `NextIntlClientProvider`.
 - [ ] 3.3 Audit hydrated date formatting paths and add explicit timezone handling only where they bypass the shared next-intl runtime.
 
 ## 4. Personal Manual Override
