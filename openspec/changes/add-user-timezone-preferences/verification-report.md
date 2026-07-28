@@ -46,6 +46,12 @@ UTC fallback. Pure tests prove the same instant resolves to December 2026 in
 UTC and January 2027 in Asia/Shanghai. The audit claims only these enumerated
 server paths plus the scanned client presentation patterns.
 
+The Compliance API now takes one current-time snapshot and derives its
+date-only cash-flow query year with `getUTCFullYear()`. It classifies ISO
+`flow_date` months with `getUTCMonth()`, preventing January 1 from becoming
+December on a west-of-UTC server. The route contract and boundary behavior are
+covered by `tests/time-zone-compliance-route.test.ts`.
+
 ## Browser verification
 
 The real tenant application was exercised through an isolated development
@@ -93,7 +99,7 @@ SELECT is empty, authenticated direct UPDATE and RPC execution are denied, and
 the service-role RPC succeeds. Cleanup removed both users. The migration is
 documented as a ledger-managed one-shot Supabase migration.
 
-Final focused verification passed 8 files and 109 tests; the environment-gated
+Final focused verification passed 9 files and 112 tests; the environment-gated
 database integration passed 1 additional test. Changed-file ESLint, strict
 OpenSpec, and `git diff --check` pass. TypeScript reports only the known
 platform-landing TS2802 baseline.

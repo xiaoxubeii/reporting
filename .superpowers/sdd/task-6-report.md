@@ -59,7 +59,9 @@ diagnostic.
 - A disposable local-Supabase integration test passed nullable service RPC
   updates, `full_name` preservation, owner/cross-user RLS behavior, direct-write
   denial, authenticated RPC denial, and service-role RPC success.
-- Final focused suite: 8 files, 109 tests. Database integration: 1 test. ESLint,
+- Compliance date-only queries now use one UTC year snapshot and UTC month
+  classification; a west-of-UTC January 1 regression test covers the boundary.
+- Final focused suite: 9 files, 112 tests. Database integration: 1 test. ESLint,
   strict OpenSpec, and diff-check pass. TypeScript has only the known
   platform-landing TS2802 baseline.
 
