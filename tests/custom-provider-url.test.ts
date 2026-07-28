@@ -1,9 +1,50 @@
 import { describe, expect, it } from 'vitest'
 
-import { validateCustomProviderUrl } from '../lib/validate-url'
+import { validateCustomProviderUrl, validateOllamaEgressUrl } from '../lib/validate-url'
 import { safeCustomProviderLookup } from '../lib/ai/custom-provider-fetch'
 
 describe('custom provider URL validation', () => {
+  it('allows explicit local Ollama only outside production or with the deployment opt-in', async () => {
+    await expect(validateOllamaEgressUrl('http://127.0.0.1:11434/v1', {
+      NODE_ENV: 'development',
+    })).resolves.toEqual({
+      ok: true,
+      url: 'http://127.0.0.1:11434/v1',
+      publicOnly: false,
+    })
+    await expect(validateOllamaEgressUrl('http://127.0.0.1:11434/v1', {
+      NODE_ENV: 'production',
+    })).resolves.toEqual({
+      ok: false,
+      error: 'Custom provider Base URL must use HTTPS',
+    })
+    await expect(validateOllamaEgressUrl('http://127.0.0.1:11434/v1', {
+      NODE_ENV: 'production',
+      ALLOW_PRIVATE_OLLAMA_EGRESS: 'true',
+    })).resolves.toEqual({
+      ok: true,
+      url: 'http://127.0.0.1:11434/v1',
+      publicOnly: false,
+    })
+  })
+
+  it('requires public DNS-pinned, redirect-free egress for production Ollama', async () => {
+    await expect(validateOllamaEgressUrl('https://93.184.216.34/v1', {
+      NODE_ENV: 'production',
+    })).resolves.toEqual({
+      ok: true,
+      url: 'https://93.184.216.34/v1',
+      publicOnly: true,
+    })
+  })
+
+  it('fails closed when the runtime environment is not explicitly development or test', async () => {
+    await expect(validateOllamaEgressUrl('http://127.0.0.1:11434/v1', {})).resolves.toEqual({
+      ok: false,
+      error: 'Custom provider Base URL must use HTTPS',
+    })
+  })
+
   it('accepts a public HTTPS address', async () => {
     await expect(validateCustomProviderUrl('https://93.184.216.34/v1')).resolves.toEqual({
       ok: true,

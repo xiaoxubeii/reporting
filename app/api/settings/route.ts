@@ -11,7 +11,7 @@ import { dbError } from '@/lib/api-error'
 import { logActivity } from '@/lib/activity'
 import { DEFAULT_FEATURE_VISIBILITY } from '@/lib/types/features'
 import { forgetFundCurrency } from '@/lib/accounting/currency'
-import { validateCustomProviderUrl, validateOllamaUrl } from '@/lib/validate-url'
+import { validateCustomProviderUrl, validateOllamaEgressUrl } from '@/lib/validate-url'
 import {
   getCustomAIProviderInputError,
   getCustomAIProviderValidationError,
@@ -489,7 +489,7 @@ export async function PATCH(req: NextRequest) {
   if (ollamaBaseUrl !== undefined) {
     const trimmed = ollamaBaseUrl?.trim() || null
     if (trimmed) {
-      const validation = validateOllamaUrl(trimmed)
+      const validation = await validateOllamaEgressUrl(trimmed)
       if (!validation.ok) {
         return NextResponse.json({ error: validation.error }, { status: 400 })
       }

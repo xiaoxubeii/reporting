@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">{t('forgotTitle')}</CardTitle>
+            <CardTitle className="text-lg" role="heading" aria-level={2}>{t('forgotTitle')}</CardTitle>
             <CardDescription>
               {sent
                 ? t('forgotSentDescription')

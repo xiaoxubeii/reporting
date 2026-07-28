@@ -69,6 +69,21 @@ describe('public expert response routes', () => {
     expectSecureHeaders(duplicate)
   })
 
+  it('maps a rejected answer rewrite to the generic non-enumerating response', async () => {
+    const credential = createInvitationToken()
+    submitPublicResponse.mockRejectedValue(new Error('submitted answer differs'))
+
+    const response = await submitRoute(jsonRequest('/submit', {
+      token: credential.rawToken,
+      response_markdown: 'Replacement answer',
+    }))
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'This invitation is invalid or no longer available.' })
+    expect(materializeExpertResponse).not.toHaveBeenCalled()
+    expectSecureHeaders(response)
+  })
+
   it('records materialization failure without making the accepted response resubmittable', async () => {
     const credential = createInvitationToken()
     submitPublicResponse.mockResolvedValue({

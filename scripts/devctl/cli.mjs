@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { buildDefaultAdapters } from './adapters.mjs'
+import { buildDefaultAdapters, platformHost } from './adapters.mjs'
 import { createExternalDependencyProbes } from './dependencies.mjs'
 import { createDevctlManager, normalizeServices, SERVICE_NAMES } from './manager.mjs'
 import { readExistingSecret, readOrCreateSecret } from './runtime.mjs'
@@ -52,7 +52,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   try {
     if (parsed.action === 'start') {
       const result = await manager.start(parsed.services)
-      stdout.write(result.changed ? formatStarted(result.state) : 'All selected services are already running.\n')
+      stdout.write(result.changed ? formatStarted(result.state, 'started', env) : 'All selected services are already running.\n')
       return 0
     }
     if (parsed.action === 'stop') {
@@ -62,7 +62,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     }
     if (parsed.action === 'restart') {
       const result = await manager.restart(parsed.services)
-      stdout.write(formatStarted(result.state, 'restarted'))
+      stdout.write(formatStarted(result.state, 'restarted', env))
       return 0
     }
     if (parsed.action === 'status') {
@@ -92,12 +92,13 @@ export function parseArguments(argv) {
   return Object.freeze({ help: false, action, services: normalizeServices(serviceArgs) })
 }
 
-function formatStarted(state, verb = 'started') {
+export function formatStarted(state, verb = 'started', env = {}) {
+  const host = platformHost(env)
   const lines = [
     `Reporting services ${verb} in port block ${state.basePort}-${state.basePort + 9}.`,
   ]
   for (const [name, port] of Object.entries(state.ports)) {
-    if (state.services[name]) lines.push(`  ${name.padEnd(9)} http://127.0.0.1:${port}`)
+    if (state.services[name]) lines.push(`  ${name.padEnd(9)} http://${host}:${port}`)
   }
   return `${lines.join('\n')}\n`
 }

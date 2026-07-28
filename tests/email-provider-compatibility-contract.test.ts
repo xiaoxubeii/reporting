@@ -22,6 +22,20 @@ describe('email provider compatibility', () => {
     expect(email).toMatch(/params\.from \?\? config\.from/)
   })
 
+  it.each([
+    'app/api/inbound-email/route.ts',
+    'app/api/inbound-email/mailgun/route.ts',
+  ])('fails closed before pipeline processing when legacy attachment storage fails: %s', file => {
+    const route = source(file)
+    expect(route).toContain('prepareLegacyInboundAttachments')
+    expect(route).toContain('persistLegacyInboundAttachments')
+    expect(route).not.toContain('Content: att.Content')
+    expect(route.indexOf('if (!preparedAttachments.ok)'))
+      .toBeLessThan(route.indexOf('await runPipeline'))
+    expect(route.indexOf('if (!storedAttachments.ok)'))
+      .toBeLessThan(route.indexOf('await runPipeline'))
+  })
+
   it('exposes an atomic key transition without copying incompatible legacy ciphertext', () => {
     const migration = source('supabase/migrations/20260726170000_harden_resend_provider_integration.sql')
     expect(migration).not.toMatch(/set resend_api_key_encrypted = credentials\.sending_api_key_encrypted/)

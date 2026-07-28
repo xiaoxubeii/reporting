@@ -5,7 +5,12 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { useTenantBranding } from '@/components/tenant-branding-provider'
 
-export function PlatformTelemetry() {
+export function PlatformTelemetry({ enabled }: { enabled: boolean }) {
+  if (!enabled) return null
+  return <EnabledPlatformTelemetry />
+}
+
+function EnabledPlatformTelemetry() {
   const pathname = usePathname()
   const tenant = useTenantBranding()
   if (tenant && pathname === '/') return null

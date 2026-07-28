@@ -14,6 +14,7 @@ describe('investment E2E fixture CLI', () => {
           ...process.env,
           NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:8000',
           SUPABASE_SERVICE_ROLE_KEY: 'fixture-test-service-role',
+          E2E_RUN_ID: '11111111-1111-4111-8111-111111111111',
         },
       }
     )

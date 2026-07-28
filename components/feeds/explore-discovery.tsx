@@ -32,6 +32,8 @@ export function ExploreDiscovery({ kind }: { kind: 'trending' | 'deal_signal' })
   const [page, setPage] = useState<DiscoveryPayload<DiscoveryItem> | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<DiscoveryItem | null>(null)
   const [dealPrefill, setDealPrefill] = useState<ManualDealPrefill | null>(null)
@@ -39,7 +41,7 @@ export function ExploreDiscovery({ kind }: { kind: 'trending' | 'deal_signal' })
   const requestSequence = useRef(0)
   const activeRequest = useRef<AbortController | null>(null)
 
-  const load = useCallback(async (offset = 0, append = false) => {
+  const load = useCallback(async (offset = 0, append = false, silent = false) => {
     const requestId = requestSequence.current + 1
     requestSequence.current = requestId
     activeRequest.current?.abort()
@@ -47,7 +49,7 @@ export function ExploreDiscovery({ kind }: { kind: 'trending' | 'deal_signal' })
     activeRequest.current = controller
     const previousPage = pageRef.current
     if (append) setLoadingMore(true)
-    else setLoading(true)
+    else if (!silent) setLoading(true)
     setError(null)
     try {
       let shouldAppend = append
@@ -74,11 +76,34 @@ export function ExploreDiscovery({ kind }: { kind: 'trending' | 'deal_signal' })
     } finally {
       if (requestSequence.current === requestId) {
         activeRequest.current = null
-        setLoading(false)
+        if (!silent) setLoading(false)
         setLoadingMore(false)
       }
     }
   }, [feedError, kind])
+
+  const requestRefresh = useCallback(async () => {
+    setRefreshing(true)
+    setRefreshError(null)
+    try {
+      await feedsRequest<{ jobId: string; status: string }>(
+        '/api/feeds/explore/discovery/refresh',
+        { method: 'POST', body: '{}' },
+      )
+      await load()
+    } catch (value) {
+      if (value instanceof Error && value.message.includes('Discovery AI is not configured')) {
+        // Re-read the server-owned status so the existing results and the
+        // retryable provider state stay in one canonical UI surface.
+        await load()
+        setRefreshError(feedError(feedErrorMessageKey(value)))
+      } else {
+        setRefreshError(feedError(feedErrorMessageKey(value)))
+      }
+    } finally {
+      setRefreshing(false)
+    }
+  }, [feedError, load])
 
   useEffect(() => {
     pageRef.current = null
@@ -92,6 +117,12 @@ export function ExploreDiscovery({ kind }: { kind: 'trending' | 'deal_signal' })
       activeRequest.current = null
     }
   }, [load])
+
+  useEffect(() => {
+    if (page?.refresh?.state !== 'queued' && page?.refresh?.state !== 'running') return
+    const interval = window.setInterval(() => { void load(0, false, true) }, 1_500)
+    return () => window.clearInterval(interval)
+  }, [load, page?.refresh?.state])
   const items = page?.items ?? []
   const hasMore = page ? items.length < page.total : false
 
@@ -112,12 +143,13 @@ export function ExploreDiscovery({ kind }: { kind: 'trending' | 'deal_signal' })
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <header className="flex items-end justify-between gap-4 pb-2">
         <div><h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1><p className="mt-1 text-sm text-muted-foreground">{t('description')}</p></div>
-        <Button variant="outline" size="icon" aria-label={t('refresh')} onClick={() => load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} /></Button>
+        <Button variant="outline" size="icon" aria-label={t('refresh')} onClick={() => { void requestRefresh() }} disabled={loading || refreshing}><RefreshCw className={loading || refreshing ? 'animate-spin' : ''} /></Button>
       </header>
       <TodayViewTabs active="explore" />
       <ExploreViewTabs active={kind} />
 
-      {page?.isStale && <div role="status" className="mt-5 rounded-md border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">{t('stale')}</div>}
+      {page && <DiscoveryRefreshBanner status={page.refresh} legacyStale={page.isStale} refreshing={refreshing} onRetry={() => { void requestRefresh() }} />}
+      {refreshError && <p role="alert" className="mt-3 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">{refreshError}</p>}
       <div className="mt-6">
         {loading && <FeedRowsSkeleton />}
         {!loading && error && <FeedsStatePanel tone="error" title={t('states.errorTitle')} description={error} actionLabel={t('retry')} onAction={() => load()} />}
@@ -137,6 +169,40 @@ export function ExploreDiscovery({ kind }: { kind: 'trending' | 'deal_signal' })
 
       <DiscoveryDetails item={selected} onOpenChange={open => { if (!open) setSelected(null) }} />
       <ManualDealDialog open={dealPrefill !== null} onOpenChange={open => { if (!open) setDealPrefill(null) }} prefill={dealPrefill} onCreated={dealId => { setDealPrefill(null); if (dealId) router.push(`/deals/${dealId}`) }} />
+    </div>
+  )
+}
+
+function DiscoveryRefreshBanner({ status, legacyStale, refreshing, onRetry }: {
+  status?: DiscoveryPayload<DiscoveryItem>['refresh']
+  legacyStale: boolean
+  refreshing: boolean
+  onRetry: () => void
+}) {
+  const t = useTranslations('Feeds.discovery')
+  const effectiveStatus = status ?? {
+    state: legacyStale ? 'stale' : 'ready',
+    reason: legacyStale ? 'results_stale' : null,
+    retryable: legacyStale,
+    lastAttemptAt: null,
+  }
+  if (effectiveStatus.state === 'ready' && !legacyStale) return null
+  if (effectiveStatus.state === 'ready' && legacyStale) {
+    return <div role="status" className="mt-5 rounded-md border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">{t('stale')}</div>
+  }
+  const key = effectiveStatus.state === 'queued'
+    ? 'refreshQueued'
+    : effectiveStatus.state === 'running'
+      ? 'refreshRunning'
+      : effectiveStatus.reason === 'provider_not_configured'
+        ? 'providerNotConfigured'
+        : effectiveStatus.reason === 'refresh_failed'
+          ? 'refreshFailed'
+          : 'resultsStale'
+  return (
+    <div role="status" className="mt-5 flex flex-col gap-3 rounded-md border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200 sm:flex-row sm:items-center sm:justify-between">
+      <div><p className="font-medium">{t(`states.${key}Title`)}</p><p className="mt-1 text-xs opacity-90">{t(`states.${key}Description`)}</p></div>
+      {effectiveStatus.retryable && <Button variant="outline" size="sm" onClick={onRetry} disabled={refreshing}>{refreshing && <Loader2 className="animate-spin" />}{t('retry')}</Button>}
     </div>
   )
 }

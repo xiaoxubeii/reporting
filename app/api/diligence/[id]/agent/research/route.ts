@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { kickWorker } from '@/lib/memo-agent/kick'
+import { kickBackgroundJobDispatcher } from '@/lib/background-jobs/kick'
 import { enforceCapsForStage } from '@/lib/memo-agent/cost'
+import { enqueueMemoResearchBackground } from '@/lib/memo-agent/research-background'
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -16,7 +17,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
 
   const { data: deal } = await admin
     .from('diligence_deals')
@@ -37,7 +38,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .limit(1)
     .maybeSingle()
 
-  if (!draft || !(draft as any).ingestion_output) {
+  if (!draft || !draft.ingestion_output) {
     return NextResponse.json({
       error: 'Run Stage 1 ingest first, research depends on the ingestion output.',
     }, { status: 409 })
@@ -54,8 +55,8 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .maybeSingle()
   if (existing) {
     return NextResponse.json({
-      error: `A ${(existing as any).kind} job is already ${(existing as any).status}.`,
-      job_id: (existing as any).id,
+      error: `A ${existing.kind} job is already ${existing.status}.`,
+      job_id: existing.id,
     }, { status: 409 })
   }
 
@@ -64,30 +65,29 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: enforced.reason, estimate: enforced.estimate, caps: enforced.caps }, { status: 422 })
   }
 
-  const { data: created, error } = await admin
-    .from('memo_agent_jobs')
-    .insert({
-      fund_id: fundId,
-      deal_id: params.id,
-      draft_id: (draft as any).id,
-      kind: 'research',
-      enqueued_by: user.id,
-    } as any)
-    .select('id, kind, status, enqueued_at')
-    .single()
-  if (error || !created) return NextResponse.json({ error: error?.message ?? 'enqueue failed' }, { status: 500 })
-  await kickWorker() // start the worker now instead of waiting for the cron
-
-  await admin
-    .from('diligence_deals')
-    .update({ current_memo_stage: 'research' })
-    .eq('id', params.id)
-    .eq('fund_id', fundId)
+  let created: Awaited<ReturnType<typeof enqueueMemoResearchBackground>>
+  try {
+    created = await enqueueMemoResearchBackground({
+      fundId,
+      dealId: params.id,
+      draftId: draft.id,
+      actorUserId: user.id,
+    }, admin)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'enqueue failed'
+    if (/already active/i.test(message)) {
+      return NextResponse.json({ error: message }, { status: 409 })
+    }
+    console.error('[memo-research] atomic enqueue failed')
+    return NextResponse.json({ error: 'Unable to enqueue research' }, { status: 500 })
+  }
+  await kickBackgroundJobDispatcher()
 
   return NextResponse.json({
-    job_id: (created as any).id,
+    job_id: created.id,
+    background_job_id: created.backgroundJobId,
     kind: 'research',
-    status: (created as any).status,
+    status: created.status,
     estimate: enforced.estimate,
     caps: enforced.caps,
   })

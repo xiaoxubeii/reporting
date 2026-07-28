@@ -44,6 +44,7 @@ describe('custom provider factory path', () => {
       {
         requestParameters: { thinking: { type: 'disabled' } },
         rejectRedirects: true,
+        publicEgressOnly: true,
       },
     )
     expect(result.model).toBe('gpt-compatible-model')

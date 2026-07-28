@@ -8,7 +8,10 @@ import {
 import { dedupeDealSignals, isPublishableDealSignal } from './deal-signal'
 import { calculateTrending, type TrendingObservation, type TrendingTagKind } from './trending'
 
-const MAX_SOURCE_REFERENCES = 100
+// Public discovery contracts expose at most 12 sources per item. Keep the
+// persisted generation inside that same boundary so every published row can
+// be read back without a second lossy normalization step.
+const MAX_SOURCE_REFERENCES = 12
 const MAX_SOURCE_REFERENCES_BYTES = 60_000
 const MAX_PUBLISH_ITEMS = 500
 const MAX_PUBLISH_BYTES = 900_000

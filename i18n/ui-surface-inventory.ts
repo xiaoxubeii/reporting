@@ -101,6 +101,7 @@ export const UI_PAGE_FILES = [
   'app/portal/contact/page.tsx',
   'app/portal/letters/[letterId]/page.tsx',
   'app/portal/overview/page.tsx',
+  'app/portal/page.tsx',
   'app/portal/settings/page.tsx',
   'app/portal/snapshots/[snapshotId]/page.tsx',
   'app/portal/snapshots/page.tsx',
@@ -118,6 +119,7 @@ export const NON_VISUAL_PAGE_FILES = [
   'app/(app)/accounting/[[...rest]]/page.tsx',
   'app/(app)/companies/page.tsx',
   'app/(app)/lps/live/page.tsx',
+  'app/portal/page.tsx',
 ] as const
 
 export const LOCALIZED_PAGE_FILES = [

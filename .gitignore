@@ -23,6 +23,13 @@ yarn-debug.log*
 yarn-error.log*
 /.playwright-mcp/
 /.devctl/
+/.harnesskit/evidence/comprehensive-site-e2e/html-report/
+/.harnesskit/evidence/comprehensive-site-e2e/test-results/
+/.harnesskit/evidence/comprehensive-site-e2e/results.json
+/.harnesskit/evidence/comprehensive-site-e2e/capabilities.json
+/.harnesskit/evidence/comprehensive-site-e2e/fixture-lifecycle.json
+/.harnesskit/evidence/comprehensive-site-e2e/run-manifest.json
+/.harnesskit/evidence/comprehensive-site-e2e/runs/
 
 # env files
 .env

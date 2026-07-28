@@ -12,7 +12,7 @@ import {
   readState,
   withRuntimeLock,
 } from '../scripts/devctl/runtime.mjs'
-import { filterDotenv, parseArguments } from '../scripts/devctl/cli.mjs'
+import { filterDotenv, formatStarted, parseArguments } from '../scripts/devctl/cli.mjs'
 import { SERVICE_NAMES } from '../scripts/devctl/manager.mjs'
 
 const temporaryDirectories = new Set<string>()
@@ -105,6 +105,19 @@ describe('devctl runtime safety', () => {
       NODE_OPTIONS: '--require=/tmp/evil.js',
       BASH_ENV: '/tmp/evil.sh',
     }, new Set(['CRON_SECRET']))).toEqual({ CRON_SECRET: 'allowed' })
+  })
+
+  it('prints the usable platform URL for hosted-localhost routing', () => {
+    const state = {
+      basePort: 5000,
+      ports: { web: 5000, cron: 5001 },
+      services: { web: { kind: 'process' }, cron: { kind: 'process' } },
+    }
+
+    expect(formatStarted(state, 'started', { FUND_WORKSPACE_ROOT_DOMAIN: 'localhost' }))
+      .toContain('web       http://localhost:5000')
+    expect(formatStarted(state, 'started', {}))
+      .toContain('web       http://127.0.0.1:5000')
   })
 })
 

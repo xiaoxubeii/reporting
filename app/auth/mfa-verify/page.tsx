@@ -122,7 +122,7 @@ function MfaVerifyForm() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">{t('mfaTitle')}</CardTitle>
+            <CardTitle className="text-lg" role="heading" aria-level={2}>{t('mfaTitle')}</CardTitle>
             <CardDescription>{t('mfaDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

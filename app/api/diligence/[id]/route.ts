@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbError } from '@/lib/api-error'
 import { draftHasGeneratedArtifacts } from '@/lib/diligence/draft-artifacts'
-import { normalizeAnalysisPreferences } from '@/lib/diligence/analysis-preferences'
+import { isFinalDecisionStatus } from '@/lib/diligence/final-decision'
 
 // 'invested' is the current label for a closed/won deal; 'won'/'lost'/'on_hold'
 // are retained for back-compat with rows written before the relabel.
@@ -64,10 +64,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = await ensureMember()
   if ('error' in guard) return guard.error
-  const { admin, fundId } = guard
+  const { admin, fundId, role } = guard
 
   const body = await req.json().catch(() => ({}))
   const updates: Record<string, unknown> = {}
+  let requestedDealStatus: typeof VALID_DEAL_STATUSES[number] | null = null
   if (typeof body.name === 'string' && body.name.trim()) updates.name = body.name.trim()
   if (typeof body.sector === 'string') updates.sector = body.sector.trim() || null
   if (typeof body.stage_at_consideration === 'string') updates.stage_at_consideration = body.stage_at_consideration.trim() || null
@@ -76,7 +77,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!VALID_DEAL_STATUSES.includes(body.deal_status)) {
       return NextResponse.json({ error: 'Invalid deal_status' }, { status: 400 })
     }
-    updates.deal_status = body.deal_status
+    if (isFinalDecisionStatus(body.deal_status)) {
+      if (role !== 'admin') {
+        return NextResponse.json({ error: 'Admin required', code: 'admin_required' }, { status: 403 })
+      }
+    }
+    requestedDealStatus = body.deal_status
   }
   if (typeof body.current_memo_stage === 'string') {
     if (!VALID_MEMO_STAGES.includes(body.current_memo_stage)) {
@@ -84,22 +90,52 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     updates.current_memo_stage = body.current_memo_stage
   }
-  if (body.analysis_preferences !== undefined) {
-    if (!body.analysis_preferences || typeof body.analysis_preferences !== 'object' || Array.isArray(body.analysis_preferences)) {
-      return NextResponse.json({ error: 'Invalid analysis_preferences' }, { status: 400 })
+  if (requestedDealStatus && Object.keys(updates).length > 0) {
+    return NextResponse.json({
+      error: 'Record a Deal status separately from other updates.',
+      code: 'deal_status_separate_update_required',
+    }, { status: 400 })
+  }
+  if (requestedDealStatus) {
+    const { error } = await admin.rpc('set_diligence_deal_status', {
+      p_actor_user_id: guard.userId,
+      p_deal_id: params.id,
+      p_fund_id: fundId,
+      p_status: requestedDealStatus,
+    })
+    if (error) {
+      if (error.message.includes('finalized_memo_required')) {
+        return NextResponse.json({
+          error: 'Finalize a memo before recording the final investment decision.',
+          code: 'finalized_memo_required',
+        }, { status: 409 })
+      }
+      if (error.message.includes('admin_required')) {
+        return NextResponse.json({ error: 'Admin required', code: 'admin_required' }, { status: 403 })
+      }
+      if (error.message.includes('fund_membership_required')) {
+        return NextResponse.json({ error: 'No fund found' }, { status: 403 })
+      }
+      if (error.message.includes('diligence_deal_not_found')) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      }
+      return dbError(error, 'diligence-deal-status')
     }
-    updates.analysis_preferences = normalizeAnalysisPreferences(body.analysis_preferences)
+    return NextResponse.json({ ok: true })
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
   }
 
-  const { error } = await admin
+  const { data: updatedDeal, error } = await admin
     .from('diligence_deals')
     .update(updates)
     .eq('id', params.id)
     .eq('fund_id', fundId)
+    .select('id')
+    .maybeSingle()
   if (error) return dbError(error, 'diligence-deal-update')
+  if (!updatedDeal) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ ok: true })
 }
 
@@ -134,7 +170,8 @@ async function ensureMember() {
     .maybeSingle()
   if (!membership) return { error: NextResponse.json({ error: 'No fund found' }, { status: 403 }) }
 
-  return { admin, fundId: (membership as any).fund_id as string, userId: user.id, role: (membership as any).role as string }
+  const membershipRow = membership as { fund_id: string; role: string }
+  return { admin, fundId: membershipRow.fund_id, userId: user.id, role: membershipRow.role }
 }
 
 async function ensureAdmin() {

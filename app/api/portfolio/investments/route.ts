@@ -5,6 +5,35 @@ import { dbError } from '@/lib/api-error'
 import type { InvestmentTransaction, CompanyStatus } from '@/lib/types/database'
 import { xirr, type CashFlow } from '@/lib/xirr'
 
+interface LegacyQueryError {
+  readonly message: string
+}
+
+interface LegacyInvestmentQuery extends PromiseLike<{
+  readonly data: InvestmentTransaction[] | null
+  readonly error: LegacyQueryError | null
+}> {
+  eq(column: string, value: string): LegacyInvestmentQuery
+  lte(column: string, value: string): LegacyInvestmentQuery
+  order(column: string, options: { readonly ascending: boolean }): LegacyInvestmentQuery
+}
+
+interface LegacyVehicleQuery extends PromiseLike<{
+  readonly data: readonly { readonly name: string; readonly vintage_year: number | null }[] | null
+  readonly error: LegacyQueryError | null
+}> {
+  eq(column: string, value: string): LegacyVehicleQuery
+}
+
+interface LegacyPortfolioClient {
+  from(table: 'investment_transactions'): {
+    select(columns: '*'): LegacyInvestmentQuery
+  }
+  from(table: 'fund_vehicles'): {
+    select(columns: 'name, vintage_year'): LegacyVehicleQuery
+  }
+}
+
 // ---------------------------------------------------------------------------
 // GET — portfolio-wide investment summary
 // ---------------------------------------------------------------------------
@@ -15,6 +44,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
+  const legacyAdmin = admin as unknown as LegacyPortfolioClient
 
   const { data: membership } = await admin
     .from('fund_members')
@@ -29,8 +59,8 @@ export async function GET(req: NextRequest) {
   // Fetch transactions for this fund, optionally filtered by as-of date
   const asOf = req.nextUrl.searchParams.get('asOf')
 
-  let txnQuery = admin
-    .from('investment_transactions' as any)
+  let txnQuery = legacyAdmin
+    .from('investment_transactions')
     .select('*')
     .eq('fund_id', fundId)
 
@@ -39,7 +69,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { data: transactions, error: txnError } = await txnQuery
-    .order('transaction_date', { ascending: true }) as { data: InvestmentTransaction[] | null; error: { message: string } | null }
+    .order('transaction_date', { ascending: true })
 
   if (txnError) return dbError(txnError, 'portfolio-investments')
 
@@ -50,6 +80,16 @@ export async function GET(req: NextRequest) {
     .eq('fund_id', fundId) as { data: { id: string; name: string; status: CompanyStatus; portfolio_group: string[] | null }[] | null; error: { message: string } | null }
 
   if (compError) return dbError(compError, 'portfolio-investments-companies')
+
+  // Vintage years are presentation metadata for the investment groups. Keep
+  // them on this already Fund-scoped response so an investments reader does
+  // not need access to the accounting-only vehicle registry endpoint.
+  const { data: vehicleVintages, error: vehicleError } = await legacyAdmin
+    .from('fund_vehicles')
+    .select('name, vintage_year')
+    .eq('fund_id', fundId)
+
+  if (vehicleError) return dbError(vehicleError, 'portfolio-investments-vintages')
 
   const companyMap = new Map((companies ?? []).map(c => [c.id, c]))
 
@@ -152,7 +192,6 @@ export async function GET(req: NextRequest) {
     // Third pass: compute summary per (company, group) pair
     for (const [group, gTxns] of Array.from(groupTxns.entries())) {
       let totalInvested = 0
-      let totalShares = 0
       let totalRealized = 0
       let proceedsReceived = 0
       let proceedsEscrow = 0
@@ -164,8 +203,6 @@ export async function GET(req: NextRequest) {
       for (const txn of gTxns) {
         if (txn.transaction_type === 'investment') {
           totalInvested += txn.investment_cost ?? 0
-          totalShares += txn.shares_acquired ?? 0
-
           if (txn.transaction_date && txn.investment_cost) {
             const cf: CashFlow = { date: new Date(txn.transaction_date), amount: -(txn.investment_cost) }
             groupCashFlows.push(cf)
@@ -338,5 +375,6 @@ export async function GET(req: NextRequest) {
     portfolioIRR,
     companies: companySummaries,
     groups,
+    vintages: vehicleVintages ?? [],
   })
 }

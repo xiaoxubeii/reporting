@@ -6,6 +6,12 @@ import type {
   PublishItem,
 } from './materialize'
 import { validateDiscoveryFundId } from './config'
+import {
+  deriveDiscoveryRefreshStatus,
+  type DiscoveryBackgroundJobSnapshot,
+} from './refresh-status'
+import type { DiscoveryRefreshStatus } from './contracts'
+import { resolveDiscoveryAIProvider } from './provider'
 
 type Admin = ReturnType<typeof createAdminClient>
 const MATERIALIZATION_PAGE_SIZE = 1_000
@@ -245,6 +251,29 @@ export class DiscoveryRuntimeStore {
     })
   }
 
+  async readStatus(state: DiscoveryReadState, isStale: boolean): Promise<DiscoveryRefreshStatus> {
+    const [jobResult, providerConfigured] = await Promise.all([
+      this.admin.from('background_jobs')
+        .select('status, updated_at')
+        .eq('fund_id', this.fundId)
+        .eq('kind', 'feed_discovery')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      resolveDiscoveryAIProvider(this.admin as never, this.fundId)
+        .then(() => true)
+        .catch(() => false),
+    ])
+    if (jobResult.error) throw jobResult.error
+    const latestJob = validBackgroundJobSnapshot(jobResult.data)
+    return deriveDiscoveryRefreshStatus({
+      discovery: state,
+      providerConfigured,
+      latestJob,
+      isStale,
+    })
+  }
+
   async readItems(input: {
     generationId: string
     kind: 'trending' | 'deal_signal'
@@ -275,6 +304,20 @@ export class DiscoveryRuntimeStore {
       total: count ?? 0,
     })
   }
+}
+
+function validBackgroundJobSnapshot(value: unknown): DiscoveryBackgroundJobSnapshot | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const row = value as Record<string, unknown>
+  if (
+    !['pending', 'running', 'completed', 'failed', 'cancelled'].includes(String(row.status))
+    || typeof row.updated_at !== 'string'
+    || Number.isNaN(Date.parse(row.updated_at))
+  ) return null
+  return Object.freeze({
+    status: row.status as DiscoveryBackgroundJobSnapshot['status'],
+    updatedAt: new Date(row.updated_at).toISOString(),
+  })
 }
 
 export async function collectMaterializationRows<T>(

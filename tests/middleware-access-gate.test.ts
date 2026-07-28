@@ -204,12 +204,13 @@ describe('middleware API gate — what it must not break', () => {
     expect((await middleware(req('/api/agent', 'POST'))).status).not.toBe(403)
   })
 
-  it('keeps the locale preference available while MFA verification is pending', async () => {
+  it('keeps public UI preferences available while MFA verification is pending', async () => {
     getAuthenticatorAssuranceLevel.mockResolvedValue({
       data: { currentLevel: 'aal1', nextLevel: 'aal2' },
     })
 
     expect((await middleware(req('/api/locale', 'POST'))).status).not.toBe(403)
+    expect((await middleware(req('/api/time-zone', 'POST'))).status).not.toBe(403)
   })
 
   it('leaves the LP portal to its own identity model', async () => {

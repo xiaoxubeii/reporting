@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { BackgroundJobPayload } from './types'
 
 export interface BackgroundJobResourceAuthority {
+  readonly jobId: string
   readonly kind: string
   readonly payload: BackgroundJobPayload
   readonly fundId: string
@@ -24,11 +25,62 @@ export function createSupabaseBackgroundJobResourceValidator(
       await validateDealResearchAuthority(admin, input)
       return
     }
+    if (input.kind === 'memo_research') {
+      await validateMemoResearchAuthority(admin, input)
+      return
+    }
     if (input.kind === 'feed_discovery') {
       await validateFeedDiscoveryAuthority(admin, input)
       return
     }
     throw new Error('Unsupported background job authority adapter')
+  }
+}
+
+async function validateMemoResearchAuthority(
+  admin: SupabaseClient,
+  input: BackgroundJobResourceAuthority,
+): Promise<void> {
+  const { memoJobId, dealId, draftId } = input.payload
+  if (typeof memoJobId !== 'string' || typeof dealId !== 'string' || typeof draftId !== 'string') {
+    throw new Error('Invalid Memo Research resource')
+  }
+  const [memoResult, draftResult] = await Promise.all([
+    admin
+      .from('memo_agent_jobs')
+      .select('id, background_job_id, fund_id, deal_id, draft_id, kind, status')
+      .eq('id', memoJobId)
+      .eq('fund_id', input.fundId)
+      .maybeSingle(),
+    admin
+      .from('diligence_memo_drafts')
+      .select('id, fund_id, deal_id, is_draft, ingestion_output')
+      .eq('id', draftId)
+      .eq('fund_id', input.fundId)
+      .eq('deal_id', dealId)
+      .maybeSingle(),
+  ])
+  if (memoResult.error) throw memoResult.error
+  if (draftResult.error) throw draftResult.error
+  const memo = memoResult.data as unknown as Record<string, unknown> | null
+  const draft = draftResult.data as unknown as Record<string, unknown> | null
+  if (
+    !memo
+    || memo.id !== memoJobId
+    || memo.background_job_id !== input.jobId
+    || memo.fund_id !== input.fundId
+    || memo.deal_id !== dealId
+    || memo.draft_id !== draftId
+    || memo.kind !== 'research'
+    || (memo.status !== 'pending' && memo.status !== 'running')
+    || !draft
+    || draft.id !== draftId
+    || draft.fund_id !== input.fundId
+    || draft.deal_id !== dealId
+    || draft.is_draft !== true
+    || draft.ingestion_output == null
+  ) {
+    throw new Error('Background job resource mismatch')
   }
 }
 

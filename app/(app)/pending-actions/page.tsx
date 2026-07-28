@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -29,6 +29,7 @@ function formatVal(v: unknown, locale: string): string {
 
 export default function PendingActionsPage() {
   const t = useTranslations('PendingActions')
+  const format = useFormatter()
   const locale = useLocale()
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<PendingActionRow[]>([])
@@ -113,7 +114,7 @@ export default function PendingActionsPage() {
                       </span>
                       <span className="text-sm font-medium">{row.preview.summary}</span>
                       <span className="ml-auto text-xs text-muted-foreground">
-                        {row.created_via ?? t('analyst')} · {new Intl.DateTimeFormat(locale).format(new Date(row.created_at))}
+                        {row.created_via ?? t('analyst')} · {format.dateTime(new Date(row.created_at))}
                       </span>
                     </div>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Building2, Lock, Send, Pencil, X, Check, Reply, Pin, PinOff } from 'lucide-react'
 import Link from 'next/link'
 import { NoteContent } from '@/components/note-content'
@@ -54,10 +54,11 @@ const KNOWN_CONTEXTS = ['lps', 'investments', 'interactions', 'compliance', 'dea
 
 export default function NotesPage() {
   const t = useTranslations('Notes')
-  const locale = useLocale()
+  const format = useFormatter()
   const fv = useFeatureVisibility()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [filter, setFilter] = useState<FilterMode>('all')
 
   // Compose / edit state
@@ -117,17 +118,30 @@ export default function NotesPage() {
   }, [])
 
   useEffect(() => {
+    const controller = new AbortController()
+    let active = true
     setLoading(true)
+    setLoadError(false)
     const params = filter !== 'all' ? `?filter=${filter}` : ''
-    fetch(`/api/notes${params}`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
+    void (async () => {
+      try {
+        const response = await fetch(`/api/notes${params}`, { signal: controller.signal })
+        if (!response.ok) throw new Error(`Notes request failed with HTTP ${response.status}`)
+        const data = await response.json()
+        if (active && Array.isArray(data)) {
           setNotes(data)
           markAsRead(data)
         }
-      })
-      .finally(() => setLoading(false))
+      } catch {
+        if (active && !controller.signal.aborted) setLoadError(true)
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+      controller.abort()
+    }
   }, [filter, markAsRead])
 
   // Focus reply textarea when opening
@@ -257,7 +271,11 @@ export default function NotesPage() {
       <div className="flex-1 min-w-0 w-full">
       {loading && <p className="text-sm text-muted-foreground">{t('loading')}</p>}
 
-      {!loading && notes.length === 0 && (
+      {!loading && loadError && (
+        <p role="alert" className="text-sm text-destructive">{t('loadError')}</p>
+      )}
+
+      {!loading && !loadError && notes.length === 0 && (
         <p className="text-sm text-muted-foreground">{t('empty')}</p>
       )}
 
@@ -266,7 +284,7 @@ export default function NotesPage() {
           (() => {
             const relative = relativeTime(note.createdAt)
             const relativeLabel = relative.unit === 'date'
-              ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(relative.date)
+              ? format.dateTime(relative.date, { month: 'short', day: 'numeric' })
               : t(`relative.${relative.unit}`, { count: relative.count })
             return (
           <div

@@ -170,7 +170,7 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
 
   return (
     <div className="p-4 md:py-8 md:pl-8 md:pr-4">
-      <div className="mb-6 flex items-start justify-between gap-3">
+      <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
             {fv.deals === 'admin' && <Lock className="h-4 w-4 text-amber-500" />}
@@ -178,7 +178,7 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
           </h1>
           <p className="text-sm text-muted-foreground">{t('description')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <div className="flex border rounded-md overflow-hidden bg-card">
             <button
               onClick={() => setView('table')}
@@ -206,13 +206,13 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
       }} />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t('searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-8 h-9 w-72"
+            className="pl-8 h-9 w-full sm:w-72"
           />
         </div>
         <StatusFilter value={statusFilter} onChange={setStatusFilter} />
@@ -260,8 +260,8 @@ export function DealsContent({ initialDeals }: { initialDeals: Deal[] }) {
       {view === 'board' ? (
         <DealsBoard deals={filtered} onMove={updateStatus} />
       ) : (
-      <div className="rounded-md border bg-card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="max-w-full overflow-x-auto rounded-md border bg-card">
+        <table className="w-full min-w-[44rem] text-sm">
           <thead className="bg-muted/50">
             <tr className="text-left text-xs uppercase text-muted-foreground">
               <SortableTh label={t('table.date')} sortKey="date" sort={sort} onToggle={toggleSort} />

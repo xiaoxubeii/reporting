@@ -67,12 +67,16 @@ export async function submitPublicResponse(params: {
 
   let existingQuery = params.admin
     .from('diligence_expert_requests')
-    .select('id, status, submitted_at, expires_at')
+    .select('id, status, submitted_at, expires_at, response_markdown')
     .eq('token_hash', tokenHash)
   if (params.expectedFundId) existingQuery = existingQuery.eq('fund_id', params.expectedFundId)
   const { data: existing } = await existingQuery.maybeSingle()
   const row = existing
-  if (row?.status === 'submitted' && row.submitted_at && row.expires_at && Date.parse(row.expires_at) > Date.now()) {
+  if (row?.status === 'submitted'
+    && row.submitted_at
+    && row.expires_at
+    && Date.parse(row.expires_at) > Date.now()
+    && row.response_markdown === params.responseMarkdown) {
     return { requestId: row.id, submittedAt: row.submitted_at, alreadySubmitted: true }
   }
   throw new Error(PUBLIC_INVITATION_ERROR)

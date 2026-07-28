@@ -8,6 +8,7 @@ import { SearchPage } from '@/components/search/search-page'
 import type { SearchCategoryOption } from '@/lib/search/categories'
 
 vi.mock('next-intl', () => ({
+  useFormatter: () => ({ dateTime: (value: Date) => value.toISOString() }),
   useTranslations: () => (key: string) => key,
 }))
 

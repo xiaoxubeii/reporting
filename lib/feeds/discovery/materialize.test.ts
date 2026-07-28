@@ -6,6 +6,7 @@ import {
   type MaterializationEnrichment,
   type PublishItem,
 } from './materialize'
+import { parseDiscoveryItem } from './contracts'
 
 const NOW = new Date('2026-07-25T12:00:00.000Z')
 
@@ -17,7 +18,7 @@ describe('materializeDiscovery', () => {
     const trending = items.find(item => item.kind === 'trending')
 
     expect(trending).toBeDefined()
-    expect(trending!.source_entry_refs.length).toBeLessThanOrEqual(100)
+    expect(trending!.source_entry_refs.length).toBeLessThanOrEqual(12)
     const compactBytes = new TextEncoder().encode(JSON.stringify(trending!.source_entry_refs)).byteLength
     const postgresSeparatorBytes = trending!.source_entry_refs.reduce((total, source) => {
       const keyCount = Object.keys(source).length
@@ -26,6 +27,16 @@ describe('materializeDiscovery', () => {
     expect(compactBytes).toBeLessThanOrEqual(60_000)
     expect(compactBytes + postgresSeparatorBytes).toBeLessThanOrEqual(65_536)
     expect(trending!.source_entry_refs[0]).toMatchObject({ entryId: 140 })
+    expect(() => parseDiscoveryItem({
+      kind: 'trending',
+      id: '00000000-0000-4000-8000-000000000001',
+      label: trending!.title,
+      summary: trending!.summary,
+      score: trending!.score,
+      metrics: trending!.metadata_json.metrics,
+      sources: trending!.source_entry_refs,
+      generatedAt: NOW.toISOString(),
+    })).not.toThrow()
   })
 
   it('deterministically bounds the complete generation below RPC item and byte limits', () => {

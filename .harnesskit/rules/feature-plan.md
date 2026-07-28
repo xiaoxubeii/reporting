@@ -15,12 +15,13 @@ dependency and ownership checks.
 
 | Feature ID | Goal | Lane | OpenSpec | Acceptance | Parallel Class | Dependencies | Owner | Worktree | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| comprehensive-site-e2e | Prove and repair the major FundWorkspace user journeys through one isolated, repeatable real-browser suite | feature-planning | `openspec/changes/add-comprehensive-site-e2e` | Disposable users and two Funds complete tenant onboarding/isolation, every enabled Search adapter, Feeds subscription/category/Explore/Trending/Deal Signals, Pitch-to-Memo investment decisions, mail/notifications, and the remaining primary route sweep with structured evidence; every reproducible product defect is fixed and rerun | serial-required | current main product, local Supabase, Web/Cron, Miniflux, SearXNG, configured AI/mail capabilities, Chromium | main-agent | `/home/ubuntu/workspace/reporting.worktrees/comprehensive-site-e2e` | planned |
+| comprehensive-site-e2e | Prove and repair the major FundWorkspace user journeys through one isolated, repeatable real-browser suite | feature-planning | `openspec/changes/add-comprehensive-site-e2e` | Disposable users and two Funds complete tenant onboarding/isolation, every enabled Search adapter, Feeds subscription/category/Explore/Trending/Deal Signals, Pitch-to-Memo investment decisions, mail/notifications, and the remaining primary route sweep with structured evidence; every reproducible product defect is fixed and rerun | serial-required | current main product, local Supabase, Web/Cron, Miniflux, SearXNG, configured AI/mail capabilities, Chromium | main-agent | `/home/ubuntu/workspace/reporting.worktrees/comprehensive-site-e2e` | in_progress |
 | global-assistant-context | Replace page-local Analyst mounts with one authenticated global assistant and let supported front-end content become bounded conversation context | feature-planning | `openspec/changes/add-global-assistant-context` | One responsive assistant works across authenticated routes; desktop uses a 400px right dock that reflows content, narrower screens use full-height drawers, and supported snapshots use a full-height right-edge drag target plus accessible send action without changing trusted scope | main-agent-only | current Analyst shell/panel/API/conversations, Search, Feeds, Expert Directory, Dashboard Companies, Deals | main-agent | `/home/ubuntu/workspace/reporting.worktrees/global-assistant-context` | ready_to_merge |
 | fund-identity-onboarding | Separate platform login identity from immutable per-Fund business identity, reserve the Fund subdomain at creation, add invitation-only membership and internal mailboxes, and split personal from Fund settings | feature-planning | `openspec/changes/add-fund-identity-onboarding` | External verified email remains the only login/recovery identity; Fund creation atomically reserves an immutable unique slug and owner membership; global personal profile, Fund-scoped immutable mailbox, invitation acceptance, role authorization, resumable setup, and existing Resend routing work across English/Chinese desktop/mobile flows without email-domain auto-join | serial-required | completed Fund subdomain isolation and multi-tenant Resend mail, current Supabase Auth/onboarding/membership/settings contracts, local Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/add-fund-identity-onboarding` | in_progress |
 | institutional-platform-landing | Redesign the platform root as an institutional FundWorkspace investment-decision landing with real product evidence, optional expert validation, a configured demo CTA, and a non-enumerating workspace entry | feature-planning | `openspec/changes/redesign-platform-landing` | Platform `/` communicates Signal → Research → optional Expert Validation → IC → Portfolio/LP in English and Chinese with real screenshots and accessible responsive behavior; configured demo links are HTTPS-only; workspace entry performs syntax-only canonical tenant `/auth` navigation; tenant `/`, auth/app/portal, other public pages, and private-data boundaries remain unchanged; focused, build, review, and real browser verification pass | main-agent-only | current platform/tenant root split, public layout/auth redirect, next-intl, canonical Fund host helpers, verified expert-validation evidence | main-agent | current checkout | in_progress |
 | multi-tenant-resend-mail | Add isolated FundWorkspace platform mail and per-Fund BYOK Resend business mail with secure outbound threads, tokenized replies, inbound routing, Pitch intake, and expert invitations | feature-planning | `openspec/changes/add-multi-tenant-resend-mail` | Platform and Fund credentials never cross; each Fund has an exact derived subdomain and Fund-scoped mailboxes; signed/idempotent Resend inbound routes deterministic replies; Pitch enters Deal screening; expert replies remain thread mail; Settings, focused tests, security review, and real local flows pass | serial-required | current email adapters, Fund envelope encryption, Supabase Auth SMTP operations, Deal intake, expert validation, local Supabase | main-agent | current checkout | in_progress |
 | background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
+| memo-research-reporting-search | Replace Anthropic-native Memo Research web search with the provider-neutral Reporting Search tool and source-ID grounding | feature-planning | `openspec/changes/replace-memo-research-web-search` | The diligence Research button enqueues a real generalized attempt; tool-capable providers autonomously call fund-scoped Reporting Search under the initiating user's live authorization; three parallel sub-calls share one budget; private data-room text is not exposed as arbitrary queries; only collected source IDs ground persisted findings; unsupported providers fail visibly to no-search mode | main-agent-only | completed background-job-http-context and search-product, current Memo Agent jobs/providers, local Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/replace-memo-research-web-search` | passing |
 | investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
 | expert-validation | Close the Research gap/contradiction → expert answer → industry_expert → existing evidence pipeline loop | feature-planning | `openspec/changes/add-expert-validation` | Real internal and public browser flow works; one immutable submitted answer is materialized and enqueued with the documented security boundaries | single-feature | existing Diligence, email, AI, storage, job pipeline | main-agent | current checkout | in_progress |
 | diligence-research-team | Move founder dossiers into the Research evidence workspace and protect partner edits across Research reruns | feature-planning | `openspec/changes/merge-founder-dossiers-into-research` | The top-level Founders tab is removed; a compact localized Founders & Core Team section supports contextual add/edit/remove through the existing Research contract; reruns preserve stored dossiers; focused and real browser verification pass | main-agent-only | current Diligence Research UI/output contract, existing draft PATCH endpoint, current dirty main worktree | main-agent | current checkout | in_progress |
@@ -440,6 +441,64 @@ contract for self-check, review, testing, and merge.
 - verification: HarnessKit fast, strict OpenSpec, `git diff --check`, generated-state parsing, focused tests, TypeScript, live HTTP replay rejection, and database object inspection pass. HarnessKit targeted remains blocked by existing repository-wide ESLint debt; file-level lint of the touched Anthropic provider reports six pre-existing `any` usages outside this change's diff.
 - reviews: final correctness and security re-reviews found no remaining MEDIUM/HIGH/CRITICAL after generic lifecycle/domain projection separation, registry invariant hardening, POST-only bypass, required-kind binding, and Cron/Job secret separation.
 - risks: the accepted at-least-once provider billing window remains; the configured OpenRouter model may emit citations that fail server provenance validation, which produces a safe terminal Research failure rather than ungrounded output.
+
+### Feature: memo-research-reporting-search
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a security-sensitive, provider-facing, asynchronous contract change spanning Memo Agent lifecycle, generalized background identity, Search authorization, citations, limits, and browser-visible diagnostics.
+- Change: `openspec/changes/replace-memo-research-web-search`
+- Classification: `main-agent-only`; background identity, Search tool execution, persistence, and compatibility behavior must land as one serial contract.
+
+#### Acceptance
+
+- The diligence “Run research” action preserves its existing user flow while enqueueing a real `memo_research` generalized background attempt tied to the initiating user, fund, deal, draft, and compatibility Memo job.
+- With external Search enabled, Anthropic and tool-capable OpenAI-compatible/custom providers autonomously call the code-owned `reporting_search`; provider-native web search is disabled by default.
+- Providers without a custom tool loop run explicit no-search mode with a visible warning and cannot represent model-memory conclusions as externally verified.
+- Claims, competitors, and founders sub-calls share one database-enforced Search budget and collision-free tool-call namespaces.
+- Tool inputs use a bounded topic vocabulary and server-built queries from public identifiers; private files, emails, claims, projections, and arbitrary model-authored query strings do not leave the diligence boundary.
+- Persisted citations use only source IDs returned by the active Search attempt; unsupported IDs/URLs/titles cannot ground a finding.
+- Existing progress, research output, diagnostics, downstream memo stages, and transitional `web_sources` / `web_search_count` consumers remain functional.
+
+#### Allowed Change Scope
+
+- `openspec/changes/replace-memo-research-web-search/**`, this feature contract, focused progress/evidence.
+- Generalized background-job registry/payload/worker/route contracts and focused migration/type updates.
+- Memo Research launch, worker, stage-provider, prompts, output parsing/persistence, settings copy, and diagnostics.
+- Search-owned agent tool abstraction plus unchanged Deal Research adapter behavior.
+- Focused unit/integration/security tests and authenticated diligence Research browser evidence.
+
+#### Shared Contract Changes
+
+- Adds one registered `memo_research` background-job kind with fixed worker path/audience/scope, required Diligence/Search access, bounded Search capability, and validated payload.
+- Keeps `memo_agent_jobs` as the compatibility progress record during migration while the generalized attempt is authoritative for Search identity and tool-call accounting.
+- Replaces Anthropic `enableWebSearch` capability resolution with provider-neutral `supportsToolLoop` and a server-only legacy rollback flag.
+- Adds provider-neutral Search source/count fields while mirroring legacy web source/count fields during compatibility.
+
+#### Verification Plan
+
+- TDD: registry/payload/token/context, launch/compatibility lifecycle, Search adapter topic validation, shared call limit, tool-loop provider parity, citation validation, and fallback behavior.
+- Targeted: focused Vitest suites, migration/type validation, TypeScript, changed-file lint, strict OpenSpec, HarnessKit fast/targeted, secret and diff checks.
+- Full: production build/full relevant suite, code/security review, and authenticated browser flow from ingestion through “Run research” to terminal Search diagnostics and grounded source display.
+
+#### Review Required
+
+- planner/architect: yes, completed before implementation and reflected in the OpenSpec design.
+- reviewer: yes, queue compatibility, retries, concurrency, provider loops, output compatibility, and no duplicated Search path.
+- security-reviewer: yes, user/fund restoration, live entitlement, confused-deputy/replay/SSRF boundaries, prompt injection, private query leakage, and source-ID grounding.
+- browser/QA: yes, the existing Research action and diagnostics are browser-visible and cross frontend/backend/background boundaries.
+
+#### Progress / Evidence
+
+- status: complete
+- branch/worktree: `codex/replace-memo-research-web-search` in `/home/ubuntu/workspace/reporting.worktrees/replace-memo-research-web-search`; unrelated dirty `main` changes are preserved.
+- implementation: generalized Memo Research job execution, provider-neutral Reporting Search tool loops, bounded public-identity queries, source-ID grounding, compatibility fields, diagnostics, migration, and localized UI are implemented.
+- focused verification: the final security-focused slice passes 21 files / 123 tests; the changed implementation passes focused lint review, strict OpenSpec, migration contracts, `git diff --check`, and secret scanning. TypeScript reports only the pre-existing `tests/platform-landing-logo-assets.test.ts` iterator target error.
+- full verification: excluding the two known stale platform-landing test files, Vitest passes 313 files / 2162 tests with 4 files / 8 environment-gated tests skipped. `next build --no-lint` completes compilation, type validation, all 277 static pages, and route generation with the real local environment. The default build remains blocked by repository-wide existing ESLint debt.
+- independent review: final correctness, TypeScript/React, and security reviews report zero remaining critical/high/medium findings after strict Search-envelope parsing, legacy-worker exclusion, provider-side blocked domains, internal-origin-only kicks, provider-neutral UI grounding, and hosted-localhost output corrections.
+- browser: a disposable authenticated Fund and ingested draft completed the real Research action through the generalized worker and configured external model. Three `reporting_search` calls returned nine accepted sources; the final page displayed Reporting Search diagnostics and `0/6` grounded findings because the model returned no accepted source IDs, proving fail-closed grounding. No LinkedIn source entered the registry, and the fixture, user, jobs, and credential link were removed.
+- baseline blockers: HarnessKit fast/full stop on the pre-existing invalid `feed-discovery: complete` clean-state value; the default all-repository test/lint/type gates also retain unrelated platform-landing and lint debt. Feature-scoped tests, production build, reviews, and the real browser path pass.
 
 ### Feature: investment-decision-e2e
 
@@ -1368,3 +1427,56 @@ unmerged worktrees intact if a merge or verification fails.
 - planning: OpenSpec proposal, design, spec, and task plan created; strict validation passed before implementation
 - verification: 1,447 tests, TypeScript, executable database contract, strict OpenSpec validation, and authenticated English/Chinese browser flows passed; production compilation succeeds before the repository-wide pre-existing lint gate
 - workspace: unrelated pre-existing untracked screenshots, evidence, deliverables, and demo scripts are excluded from the feature scope
+
+### Feature: user-timezone-preferences
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible change across SSR/client rendering, authenticated preferences, cookies, and database persistence.
+- Change: `openspec/changes/add-user-timezone-preferences`
+- Classification: `single-feature`, serial-required because the timezone resolver and persistence contract must land before provider and UI consumers
+
+#### Acceptance
+
+- Existing timestamps remain UTC instants in storage.
+- The server and browser receive the same explicit IANA timezone for every hydrated render, eliminating timezone-driven date mismatches.
+- A browser can detect its IANA timezone automatically without IP/GPS access and persist it as a device-local choice.
+- A signed-in user can select Automatic or a manual IANA timezone; manual preference wins over automatic detection and survives across devices.
+- Missing, invalid, or stale timezone values fall back safely to UTC.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-user-timezone-preferences/**`, this feature-plan entry, and focused HarnessKit progress/evidence.
+- `i18n/**`, root provider/layout, timezone API/bootstrap, personal settings API/UI, locale catalogs, user profile/domain types, additive migration, and focused tests.
+- Unrelated main-worktree navigation, landing-page, localization, diligence-preference, and image changes remain untouched.
+
+#### Shared Contract Changes
+
+- Adds nullable `user_profiles.time_zone`; `NULL` means automatic mode and a valid IANA value means manual override.
+- Adds a bounded same-origin timezone-cookie endpoint and an explicit root i18n `timeZone` render input.
+- Extends personal settings read/write payloads with timezone mode and manual value.
+
+#### Verification Plan
+
+- Unit tests for IANA validation, resolution precedence, invalid fallback, and automatic/manual bootstrap behavior.
+- Route and migration tests for body/origin/host validation, cookie flags, authentication, and profile semantics.
+- TypeScript, focused lint/tests, strict OpenSpec, HarnessKit fast/targeted, dependency audit review, and `git diff --check`.
+- Real browser verification with a near-midnight UTC timestamp, `Asia/Shanghai` automatic mode, manual UTC override, reload persistence, and no hydration console error.
+
+#### Review Required
+
+- Correctness review for first-request behavior, single refresh, precedence, and render determinism.
+- Security/database review for cookie boundaries, input validation, authorization, RLS preservation, and additive migration safety.
+- Browser/UX review for automatic/manual controls, keyboard access, localization, and responsive settings layout.
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `codex/user-timezone-preferences` at `/home/ubuntu/workspace/reporting-timezone`
+- planning: OpenSpec proposal, design, specification, and task plan are strict-valid
+- implementation: resolver, secure host-only cookie synchronization, additive profile persistence, root request/client provider, manual Personal Settings override, and the complete hydrated client timestamp audit are implemented
+- timestamp audit: 218 `use client` modules are scanned for the enumerated native date-presentation patterns; two browser-IANA detection calls and numeric `toLocaleString` sites are explicitly classified. Two important server timestamp pages use request-scoped `getFormatter`, three current month/year decisions use an explicit-IANA calendar helper, and the Compliance API uses one UTC year snapshot plus UTC month classification for date-only cash flows. Calendar-only/business-period values retain explicit UTC semantics.
+- focused verification: final review suite passes 9 files/112 tests; stale Compliance/Letters/Search contracts pass 12/12 after alignment with the request-scoped formatter architecture; the environment-gated disposable local-Supabase profile integration passes 1 test. Full Vitest passes 316 files/2,249 tests and leaves only four documented platform-landing baseline failures. Changed-file ESLint, strict OpenSpec, and diff-check pass; TypeScript reports only the known platform-landing TS2802 baseline.
+- browser: Automatic Asia/Shanghai, manual UTC, reload persistence, reset, and sibling-tenant cookie isolation were observed; compact assertions and screenshots are under `.harnesskit/evidence/add-user-timezone-preferences/`
+- open acceptance: 5.3 remains open because the app emits the unrelated existing `next-themes` root-class hydration warning and the captured screenshots do not cover every state; 5.4 remains open for repository baseline TypeScript/HarnessKit/build/audit gates

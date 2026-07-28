@@ -47,6 +47,23 @@ describe('Feed Discovery background-job scheduler', () => {
     }
   })
 
+  it('isolates one Fund enqueue failure without blocking healthy Funds', async () => {
+    const deps = dependencies()
+    vi.mocked(deps.enqueue)
+      .mockRejectedValueOnce(new Error('Fund A configuration changed'))
+      .mockResolvedValueOnce({ id: `${FUND_B}:job`, status: 'pending' })
+
+    await expect(scheduleFeedDiscoveryJobs(deps)).resolves.toEqual({ eligible: 2, scheduled: 1 })
+    expect(deps.enqueue).toHaveBeenCalledTimes(2)
+  })
+
+  it('fails the batch when no eligible Fund can be scheduled', async () => {
+    const deps = dependencies()
+    vi.mocked(deps.enqueue).mockRejectedValue(new Error('queue unavailable'))
+
+    await expect(scheduleFeedDiscoveryJobs(deps)).rejects.toThrow('Feed Discovery scheduling failed')
+  })
+
   it('never performs unbounded work inside one Cron invocation', async () => {
     const fundIds = Array.from({ length: 101 }, (_, index) =>
       `2621143a-c9c3-4079-b52d-${String(index).padStart(12, '0')}`,

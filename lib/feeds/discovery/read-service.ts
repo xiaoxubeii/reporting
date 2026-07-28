@@ -7,12 +7,14 @@ import {
   type DiscoveryReadState,
   type StoredDiscoveryRow,
 } from './runtime-store'
+import type { DiscoveryRefreshStatus } from './contracts'
 
 const STALE_AFTER_MS = 6 * 60 * 60 * 1_000
 const MAX_EXISTING_DEALS = 2_000
 
 interface DiscoveryReader {
   readState(): Promise<DiscoveryReadState>
+  readStatus?(state: DiscoveryReadState, isStale: boolean): Promise<DiscoveryRefreshStatus>
   readItems(input: {
     generationId: string
     kind: DiscoveryKind
@@ -43,12 +45,16 @@ export class DiscoveryReadService {
     const reader = this.reader ?? new DiscoveryRuntimeStore(input.fundId, this.admin as never)
     const state = await reader.readState()
     const isStale = staleState(state, this.clock.now())
+    const refresh = reader.readStatus
+      ? await reader.readStatus(state, isStale)
+      : fallbackRefreshStatus(state, isStale)
     if (!state.activeGenerationId) {
       return parseDiscoveryPage({
         items: [],
         generationId: null,
         generatedAt: state.generatedAt,
         isStale,
+        refresh,
         total: 0,
         limit: input.limit,
         offset: input.offset,
@@ -71,6 +77,7 @@ export class DiscoveryReadService {
       generationId: state.activeGenerationId,
       generatedAt: state.generatedAt,
       isStale,
+      refresh,
       total: result.total,
       limit: input.limit,
       offset: input.offset,
@@ -87,6 +94,19 @@ export class DiscoveryReadService {
     if (error) throw error
     return Object.freeze(data ?? [])
   }
+}
+
+function fallbackRefreshStatus(state: DiscoveryReadState, isStale: boolean): DiscoveryRefreshStatus {
+  if (state.lastErrorCode !== null) {
+    return Object.freeze({ state: 'degraded', reason: 'refresh_failed', retryable: true, lastAttemptAt: state.lastAttemptAt })
+  }
+  if (!state.activeGenerationId) {
+    return Object.freeze({ state: 'degraded', reason: 'provider_not_configured', retryable: true, lastAttemptAt: state.lastAttemptAt })
+  }
+  if (isStale) {
+    return Object.freeze({ state: 'stale', reason: 'results_stale', retryable: true, lastAttemptAt: state.lastAttemptAt })
+  }
+  return Object.freeze({ state: 'ready', reason: null, retryable: false, lastAttemptAt: state.lastAttemptAt })
 }
 
 export function mapDiscoveryRow(

@@ -1897,6 +1897,7 @@ export type Database = {
           fund_id: string;
           deal_id: string;
           draft_id: string | null;
+          background_job_id: string | null;
           kind: string;
           status: string;
           payload: Json | null;
@@ -1915,6 +1916,7 @@ export type Database = {
           fund_id: string;
           deal_id: string;
           draft_id?: string | null;
+          background_job_id?: string | null;
           kind: string;
           status?: string;
           payload?: Json | null;
@@ -1933,6 +1935,7 @@ export type Database = {
           fund_id?: string;
           deal_id?: string;
           draft_id?: string | null;
+          background_job_id?: string | null;
           kind?: string;
           status?: string;
           payload?: Json | null;
@@ -3832,18 +3835,21 @@ export type Database = {
         Row: {
           created_at: string;
           full_name: string | null;
+          time_zone: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           created_at?: string;
           full_name?: string | null;
+          time_zone?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           created_at?: string;
           full_name?: string | null;
+          time_zone?: string | null;
           updated_at?: string;
           user_id?: string;
         };
@@ -4291,6 +4297,23 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      set_diligence_deal_status: {
+        Args: {
+          p_actor_user_id: string;
+          p_deal_id: string;
+          p_fund_id: string;
+          p_status: string;
+        };
+        Returns: string;
+      };
+      promote_inbound_deal_to_diligence: {
+        Args: {
+          p_deal_id: string;
+          p_fund_id: string;
+          p_user_id: string;
+        };
+        Returns: { created: boolean; diligence_id: string }[];
+      };
       append_diligence_qa_session_messages: {
         Args: {
           p_deal_id: string;
@@ -4432,6 +4455,10 @@ export type Database = {
       };
       update_user_profile: {
         Args: { p_full_name: string; p_user_id: string };
+        Returns: Database["public"]["Tables"]["user_profiles"]["Row"];
+      };
+      update_user_time_zone: {
+        Args: { p_time_zone: string | null; p_user_id: string };
         Returns: Database["public"]["Tables"]["user_profiles"]["Row"];
       };
       revoke_fund_member_invitation: {
@@ -5018,6 +5045,34 @@ export type Database = {
           p_sources?: Json | null;
           p_status: string;
           p_summary?: string | null;
+        };
+        Returns: boolean;
+      };
+      memo_agent_enqueue_research_background: {
+        Args: {
+          p_actor_user_id: string;
+          p_deal_id: string;
+          p_draft_id: string;
+          p_fund_id: string;
+        };
+        Returns: Database["public"]["Tables"]["memo_agent_jobs"]["Row"];
+      };
+      memo_research_update_progress: {
+        Args: {
+          p_attempt_id: string;
+          p_job_id: string;
+          p_memo_job_id: string;
+          p_message: string;
+        };
+        Returns: boolean;
+      };
+      memo_research_write_result: {
+        Args: {
+          p_attempt_id: string;
+          p_job_id: string;
+          p_memo_job_id: string;
+          p_research_output: Json;
+          p_result: Json;
         };
         Returns: boolean;
       };

@@ -101,4 +101,20 @@ describe('Deal Research HTTP worker', () => {
     expect(deps.projectRunning).not.toHaveBeenCalled()
     expect(deps.runResearch).not.toHaveBeenCalled()
   })
+
+  it('reports a persisted domain failure as terminal instead of retrying the provider', async () => {
+    const deps = dependencies({ runResearch: vi.fn(async () => ({ status: 'failed' as const, error: 'invalid grounded result', retryable: false })) })
+    const result = await executeDealResearchWorker(new Request('https://reporting.example/api/internal/background-jobs/deal-research/run', {
+      method: 'POST', headers: { authorization: 'Bearer signed.token.value' },
+    }), deps)
+    expect(result).toEqual({ status: 422, body: { status: 'failed' } })
+  })
+
+  it('returns a retryable HTTP status for transient provider failures', async () => {
+    const deps = dependencies({ runResearch: vi.fn(async () => ({ status: 'failed' as const, error: 'provider unavailable', retryable: true })) })
+    const result = await executeDealResearchWorker(new Request('https://reporting.example/api/internal/background-jobs/deal-research/run', {
+      method: 'POST', headers: { authorization: 'Bearer signed.token.value' },
+    }), deps)
+    expect(result).toEqual({ status: 503, body: { status: 'failed' } })
+  })
 })

@@ -15,13 +15,13 @@ import { IngestionSummary } from '@/components/diligence/ingestion-summary'
 import { StageHeader, DiligenceStageBar } from '@/components/diligence/stage-header'
 import { DataRoomBar } from '@/components/diligence/progress-bars'
 import { countDocuments } from '@/lib/diligence/progress'
-import { AnalysisPreferencesSheet } from '@/components/diligence/analysis-preferences-sheet'
-import type { AnalysisPreferences } from '@/lib/diligence/analysis-preferences'
+import { SchemaViewer } from '@/components/diligence/schema-viewer'
 import { AnalystDiligenceScope } from '@/components/analyst-scope'
 import { AffinityPanel } from '@/components/diligence/affinity-panel'
 import { EmailIntakeTray } from '@/components/diligence/email-intake-tray'
 import type { IngestionOutput } from '@/lib/memo-agent/stages/ingest'
 import type { ResearchOutput } from '@/lib/memo-agent/stages/research'
+import { summarizeResearchDiagnostics } from '@/lib/memo-agent/research-diagnostics'
 import { uploadDiligenceDocument } from '@/lib/diligence/upload-document'
 import { formatFileSize } from '@/lib/diligence/format-file-size'
 import { MemoEditor } from './drafts/[draftId]/memo-editor'
@@ -43,7 +43,6 @@ interface Deal {
   lead_partner_id: string | null
   promoted_company_id: string | null
   drive_folder_url: string | null
-  analysis_preferences: AnalysisPreferences
   created_at: string
   updated_at: string
 }
@@ -105,6 +104,8 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
   const [changingLanguage, setChangingLanguage] = useState(false)
   const [languageNotice, setLanguageNotice] = useState<string | null>(null)
   const [languageError, setLanguageError] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const [statusSaving, setStatusSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('Checklist')
   // Documents live here (not inside Data Room) so the Checklist tab's
   // doc-count gate and the Data Room list stay in sync after an import/upload.
@@ -260,13 +261,28 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
   }
 
   async function updateStatus(deal_status: Deal['deal_status']) {
-    setDeal(d => ({ ...d, deal_status }))
-    await fetch(`/api/diligence/${deal.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deal_status }),
-    })
-    router.refresh()
+    if (deal_status === deal.deal_status || statusSaving) return
+    setStatusSaving(true)
+    setStatusError(null)
+    try {
+      const response = await fetch(`/api/diligence/${deal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deal_status }),
+      })
+      const result = await response.json().catch(() => ({})) as { error?: string; code?: string }
+      if (!response.ok) {
+        throw new Error(result.code === 'finalized_memo_required'
+          ? t('header.finalizeBeforeDecision')
+          : (result.error ?? t('header.statusUpdateFailed')))
+      }
+      setDeal(current => ({ ...current, deal_status }))
+      router.refresh()
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : t('header.statusUpdateFailed'))
+    } finally {
+      setStatusSaving(false)
+    }
   }
 
   async function saveName() {
@@ -357,11 +373,6 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <AnalysisPreferencesSheet
-            dealId={deal.id}
-            preferences={deal.analysis_preferences}
-            onSaved={analysis_preferences => setDeal(current => ({ ...current, analysis_preferences }))}
-          />
           <div className="flex items-center gap-1.5">
             <span id="deal-output-language-label" className="text-xs font-medium text-foreground">
               {t('header.outputLanguage')}
@@ -385,14 +396,15 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
               </SelectContent>
             </Select>
           </div>
-          <StatusDropdown value={deal.deal_status} onPick={updateStatus} />
+          <StatusDropdown value={deal.deal_status} disabled={statusSaving} onPick={updateStatus} />
         </div>
       </div>
 
-      {(languageNotice || languageError) && (
+      {(languageNotice || languageError || statusError) && (
         <div className="mb-4 space-y-1" aria-live="polite">
           {languageNotice && <p className="text-xs text-muted-foreground">{languageNotice}</p>}
           {languageError && <p className="text-xs text-destructive" role="alert">{languageError}</p>}
+          {statusError && <p className="text-xs text-destructive" role="alert">{statusError}</p>}
         </div>
       )}
 
@@ -950,6 +962,15 @@ function ChecklistTab({ deal, onJumpToDoc }: {
         </Accordion>
       )}
 
+      <SchemaViewer
+        schemaName="data_room_ingestion"
+        title={t('agent.title')}
+        subtitle={t('agent.subtitle')}
+        guidanceStage="ingest"
+        description={t('agent.description')}
+        defaultOpen={!ingestionDraft?.ingestion_output}
+      />
+
     </div>
   )
 }
@@ -1355,7 +1376,7 @@ function ChecklistRow({ item, findings, onDelete, onPatch, onJumpToDoc, dragHand
   )
 }
 
-function StatusDropdown({ value, onPick }: { value: Deal['deal_status']; onPick: (s: Deal['deal_status']) => void }) {
+function StatusDropdown({ value, disabled, onPick }: { value: Deal['deal_status']; disabled: boolean; onPick: (s: Deal['deal_status']) => void }) {
   const t = useTranslations('Diligence.dealDetail')
   const labels: Record<string, string> = {
     invested: t('statuses.invested'), active: t('statuses.active'), passed: t('statuses.passed'),
@@ -1367,6 +1388,7 @@ function StatusDropdown({ value, onPick }: { value: Deal['deal_status']; onPick:
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           className="inline-flex items-center h-8 px-3 rounded-md text-xs font-medium border bg-background hover:bg-muted"
         >
           {labels[value] ?? value}
@@ -2629,6 +2651,15 @@ function ResearchTab({ dealId, userId, isAdmin }: { dealId: string; userId: stri
         </Disclosure>
       )}
 
+      <SchemaViewer
+        schemaName="research_dossier"
+        title={t('agent.title')}
+        subtitle={t('agent.subtitle')}
+        guidanceStage="research"
+        description={t('agent.description')}
+        defaultOpen={!research}
+      />
+
     </div>
   )
 }
@@ -2790,11 +2821,21 @@ function ExternalResearchView({ research, editable, onToggleFinding, onToggleGap
     company_stated: 'verification.company_stated',
     inconclusive: 'verification.unverified',
   } as const
-  const sourcedFindings = research.findings.filter(f => f.sources.some(s => !!s.url)).length
-  const searchCount = research.web_search_count ?? null
-  const webSources = research.web_sources ?? []
+  const searchBackend = research.search_backend ?? (research.research_mode === 'with_web_search' ? 'anthropic' : 'none')
+  const searchCount = research.search_count ?? research.web_search_count ?? null
+  const diagnostics = summarizeResearchDiagnostics({
+    backend: searchBackend,
+    findings: research.findings,
+    searchSources: research.search_sources,
+    legacyWebSources: research.web_sources,
+  })
+  const sourcedFindings = diagnostics.groundedFindings
+  const searchSources = diagnostics.sources
+  const backendLabel = searchBackend === 'reporting'
+    ? t('diagnostic.backendReporting')
+    : t('diagnostic.backendAnthropic')
   const hasExternalEvidence = research.findings.length > 0
-    || webSources.length > 0
+    || searchSources.length > 0
     || (research.competitive_map?.named_by_research ?? []).some(competitor => (competitor.sources ?? []).some(source => !!source.url))
     || (research.founder_dossiers ?? []).some(founder => (founder.sources ?? []).some(source => !!source.url))
   const activeFindings = research.findings.map((f, i) => ({ f, i })).filter(x => !x.f.dismissed).slice(0, 50)
@@ -2807,18 +2848,23 @@ function ExternalResearchView({ research, editable, onToggleFinding, onToggleGap
         <div className="rounded-md bg-muted/40 px-3 py-2 text-xs space-y-1">
           <div className="font-medium">{t('diagnostic.title')}</div>
           <div className="text-muted-foreground">
+            {t('diagnostic.backend', { backend: backendLabel })} ·{' '}
             {searchCount !== null && <>{t('diagnostic.searches', { count: searchCount })} · </>}
-            {t('diagnostic.urls', { count: webSources.length })} · {t('diagnostic.sourced', { count: sourcedFindings, total: research.findings.length })}
+            {t('diagnostic.urls', { count: searchSources.length })} · {t('diagnostic.sourced', { count: sourcedFindings, total: research.findings.length })}
           </div>
-          {searchCount !== null && searchCount > 0 && webSources.length === 0 && sourcedFindings === 0 && (
+          {searchCount !== null && searchCount > 0 && searchSources.length === 0 && sourcedFindings === 0 && (
             <div className="text-amber-700 dark:text-amber-400 text-[11px]">{t('diagnostic.noUrls')}</div>
           )}
-          {webSources.length > 0 && (
+          {searchSources.length > 0 && (
             <details className="mt-1">
-              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('diagnostic.sources', { count: webSources.length })}</summary>
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('diagnostic.sources', { count: searchSources.length })}</summary>
               <ul className="mt-1 space-y-0.5 pl-3">
-                {webSources.slice(0, 30).map((s, i) => (
-                  <li key={i} className="truncate"><a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.title || s.url}</a></li>
+                {searchSources.slice(0, 30).map((s, i) => (
+                  <li key={i} className="truncate">
+                    {s.url
+                      ? <a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.title || s.url}</a>
+                      : <span>{s.title}</span>}
+                  </li>
                 ))}
               </ul>
             </details>
@@ -3827,6 +3873,15 @@ function ScoringTab({ dealId }: { dealId: string }) {
           </div>
         )}
       </Section>
+
+      <SchemaViewer
+        schemaName="rubric"
+        title={t('agent.title')}
+        subtitle={t('agent.subtitle')}
+        guidanceStage="score"
+        description={t('agent.description')}
+        defaultOpen={scores.length === 0}
+      />
 
     </div>
   )

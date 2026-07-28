@@ -26,6 +26,7 @@ const PLATFORM_PAGE_PATHS = new Set([
   '/',
   '/contact',
   '/demo',
+  '/icon',
   '/license',
   '/pending',
   '/pricing',
@@ -43,6 +44,7 @@ const PLATFORM_API_PATHS = new Set([
   '/api/auth/branding',
   '/api/auth/logout',
   '/api/auth/signup',
+  '/api/contact',
 ])
 
 function hasPathPrefix(pathname: string, prefix: string): boolean {
@@ -75,7 +77,7 @@ function isPlatformRoute(pathname: string, method: string): boolean {
   if (pathname === '/api/og') return method === 'GET' || method === 'HEAD'
   if (PLATFORM_PAGE_PATHS.has(pathname) || pathname.endsWith('-explainer')) return true
   if (pathname.startsWith('/.well-known/')) return true
-  if (pathname === '/api/setup' || pathname === '/api/locale') return true
+  if (pathname === '/api/setup' || pathname === '/api/locale' || pathname === '/api/time-zone') return true
   if (pathname === '/api/oauth/register' || pathname.startsWith('/api/oauth/metadata/')) return true
   if (PLATFORM_API_PATHS.has(pathname)) return true
   if (PLATFORM_PAGE_PREFIXES.some(prefix => hasPathPrefix(pathname, prefix))) return true

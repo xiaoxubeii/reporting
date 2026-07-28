@@ -119,4 +119,9 @@ describe('requiredLevel', () => {
   it('is case-insensitive about the method', () => {
     expect(requiredLevel({ domain: 'portfolio' }, 'get')).toBe('read')
   })
+
+  it('requires write access for the cost-incurring Fund Discovery refresh', () => {
+    const entry = ROUTE_DOMAINS['api/feeds/explore/discovery/refresh']
+    expect(requiredLevel(entry, 'POST')).toBe('write')
+  })
 })

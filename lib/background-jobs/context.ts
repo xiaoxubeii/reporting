@@ -28,6 +28,7 @@ export interface StoredBackgroundJob {
 export interface BackgroundJobContextRepository {
   loadJob(jobId: string): Promise<StoredBackgroundJob | null>
   validateResource(input: Readonly<{
+    jobId: string
     kind: string
     payload: BackgroundJobPayload
     fundId: string
@@ -153,7 +154,7 @@ async function restoreLiveContext(input: Readonly<{
   if (hop === 'worker' && input.tokenId !== input.attemptId) throw new Error('Worker token id is not attempt-bound')
   if (!policy.actors.includes(job.actorType)) throw new Error('Actor is not allowed')
   const payload = policy.parsePayload(job.payload)
-  await input.repository.validateResource({ kind: policy.kind, payload, fundId: job.fundId })
+  await input.repository.validateResource({ jobId: job.id, kind: policy.kind, payload, fundId: job.fundId })
 
   let actor: BackgroundExecutionActor
   let access: AccessContext | null = null
@@ -165,7 +166,10 @@ async function restoreLiveContext(input: Readonly<{
     const liveAccess = await input.repository.loadAccess(job.fundId, job.actorUserId, membership.role)
     access = liveAccess
     if (liveAccess.fundId !== job.fundId || liveAccess.userId !== job.actorUserId) throw new Error('Access context mismatch')
-    if (!policy.requiredUserAccess.every(requirement => (
+    const hopRequirements = hop === 'search'
+      ? [...policy.requiredUserAccess, ...(policy.search?.requiredUserAccess ?? [])]
+      : policy.requiredUserAccess
+    if (!hopRequirements.every(requirement => (
       hasAccess(liveAccess, requirement.domain, requirement.need, requirement.feature)
     ))) throw new Error('Required user access was revoked')
     actor = Object.freeze({ type: 'user', userId: job.actorUserId })

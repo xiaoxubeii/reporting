@@ -9,9 +9,16 @@ import {
 import { checkFundMember } from '@/lib/pipeline/checkFundMember'
 import { isAuthorizedSender } from '@/lib/pipeline/isAuthorizedSender'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
-import { scanFileAsync } from '@/lib/security/scan-file'
 import { emailFingerprint } from '@/lib/pipeline/emailFingerprint'
 import { admitsRegisteredSystemRequest } from '@/lib/tenancy/system-request'
+import {
+  attachmentFailureMessage,
+  persistLegacyInboundAttachments,
+  prepareLegacyInboundAttachments,
+} from '@/lib/email/legacy-inbound-attachments'
+import { readBoundedJson } from '@/lib/http/read-bounded-body'
+
+const MAX_POSTMARK_BODY_BYTES = 40 * 1024 * 1024
 
 function safeTokenCompare(a: string, b: string): boolean {
   try {
@@ -32,6 +39,12 @@ export async function POST(req: NextRequest) {
   // Rate limit inbound webhook: 60 per minute per IP
   const limited = await rateLimit({ key: `inbound:${getClientIp(req)}`, limit: 60, windowSeconds: 60 })
   if (limited) return limited
+  // Reject obviously absent/malformed credentials before buffering a large
+  // JSON email. Exact token verification remains Fund-bound after recipient
+  // resolution, but unauthenticated traffic must not consume the body budget.
+  if (!plausibleInboundToken(readInboundToken(req))) {
+    return NextResponse.json({ ok: true })
+  }
 
   try {
     await handleInbound(req)
@@ -46,14 +59,10 @@ export async function POST(req: NextRequest) {
 // ---------------------------------------------------------------------------
 
 async function handleInbound(req: NextRequest) {
+  const payload = await readBoundedJson<PostmarkPayload>(req, MAX_POSTMARK_BODY_BYTES)
   const supabase = createAdminClient()
   // Accept token from Authorization header (preferred) or query string (legacy/Postmark)
-  const authHeader = req.headers.get('authorization')
-  const token = (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null)
-    ?? req.nextUrl.searchParams.get('token')
-    ?? ''
-  const payload = (await req.json()) as PostmarkPayload
-
+  const token = readInboundToken(req)
   const toAddress = payload.OriginalRecipient || payload.To
   const fromAddress = payload.FromFull?.Email || payload.From
 
@@ -107,6 +116,11 @@ async function handleInbound(req: NextRequest) {
     }))
   }
 
+  const preparedAttachments = await prepareLegacyInboundAttachments(payload.Attachments ?? [])
+  const attachmentError = preparedAttachments.ok
+    ? null
+    : attachmentFailureMessage(preparedAttachments.code)
+
   const { data: emailRow, error: insertError } = await supabase
     .from('inbound_emails')
     .insert({
@@ -114,7 +128,8 @@ async function handleInbound(req: NextRequest) {
       from_address: fromAddress,
       subject: payload.Subject ?? null,
       raw_payload: strippedPayload as unknown as import('@/lib/types/database').Json,
-      processing_status: 'pending',
+      processing_status: attachmentError ? 'failed' : 'pending',
+      processing_error: attachmentError,
       attachments_count: payload.Attachments?.length ?? 0,
       email_fingerprint: fingerprint,
     })
@@ -128,51 +143,66 @@ async function handleInbound(req: NextRequest) {
 
   const emailId = emailRow.id
 
-  // Step 3b: Upload attachments to Storage and update payload with StoragePaths
-  if (payload.Attachments && payload.Attachments.length > 0) {
-    const updatedAttachments = []
-    for (let attIdx = 0; attIdx < payload.Attachments.length; attIdx++) {
-      const att = payload.Attachments[attIdx]
-      const buffer = Buffer.from(att.Content!, 'base64')
+  if (!preparedAttachments.ok) {
+    console.warn(`[inbound-email] ${preparedAttachments.code}; refusing pipeline processing`)
+    return
+  }
 
-      // Scan attachment before uploading
-      const scanResult = await scanFileAsync(buffer, att.Name, att.ContentType)
-      if (!scanResult.safe) {
-        console.warn(`[inbound-email] Skipping unsafe attachment "${att.Name}": ${scanResult.reason}`)
-        continue
-      }
-
-      const safeName = `${attIdx}_${att.Name.replace(/[\/\\:*?"<>|]/g, '_').replace(/\.\./g, '_')}`
-      const storagePath = `${emailId}/${safeName}`
-      const { error: uploadError } = await supabase.storage
-        .from('email-attachments')
-        .upload(storagePath, buffer, { contentType: att.ContentType })
-
-      if (uploadError) {
-        console.error(`[inbound-email] Failed to upload attachment "${att.Name}" to storage:`, uploadError.message)
-        // Keep Content in payload so it's not lost
-        updatedAttachments.push({
-          Name: att.Name,
-          ContentType: att.ContentType,
-          ContentLength: att.ContentLength,
-          Content: att.Content,
-        })
-      } else {
-        updatedAttachments.push({
-          Name: att.Name,
-          ContentType: att.ContentType,
-          ContentLength: att.ContentLength,
-          StoragePath: storagePath,
-        })
-      }
-    }
-
+  // Step 3b: Persist every safe attachment or roll back the whole set. The
+  // database payload never receives base64 attachment content.
+  const storedAttachments = await persistLegacyInboundAttachments(
+    preparedAttachments.attachments,
+    {
+      store: async ({ filename, contentType, bytes }) => {
+        const storagePath = `${emailId}/${filename}`
+        const { error } = await supabase.storage
+          .from('email-attachments')
+          .upload(storagePath, bytes, { contentType })
+        if (error) throw error
+        return storagePath
+      },
+      remove: async storagePath => {
+        const { error } = await supabase.storage
+          .from('email-attachments')
+          .remove([storagePath])
+        if (error) throw error
+      },
+    },
+  )
+  if (!storedAttachments.ok) {
     await supabase
       .from('inbound_emails')
       .update({
-        raw_payload: { ...strippedPayload, Attachments: updatedAttachments } as unknown as import('@/lib/types/database').Json,
+        processing_status: 'failed',
+        processing_error: attachmentFailureMessage(storedAttachments.code),
       })
       .eq('id', emailId)
+    return
+  }
+
+  if (storedAttachments.attachments.length > 0) {
+    const { error: metadataError } = await supabase
+      .from('inbound_emails')
+      .update({
+        raw_payload: {
+          ...strippedPayload,
+          Attachments: storedAttachments.attachments,
+        } as unknown as import('@/lib/types/database').Json,
+      })
+      .eq('id', emailId)
+    if (metadataError) {
+      await Promise.allSettled(storedAttachments.attachments.map(async attachment => {
+        await supabase.storage.from('email-attachments').remove([attachment.StoragePath])
+      }))
+      await supabase
+        .from('inbound_emails')
+        .update({
+          processing_status: 'failed',
+          processing_error: attachmentFailureMessage('attachment_storage_failed'),
+        })
+        .eq('id', emailId)
+      return
+    }
   }
 
   // Steps 4–8: extraction pipeline. Pass original in-memory payload (with Content).
@@ -192,6 +222,19 @@ async function handleInbound(req: NextRequest) {
       .update({ processing_status: 'failed', processing_error: message })
       .eq('id', emailId)
   }
+}
+
+function readInboundToken(req: NextRequest): string {
+  const authHeader = req.headers.get('authorization')
+  return (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null)
+    ?? req.nextUrl.searchParams.get('token')
+    ?? ''
+}
+
+function plausibleInboundToken(token: string): boolean {
+  return token.length >= 16
+    && token.length <= 512
+    && /^[A-Za-z0-9._~-]+$/.test(token)
 }
 
 function describePipelineError(raw: string): string {

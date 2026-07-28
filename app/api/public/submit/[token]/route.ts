@@ -3,10 +3,22 @@ import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getFeatureProvider } from '@/lib/ai/feature-provider'
 import { extractAttachmentText, type PostmarkPayload } from '@/lib/parsing/extractAttachmentText'
-import { processDeal } from '@/lib/pipeline/processDeal'
+import { insertInboundDealIdempotently, processDeal } from '@/lib/pipeline/processDeal'
+import {
+  buildPublicSubmissionFallbackDeal,
+  ensureProcessedDeal,
+  queueFallbackDealResearch,
+} from '@/lib/deals/public-submission-fallback'
 import type { PostmarkPayload as PipelinePayload } from '@/lib/pipeline/processEmail'
-import { rateLimit } from '@/lib/rate-limit'
+import { getClientIp, rateLimit } from '@/lib/rate-limit'
 import { fundMatchesTrustedRequestTenant } from '@/lib/tenancy/request'
+import { RequestBodyTooLargeError, readBoundedJson } from '@/lib/http/read-bounded-body'
+import type { Json } from '@/lib/types/database'
+import { persistPreparedSubmissionAttachments } from '@/lib/deals/submission-attachments'
+import {
+  attachmentFailureMessage,
+  prepareLegacyInboundAttachments,
+} from '@/lib/email/legacy-inbound-attachments'
 
 import {
   MAX_NAME_LEN, MAX_EMAIL_LEN, MAX_URL_LEN, MAX_PITCH_LEN,
@@ -14,10 +26,19 @@ import {
 } from '@/lib/deals/submission-validation'
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
+const MAX_SUBMISSION_BODY_BYTES = 14 * 1024 * 1024
 const MIN_PITCH_LEN = 50
+type JsonObject = { [key: string]: Json | undefined }
+type SyntheticPostmarkPayload = PostmarkPayload & {
+  From: string
+  To: string
+  FromFull: { Email: string; Name: string }
+  Subject: string
+  MessageID: string
+}
 
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
-  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0]?.trim() || 'unknown'
+  const ip = getClientIp(req)
   const limited = await rateLimit({ key: `public-submit:${ip}`, limit: 5, windowSeconds: 3600 })
   if (limited) return limited
 
@@ -30,10 +51,10 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     .eq('deal_submission_token', params.token)
     .maybeSingle()
 
-  if (!settings || !(settings as any).deal_intake_enabled) {
+  if (!settings || !(settings as { deal_intake_enabled: boolean }).deal_intake_enabled) {
     return NextResponse.json({ error: 'Submission form is not active' }, { status: 404 })
   }
-  const fundId = (settings as any).fund_id as string
+  const fundId = (settings as { fund_id: string }).fund_id
   if (!(await fundMatchesTrustedRequestTenant(admin as never, req.headers, fundId))) {
     return NextResponse.json({ error: 'Submission form is not active' }, { status: 404 })
   }
@@ -48,8 +69,11 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     website?: string
   }
   try {
-    body = await req.json()
-  } catch {
+    body = await readBoundedJson(req, MAX_SUBMISSION_BODY_BYTES)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: 'Submission is too large' }, { status: 413 })
+    }
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
@@ -119,7 +143,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
   const messageId = `<public-submit-${crypto.randomUUID()}@hemrock.local>`
 
-  const payload: PostmarkPayload & { From: string; To: string; FromFull: { Email: string; Name: string }; Subject: string; MessageID: string } = {
+  const payload: SyntheticPostmarkPayload = {
     From: founderEmail,
     To: 'public-submit@hemrock.local',
     FromFull: { Email: founderEmail, Name: founderName },
@@ -130,6 +154,16 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     Attachments: attachment ? [attachment] : [],
   }
 
+  // Decode and scan the complete attachment set before creating any database
+  // or storage records. This also covers ZIP integrity and expansion limits.
+  const preparedAttachments = await prepareLegacyInboundAttachments(payload.Attachments ?? [])
+  if (!preparedAttachments.ok) {
+    const error = preparedAttachments.code === 'attachment_unsafe'
+      ? 'Attachment failed security scan'
+      : attachmentFailureMessage(preparedAttachments.code)
+    return NextResponse.json({ error }, { status: 400 })
+  }
+
   // Insert inbound_emails row first so processDeal can FK to it.
   const { data: emailInsert, error: emailErr } = await admin
     .from('inbound_emails')
@@ -138,7 +172,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       from_address: founderEmail,
       subject,
       received_at: new Date().toISOString(),
-      raw_payload: stripAttachmentContent(payload) as any,
+      raw_payload: stripAttachmentContent(payload),
       processing_status: 'processing',
       attachments_count: attachment ? 1 : 0,
       routing_label: 'deals',
@@ -146,7 +180,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       routing_reasoning: 'Public submission form (bypassed classifier)',
       routing_secondary_label: null,
       routed_to: 'deals',
-    } as any)
+    })
     .select('id')
     .single()
 
@@ -157,37 +191,65 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
   const emailId = (emailInsert as { id: string }).id
 
-  // Upload attachment to Supabase Storage if present, and update payload to
-  // reference the StoragePath so future re-runs (regenerate, reroute) can
-  // re-hydrate it.
-  if (attachment) {
-    const safeName = `0_${attachment.Name}`
-    const storagePath = `${emailId}/${safeName}`
-    const buf = Buffer.from(attachment.Content, 'base64')
-    const { error: uploadErr } = await admin.storage
-      .from('email-attachments')
-      .upload(storagePath, buf, { contentType: attachment.ContentType, upsert: true })
-    if (!uploadErr) {
-      // Re-store payload with StoragePath (and Content stripped to save bytes).
-      const stripped = {
-        ...stripAttachmentContent(payload),
-        Attachments: [{
-          Name: attachment.Name,
-          ContentType: attachment.ContentType,
-          ContentLength: attachment.ContentLength,
-          StoragePath: storagePath,
-        }],
-      }
-      await admin.from('inbound_emails').update({ raw_payload: stripped as any }).eq('id', emailId)
-    }
+  // Store every attachment and publish StoragePath metadata atomically. A
+  // partial upload or failed metadata write is rolled back and fails closed.
+  const storedAttachments = await persistPreparedSubmissionAttachments(
+    preparedAttachments.attachments,
+    {
+      store: async ({ filename, contentType, bytes }) => {
+        const storagePath = `${emailId}/${filename}`
+        const { error } = await admin.storage
+          .from('email-attachments')
+          .upload(storagePath, bytes, { contentType, upsert: true })
+        if (error) throw error
+        return storagePath
+      },
+      remove: async storagePath => {
+        const { error } = await admin.storage
+          .from('email-attachments')
+          .remove([storagePath])
+        if (error) throw error
+      },
+      persistMetadata: async stored => {
+        const stripped = { ...stripAttachmentContent(payload), Attachments: stored }
+        const { error } = await admin
+          .from('inbound_emails')
+          .update({ raw_payload: stripped as unknown as Json })
+          .eq('id', emailId)
+        if (error) throw error
+      },
+    },
+  )
+  if (!storedAttachments.ok) {
+    const storageFailure = attachmentFailureMessage('attachment_storage_failed')
+    await admin
+      .from('inbound_emails')
+      .update({ processing_status: 'failed', processing_error: storageFailure })
+      .eq('id', emailId)
+    return NextResponse.json({ error: 'Submission failed' }, { status: 500 })
   }
 
-  // Run the deals pipeline. Failures don't roll back the email row — they're
-  // recorded as processing_status='failed' so admins can retry from the email page.
+  const insertFallbackDeal = () => insertInboundDealIdempotently(
+    admin,
+    buildPublicSubmissionFallbackDeal({
+      emailId,
+      fundId,
+      companyName,
+      companyUrl,
+      founderName,
+      founderEmail,
+      pitch,
+    }),
+  )
+
+  // Run the deals pipeline. Both thrown failures and a resolved null Deal id
+  // must persist a fallback before the public endpoint can acknowledge intake.
+  let processResult: { dealId?: string | null } | null = null
+  let analysisError: string | null = null
   try {
     const { provider, model, providerType } = await getFeatureProvider(admin, fundId, 'deal_analysis')
     const extracted = await extractAttachmentText(payload)
-    await processDeal({
+    processResult = await processDeal({
       supabase: admin,
       emailId,
       fundId,
@@ -197,30 +259,64 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       providerType,
       model,
     })
-    await admin
-      .from('inbound_emails')
-      .update({ processing_status: 'success' })
-      .eq('id', emailId)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[public-submit] processDeal failed:', msg)
+    analysisError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[public-submit] processDeal failed:', analysisError)
+  }
+
+  let ensuredDeal
+  try {
+    ensuredDeal = await ensureProcessedDeal(processResult, insertFallbackDeal)
+  } catch (err) {
+    const fallbackError = err instanceof Error ? err.message : 'Fallback Deal insert failed'
+    console.error('[public-submit] Fallback Deal insert failed:', fallbackError)
     await admin
       .from('inbound_emails')
-      .update({ processing_status: 'failed', processing_error: msg })
+      .update({
+        processing_status: 'failed',
+        processing_error: analysisError ?? fallbackError,
+      })
       .eq('id', emailId)
-    // We still return ok to the founder — admins can recover from the audit/emails page.
+    return NextResponse.json({ error: 'Submission failed' }, { status: 500 })
+  }
+
+  if (analysisError || ensuredDeal.usedFallback) {
+    try {
+      await queueFallbackDealResearch({ dealId: ensuredDeal.dealId, fundId })
+    } catch (error) {
+      console.error('[public-submit] Could not queue fallback Deal Research:', error instanceof Error ? error.message : 'Unknown error')
+    }
+    await admin
+      .from('inbound_emails')
+      .update({
+        processing_status: 'failed',
+        processing_error: analysisError ?? 'Deal analysis returned no Deal',
+      })
+      .eq('id', emailId)
+  } else {
+    await admin
+      .from('inbound_emails')
+      .update({ processing_status: 'success', processing_error: null })
+      .eq('id', emailId)
   }
 
   return NextResponse.json({ ok: true })
 }
 
-function stripAttachmentContent(payload: any) {
-  if (!payload.Attachments) return payload
+function stripAttachmentContent(payload: SyntheticPostmarkPayload): JsonObject {
   return {
-    ...payload,
-    Attachments: payload.Attachments.map((a: any) => {
-      const { Content, ...rest } = a
-      return rest
-    }),
+    From: payload.From,
+    To: payload.To,
+    FromFull: payload.FromFull,
+    Subject: payload.Subject,
+    TextBody: payload.TextBody,
+    HtmlBody: payload.HtmlBody,
+    MessageID: payload.MessageID,
+    Attachments: (payload.Attachments ?? []).map(({ Name, ContentType, ContentLength, StoragePath }) => ({
+      Name,
+      ContentType,
+      ContentLength,
+      ...(StoragePath ? { StoragePath } : {}),
+    })),
   }
 }

@@ -202,7 +202,15 @@ export function ExpertValidationPanel({
       </div>
       {(matches.length > 0 ? matches : experts).map(expert => <div key={expert.id} className="flex items-start gap-3 border-t pt-3 text-sm">
         <div className="flex-1"><div className="flex items-center gap-2"><div className="font-medium">{expert.name}</div><Badge variant="secondary" className="text-[10px]">{expert.verificationType === 'platform_certified' ? expertT('badges.platform') : expert.sourceType === 'discovery' ? expertT('badges.fundDiscovery') : expertT('badges.fundManual')}</Badge></div><div className="text-xs text-muted-foreground">{[expert.title, expert.organization].filter(Boolean).join(' · ')}</div><div className="text-xs mt-1">{expert.profileText}</div>{'similarity' in expert && <div className="text-[11px] text-muted-foreground mt-1">{t('choose.similarity', { value: format.number((expert as ExpertMatch).similarity, { style: 'percent', maximumFractionDigits: 0 }) })}</div>}</div>
-        <Button size="sm" variant={active.expertId === expert.id ? 'default' : 'outline'} onClick={() => choose(expert.id, 'similarity' in expert ? 'auto_match' : 'manual')} disabled={busy === `select:${expert.id}`}>{active.expertId === expert.id ? t('choose.selected') : t('choose.select')}</Button>
+        <Button
+          size="sm"
+          variant={active.expertId === expert.id ? 'default' : 'outline'}
+          aria-label={`${active.expertId === expert.id ? t('choose.selected') : t('choose.select')} ${expert.name}`}
+          onClick={() => choose(expert.id, 'similarity' in expert ? 'auto_match' : 'manual')}
+          disabled={busy === `select:${expert.id}`}
+        >
+          {active.expertId === expert.id ? t('choose.selected') : t('choose.select')}
+        </Button>
       </div>)}
       {active.expertId && <Button onClick={() => invite(false)} disabled={busy === 'invite'}><Send className="h-4 w-4 mr-1" />{t('sendInvitation')}</Button>}
     </div>}

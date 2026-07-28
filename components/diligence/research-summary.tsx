@@ -29,16 +29,40 @@ const TIER_LABEL: Record<string, string> = {
 export function ResearchSummary({ output }: { output: ResearchOutput }) {
   const verifiedCount = output.findings.filter(f => f.verification_status === 'verified').length
   const contradictedCount = output.findings.filter(f => f.verification_status === 'contradicted').length
+  const searchBackend = output.search_backend ?? (output.research_mode === 'with_web_search' ? 'anthropic' : 'none')
+  const searchSources = output.search_sources ?? []
+  const searchCount = output.search_count ?? output.web_search_count ?? 0
 
   return (
     <div className="space-y-6">
       {output.research_mode === 'no_web_search' && (
         <div className="rounded-md border border-amber-500/40 bg-amber-50/50 dark:bg-amber-900/10 p-3 text-sm">
-          <div className="font-medium">External web search disabled</div>
+          <div className="font-medium">External Search was not used</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            The agent verified what it could from its training data and the deal materials, and surfaced the rest as research gaps.
-            Web-search-enabled providers ship in a follow-up release.
+            The agent used the deal materials and surfaced unsupported claims as research gaps.
           </div>
+        </div>
+      )}
+
+      {searchBackend !== 'none' && (
+        <div className="rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="font-medium">External Search diagnostic</div>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>Backend: {searchBackend === 'reporting' ? 'Reporting Search' : 'Anthropic rollback'}</span>
+            <span>Searches: {searchCount}</span>
+            <span>Grounded sources: {searchSources.length || output.web_sources?.length || 0}</span>
+          </div>
+          {searchSources.length > 0 && (
+            <div className="mt-2 space-y-1 text-xs">
+              {searchSources.map(source => (
+                <div key={source.id}>
+                  {source.url
+                    ? <a href={source.url} target="_blank" rel="noreferrer" className="hover:underline">{source.title}</a>
+                    : <span>{source.title}</span>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

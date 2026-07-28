@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -88,10 +88,8 @@ function getPageNumbers(current: number, total: number): (number | '...')[] {
 
 export default function EmailsPage() {
   const t = useTranslations('Emails')
+  const format = useFormatter()
   const locale = useLocale()
-  const dateFormatter = new Intl.DateTimeFormat(locale, {
-    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
   const router = useRouter()
   const [data, setData] = useState<EmailsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -433,7 +431,9 @@ export default function EmailsPage() {
                 onClick={() => router.push(`/emails/${email.id}`)}
               >
                 <td className="px-4 py-3 text-muted-foreground whitespace-nowrap hidden sm:table-cell">
-                  {dateFormatter.format(new Date(email.received_at))}
+                  {format.dateTime(new Date(email.received_at), {
+                    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                  })}
                 </td>
                 <td className="px-4 py-3 max-w-[180px] truncate">{email.from_address}</td>
                 <td className="px-4 py-3 max-w-[240px] truncate text-muted-foreground hidden md:table-cell">

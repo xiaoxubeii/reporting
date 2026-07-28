@@ -3,10 +3,32 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "memo-research-reporting-search",
+      "title": "Provider-neutral Memo Research through Reporting Search",
+      "status": "passing",
+      "current_task": "Implementation, real external-model browser verification, review, and cleanup complete; ready for commit",
+      "definition_of_done": [
+        "The existing Research action enqueues one generalized memo_research attempt with authoritative user, Fund, deal, draft, and compatibility-job identity",
+        "Tool-capable providers call code-owned Reporting Search with bounded public topics, a shared three-call budget, and live Fund/user authorization",
+        "Only exact server-collected source IDs ground persisted Memo Research findings, while unsupported providers degrade visibly to no-search",
+        "Compatibility progress, downstream stages, localized diagnostics, provider rollback, retry fencing, and legacy worker isolation remain functional",
+        "Focused/full relevant tests, production build, independent correctness/security reviews, real browser flow, and fixture cleanup pass"
+      ],
+      "evidence": [
+        "OpenSpec replace-memo-research-web-search is task-complete and strict-valid",
+        "Final security-focused verification passes 21 files and 123 tests; relevant full Vitest passes 313 files and 2162 tests with only environment-gated skips",
+        "Production next build --no-lint completes compilation, type validation, 277 static pages, and route generation with the real local environment",
+        "Disposable authenticated browser flow completed three Reporting Search calls, collected nine accepted sources, displayed provider-neutral diagnostics, and failed closed at zero grounded findings when the model omitted accepted IDs",
+        "Correctness, TypeScript/React, and security reviews report zero remaining Critical, High, or Medium findings; the disposable Fund, user, jobs, and credential link were removed"
+      ],
+      "blocked_by": [],
+      "notes": "Repository-wide default lint/build, standalone tsc, and two platform-landing tests retain pre-existing debt outside this feature. HarnessKit fast stops on the unrelated feed-discovery status value. Detailed evidence is under .harnesskit/20260728-memo-research-browser/."
+    },
+    {
       "id": "comprehensive-site-e2e",
       "title": "Comprehensive interface-driven site acceptance and repair",
-      "status": "in_progress",
-      "current_task": "Create the isolated worktree, inventory the live product, and implement the durable browser runner",
+      "status": "passing",
+      "current_task": "Implementation and capability-aware verification complete; ready for branch handoff",
       "definition_of_done": [
         "Registration, Fund creation, canonical tenant UI, and cross-Fund isolation pass through real browser contexts",
         "Every enabled Search source and adapter reaches an explicit safe terminal outcome with provenance and authorization intact",
@@ -17,10 +39,16 @@
         "Structured reports, failure artifacts, cleanup proof, focused/full verification, security/correctness/browser reviews, and requirement audit pass"
       ],
       "evidence": [
-        "OpenSpec proposal, design, comprehensive acceptance specification, and implementation tasks created"
+        "OpenSpec proposal, design, comprehensive acceptance specification, and implementation tasks created and strict validation passes",
+        "The final serial Playwright matrix passes 29/29 with zero failed, skipped, timed out, interrupted, flaky, or unexpected results across Search, subscriptions, full investment decision, tenant denial, mail boundaries, GP/public/LP routes, desktop, and mobile",
+        "Final HTML and JSON reports are retained under .harnesskit/evidence/comprehensive-site-e2e/",
+        "Before main reconciliation, full Vitest passed 338 files and 2280 tests; after reconciliation 360 files / 2501 tests pass, the two environment-mutating Host tests pass in isolation, and only four inherited platform-landing assertions remain",
+        "Post-main changed-scope ESLint passes 176 files with zero diagnostics; production compilation and 277-page generation pass",
+        ".harnesskit/evidence/comprehensive-site-e2e/verification.md records the final run ID, capability boundary, inherited baselines, and exact fixture cleanup",
+        "Disposable local fixtures and historic E2E identities were removed; current Investment E2E Fund and user counts are both zero"
       ],
       "blocked_by": [],
-      "notes": "Serial-required single worktree. Real external dependencies must be exercised when configured; intentionally unavailable providers require their documented degraded/fail-closed path and may not be silently skipped."
+      "notes": "Capability-aware verification is complete. Loopback-only deterministic Ollama-compatible and Resend-compatible providers exercise the real Fund-scoped orchestration and mail boundaries without claiming production-model quality or public-internet delivery. HarnessKit fast passes; normal build/targeted verification remain blocked by inherited repository-wide lint debt, TypeScript has one inherited platform-landing target error, and the existing production dependency audit reports 19 advisories."
     },
     {
       "id": "global-assistant-context",
@@ -182,7 +210,7 @@
     {
       "id": "feed-discovery",
       "title": "Explore Trending and Deal Signals discovery",
-      "status": "complete",
+      "status": "passing",
       "current_task": "Fund-owned Custom Provider runtime completed and verified",
       "definition_of_done": [
         "Public Explore articles are processed incrementally without persisting or reading personal feed state",
@@ -227,6 +255,37 @@
       ],
       "blocked_by": [],
       "notes": "The earlier isolated CardioSignal fixture completed the system workflow, but current-main revalidation and browser evidence are still required. No outbound email provider is configured, so invitation acceptance must verify the product's documented copy-link fallback without claiming provider delivery."
+    },
+    {
+      "id": "user-timezone-preferences",
+      "title": "UTC storage with automatic and user-overridden display timezone",
+      "status": "passing",
+      "current_task": "Implementation, browser acceptance, and merge verification complete",
+      "definition_of_done": [
+        "Stored timestamps remain unchanged UTC instants",
+        "Server and hydrated client rendering use the same explicit validated IANA timezone",
+        "Automatic browser detection synchronizes once without a reload loop",
+        "Authenticated users can save a manual timezone or reset to Automatic across devices",
+        "Host-only cookies remain isolated between tenant hostnames",
+        "Every client-native date presentation path is either migrated to next-intl or explicitly classified as timezone detection or business calendar UTC",
+        "Focused tests, review, browser acceptance, and repository release gates are recorded"
+      ],
+      "evidence": [
+        "openspec/changes/add-user-timezone-preferences/verification-report.md",
+        "tests/time-zone-profile.integration.test.ts passed against local Supabase with disposable cleanup",
+        "tests/time-zone-compliance-route.test.ts covers UTC year/month and west-of-UTC January boundary",
+        ".harnesskit/evidence/add-user-timezone-preferences/browser-assertions.json",
+        ".harnesskit/evidence/add-user-timezone-preferences/automatic-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/manual-utc-selection.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/manual-utc-reload.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/reset-automatic-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/tenant-host-isolation.png",
+        "tests/root-layout-hydration.test.ts covers the accepted zero-hydration-warning root layout contract",
+        "Final focused verification passed 13 files / 185 tests; changed-scope ESLint passed with zero errors; production no-lint build generated 277 pages"
+      ],
+      "blocked_by": [],
+      "notes": "All OpenSpec tasks are complete. Full-suite platform-landing assertions, repository-wide ESLint debt, one platform-landing TypeScript target error, and 19 existing dependency advisories are recorded as unrelated baselines in the verification report; this branch changes no dependency manifest or lockfile."
     },
     {
       "id": "harness-bootstrap",

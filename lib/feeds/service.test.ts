@@ -8,10 +8,11 @@ const getMinifluxCredential = vi.hoisted(() => vi.fn(async (_admin: unknown, use
   const value = credentials.get(userId)
   return value ? { ...value, lastVerifiedAt: null, lastError: null } : null
 }))
+const getMinifluxConnectionMetadata = vi.hoisted(() => vi.fn())
 
 vi.mock('./credentials', () => ({
   getMinifluxCredential,
-  getMinifluxConnectionMetadata: vi.fn(),
+  getMinifluxConnectionMetadata,
   assertMinifluxAccountAvailable: vi.fn(),
   saveMinifluxCredential: vi.fn(),
   deleteMinifluxCredential: vi.fn(),
@@ -71,6 +72,13 @@ describe('FeedService Miniflux-only user isolation', () => {
     credentials.set('user-b', { apiToken: 'token-b', externalUserId: 2, username: 'reader-b' })
     clients.set('token-a', clientDouble())
     clients.set('token-b', clientDouble())
+    getMinifluxConnectionMetadata.mockResolvedValue({
+      connected: true,
+      externalUserId: 1,
+      username: 'reader-a',
+      lastVerifiedAt: null,
+      lastError: null,
+    })
     clients.get('token-a')!.verifyConnection.mockResolvedValue({ id: 1, username: 'reader-a', isAdmin: false })
     clients.get('token-b')!.verifyConnection.mockResolvedValue({ id: 2, username: 'reader-b', isAdmin: false })
   })
@@ -89,6 +97,36 @@ describe('FeedService Miniflux-only user isolation', () => {
     expect(getMinifluxCredential).toHaveBeenCalledWith(admin, 'user-a')
     expect(getMinifluxCredential).toHaveBeenCalledWith(admin, 'user-b')
     expect(admin.from).not.toHaveBeenCalled()
+  })
+
+  it('reports a stored connection as disconnected when the upstream identity can no longer be verified', async () => {
+    clients.get('token-a')!.verifyConnection.mockRejectedValue(new Error('revoked'))
+
+    await expect(new FeedService(admin as never).connectionStatus('user-a')).resolves.toMatchObject({
+      connected: false,
+      lastError: 'The feed connection could not be verified. Reconnect Miniflux.',
+      baseUrlConfigured: true,
+    })
+  })
+
+  it('reports a stored connection as connected only for the same non-admin Miniflux identity', async () => {
+    await expect(new FeedService(admin as never).connectionStatus('user-a')).resolves.toMatchObject({
+      connected: true,
+      baseUrlConfigured: true,
+    })
+    expect(clients.get('token-a')!.verifyConnection).toHaveBeenCalledOnce()
+  })
+
+  it('can report configured connection state without hiding a later adapter failure', async () => {
+    clients.get('token-a')!.verifyConnection.mockRejectedValue(new Error('revoked'))
+
+    await expect(new FeedService(admin as never).connectionStatus('user-a', {
+      verifyUpstream: false,
+    })).resolves.toMatchObject({
+      connected: true,
+      baseUrlConfigured: true,
+    })
+    expect(clients.get('token-a')!.verifyConnection).not.toHaveBeenCalled()
   })
 
   it('verifies the stored Miniflux identity before serving connected resources', async () => {

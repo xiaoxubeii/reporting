@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { DiscoveryReadService, mapDiscoveryRow } from './read-service'
+import { deriveDiscoveryRefreshStatus } from './refresh-status'
 
 const GENERATION_ID = '00000000-0000-4000-8000-000000000001'
 const ITEM_ID = '00000000-0000-4000-8000-000000000002'
@@ -24,7 +25,10 @@ describe('DiscoveryReadService', () => {
 
     const page = await service.list({ fundId: 'fund-1', kind: 'trending', limit: 20, offset: 0 })
 
-    expect(page).toMatchObject({ items: [], generationId: null, generatedAt: null, isStale: true, total: 0 })
+    expect(page).toMatchObject({
+      items: [], generationId: null, generatedAt: null, isStale: true, total: 0,
+      refresh: { state: 'degraded', reason: 'provider_not_configured', retryable: true },
+    })
     expect(reader.readItems).not.toHaveBeenCalled()
   })
 
@@ -88,6 +92,59 @@ describe('DiscoveryReadService', () => {
     expect(chain.eq).toHaveBeenCalledWith('fund_id', 'fund-1')
     expect(chain.neq).toHaveBeenCalledWith('status', 'passed')
     expect(page.items[0]).toMatchObject({ kind: 'deal_signal', companyName: 'Acme', existingDealId: DEAL_ID })
+  })
+})
+
+describe('discovery refresh state', () => {
+  it.each([
+    ['pending', 'queued', null, false],
+    ['running', 'running', null, false],
+    ['failed', 'degraded', 'refresh_failed', true],
+    ['cancelled', 'degraded', 'refresh_failed', true],
+  ] as const)('maps a %s background job to sanitized %s state', async (jobStatus, state, reason, retryable) => {
+    const refresh = deriveDiscoveryRefreshStatus({
+      discovery: { activeGenerationId: null, generatedAt: null, lastAttemptAt: null, lastErrorCode: null },
+      providerConfigured: true,
+      latestJob: { status: jobStatus, updatedAt: GENERATED_AT },
+      isStale: true,
+    })
+    const reader = {
+      readState: vi.fn(async () => ({ activeGenerationId: null, generatedAt: null, lastAttemptAt: null, lastErrorCode: null })),
+      readStatus: vi.fn(async () => refresh),
+      readItems: vi.fn(),
+    }
+    const service = new DiscoveryReadService({} as never, reader, { now: () => new Date(GENERATED_AT) })
+
+    const page = await service.list({ fundId: 'fund-1', kind: 'trending', limit: 20, offset: 0 })
+
+    expect(page.refresh).toEqual({ state, reason, retryable, lastAttemptAt: GENERATED_AT })
+  })
+
+  it('serves last-known-good results while exposing only a sanitized failed refresh reason', async () => {
+    const reader = {
+      readState: vi.fn(async () => ({
+        activeGenerationId: GENERATION_ID,
+        generatedAt: GENERATED_AT,
+        lastAttemptAt: '2026-07-25T11:00:00.000Z',
+        lastErrorCode: 'provider-secret-stack-trace',
+      })),
+      readStatus: vi.fn(async () => ({
+        state: 'degraded' as const,
+        reason: 'refresh_failed' as const,
+        retryable: true,
+        lastAttemptAt: '2026-07-25T11:00:00.000Z',
+      })),
+      readItems: vi.fn(async () => ({ total: 1, rows: [dealRow()] })),
+    }
+    const service = new DiscoveryReadService({ from: vi.fn() } as never, reader, {
+      now: () => new Date('2026-07-25T11:00:01.000Z'),
+    })
+
+    const page = await service.list({ fundId: 'fund-1', kind: 'trending', limit: 20, offset: 0 })
+
+    expect(page.items).toHaveLength(1)
+    expect(page.refresh).toMatchObject({ state: 'degraded', reason: 'refresh_failed', retryable: true })
+    expect(JSON.stringify(page)).not.toContain('provider-secret-stack-trace')
   })
 })
 

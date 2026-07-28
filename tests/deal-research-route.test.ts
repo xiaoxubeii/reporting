@@ -27,6 +27,7 @@ describe('POST /api/deals/[id]/research', () => {
     const { POST } = await import('@/app/api/deals/[id]/research/route')
     const response = await POST(request(), { params: { id: 'deal-1' } })
     expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ job_id: 'job-1', already: false })
     expect(assertRouteAccess).toHaveBeenCalledWith(expect.anything(), 'user-1', 'api/deals/[id]/research', 'POST')
     expect(queueDealResearch).toHaveBeenCalledWith({
       dealId: 'deal-1', fundId: 'fund-1', actor: { type: 'user', userId: 'user-1' },

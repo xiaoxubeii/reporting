@@ -176,7 +176,7 @@ function SignUpForm() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">{t('signupTitle')}</CardTitle>
+            <CardTitle className="text-lg" role="heading" aria-level={2}>{t('signupTitle')}</CardTitle>
             <CardDescription>{t('signupDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

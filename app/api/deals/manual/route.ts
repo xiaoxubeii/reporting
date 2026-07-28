@@ -4,8 +4,23 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getFeatureProvider } from '@/lib/ai/feature-provider'
 import { extractAttachmentText, type PostmarkPayload } from '@/lib/parsing/extractAttachmentText'
-import { processDeal } from '@/lib/pipeline/processDeal'
+import { insertInboundDealIdempotently, processDeal } from '@/lib/pipeline/processDeal'
+import {
+  buildPublicSubmissionFallbackDeal,
+  ensureProcessedDeal,
+  queueFallbackDealResearch,
+} from '@/lib/deals/public-submission-fallback'
+import { persistPreparedSubmissionAttachments } from '@/lib/deals/submission-attachments'
+import {
+  attachmentFailureMessage,
+  prepareLegacyInboundAttachments,
+} from '@/lib/email/legacy-inbound-attachments'
+import type { IntroSource, Json } from '@/lib/types/database'
 import type { PostmarkPayload as PipelinePayload } from '@/lib/pipeline/processEmail'
+import {
+  RequestBodyTooLargeError,
+  readBoundedFormData,
+} from '@/lib/http/read-bounded-body'
 import {
   MAX_NAME_LEN, MAX_EMAIL_LEN, MAX_URL_LEN, MAX_PITCH_LEN,
   EMAIL_RE, safeWebUrl, sanitizeFilename, validateAttachmentType,
@@ -13,6 +28,24 @@ import {
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
 const MAX_FILES = 10
+const MAX_MANUAL_DEAL_BODY_BYTES = 32 * 1024 * 1024
+type JsonObject = { [key: string]: Json | undefined }
+type SyntheticPostmarkPayload = PostmarkPayload & {
+  From: string
+  To: string
+  FromFull: { Email: string; Name: string }
+  Subject: string
+  MessageID: string
+}
+const MANUAL_INTRO_SOURCES = new Set<IntroSource>([
+  'referral',
+  'cold',
+  'warm_intro',
+  'accelerator',
+  'demo_day',
+  'event',
+  'other',
+])
 
 /**
  * Admin-authenticated in-app deal creation. Composes a synthetic email payload
@@ -44,12 +77,15 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
-  const fundId = (membership as any).fund_id as string
+  const fundId = (membership as { fund_id: string }).fund_id
 
   let form: FormData
   try {
-    form = await req.formData()
-  } catch {
+    form = await readBoundedFormData(req, MAX_MANUAL_DEAL_BODY_BYTES)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json({ error: 'Submission exceeds the 32MB request limit' }, { status: 413 })
+    }
     return NextResponse.json({ error: 'Expected multipart/form-data' }, { status: 400 })
   }
 
@@ -71,6 +107,10 @@ export async function POST(req: NextRequest) {
   if (referrerEmail && !EMAIL_RE.test(referrerEmail)) {
     return NextResponse.json({ error: 'Invalid referrer email' }, { status: 400 })
   }
+  if (introSource && !MANUAL_INTRO_SOURCES.has(introSource as IntroSource)) {
+    return NextResponse.json({ error: 'Invalid intro source' }, { status: 400 })
+  }
+  const validatedIntroSource = introSource ? introSource as IntroSource : null
 
   // Validate and normalize the website URL — only http(s) accepted so we
   // don't store `javascript:` URLs that would later render as <a href>.
@@ -124,7 +164,7 @@ export async function POST(req: NextRequest) {
   }
 
   const messageId = `<manual-${crypto.randomUUID()}@hemrock.local>`
-  const payload: PostmarkPayload & { From: string; To: string; FromFull: { Email: string; Name: string }; Subject: string; MessageID: string } = {
+  const payload: SyntheticPostmarkPayload = {
     From: founderEmail,
     To: 'manual-entry@hemrock.local',
     FromFull: { Email: founderEmail, Name: founderName },
@@ -135,6 +175,16 @@ export async function POST(req: NextRequest) {
     Attachments: attachments,
   }
 
+  // MIME/extension allowlisting is not a content security boundary. Scan the
+  // complete decoded set before creating any database or storage records.
+  const preparedAttachments = await prepareLegacyInboundAttachments(attachments)
+  if (!preparedAttachments.ok) {
+    const error = preparedAttachments.code === 'attachment_unsafe'
+      ? 'Attachment failed security scan'
+      : attachmentFailureMessage(preparedAttachments.code)
+    return NextResponse.json({ error }, { status: 400 })
+  }
+
   // Insert the inbound_emails row that the deal will FK to.
   const { data: emailInsert, error: emailErr } = await admin
     .from('inbound_emails')
@@ -143,7 +193,7 @@ export async function POST(req: NextRequest) {
       from_address: founderEmail,
       subject,
       received_at: new Date().toISOString(),
-      raw_payload: stripAttachmentContent(payload) as any,
+      raw_payload: stripAttachmentContent(payload),
       processing_status: 'processing',
       attachments_count: attachments.length,
       routing_label: 'deals',
@@ -151,7 +201,7 @@ export async function POST(req: NextRequest) {
       routing_reasoning: `Manual entry by ${user.email ?? user.id}`,
       routing_secondary_label: null,
       routed_to: 'deals',
-    } as any)
+    })
     .select('id')
     .single()
 
@@ -161,40 +211,69 @@ export async function POST(req: NextRequest) {
   }
   const emailId = (emailInsert as { id: string }).id
 
-  // Upload attachments to storage and rewrite the payload to reference
-  // StoragePath instead of inline content (so the row stays compact).
-  if (attachments.length > 0) {
-    const updatedAttachments: Array<{ Name: string; ContentType: string; ContentLength: number; StoragePath: string }> = []
-    for (let i = 0; i < attachments.length; i++) {
-      const a = attachments[i]
-      const safeName = `${i}_${a.Name}`
-      const storagePath = `${emailId}/${safeName}`
-      const buf = Buffer.from(a.Content, 'base64')
-      const { error: uploadErr } = await admin.storage
-        .from('email-attachments')
-        .upload(storagePath, buf, { contentType: a.ContentType, upsert: true })
-      if (!uploadErr) {
-        updatedAttachments.push({
-          Name: a.Name,
-          ContentType: a.ContentType,
-          ContentLength: a.ContentLength,
-          StoragePath: storagePath,
-        })
-      }
-    }
-    if (updatedAttachments.length > 0) {
-      const stripped = { ...stripAttachmentContent(payload), Attachments: updatedAttachments }
-      await admin.from('inbound_emails').update({ raw_payload: stripped as any }).eq('id', emailId)
-    }
+  // Store every attachment and commit the StoragePath metadata as one logical
+  // operation. Partial writes are rolled back and never reach the Deal pipeline.
+  const storedAttachments = await persistPreparedSubmissionAttachments(
+    preparedAttachments.attachments,
+    {
+      store: async ({ filename, contentType, bytes }) => {
+        const storagePath = `${emailId}/${filename}`
+        const { error } = await admin.storage
+          .from('email-attachments')
+          .upload(storagePath, bytes, { contentType, upsert: true })
+        if (error) throw error
+        return storagePath
+      },
+      remove: async storagePath => {
+        const { error } = await admin.storage
+          .from('email-attachments')
+          .remove([storagePath])
+        if (error) throw error
+      },
+      persistMetadata: async stored => {
+        const stripped = { ...stripAttachmentContent(payload), Attachments: stored }
+        const { error } = await admin
+          .from('inbound_emails')
+          .update({ raw_payload: stripped as unknown as Json })
+          .eq('id', emailId)
+        if (error) throw error
+      },
+    },
+  )
+  if (!storedAttachments.ok) {
+    const storageFailure = attachmentFailureMessage('attachment_storage_failed')
+    await admin
+      .from('inbound_emails')
+      .update({ processing_status: 'failed', processing_error: storageFailure })
+      .eq('id', emailId)
+    return NextResponse.json({ error: 'Failed to store pitch attachments', email_id: emailId }, { status: 500 })
   }
 
-  // Run the analyzer. On failure, the inbound_email row is marked failed but
-  // we still return the email_id so the admin can see it in /audit and retry.
-  let dealId: string | null = null
+  const insertFallbackDeal = () => insertInboundDealIdempotently(
+    admin,
+    buildPublicSubmissionFallbackDeal({
+      emailId,
+      fundId,
+      companyName,
+      companyUrl,
+      founderName,
+      founderEmail,
+      pitch,
+      introSource: validatedIntroSource,
+      referrerName: referrerName || null,
+      referrerEmail: referrerEmail || null,
+    }),
+  )
+
+  // A resolved provider call is not enough: processDeal must return a durable
+  // Deal id. Missing ids and thrown analysis errors both enter the same
+  // deterministic fallback path before this route can report success.
+  let processResult: { dealId?: string | null } | null = null
+  let analysisError: string | null = null
   try {
     const { provider, model, providerType } = await getFeatureProvider(admin, fundId, 'deal_analysis')
     const extracted = await extractAttachmentText(payload)
-    const result = await processDeal({
+    processResult = await processDeal({
       supabase: admin,
       emailId,
       fundId,
@@ -204,42 +283,67 @@ export async function POST(req: NextRequest) {
       providerType,
       model,
     })
-    dealId = (result as any)?.dealId ?? null
-    await admin
-      .from('inbound_emails')
-      .update({ processing_status: 'success' })
-      .eq('id', emailId)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[deals/manual] processDeal failed:', msg)
+    analysisError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[deals/manual] processDeal failed:', analysisError)
+  }
+
+  let ensuredDeal
+  try {
+    ensuredDeal = await ensureProcessedDeal(processResult, insertFallbackDeal)
+  } catch (err) {
+    const fallbackError = err instanceof Error ? err.message : 'Fallback Deal insert failed'
+    console.error('[deals/manual] Fallback Deal insert failed:', fallbackError)
     await admin
       .from('inbound_emails')
-      .update({ processing_status: 'failed', processing_error: msg })
+      .update({
+        processing_status: 'failed',
+        processing_error: analysisError ?? fallbackError,
+      })
       .eq('id', emailId)
-    return NextResponse.json({ error: msg, email_id: emailId }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create deal', email_id: emailId }, { status: 500 })
   }
 
-  // Look up the created deal so the client can route to it directly.
-  if (!dealId) {
-    const { data: deal } = await admin
-      .from('inbound_deals')
-      .select('id')
-      .eq('email_id', emailId)
-      .eq('fund_id', fundId)
-      .maybeSingle()
-    dealId = (deal as any)?.id ?? null
+  if (analysisError || ensuredDeal.usedFallback) {
+    try {
+      await queueFallbackDealResearch({ dealId: ensuredDeal.dealId, fundId })
+    } catch (error) {
+      console.error('[deals/manual] Could not queue fallback Deal Research:', error instanceof Error ? error.message : 'Unknown error')
+    }
+    const processingError = analysisError ?? 'Deal analysis returned no Deal'
+    await admin
+      .from('inbound_emails')
+      .update({ processing_status: 'failed', processing_error: processingError })
+      .eq('id', emailId)
+    return NextResponse.json({
+      deal_id: ensuredDeal.dealId,
+      email_id: emailId,
+      analysis_status: 'failed',
+    })
   }
 
-  return NextResponse.json({ ok: true, email_id: emailId, deal_id: dealId })
+  await admin
+    .from('inbound_emails')
+    .update({ processing_status: 'success', processing_error: null })
+    .eq('id', emailId)
+
+  return NextResponse.json({ ok: true, email_id: emailId, deal_id: ensuredDeal.dealId })
 }
 
-function stripAttachmentContent(payload: any) {
-  if (!payload.Attachments) return payload
+function stripAttachmentContent(payload: SyntheticPostmarkPayload): JsonObject {
   return {
-    ...payload,
-    Attachments: payload.Attachments.map((a: any) => {
-      const { Content, ...rest } = a
-      return rest
-    }),
+    From: payload.From,
+    To: payload.To,
+    FromFull: payload.FromFull,
+    Subject: payload.Subject,
+    TextBody: payload.TextBody,
+    HtmlBody: payload.HtmlBody,
+    MessageID: payload.MessageID,
+    Attachments: (payload.Attachments ?? []).map(({ Name, ContentType, ContentLength, StoragePath }) => ({
+      Name,
+      ContentType,
+      ContentLength,
+      ...(StoragePath ? { StoragePath } : {}),
+    })),
   }
 }

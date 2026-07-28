@@ -3,6 +3,7 @@ export interface FounderDossier {
   role: string
   background_summary: string
   sources: Array<{ title: string; url: string | null }>
+  evidence_source_ids?: string[]
   open_questions: string[]
   dismissed?: boolean
 }
@@ -52,12 +53,19 @@ export function parseFounderDossiers(value: unknown): {
           .map(question => question.trim())
           .filter(Boolean)
       : []
+    const evidenceSourceIds = Array.isArray(candidate.evidence_source_ids)
+      ? Array.from(new Set(candidate.evidence_source_ids
+          .filter((id): id is string => typeof id === 'string')
+          .map(id => id.trim())
+          .filter(Boolean)))
+      : []
 
     dossiers.push({
       founder_name: candidate.founder_name.trim(),
       role: typeof candidate.role === 'string' ? candidate.role.trim() : '',
       background_summary: typeof candidate.background_summary === 'string' ? candidate.background_summary.trim() : '',
       sources,
+      ...(evidenceSourceIds.length > 0 ? { evidence_source_ids: evidenceSourceIds } : {}),
       open_questions: openQuestions,
     })
   }
@@ -76,6 +84,7 @@ function cloneDossier(dossier: FounderDossier): FounderDossier {
   return {
     ...dossier,
     sources: dossier.sources.map(source => ({ ...source })),
+    evidence_source_ids: dossier.evidence_source_ids ? [...dossier.evidence_source_ids] : undefined,
     open_questions: [...dossier.open_questions],
   }
 }

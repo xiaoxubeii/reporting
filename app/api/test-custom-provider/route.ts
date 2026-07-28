@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
     const provider = new OpenAIProvider(apiKey, urlValidation.url, {
       requestParameters: requestParameters.value,
       rejectRedirects: true,
+      publicEgressOnly: true,
     })
     await provider.createMessage({ model, maxTokens: 1, content: 'Hi' })
     return NextResponse.json({ ok: true })

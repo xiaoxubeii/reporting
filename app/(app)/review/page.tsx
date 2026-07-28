@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -60,8 +60,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function ReviewPage() {
   const t = useTranslations('Review')
-  const locale = useLocale()
-  const dateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' })
+  const format = useFormatter()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [data, setData] = useState<ReviewData | null>(null)
@@ -188,7 +187,7 @@ export default function ReviewPage() {
                   )}
                   {item.email && (
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {item.email.subject ?? t('noSubject')}, {dateFormatter.format(new Date(item.email.received_at))}
+                      {item.email.subject ?? t('noSubject')}, {format.dateTime(new Date(item.email.received_at), { year: 'numeric', month: 'short', day: 'numeric' })}
                     </span>
                   )}
                 </div>
@@ -303,7 +302,7 @@ export default function ReviewPage() {
                     </p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                       <span>{email.from_address}</span>
-                      <span>{dateFormatter.format(new Date(email.received_at))}</span>
+                      <span>{format.dateTime(new Date(email.received_at), { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                       {email.company ? (
                         <span>{email.company.name}</span>
                       ) : (

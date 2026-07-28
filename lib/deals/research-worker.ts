@@ -12,6 +12,7 @@ import type {
 } from '@/lib/background-jobs/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runDealResearch } from './research'
+import type { DealResearchRunResult } from './research'
 import { writeAttemptBoundDealResearch } from './research-persistence'
 
 export interface DealResearchWorkerDeal {
@@ -40,7 +41,7 @@ export interface DealResearchWorkerDependencies {
   runResearch(
     context: BackgroundExecutionContext,
     deal: DealResearchWorkerDeal,
-  ): Promise<{ readonly status: 'done' | 'skipped' | 'failed'; readonly error?: string }>
+  ): Promise<DealResearchRunResult>
 }
 
 export interface DealResearchWorkerResult {
@@ -91,7 +92,11 @@ export async function executeDealResearchWorker(
   const result = await dependencies.runResearch(context, deal)
   if (result.status === 'done') return { status: 200, body: { status: 'done' } }
   if (result.status === 'skipped') return { status: 422, body: { status: 'skipped' } }
-  return { status: 503, body: { status: 'failed' } }
+  if (result.retryable) return { status: 503, body: { status: 'failed' } }
+  // runDealResearch has already persisted the truthful Deal-level failure.
+  // Retrying the same permanent provider/configuration failure is wasteful;
+  // 422 tells the dispatcher that transport completed without claiming success.
+  return { status: 422, body: { status: 'failed' } }
 }
 
 function createDealResearchWorkerDependencies(

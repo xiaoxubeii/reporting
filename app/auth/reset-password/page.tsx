@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">{t('setPasswordTitle')}</CardTitle>
+            <CardTitle className="text-lg" role="heading" aria-level={2}>{t('setPasswordTitle')}</CardTitle>
             <CardDescription>
               {success ? t('passwordUpdatedDescription') : t('choosePasswordDescription')}
             </CardDescription>

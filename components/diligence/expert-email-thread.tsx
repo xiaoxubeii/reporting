@@ -19,13 +19,8 @@ export function ExpertEmailThread({ dealId, requestId }: { dealId: string; reque
     setState({ status: 'loading' })
     const encodedDealId = encodeURIComponent(dealId)
     const encodedRequestId = encodeURIComponent(requestId)
-    void fetch(`/api/diligence/${encodedDealId}/expert-validations/${encodedRequestId}/email-thread`, {
-      cache: 'no-store',
-      signal: controller.signal,
-    }).then(async response => {
-      if (!response.ok) throw new Error('Thread unavailable')
-      const body = await response.json() as { thread?: ExpertEmailThreadView }
-      if (!body.thread) throw new Error('Thread unavailable')
+    const url = `/api/diligence/${encodedDealId}/expert-validations/${encodedRequestId}/email-thread`
+    void loadThreadWithRetry(url, controller.signal).then(body => {
       if (!controller.signal.aborted) setState({ status: 'ready', thread: body.thread })
     }).catch(() => {
       if (!controller.signal.aborted) setState({ status: 'error' })
@@ -59,6 +54,31 @@ export function ExpertEmailThread({ dealId, requestId }: { dealId: string; reque
       </article>)}
     </div>}
   </section>
+}
+
+async function loadThreadWithRetry(
+  url: string,
+  signal: AbortSignal,
+): Promise<{ thread: ExpertEmailThreadView }> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(url, { cache: 'no-store', signal })
+      if (!response.ok) throw new Error('Thread unavailable')
+      const body = await response.json() as { thread?: ExpertEmailThreadView }
+      if (!body.thread) throw new Error('Thread unavailable')
+      return { thread: body.thread }
+    } catch (error) {
+      if (signal.aborted || attempt === 2 || !(error instanceof TypeError)) throw error
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(resolve, 250 * (attempt + 1))
+        signal.addEventListener('abort', () => {
+          window.clearTimeout(timeout)
+          reject(new DOMException('Aborted', 'AbortError'))
+        }, { once: true })
+      })
+    }
+  }
+  throw new Error('Thread unavailable')
 }
 
 function formatBytes(size: number) {

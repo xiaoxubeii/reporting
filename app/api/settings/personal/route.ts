@@ -1,23 +1,30 @@
 import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAuthSessionMissingError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { loadPersonalProfile, savePersonalProfile } from '@/lib/identity/profile'
+import { loadPersonalProfile, savePersonalProfile, savePersonalTimeZone } from '@/lib/identity/profile'
 import { identityErrorResponse, readIdentityJson } from '@/lib/identity/http'
 import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 import { setCurrentUserMailbox } from '@/lib/email/mailboxes'
 import { deriveFundEmailDomain } from '@/lib/email/domain'
 import { FundEmailError } from '@/lib/email/errors'
+import { isTrustedRequestHost, isTrustedSameOriginRequest } from '@/lib/http/trusted-origin'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const admin = createAdminClient()
+async function currentUser() {
+  const { data: { user }, error } = await createClient().auth.getUser()
+  if (error && !isAuthSessionMissingError(error)) throw new Error('Authentication unavailable')
+  return user
+}
 
+export async function GET(request: NextRequest) {
+  if (!isTrustedRequestHost(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
+    const user = await currentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const admin = createAdminClient()
     const [profile, membershipResult] = await Promise.all([
       loadPersonalProfile(admin, user.id),
       admin.from('fund_members').select('fund_id,role').eq('user_id', user.id).maybeSingle(),
@@ -74,11 +81,11 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const admin = createAdminClient()
+  if (!isTrustedSameOriginRequest(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
+    const user = await currentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const admin = createAdminClient()
     const body = await readIdentityJson(req)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
@@ -86,11 +93,16 @@ export async function PATCH(req: NextRequest) {
     const input = body as Record<string, unknown>
     const hasName = Object.hasOwn(input, 'fullName')
     const hasMailbox = Object.hasOwn(input, 'mailboxLocalPart')
-    if (hasName === hasMailbox) {
+    const hasTimeZone = Object.hasOwn(input, 'timeZone')
+    if (Object.keys(input).length !== 1 || Number(hasName) + Number(hasMailbox) + Number(hasTimeZone) !== 1) {
       return NextResponse.json({ error: 'Update one personal setting at a time.' }, { status: 400 })
     }
     if (hasName) {
       const profile = await savePersonalProfile(admin, { userId: user.id, fullName: input.fullName })
+      return NextResponse.json({ profile })
+    }
+    if (hasTimeZone) {
+      const profile = await savePersonalTimeZone(admin, { userId: user.id, timeZone: input.timeZone })
       return NextResponse.json({ profile })
     }
 

@@ -1,25 +1,28 @@
 'use client'
 
 import { useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 
 /**
- * Signs out the demo (viewer) user when the browser tab is closed
- * or when they navigate to an external page. This prevents the demo
- * session from persisting and interfering with real user logins.
+ * Ends a demo session before the user leaves this application for another origin.
+ * Browser unload events also fire for reloads and direct internal navigation, so
+ * using them here destroys the viewer session while the user is still browsing.
  */
 export function DemoSessionGuard() {
   useEffect(() => {
-    const supabase = createClient()
-
-    const handleUnload = () => {
-      // Use sendBeacon to reliably sign out even during tab close.
-      // Fall back to calling signOut directly.
+    const handleClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const anchor = target.closest<HTMLAnchorElement>('a[href]')
+      if (!anchor) return
+      if (anchor.target && anchor.target.toLowerCase() !== '_self') return
+      const destination = new URL(anchor.href, window.location.href)
+      if (destination.origin === window.location.origin) return
       navigator.sendBeacon('/api/auth/logout')
     }
 
-    window.addEventListener('beforeunload', handleUnload)
-    return () => window.removeEventListener('beforeunload', handleUnload)
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
   }, [])
 
   return null

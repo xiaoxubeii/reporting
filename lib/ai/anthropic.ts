@@ -1,5 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type {
+  BetaMessageStreamParams,
+  BetaToolUnion,
+} from '@anthropic-ai/sdk/resources/beta/messages/messages'
+import type {
   AIProvider, AIModel, AIResult, CreateMessageParams, CreateChatParams, ContentBlock,
   CreateToolLoopParams, ToolLoopResult, ToolCallRecord,
 } from './types'
@@ -22,11 +26,14 @@ export class AnthropicProvider implements AIProvider {
       ? params.content
       : toAnthropicContent(params.content)
 
-    const tools = params.enableWebSearch
+    const tools: Anthropic.ToolUnion[] | undefined = params.enableWebSearch
       ? [{
           type: 'web_search_20250305' as const,
-          name: 'web_search',
+          name: 'web_search' as const,
           max_uses: params.webSearchMaxUses ?? 5,
+          ...(params.webSearchBlockedDomains?.length
+            ? { blocked_domains: [...params.webSearchBlockedDomains] }
+            : {}),
         }]
       : undefined
 
@@ -48,7 +55,7 @@ export class AnthropicProvider implements AIProvider {
       model: params.model,
       max_tokens: params.maxTokens,
       ...(systemBlocks ? { system: systemBlocks } : {}),
-      ...(tools ? { tools: tools as any } : {}),
+      ...(tools ? { tools } : {}),
       messages: [{ role: 'user' as const, content }],
     }
     const stream = params.signal
@@ -68,7 +75,7 @@ export class AnthropicProvider implements AIProvider {
     // Count actual web searches performed so callers can tell "tool attached
     // but model didn't search" from "model searched but found nothing".
     const webSearchCount = params.enableWebSearch
-      ? response.content.filter((b: any) => b.type === 'web_search_tool_result').length
+      ? response.content.filter(b => b.type === 'web_search_tool_result').length
       : undefined
 
     // Anthropic attaches citations to text blocks as metadata (not in the text
@@ -81,12 +88,12 @@ export class AnthropicProvider implements AIProvider {
       const out: Array<{ url: string; title: string }> = []
       for (const block of response.content) {
         if (block.type !== 'text') continue
-        const cites = (block as any).citations as Array<{ type?: string; url?: string; title?: string }> | undefined
+        const cites = block.citations
         if (!Array.isArray(cites)) continue
         for (const c of cites) {
-          if (!c || typeof c.url !== 'string' || !c.url || seen.has(c.url)) continue
+          if (!('url' in c) || typeof c.url !== 'string' || !c.url || seen.has(c.url)) continue
           seen.add(c.url)
-          out.push({ url: c.url, title: typeof c.title === 'string' ? c.title : c.url })
+          out.push({ url: c.url, title: 'title' in c && typeof c.title === 'string' ? c.title : c.url })
         }
       }
       webSearchCitations = out
@@ -166,15 +173,12 @@ export class AnthropicProvider implements AIProvider {
     }
     const knownCustomTools = new Set(customTools.map(tool => tool.name))
 
-    const toolDefs: any[] = [
+    const toolDefs: Anthropic.ToolUnion[] = [
       ...customTools.map(t => ({
         name: t.name,
         description: t.description,
-        input_schema: t.inputSchema,
+        input_schema: t.inputSchema as Anthropic.Tool['input_schema'],
       })),
-      // Each declared MCP server must be referenced by exactly one toolset entry,
-      // or the API rejects the request.
-      ...mcpServers.map(s => ({ type: 'mcp_toolset', mcp_server_name: s.name })),
     ]
 
     if (params.enableWebSearch) {
@@ -182,6 +186,9 @@ export class AnthropicProvider implements AIProvider {
         type: 'web_search_20250305',
         name: 'web_search',
         max_uses: params.webSearchMaxUses ?? 5,
+        ...(params.webSearchBlockedDomains?.length
+          ? { blocked_domains: [...params.webSearchBlockedDomains] }
+          : {}),
       })
     }
 
@@ -202,7 +209,7 @@ export class AnthropicProvider implements AIProvider {
     let truncated = false
 
     for (let i = 0; i < maxIterations; i++) {
-      const request: any = {
+      const request: Anthropic.MessageCreateParams = {
         model: params.model,
         max_tokens: params.maxTokens,
         ...(systemBlocks ? { system: systemBlocks } : {}),
@@ -214,7 +221,7 @@ export class AnthropicProvider implements AIProvider {
       // server list; without the beta header the mcp_servers param is rejected.
       let response: Anthropic.Message
       if (mcpServers.length > 0) {
-        const stream = (this.client as any).beta.messages.stream({
+        const betaRequest: BetaMessageStreamParams = {
           ...request,
           betas: [MCP_BETA],
           mcp_servers: mcpServers.map(s => ({
@@ -223,8 +230,18 @@ export class AnthropicProvider implements AIProvider {
             url: s.url,
             ...(s.authorizationToken ? { authorization_token: s.authorizationToken } : {}),
           })),
-        }, params.signal ? { signal: params.signal } : undefined)
-        response = await stream.finalMessage()
+          // Each declared MCP server must be referenced by exactly one toolset
+          // entry, or the API rejects the request.
+          tools: [
+            ...(toolDefs as unknown as BetaToolUnion[]),
+            ...mcpServers.map((s): BetaToolUnion => ({
+              type: 'mcp_toolset',
+              mcp_server_name: s.name,
+            })),
+          ],
+        }
+        const stream = this.client.beta.messages.stream(betaRequest, params.signal ? { signal: params.signal } : undefined)
+        response = await stream.finalMessage() as unknown as Anthropic.Message
       } else {
         const stream = this.client.messages.stream(request, params.signal ? { signal: params.signal } : undefined)
         response = await stream.finalMessage()

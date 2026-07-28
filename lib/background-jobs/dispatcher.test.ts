@@ -244,6 +244,21 @@ describe('background job dispatcher', () => {
     expect(repo.finalize).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }))
   })
 
+  it('treats a persisted domain failure as terminal while leaving domain state to the worker', async () => {
+    const repo = repository()
+    const result = await dispatchBackgroundJobs({
+      authorization: `Bearer ${CRON_SECRET}`,
+      cronSecret: CRON_SECRET,
+      repository: repo,
+      fetchImpl: vi.fn(async () => new Response(JSON.stringify({ status: 'failed' }), {
+        status: 422, headers: { 'content-type': 'application/json' },
+      })),
+      env: ENV,
+    })
+    expect(result.completed).toBe(1)
+    expect(repo.finalize).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }))
+  })
+
   it('does not retry once the attempt limit is reached and honors CAS finalization', async () => {
     const repo = repository([{ ...JOB, attempts: 3, maxAttempts: 3 }])
     vi.mocked(repo.finalize).mockResolvedValue(false)

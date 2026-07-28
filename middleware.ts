@@ -112,7 +112,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = pathname.startsWith('/auth')
   const isApiRoute = pathname.startsWith('/api')
-  const isLocalePreferenceRoute = pathname === '/api/locale'
+  const isUiPreferenceRoute = pathname === '/api/locale' || pathname === '/api/time-zone'
 
   // Marketing site routes require both env vars to be set
   const marketingEnabled =
@@ -146,6 +146,7 @@ export async function middleware(request: NextRequest) {
   const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/')
   const isLpApiRoute = pathname.startsWith('/api/portal/')
   const isLpActivationApi = pathname === '/api/portal/activate'
+  const isLpIdentityProbe = pathname === '/api/portal/me'
 
   // OAuth discovery (RFC 8414 / RFC 9728). An MCP client fetches these BEFORE it
   // has any credential, so they must answer to an anonymous caller — bouncing them
@@ -179,7 +180,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Enforce MFA: redirect to verify page if user has enrolled TOTP but hasn't completed AAL2
-  if (user && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isOAuthDiscovery && !isLocalePreferenceRoute) {
+  if (user && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isOAuthDiscovery && !isUiPreferenceRoute) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
       if (isApiRoute) {
@@ -204,7 +205,7 @@ export async function middleware(request: NextRequest) {
   // Reads use the caller's own session (RLS-scoped), so the edge never holds a service-role key:
   // fund_settings, fund_member_access, and fund_domain_defaults are all readable by their owner.
   if (user && isApiRoute) {
-    if (tenant && isLpApiRoute && !isLpActivationApi) {
+    if (tenant && isLpApiRoute && !isLpActivationApi && !isLpIdentityProbe) {
       const { data: lpFundId, error: lpFundError } = await supabase.rpc('resolve_my_lp_fund', {})
       if (lpFundError || lpFundId !== tenant.id) return hostNotFound()
     }
@@ -357,6 +358,7 @@ function isTenantCredentialOrOnboardingApi(pathname: string): boolean {
     || pathname === '/api/mcp'
     || pathname === '/api/agent'
     || pathname === '/api/locale'
+    || pathname === '/api/time-zone'
 }
 
 export const config = {

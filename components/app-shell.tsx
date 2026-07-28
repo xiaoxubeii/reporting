@@ -104,7 +104,7 @@ function AppShellInner({ fundName, fundLogo, userEmail, reviewBadge, settingsBad
 
         {/* Page content */}
         <main className={`flex-1 min-w-0 flex flex-col ${collapsed ? 'md:pl-4' : ''}`}>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {children}
           </div>
         </main>

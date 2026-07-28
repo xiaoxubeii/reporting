@@ -11,10 +11,17 @@ export interface DealResearchPayload extends BackgroundJobPayload {
   readonly dealId: string
 }
 
+export interface MemoResearchPayload extends BackgroundJobPayload {
+  readonly memoJobId: string
+  readonly dealId: string
+  readonly draftId: string
+}
+
 export type FeedDiscoveryPayload = Readonly<Record<never, never>>
 
 export interface BackgroundJobPayloadByKind {
   readonly deal_research: DealResearchPayload
+  readonly memo_research: MemoResearchPayload
   readonly feed_discovery: FeedDiscoveryPayload
 }
 
@@ -23,6 +30,7 @@ export interface BackgroundJobSearchCapability {
   readonly scope: BackgroundJobScope
   readonly maxCalls: number
   readonly allowPersonalSources: boolean
+  readonly requiredUserAccess: BackgroundJobPolicy['requiredUserAccess']
 }
 
 export interface BackgroundJobPolicy<K extends string = string> {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Loader2, Check, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -106,6 +106,7 @@ function ModelRow({ label, hint, recommendedKey, current, onChange, defaultProvi
 type EditorSection = 'caps' | 'stages' | 'features' | 'export'
 
 export function DefaultsEditor({ embedded, section }: { embedded?: boolean; section?: EditorSection } = {}) {
+  const format = useFormatter()
   const locale = useLocale()
   const t = useTranslations('Settings.defaults')
   // When a section is set, render + save only that slice (so the editor can be
@@ -255,7 +256,7 @@ export function DefaultsEditor({ embedded, section }: { embedded?: boolean; sect
 
   if (!data) return <div className="p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />{t('loading')}</div>
 
-  const monthName = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(data.month_window.from))
+  const monthName = format.dateTime(new Date(data.month_window.from), { month: 'long', year: 'numeric', timeZone: 'UTC' })
   const monthlyPct = data.monthly_token_cap ? Math.min(100, (data.monthly_used / data.monthly_token_cap) * 100) : 0
 
   return (

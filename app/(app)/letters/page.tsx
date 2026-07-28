@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Plus, FileText, Loader2, Trash2, Upload, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -30,8 +30,8 @@ interface Template {
 }
 
 export default function LettersPage() {
+  const format = useFormatter()
   const t = useTranslations('Letters.index')
-  const locale = useLocale()
   const fv = useFeatureVisibility()
   const [letters, setLetters] = useState<LetterSummary[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
@@ -184,7 +184,7 @@ export default function LettersPage() {
                       </td>
                       <td className="px-4 py-2.5 text-muted-foreground">{l.portfolio_group}</td>
                       <td className="px-4 py-2.5 text-muted-foreground text-xs">
-                        {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(l.updated_at))}
+                        {format.dateTime(new Date(l.updated_at), { dateStyle: 'medium' })}
                       </td>
                       {isAdmin && (
                       <td className="px-4 py-2.5">

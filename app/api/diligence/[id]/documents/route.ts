@@ -86,7 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (listErr || !listing || listing.length === 0) {
       return NextResponse.json({ error: 'Uploaded file not found in storage' }, { status: 400 })
     }
-    fileSize = (listing[0] as any).metadata?.size ?? 0
+    fileSize = listing[0].metadata?.size ?? 0
     if (fileSize === 0) return NextResponse.json({ error: 'Empty file' }, { status: 400 })
     if (fileSize > MAX_BYTES) {
       // Defensive — bucket already enforces 100 MB but check here too.
@@ -143,8 +143,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       detected_type,
       type_confidence: confidence,
       parse_status: 'pending',
+      source_kind: 'upload',
       uploaded_by: userId,
-    } as any)
+    })
     .select('id, deal_id, file_name, file_format, file_size_bytes, detected_type, type_confidence, parse_status, uploaded_at')
     .single()
 
@@ -173,9 +174,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           fund_id: fundId,
           deal_id: params.id,
           kind: 'transcribe',
-          payload: { document_id: (row as any).id },
+          payload: { document_id: row.id },
           enqueued_by: userId,
-        } as any)
+        })
     }
   }
 
@@ -197,8 +198,8 @@ async function ensureMember() {
   if (!membership) return { error: NextResponse.json({ error: 'No fund found' }, { status: 403 }) }
   return {
     admin,
-    fundId: (membership as any).fund_id as string,
+    fundId: membership.fund_id,
     userId: user.id,
-    role: (membership as any).role as string,
+    role: membership.role,
   }
 }

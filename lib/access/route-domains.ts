@@ -207,6 +207,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/feeds/entries/[id]/state': { domain: 'dealflow', feature: 'feeds', level: { PATCH: 'read' } },
   'api/feeds/explore/categories': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/discovery': { domain: 'dealflow', feature: 'feeds' },
+  'api/feeds/explore/discovery/refresh': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries/[id]': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/following': { domain: 'dealflow', feature: 'feeds' },
@@ -398,6 +399,7 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/auth/logout': 'Ends a session.',
   'api/auth/signup': 'Pre-auth by definition.',
   'api/locale': 'Public UI preference only; same-origin handler validates the fixed locale allowlist.',
+  'api/time-zone': 'Public device preference; handler enforces same-origin input and authenticates manual mode.',
   'api/setup': 'First-run bootstrap, before any fund exists.',
   'api/onboarding/check-domain': 'Pre-fund: is this email domain claimed.',
   'api/onboarding/fund': 'Creates the fund and its first admin.',
@@ -436,6 +438,7 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/cron/memo-agent-worker': 'Cron: CRON_SECRET.',
   'api/internal/background-jobs/deal-research/run': 'Internal HTTP worker: exact-audience, attempt-bound Job Token and live context restoration.',
   'api/internal/background-jobs/feed-discovery/run': 'Internal system worker: exact-audience, attempt-bound Job Token and verified persisted fund context.',
+  'api/internal/background-jobs/memo-research/run': 'Internal Memo Research worker: exact-audience, attempt-bound Job Token, live Diligence and Search access, and linked projection validation.',
 
   // Inbound from third parties, authenticated by a token in the path or a provider signature.
   'api/webhooks/heartbeat/[token]': 'Inbound webhook: high-entropy path token.',

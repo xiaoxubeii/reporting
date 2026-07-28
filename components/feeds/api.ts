@@ -214,6 +214,12 @@ export interface DiscoveryPayload<T extends TrendingDiscoveryResult | DealSignal
   generationId: string | null
   generatedAt: string | null
   isStale: boolean
+  refresh: {
+    state: 'ready' | 'queued' | 'running' | 'stale' | 'degraded'
+    reason: 'provider_not_configured' | 'refresh_failed' | 'results_stale' | null
+    retryable: boolean
+    lastAttemptAt: string | null
+  }
   total: number
   limit: number
   offset: number

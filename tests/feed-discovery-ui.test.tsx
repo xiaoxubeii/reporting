@@ -20,6 +20,7 @@ beforeEach(() => { access.canWrite = true })
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('Explore discovery UI', () => {
@@ -118,10 +119,109 @@ describe('Explore discovery UI', () => {
     expect(screen.getByText('Current signal')).toBeDefined()
     expect(screen.queryByText('Stale trending response')).toBeNull()
   })
+
+  it('shows a provider-degraded state and a real retry action without hiding last-known-good results', async () => {
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            success: false,
+            data: null,
+            error: { code: 'not_configured', message: 'Discovery AI is not configured for this Fund.' },
+          }),
+        }
+      }
+      return responseFor(withRefresh({
+        items: [{
+          kind: 'trending', id: '00000000-0000-4000-8000-000000000001', label: 'Last known topic',
+          summary: 'Safe prior output.', score: 50,
+          metrics: { articleCount: 2, sourceCount: 2, priorArticleCount: 0, growth: 2, freshness: 1, currentWindowHours: 24, baselineWindowDays: 7 },
+          sources: [], generatedAt: '2026-07-25T09:00:00.000Z',
+        }],
+        generationId: '00000000-0000-4000-8000-000000000004', generatedAt: '2026-07-25T09:00:00.000Z',
+        isStale: true, total: 1, limit: 20, offset: 0,
+      }, { state: 'degraded', reason: 'provider_not_configured', retryable: true, lastAttemptAt: null }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<ExploreDiscovery kind="trending" />)
+
+    expect(await screen.findByText('Last known topic')).toBeDefined()
+    expect(screen.getByText('states.providerNotConfiguredTitle')).toBeDefined()
+    await user.click(screen.getByRole('button', { name: 'retry' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/feeds/explore/discovery/refresh',
+      expect.objectContaining({ method: 'POST', body: '{}' }),
+    ))
+    expect(await screen.findByText('states.providerNotConfiguredDescription')).toBeDefined()
+  })
+
+  it('queues a Fund refresh from the header control and renders its pending state', async () => {
+    let queued = false
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === 'POST') {
+        queued = true
+        return responseFor({ jobId: 'job-1', status: 'pending' })
+      }
+      return responseFor(withRefresh({
+        items: [], generationId: null, generatedAt: null, isStale: true, total: 0, limit: 20, offset: 0,
+      }, queued
+        ? { state: 'queued', reason: null, retryable: false, lastAttemptAt: '2026-07-25T10:00:00.000Z' }
+        : { state: 'stale', reason: 'results_stale', retryable: true, lastAttemptAt: null }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<ExploreDiscovery kind="trending" />)
+
+    await screen.findByText('states.resultsStaleTitle')
+    await user.click(screen.getByRole('button', { name: 'refresh' }))
+
+    expect(await screen.findByText('states.refreshQueuedTitle')).toBeDefined()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/feeds/explore/discovery/refresh',
+      expect.objectContaining({ method: 'POST', body: '{}' }),
+    )
+  })
+
+  it('polls a queued refresh through running to its terminal server-owned state', async () => {
+    vi.useFakeTimers()
+    const states = [
+      { state: 'queued', reason: null, retryable: false, lastAttemptAt: '2026-07-25T10:00:00.000Z' },
+      { state: 'queued', reason: null, retryable: false, lastAttemptAt: '2026-07-25T10:00:01.000Z' },
+      { state: 'running', reason: null, retryable: false, lastAttemptAt: '2026-07-25T10:00:01.000Z' },
+      { state: 'ready', reason: null, retryable: false, lastAttemptAt: '2026-07-25T10:00:02.000Z' },
+    ]
+    let reads = 0
+    vi.stubGlobal('fetch', vi.fn(async () => responseFor(withRefresh({
+      items: [], generationId: reads >= 3 ? '00000000-0000-4000-8000-000000000005' : null,
+      generatedAt: reads >= 3 ? '2026-07-25T10:00:02.000Z' : null,
+      isStale: reads < 3, total: 0, limit: 20, offset: 0,
+    }, states[Math.min(reads++, states.length - 1)]))))
+    render(<ExploreDiscovery kind="trending" />)
+
+    await act(async () => { await Promise.resolve() })
+    expect(screen.getByText('states.refreshQueuedTitle')).toBeDefined()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500) })
+    expect(screen.getByText('states.refreshQueuedTitle')).toBeDefined()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500) })
+    expect(screen.getByText('states.refreshRunningTitle')).toBeDefined()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500) })
+    expect(screen.queryByText('states.refreshRunningTitle')).toBeNull()
+    expect(reads).toBe(4)
+  })
 })
 
 function stubPage(data: Record<string, unknown>) {
-  vi.stubGlobal('fetch', vi.fn(async () => responseFor(data)))
+  vi.stubGlobal('fetch', vi.fn(async () => responseFor(withRefresh(data))))
+}
+
+function withRefresh(data: Record<string, unknown>, refresh: Record<string, unknown> = {
+  state: 'ready', reason: null, retryable: false, lastAttemptAt: '2026-07-25T10:00:00.000Z',
+}) {
+  return { ...data, refresh }
 }
 
 function responseFor(data: Record<string, unknown>) {

@@ -19,7 +19,10 @@ export function invitationUrl(rawToken: string, canonicalOrigin?: string): strin
 export function validatedInvitationBaseUrl(value: string): string {
   let url: URL
   try { url = new URL(value) } catch { throw new Error('NEXT_PUBLIC_SITE_URL is invalid') }
-  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1'
+  const local = url.hostname === 'localhost'
+    || url.hostname.endsWith('.localhost')
+    || url.hostname === '127.0.0.1'
+    || url.hostname === '::1'
   if (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) {
     throw new Error('NEXT_PUBLIC_SITE_URL must use HTTPS (HTTP is allowed only for localhost)')
   }

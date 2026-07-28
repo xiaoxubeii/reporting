@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Lock } from 'lucide-react'
 
@@ -115,6 +115,7 @@ function relativeTime(dateString: string) {
 
 export function UsageDashboard() {
   const t = useTranslations('Usage')
+  const format = useFormatter()
   const locale = useLocale()
   const [data, setData] = useState<UsageData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -155,7 +156,7 @@ export function UsageDashboard() {
 
   const totalCost = data.mtd.total_estimated_cost as number
   const now = new Date()
-  const monthLabel = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(now)
+  const monthLabel = format.dateTime(now, { month: 'long', year: 'numeric' })
 
   const activity = data.activity
 
@@ -223,7 +224,7 @@ export function UsageDashboard() {
               <tbody>
                 {data.daily.map((row, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td className="px-4 py-2.5">{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${row.date}T00:00:00Z`))}</td>
+                    <td className="px-4 py-2.5">{format.dateTime(new Date(`${row.date}T00:00:00Z`), { dateStyle: 'medium', timeZone: 'UTC' })}</td>
                     <td className="px-4 py-2.5 capitalize">{row.provider}</td>
                     <td className="px-4 py-2.5 font-mono text-xs">{row.model}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums">{formatTokens(row.input_tokens, locale)}</td>
@@ -262,7 +263,7 @@ export function UsageDashboard() {
               <tbody>
                 {data.monthly.map((row) => {
                   const [y, m] = row.month.split('-')
-                  const label = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(parseInt(y), parseInt(m) - 1)))
+                  const label = format.dateTime(new Date(Date.UTC(parseInt(y), parseInt(m) - 1)), { month: 'long', year: 'numeric', timeZone: 'UTC' })
                   return (
                     <tr key={row.month} className="border-b last:border-0">
                       <td className="px-4 py-2.5">{label}</td>

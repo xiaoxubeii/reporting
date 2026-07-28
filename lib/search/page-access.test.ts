@@ -38,6 +38,6 @@ describe('Search page Feed access', () => {
     )
 
     expect(status).toEqual({ connected: true })
-    expect(connectionStatus).toHaveBeenCalledWith('user-1')
+    expect(connectionStatus).toHaveBeenCalledWith('user-1', { verifyUpstream: false })
   })
 })

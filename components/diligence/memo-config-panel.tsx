@@ -5,6 +5,7 @@ import { Loader2, Save, Settings2, Trash2, GripVertical, Plus } from 'lucide-rea
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useConfirm } from '@/components/confirm-dialog'
+import { SchemaViewer } from '@/components/diligence/schema-viewer'
 import { DefaultsEditor } from '@/app/(app)/settings/memo-agent/defaults/editor'
 import { useTranslations } from 'next-intl'
 
@@ -579,6 +580,13 @@ export function MemoConfigPanel({ dealId }: { dealId: string }) {
               <p className="text-[10px] text-muted-foreground">{t('sectionEditor.help')}</p>
             </div>
           </details>
+
+          <SchemaViewer
+            schemaName="memo_output"
+            title={t('schema.title')}
+            guidanceStage="draft"
+            description={t('schema.description')}
+          />
 
           <div className="flex justify-end">
             <Button size="sm" onClick={save} disabled={saving || !loaded}>

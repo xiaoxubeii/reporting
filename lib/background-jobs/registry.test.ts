@@ -12,6 +12,8 @@ import {
 import type { BackgroundJobPolicy } from './types'
 
 const DEAL_ID = '842e532a-b848-457a-9b8e-4d6d8da10caf'
+const DRAFT_ID = 'c321df20-ef87-4b9d-ad8e-c48f8e64a63a'
+const MEMO_JOB_ID = '22945638-fd8f-4bd1-85e0-beb73ef2bf8b'
 
 describe('background job registry', () => {
   it('registers Deal Research with fixed per-hop authority and bounded execution', () => {
@@ -28,9 +30,36 @@ describe('background job registry', () => {
         scope: 'search:execute',
         maxCalls: 3,
         allowPersonalSources: false,
+        requiredUserAccess: [{ domain: 'dealflow', need: 'read', feature: 'search' }],
       },
     })
     expect(policy.workerPath).not.toMatch(/^https?:/)
+    expect(policy.requestTimeoutMs).toBeLessThan(policy.leaseSeconds * 1000)
+    expect(Object.isFrozen(policy)).toBe(true)
+    expect(Object.isFrozen(policy.search)).toBe(true)
+  })
+
+  it('registers Memo Research with Diligence and Search authority plus one shared tool budget', () => {
+    const policy = backgroundJobPolicy('memo_research')
+
+    expect(policy).toMatchObject({
+      kind: 'memo_research',
+      actors: ['user'],
+      workerPath: '/api/internal/background-jobs/memo-research/run',
+      workerAudience: 'reporting-memo-research-worker',
+      workerScope: 'memo-research:execute',
+      requiredUserAccess: [
+        { domain: 'diligence', need: 'write' },
+      ],
+      maxAttempts: 3,
+      search: {
+        audience: 'reporting-search',
+        scope: 'search:execute',
+        maxCalls: 3,
+        allowPersonalSources: false,
+        requiredUserAccess: [{ domain: 'dealflow', need: 'read', feature: 'search' }],
+      },
+    })
     expect(policy.requestTimeoutMs).toBeLessThan(policy.leaseSeconds * 1000)
     expect(Object.isFrozen(policy)).toBe(true)
     expect(Object.isFrozen(policy.search)).toBe(true)
@@ -66,8 +95,17 @@ describe('background job registry', () => {
       scope: 'search:execute',
       maxCalls: 3,
       allowPersonalSources: false,
+      requiredUserAccess: [{ domain: 'dealflow', need: 'read', feature: 'search' }],
+    })
+    expect(backgroundJobSearchPolicy('memo_research')).toEqual({
+      audience: 'reporting-search',
+      scope: 'search:execute',
+      maxCalls: 3,
+      allowPersonalSources: false,
+      requiredUserAccess: [{ domain: 'dealflow', need: 'read', feature: 'search' }],
     })
     expect(isBackgroundJobAudience('reporting-deal-research-worker')).toBe(true)
+    expect(isBackgroundJobAudience('reporting-memo-research-worker')).toBe(true)
     expect(isBackgroundJobAudience('reporting-feed-discovery-worker')).toBe(true)
     expect(isBackgroundJobAudience('reporting-search')).toBe(true)
     expect(isBackgroundJobAudience('reporting-attacker')).toBe(false)
@@ -84,6 +122,27 @@ describe('background job registry', () => {
       [],
     ]) {
       expect(() => parseBackgroundJobPayload('deal_research', payload)).toThrow('Invalid deal_research payload')
+    }
+  })
+
+  it('parses only the exact linked Memo Research payload', () => {
+    expect(parseBackgroundJobPayload('memo_research', {
+      memoJobId: MEMO_JOB_ID,
+      dealId: DEAL_ID,
+      draftId: DRAFT_ID,
+    })).toEqual({ memoJobId: MEMO_JOB_ID, dealId: DEAL_ID, draftId: DRAFT_ID })
+
+    for (const payload of [
+      {},
+      { memoJobId: MEMO_JOB_ID, dealId: DEAL_ID },
+      { memoJobId: 'not-a-uuid', dealId: DEAL_ID, draftId: DRAFT_ID },
+      { memoJobId: MEMO_JOB_ID, dealId: 'not-a-uuid', draftId: DRAFT_ID },
+      { memoJobId: MEMO_JOB_ID, dealId: DEAL_ID, draftId: 'not-a-uuid' },
+      { memoJobId: MEMO_JOB_ID, dealId: DEAL_ID, draftId: DRAFT_ID, targetUrl: 'https://attacker.example' },
+      null,
+      [],
+    ]) {
+      expect(() => parseBackgroundJobPayload('memo_research', payload)).toThrow('Invalid memo_research payload')
     }
   })
 
@@ -135,6 +194,7 @@ describe('background job registry', () => {
           scope: 'search:execute' as const,
           maxCalls: 1,
           allowPersonalSources: false,
+          requiredUserAccess: [],
         }),
       },
     ]
@@ -178,5 +238,7 @@ describe('background job registry', () => {
     expect(Object.isFrozen(policy.requiredUserAccess)).toBe(true)
     expect(policy.requiredUserAccess.every(Object.isFrozen)).toBe(true)
     expect(Object.isFrozen(policy.search)).toBe(true)
+    expect(Object.isFrozen(policy.search?.requiredUserAccess)).toBe(true)
+    expect(policy.search?.requiredUserAccess.every(Object.isFrozen)).toBe(true)
   })
 })

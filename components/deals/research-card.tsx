@@ -84,7 +84,7 @@ export function DealResearchCard({
             {queueing
               ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
               : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-            {status === 'done' ? t('rerun') : t('run')}
+            {status === 'done' || status === 'failed' ? t('rerun') : t('run')}
           </Button>
         )}
       </CardHeader>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import {
   AlertCircle,
   CheckCircle2,
@@ -69,6 +69,7 @@ export function FundResendInboundProviderFields({
   onChanged?: () => void
 }) {
   const t = useTranslations('Settings.fundEmail')
+  const format = useFormatter()
   const { status, loading, loadError, reload } = useFundEmailStatus()
   const [receivingKey, setReceivingKey] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -223,7 +224,7 @@ export function FundResendInboundProviderFields({
       {status.lastVerifiedAt && (
         <p className="text-xs text-muted-foreground">
           {t('lastVerified', {
-            date: new Date(status.lastVerifiedAt).toLocaleString(),
+            date: format.dateTime(new Date(status.lastVerifiedAt), { dateStyle: 'medium', timeStyle: 'short' }),
           })}
         </p>
       )}

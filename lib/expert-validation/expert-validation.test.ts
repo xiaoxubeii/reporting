@@ -31,6 +31,7 @@ describe('expert invitation credentials', () => {
   it('accepts only HTTPS origins, with localhost HTTP as the development exception', () => {
     expect(validatedInvitationBaseUrl('https://reporting.example')).toBe('https://reporting.example')
     expect(validatedInvitationBaseUrl('http://localhost:3001')).toBe('http://localhost:3001')
+    expect(validatedInvitationBaseUrl('http://alpha.localhost:5010')).toBe('http://alpha.localhost:5010')
     expect(() => validatedInvitationBaseUrl('javascript:alert(1)')).toThrow()
     expect(() => validatedInvitationBaseUrl('http://reporting.example')).toThrow()
     expect(() => validatedInvitationBaseUrl('https://reporting.example/path')).toThrow()

@@ -1,0 +1,3 @@
+Cardio Signal is developing a non-invasive cardiovascular monitoring workflow for hospital teams.
+The current pilot covers two clinical sites and measures alert accuracy, clinician response time,
+and reduction in avoidable escalation. The company is raising a seed round to complete validation.

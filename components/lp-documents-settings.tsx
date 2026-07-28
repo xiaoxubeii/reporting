@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,15 +15,19 @@ interface Doc {
   lp_document_shares?: { lp_investor_id: string }[]
 }
 
-function fmtDate(d: string | null, locale: string): string {
+function fmtDate(d: string | null, format: ReturnType<typeof useFormatter>): string {
   if (!d) return ''
-  const date = new Date(d.length <= 10 ? `${d}T00:00:00` : d)
-  return isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date)
+  const isDateOnly = d.length <= 10
+  const date = new Date(isDateOnly ? `${d}T00:00:00Z` : d)
+  return isNaN(date.getTime()) ? '' : format.dateTime(date, {
+    dateStyle: 'medium',
+    ...(isDateOnly ? { timeZone: 'UTC' as const } : {}),
+  })
 }
 
 export function LpDocumentsSettings() {
   const t = useTranslations('LPs.admin.documents')
-  const locale = useLocale()
+  const format = useFormatter()
   const [docs, setDocs] = useState<Doc[]>([])
   const [investors, setInvestors] = useState<Investor[]>([])
   const [vehicles, setVehicles] = useState<string[]>([])
@@ -170,7 +174,7 @@ export function LpDocumentsSettings() {
                     : d.vehicle
                       ? t('vehicleInvestors', { vehicle: d.vehicle, count: d.lp_document_shares?.length ?? 0 })
                       : t('investors', { count: d.lp_document_shares?.length ?? 0 })} · {d.file_name}
-                  {(d.doc_date || d.uploaded_at) && ` · ${fmtDate(d.doc_date, locale) || fmtDate(d.uploaded_at, locale)}`}
+                  {(d.doc_date || d.uploaded_at) && ` · ${fmtDate(d.doc_date, format) || fmtDate(d.uploaded_at, format)}`}
                 </div>
               </div>
               <div className="shrink-0">

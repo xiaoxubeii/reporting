@@ -70,4 +70,27 @@ describe('ExpertEmailThread', () => {
     expect(await screen.findByText('emailThread.error')).toBeDefined()
     await waitFor(() => expect(screen.queryByText('private provider detail')).toBeNull())
   })
+
+  it('recovers from a transient network failure without leaving a permanent error state', async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ thread: {
+          id: 'thread-1', subject: null, status: 'open', participantAddress: null,
+          renderingPolicy: 'plain_text_only', createdAt: '2026-07-26T00:00:00.000Z',
+          updatedAt: '2026-07-26T00:00:00.000Z', messages: [{
+            id: 'message-1', direction: 'inbound', from: 'expert@example.test', to: [], subject: null,
+            body: { kind: 'plain_text', text: 'Recovered expert reply' }, attachments: [],
+            occurredAt: '2026-07-26T00:00:00.000Z',
+          }],
+        } }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ExpertEmailThread dealId="deal-1" requestId="request-1" />)
+    expect(await screen.findByText('Recovered expert reply', {}, { timeout: 3_000 })).toBeDefined()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText('emailThread.error')).toBeNull()
+  })
 })
