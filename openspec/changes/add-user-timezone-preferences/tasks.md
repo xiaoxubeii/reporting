@@ -16,7 +16,7 @@
 
 - [x] 3.1 Add failing provider/request tests proving server and client formatters receive the same explicit timezone.
 - [x] 3.2 Pass the resolved timezone through `i18n/request.ts`, the root layout, and `NextIntlClientProvider`.
-- [ ] 3.3 Audit hydrated date formatting paths and add explicit timezone handling only where they bypass the shared next-intl runtime.
+- [x] 3.3 Audit hydrated date formatting paths and add explicit timezone handling only where they bypass the shared next-intl runtime.
 
 ## 4. Personal Manual Override
 
@@ -27,7 +27,15 @@
 
 ## 5. Verification and Review
 
-- [ ] 5.1 Run focused timezone/profile/route/provider/UI tests, TypeScript, changed-file lint, strict OpenSpec validation, HarnessKit fast/targeted, and `git diff --check`.
-- [ ] 5.2 Run code, database, and security reviews and resolve all blocker/high findings.
+- [x] 5.1 Run focused timezone/profile/route/provider/UI tests, TypeScript, changed-file lint, strict OpenSpec validation, HarnessKit fast/targeted, and `git diff --check`.
+- [x] 5.2 Run code, database, and security reviews and resolve all blocker/high findings.
 - [ ] 5.3 Start the real application and verify automatic `Asia/Shanghai`, manual UTC, reset-to-Automatic, reload persistence, tenant-host cookie isolation, and zero hydration console errors.
 - [ ] 5.4 Run production build/full verification, record unrelated baseline gaps, and update HarnessKit/OpenSpec completion evidence.
+
+Verification notes: the requested timezone browser flows, persistence, and
+tenant-host isolation passed. Item 5.3 remains open because the application
+still emits an unrelated pre-existing `next-themes` root-class hydration
+warning, although no date/time text hydration mismatch occurred. Item 5.4
+remains open because repository-wide TypeScript, HarnessKit, dependency-audit,
+and production-build gates have pre-existing blockers documented in
+`verification-report.md`.

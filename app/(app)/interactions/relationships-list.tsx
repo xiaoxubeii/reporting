@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Building2, ChevronDown, ChevronRight, Mail, Users } from 'lucide-react'
 
 const KNOWN_TAGS = ['intro', 'hiring', 'strategy', 'fundraising', 'product', 'partnership', 'legal', 'operations'] as const
@@ -57,7 +57,7 @@ function relativeTime(dateStr: string) {
 
 export function RelationshipsList({ interactions }: { interactions: Interaction[] }) {
   const t = useTranslations('Interactions')
-  const locale = useLocale()
+  const format = useFormatter()
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [emailExpandedId, setEmailExpandedId] = useState<string | null>(null)
@@ -157,7 +157,7 @@ export function RelationshipsList({ interactions }: { interactions: Interaction[
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">
                         {relative.unit === 'date'
-                          ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(relative.date)
+                          ? format.dateTime(relative.date, { month: 'short', day: 'numeric' })
                           : t(`relative.${relative.unit}`, { count: relative.count })}
                       </span>
                       {interaction.company_name && (
