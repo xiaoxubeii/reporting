@@ -1315,3 +1315,53 @@ unmerged worktrees intact if a merge or verification fails.
 - planning: OpenSpec proposal, design, spec, and task plan created; strict validation passed before implementation
 - verification: 1,447 tests, TypeScript, executable database contract, strict OpenSpec validation, and authenticated English/Chinese browser flows passed; production compilation succeeds before the repository-wide pre-existing lint gate
 - workspace: unrelated pre-existing untracked screenshots, evidence, deliverables, and demo scripts are excluded from the feature scope
+
+### Feature: user-timezone-preferences
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a browser-visible change across SSR/client rendering, authenticated preferences, cookies, and database persistence.
+- Change: `openspec/changes/add-user-timezone-preferences`
+- Classification: `single-feature`, serial-required because the timezone resolver and persistence contract must land before provider and UI consumers
+
+#### Acceptance
+
+- Existing timestamps remain UTC instants in storage.
+- The server and browser receive the same explicit IANA timezone for every hydrated render, eliminating timezone-driven date mismatches.
+- A browser can detect its IANA timezone automatically without IP/GPS access and persist it as a device-local choice.
+- A signed-in user can select Automatic or a manual IANA timezone; manual preference wins over automatic detection and survives across devices.
+- Missing, invalid, or stale timezone values fall back safely to UTC.
+
+#### Allowed Change Scope
+
+- `openspec/changes/add-user-timezone-preferences/**`, this feature-plan entry, and focused HarnessKit progress/evidence.
+- `i18n/**`, root provider/layout, timezone API/bootstrap, personal settings API/UI, locale catalogs, user profile/domain types, additive migration, and focused tests.
+- Unrelated main-worktree navigation, landing-page, localization, diligence-preference, and image changes remain untouched.
+
+#### Shared Contract Changes
+
+- Adds nullable `user_profiles.time_zone`; `NULL` means automatic mode and a valid IANA value means manual override.
+- Adds a bounded same-origin timezone-cookie endpoint and an explicit root i18n `timeZone` render input.
+- Extends personal settings read/write payloads with timezone mode and manual value.
+
+#### Verification Plan
+
+- Unit tests for IANA validation, resolution precedence, invalid fallback, and automatic/manual bootstrap behavior.
+- Route and migration tests for body/origin/host validation, cookie flags, authentication, and profile semantics.
+- TypeScript, focused lint/tests, strict OpenSpec, HarnessKit fast/targeted, dependency audit review, and `git diff --check`.
+- Real browser verification with a near-midnight UTC timestamp, `Asia/Shanghai` automatic mode, manual UTC override, reload persistence, and no hydration console error.
+
+#### Review Required
+
+- Correctness review for first-request behavior, single refresh, precedence, and render determinism.
+- Security/database review for cookie boundaries, input validation, authorization, RLS preservation, and additive migration safety.
+- Browser/UX review for automatic/manual controls, keyboard access, localization, and responsive settings layout.
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `codex/user-timezone-preferences` at `/home/ubuntu/workspace/reporting-timezone`
+- baseline: 2,115 tests pass; four unrelated platform-landing tests fail because current main has uncommitted component/assets/test changes that are intentionally absent from the isolated worktree
+- planning: OpenSpec proposal created; design/spec/tasks pending
+- implementation: pending
