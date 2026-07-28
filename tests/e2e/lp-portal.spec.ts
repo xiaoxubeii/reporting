@@ -1,5 +1,5 @@
 import { test, expect } from './support/observed-test'
-import { signInToTenant, tenantOrigin } from './support/auth'
+import { gotoAfterTimeZoneBootstrap, signInToTenant, tenantOrigin } from './support/auth'
 import { readE2EFixtureState, readE2ELpFixtureState } from './support/fixture-state'
 
 test('Fund A LP traverses the real portal while Fund B and GP-only access fail closed', async ({ page, context, browser, baseURL, browserFailureAllowances }) => {
@@ -13,7 +13,7 @@ test('Fund A LP traverses the real portal while Fund B and GP-only access fail c
   expect(lp.fundId).toBe(primary.fundId)
   expect(lp.fundSlug).toBe(primary.fundSlug)
 
-  await page.goto(`${primaryOrigin}/auth`)
+  await gotoAfterTimeZoneBootstrap(page, `${primaryOrigin}/auth`)
   await page.locator('#email').fill(lp.email)
   await page.locator('#password').fill(lp.password)
   await page.getByRole('button', { name: /^sign in$/i }).click()

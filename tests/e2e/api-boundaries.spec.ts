@@ -1,7 +1,7 @@
 import type { APIResponse, Page } from '@playwright/test'
 
 import { test, expect } from './support/observed-test'
-import { tenantOrigin } from './support/auth'
+import { gotoAfterTimeZoneBootstrap, tenantOrigin } from './support/auth'
 import { readE2EFixtureState, type E2EFixtureState } from './support/fixture-state'
 
 const JSON_HEADERS = Object.freeze({ 'Content-Type': 'application/json' })
@@ -56,7 +56,7 @@ async function signInWithoutEnteringApp(
   fixture: E2EFixtureState,
 ): Promise<string> {
   const origin = tenantOrigin(baseURL, fixture)
-  await page.goto(`${origin}/auth?next=${encodeURIComponent('/auth')}`)
+  await gotoAfterTimeZoneBootstrap(page, `${origin}/auth?next=${encodeURIComponent('/auth')}`)
   await page.locator('#email').fill(fixture.email)
   await page.locator('#password').fill(fixture.password)
   const authResponsePromise = page.waitForResponse(response => (

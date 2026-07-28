@@ -77,7 +77,7 @@ function isPlatformRoute(pathname: string, method: string): boolean {
   if (pathname === '/api/og') return method === 'GET' || method === 'HEAD'
   if (PLATFORM_PAGE_PATHS.has(pathname) || pathname.endsWith('-explainer')) return true
   if (pathname.startsWith('/.well-known/')) return true
-  if (pathname === '/api/setup' || pathname === '/api/locale') return true
+  if (pathname === '/api/setup' || pathname === '/api/locale' || pathname === '/api/time-zone') return true
   if (pathname === '/api/oauth/register' || pathname.startsWith('/api/oauth/metadata/')) return true
   if (PLATFORM_API_PATHS.has(pathname)) return true
   if (PLATFORM_PAGE_PREFIXES.some(prefix => hasPathPrefix(pathname, prefix))) return true

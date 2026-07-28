@@ -1,6 +1,6 @@
 import { test, expect } from './support/observed-test'
 import type { Page } from '@playwright/test'
-import { signInToTenant, tenantOrigin } from './support/auth'
+import { gotoAfterTimeZoneBootstrap, seedE2ETimeZone, signInToTenant, tenantOrigin } from './support/auth'
 import { readE2EFixtureState, readE2EOnboardingFixtureState } from './support/fixture-state'
 
 async function createMarkerDeal(page: Page, marker: string): Promise<string> {
@@ -26,7 +26,7 @@ test('a new account creates its Fund through onboarding and can re-enter the can
   tenantUrl.hostname = `${onboarding.fundSlug}.localhost`
   const tenantOrigin = tenantUrl.origin
 
-  await page.goto(`${platformOrigin}/auth`)
+  await gotoAfterTimeZoneBootstrap(page, `${platformOrigin}/auth`)
   await page.locator('#email').fill(onboarding.email)
   await page.locator('#password').fill(onboarding.password)
   await page.getByRole('button', { name: /^sign in$/i }).click()
@@ -36,6 +36,7 @@ test('a new account creates its Fund through onboarding and can re-enter the can
   await page.locator('#fund-name').fill(onboarding.fundName)
   await page.locator('#fund-slug').fill(onboarding.fundSlug)
   await expect(page.getByText(`${onboarding.fundSlug}.localhost`, { exact: true })).toBeVisible()
+  await seedE2ETimeZone(page, tenantOrigin)
   await page.getByRole('button', { name: 'Create Fund workspace' }).click()
   await page.waitForURL(url => url.origin === tenantOrigin && ['/auth', '/funds/setup'].includes(url.pathname))
 

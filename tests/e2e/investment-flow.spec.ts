@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Page } from '@playwright/test'
 import { test, expect } from './support/observed-test'
-import { signInToTenant, tenantOrigin } from './support/auth'
+import { gotoAfterTimeZoneBootstrap, signInToTenant, tenantOrigin } from './support/auth'
 import { readE2EFixtureState } from './support/fixture-state'
 import {
   configureLocalFundMail,
@@ -31,7 +31,7 @@ test('public Pitch becomes a reviewable Deal, queues research, promotes to Dilig
   if (!fixtureIp) throw new Error('E2E fixture suffix cannot produce a client IP')
 
   await page.setExtraHTTPHeaders({ 'x-real-ip': fixtureIp })
-  await page.goto(`${origin}/submit/${primary.submissionToken}`)
+  await gotoAfterTimeZoneBootstrap(page, `${origin}/submit/${primary.submissionToken}`)
   await expect(page.getByRole('heading', { name: `Submit a pitch to ${primary.fundName}` })).toBeVisible()
   await page.locator('#companyName').fill(companyName)
   await page.locator('#companyUrl').fill('https://cardiosignal.example/product')
@@ -86,8 +86,8 @@ test('public Pitch becomes a reviewable Deal, queues research, promotes to Dilig
   await page.waitForURL(url => url.origin === origin && /^\/diligence\/[^/]+$/.test(url.pathname))
   await expect(page.getByRole('heading').filter({ hasText: companyName })).toBeVisible()
 
-  const workflowTabs = ['Checklist', 'Data Room', 'Research', 'Founders', 'Scoring', 'Memo', 'Settings']
-  const workflowNav = page.locator('main nav').filter({ has: page.getByRole('button', { name: 'Founders', exact: true }) })
+  const workflowTabs = ['Checklist', 'Data Room', 'Research', 'Expert Validation', 'Scoring', 'Memo', 'Settings']
+  const workflowNav = page.locator('main nav').filter({ has: page.getByRole('button', { name: 'Expert Validation', exact: true }) })
   for (const tab of workflowTabs) {
     await expect(workflowNav.getByRole('button', { name: tab, exact: true })).toBeVisible()
   }
@@ -118,7 +118,7 @@ test('public Pitch becomes a reviewable Deal, queues research, promotes to Dilig
   await expect(uploadedFiles).toHaveCount(1, { timeout: 30_000 })
   await expect(uploadedFiles.first()).toBeVisible()
 
-  for (const tab of ['Research', 'Founders', 'Scoring', 'Memo', 'Settings']) {
+  for (const tab of ['Research', 'Expert Validation', 'Scoring', 'Memo', 'Settings']) {
     const tabButton = workflowNav.getByRole('button', { name: tab, exact: true })
     await tabButton.click()
     await expect(tabButton).toHaveClass(/border-primary/)
@@ -239,7 +239,7 @@ test('Pitch to final decision preserves evidence, expert reply, 7-dimension scor
 
   await test.step('public Pitch creates exactly one source email and one tenant-scoped Deal', async () => {
     await page.setExtraHTTPHeaders({ 'x-real-ip': fixtureIp })
-    await page.goto(`${origin}/submit/${primary.submissionToken}`)
+    await gotoAfterTimeZoneBootstrap(page, `${origin}/submit/${primary.submissionToken}`)
     await page.locator('#companyName').fill(companyName)
     await page.locator('#companyUrl').fill('https://decision-loop.example/product')
     await page.locator('#founderName').fill('Jordan Founder')
@@ -404,8 +404,8 @@ test('Pitch to final decision preserves evidence, expert reply, 7-dimension scor
     await expect(page.getByRole('heading', { name: expertName })).toBeVisible()
 
     await page.goto(`${origin}/diligence/${diligenceId}`)
-    const nav = page.locator('main nav').filter({ has: page.getByRole('button', { name: 'Research', exact: true }) })
-    await nav.getByRole('button', { name: 'Research', exact: true }).click()
+    const nav = page.locator('main nav').filter({ has: page.getByRole('button', { name: 'Expert Validation', exact: true }) })
+    await nav.getByRole('button', { name: 'Expert Validation', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Validate with expert' }).first()).toBeVisible()
     const generation = page.waitForResponse(response => (
       new URL(response.url()).pathname === `/api/diligence/${diligenceId}/expert-validations/generate`
@@ -558,7 +558,7 @@ test('Pitch to final decision preserves evidence, expert reply, 7-dimension scor
     expect(threadMessages.data.map(message => message.direction)).toEqual(['outbound', 'inbound'])
     expect(threadMessages.data.some(message => message.provider_message_id === providerEmailId && message.text_body === emailReply)).toBe(true)
     await page.reload()
-    await page.locator('main nav').getByRole('button', { name: 'Research', exact: true }).click()
+    await page.locator('main nav').getByRole('button', { name: 'Expert Validation', exact: true }).click()
     await page.getByText(validationQuestion, { exact: true }).last().click()
     await expect(page.getByText('Email thread', { exact: true })).toBeVisible()
     await expect(page.getByText(emailReply, { exact: true })).toBeVisible()
