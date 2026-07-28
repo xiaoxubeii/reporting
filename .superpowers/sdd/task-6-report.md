@@ -64,6 +64,10 @@ diagnostic.
 - Final focused suite: 9 files, 112 tests. Database integration: 1 test. ESLint,
   strict OpenSpec, and diff-check pass. TypeScript has only the known
   platform-landing TS2802 baseline.
+- Final full Vitest: 316 files / 2,249 tests passed, 5 files / 9 tests skipped,
+  and only the four documented platform-landing baseline failures remain.
+  Compliance/Letters formatter contracts and the Search `next-intl` mock now
+  match the request-scoped timezone architecture; those files pass 12/12.
 
 ## Browser evidence
 

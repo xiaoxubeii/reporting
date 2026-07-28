@@ -104,6 +104,13 @@ database integration passed 1 additional test. Changed-file ESLint, strict
 OpenSpec, and `git diff --check` pass. TypeScript reports only the known
 platform-landing TS2802 baseline.
 
+The final repository Vitest run passed 316 files / 2,249 tests, skipped 5 files
+/ 9 tests, and left only the four documented platform-landing baseline failures
+across two files. Compliance and Letters localization contracts now assert the
+request-scoped formatter/timezone architecture, and the Search component test
+mock supplies `useFormatter`; those three previously stale files pass 12/12
+without changing their product behavior assertions.
+
 ## Remaining repository baselines
 
 - `npx tsc --noEmit` is blocked by the existing

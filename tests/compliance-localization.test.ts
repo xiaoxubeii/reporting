@@ -27,7 +27,10 @@ describe('Compliance localization', () => {
     const navigation = read('app/(app)/compliance/compliance-nav.tsx')
 
     expect(mainPage).toContain("useTranslations('Compliance')")
-    expect(mainPage).toContain('useLocale()')
+    expect(mainPage).toContain('useFormatter()')
+    expect(mainPage).toContain('useTimeZone()')
+    expect(mainPage).toContain("calendarPartsInTimeZone(now, timeZone ?? 'UTC')")
+    expect(mainPage).not.toContain('useLocale()')
     expect(linksPage).toContain("useTranslations('Compliance.links')")
     expect(navigation).toContain("useTranslations('Compliance.nav')")
   })
