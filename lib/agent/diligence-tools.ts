@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AgentToolContext, AgentToolHandler } from '@/lib/accounting/agent-tools'
 import { answerDealQuestion } from '@/lib/diligence/qa-answer'
+import { hasAccess } from '@/lib/access/effective'
 import {
   buildStages, countChecklist, countDocuments, assessedCount,
   checklistCoverage, countAttention,
@@ -162,7 +163,7 @@ export const DILIGENCE_HANDLERS: Record<string, AgentToolHandler> = {
     }
   },
 
-  diligence_ask: async ({ admin, fundId, userId }: AgentToolContext, input: any) => {
+  diligence_ask: async ({ admin, fundId, userId, access }: AgentToolContext, input: any) => {
     const deal = await resolveDeal(admin, fundId, String(input?.deal ?? ''))
     const question = String(input?.question ?? '').trim()
     if (!question) throw new Error('A question is required')
@@ -174,6 +175,9 @@ export const DILIGENCE_HANDLERS: Record<string, AgentToolHandler> = {
       question,
       // The key's owner, so Affinity (if they've connected it) carries THEIR permissions.
       userId,
+      allowAffinity:
+        hasAccess(access, 'relationships', 'read', 'interactions')
+        && hasAccess(access, 'relationships', 'read', 'notes'),
       feature: 'agent_diligence_ask',
     })
 

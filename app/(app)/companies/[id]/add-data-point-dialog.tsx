@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Metric } from '@/lib/types/database'
-import { useFormatter, useTranslations } from 'next-intl'
+import { useFormatter, useTimeZone, useTranslations } from 'next-intl'
+import { calendarPartsInTimeZone } from '@/lib/date/calendar-parts'
 
 interface Props {
   open: boolean
@@ -31,8 +32,9 @@ export function AddDataPointDialog({
 }: Props) {
   const t = useTranslations('CompanyDetail.dataPoint')
   const format = useFormatter()
+  const timeZone = useTimeZone()
   const [value, setValue] = useState('')
-  const [periodYear, setPeriodYear] = useState(new Date().getFullYear().toString())
+  const [periodYear, setPeriodYear] = useState(calendarPartsInTimeZone(new Date(), timeZone ?? 'UTC').year.toString())
   const [periodMonth, setPeriodMonth] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)

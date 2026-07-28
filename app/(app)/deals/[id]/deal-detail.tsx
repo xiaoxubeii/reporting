@@ -59,7 +59,7 @@ interface EmailRow {
   from_address: string
   subject: string | null
   received_at: string | null
-  raw_payload: any
+  raw_payload: unknown
   routing_label: string | null
   routing_confidence: number | null
   routing_reasoning: string | null
@@ -198,7 +198,7 @@ export function DealDetail({ deal: initial, email, priorDeal }: { deal: Deal; em
     if (!value) return null
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return null
-    return format.dateTime(date, { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' })
+    return format.dateTime(date, { year: 'numeric', month: 'numeric', day: 'numeric' })
   }
 
   return (

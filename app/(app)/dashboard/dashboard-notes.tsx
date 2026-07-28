@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { MessageSquare, Send, Pencil, X, Check, Building2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { NoteContent } from '@/components/note-content'
@@ -124,7 +124,7 @@ export function DashboardNotesPanel() {
 
 function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
   const t = useTranslations('Dashboard')
-  const locale = useLocale()
+  const format = useFormatter()
   const { userId, isAdmin, companies, groups, inputRef, toggle, setUnreadCount } = ctx
   const { fundName } = useAnalystContext()
   const [notes, setNotes] = useState<Note[]>([])
@@ -148,7 +148,7 @@ function NotesPanel({ ctx }: { ctx: NotesContextValue }) {
     if (diffMin < 60) return t('notes.relative.minutesAgo', { count: diffMin })
     if (diffHr < 24) return t('notes.relative.hoursAgo', { count: diffHr })
     if (diffDay < 7) return t('notes.relative.daysAgo', { count: diffDay })
-    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+    return format.dateTime(date, { month: 'short', day: 'numeric' })
   }
 
   useEffect(() => {

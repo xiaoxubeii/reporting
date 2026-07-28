@@ -402,9 +402,9 @@ export default function PublicLayoutClient({
 
   if (surface === 'tenant-home') return <>{children}</>
 
-  if (!authChecked) return null
-
   if (surface === 'platform-landing') return <>{children}</>
+
+  if (!authChecked) return null
 
   const fathomSiteId = process.env.NEXT_PUBLIC_FATHOM_SITE_ID
 

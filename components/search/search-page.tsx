@@ -2,7 +2,7 @@
 
 import React, { useEffect, useId, useMemo, useReducer, useRef, useState } from 'react'
 import { BookOpen, ExternalLink, Filter, Loader2, Search as SearchIcon } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -253,6 +253,7 @@ function SearchResults({ response, loading, onOpenFeed }: {
   readonly onOpenFeed: (entryId: number, trigger: HTMLButtonElement) => void
 }) {
   const t = useTranslations('SearchProduct')
+  const format = useFormatter()
   if (!response && loading) return <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</div>
   if (!response) return <div className="mt-6 rounded-lg border border-dashed px-6 py-14 text-center text-sm text-muted-foreground">{t('emptyStart')}</div>
   return <div className={`mt-4 ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
@@ -265,7 +266,7 @@ function SearchResults({ response, loading, onOpenFeed }: {
           <article key={hit.id} className="group py-5">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {hit.sources.map(source => <Badge key={`${source.id}:${source.label}`} variant="secondary">{source.label}</Badge>)}
-              {hit.publishedAt && <time dateTime={hit.publishedAt}>{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(hit.publishedAt))}</time>}
+              {hit.publishedAt && <time dateTime={hit.publishedAt}>{format.dateTime(new Date(hit.publishedAt), { dateStyle: 'medium' })}</time>}
               <AnalystContextActions snapshot={snapshotSearchHit(hit)} presentation="compact-hover" className="ml-auto" />
             </div>
             <h3 className="mt-2 text-base font-semibold leading-6">

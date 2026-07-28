@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,7 +22,6 @@ import type { FeatureKey, FeatureVisibility, FeatureVisibilityMap } from '@/lib/
 import { FEATURE_META } from '@/lib/types/feature-meta'
 import { AccessGrid } from '@/components/settings-access-grid'
 import { SettingsCard, SettingsCardGrid } from '@/components/settings-card'
-import { AffinityConnect } from '@/components/settings/affinity-connect'
 import { HeartbeatConnect } from '@/components/settings/heartbeat-connect'
 import { DealResearchSettings } from '@/components/settings/deal-research-settings'
 import { useTenantBranding } from '@/components/tenant-branding-provider'
@@ -3806,7 +3805,7 @@ interface FundInvitation {
 // `featureVisibility` is threaded through to the access grid so it re-derives what's grantable the
 // moment a switch above changes — see AccessGrid's note.
 function TeamSection({ isAdmin, isFounder, featureVisibility }: { isAdmin: boolean; isFounder: boolean; featureVisibility: Record<string, string> }) {
-  const locale = useLocale()
+  const format = useFormatter()
   const t = useTranslations('Settings.page.team')
   const [members, setMembers] = useState<Member[]>([])
   const [invitations, setInvitations] = useState<FundInvitation[]>([])
@@ -3967,7 +3966,7 @@ function TeamSection({ isAdmin, isFounder, featureVisibility }: { isAdmin: boole
                   <div key={invitation.id} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex min-w-0 flex-wrap items-center gap-2"><span className="min-w-0 break-all text-sm">{invitation.email}</span><span className="rounded-full bg-muted px-2 py-0.5 text-[10px]">{t(`statuses.${invitation.status}`)}</span></div>
-                      <span className="text-xs text-muted-foreground">{t('invitedAs', { role: invitation.role === 'admin' ? t('admin') : t('member'), date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(invitation.createdAt)) })}</span>
+                      <span className="text-xs text-muted-foreground">{t('invitedAs', { role: invitation.role === 'admin' ? t('admin') : t('member'), date: format.dateTime(new Date(invitation.createdAt), { dateStyle: 'medium' }) })}</span>
                     </div>
                     {invitation.status === 'pending' && <div className="flex gap-1">
                       <Button

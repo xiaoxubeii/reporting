@@ -37,3 +37,24 @@ Worktree: `/home/ubuntu/workspace/reporting.worktrees/comprehensive-site-e2e`
 - A loopback-only deterministic Ollama-compatible provider drives the real Fund-scoped Research/Memo execution interfaces. The suite verifies orchestration, state, provenance, and retry behavior, but does not claim production-model content quality.
 - A loopback-only Resend-compatible provider drives the Fund mail round trip. Public-internet delivery is opt-in and disabled for this run; no external email delivery is claimed.
 - The authoritative latest-run index is `run-manifest.json`; its `artifacts` fields resolve immutable reports under `runs/8915cb33-2421-42b1-b0d9-06b0d10917de/`. Legacy root-level result files are not authoritative.
+
+## Post-main reconciliation
+
+After merging `main` through `592662ff`, all seven textual conflicts were
+resolved by preserving both active contracts: atomic final decisions plus
+analysis preferences, telemetry/service-worker cleanup plus request timezone,
+the combined database RPC surface, and the current Diligence navigation plus
+final-decision messages.
+
+- Changed-scope ESLint passes 176 source files with zero diagnostics.
+- The conflict and E2E-support regression selection passes 136 tests; the two
+  Host/origin suites pass 65/65 when run separately to avoid their shared
+  process-environment mutation.
+- Full Vitest passes 360 files / 2,501 tests and skips five files / nine tests.
+  Two additional Host/origin assertions are the parallel environment mutation
+  noted above; the only remaining product-assertion failures are the four
+  inherited platform-landing baselines across two files.
+- `npx tsc --noEmit` reaches only the inherited platform-landing TS2802 target
+  error at `tests/platform-landing-logo-assets.test.ts:39`.
+- `next build --no-lint` compiles successfully, generates 277/277 pages,
+  finalizes optimization, collects traces, and exits 0.

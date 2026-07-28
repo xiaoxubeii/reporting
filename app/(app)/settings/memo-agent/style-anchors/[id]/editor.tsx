@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Save, Loader2, Check, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +37,7 @@ export interface Anchor {
 
 export function AnchorEditor({ anchor: initial }: { anchor: Anchor }) {
   const router = useRouter()
+  const format = useFormatter()
   const locale = useLocale()
   const t = useTranslations('Settings.anchorEditor')
   const [a, setA] = useState(initial)
@@ -286,7 +287,7 @@ export function AnchorEditor({ anchor: initial }: { anchor: Anchor }) {
               <div className="space-y-2">
                 <p className="text-muted-foreground">
                   {t('textExtracted', {
-                    date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(a.extracted_at)),
+                    date: format.dateTime(new Date(a.extracted_at), { dateStyle: 'medium', timeStyle: 'short' }),
                     count: a.extracted_text?.length ?? 0,
                   })}
                 </p>

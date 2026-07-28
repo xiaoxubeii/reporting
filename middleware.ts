@@ -112,7 +112,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = pathname.startsWith('/auth')
   const isApiRoute = pathname.startsWith('/api')
-  const isLocalePreferenceRoute = pathname === '/api/locale'
+  const isUiPreferenceRoute = pathname === '/api/locale' || pathname === '/api/time-zone'
 
   // Marketing site routes require both env vars to be set
   const marketingEnabled =
@@ -180,7 +180,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Enforce MFA: redirect to verify page if user has enrolled TOTP but hasn't completed AAL2
-  if (user && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isOAuthDiscovery && !isLocalePreferenceRoute) {
+  if (user && !isAuthRoute && !isPublicMarketingRoute && !isPublicTokenRoute && !isOAuthDiscovery && !isUiPreferenceRoute) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
       if (isApiRoute) {
@@ -358,6 +358,7 @@ function isTenantCredentialOrOnboardingApi(pathname: string): boolean {
     || pathname === '/api/mcp'
     || pathname === '/api/agent'
     || pathname === '/api/locale'
+    || pathname === '/api/time-zone'
 }
 
 export const config = {

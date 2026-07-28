@@ -89,16 +89,18 @@ export async function saveAffinityKey(
  */
 export async function getAffinityKey(
   admin: SupabaseClient,
-  userId: string
+  userId: string,
+  fundId: string
 ): Promise<string | null> {
   const { data } = await (admin as any)
     .from('affinity_credentials')
     .select('api_key_encrypted, fund_id')
     .eq('user_id', userId)
+    .eq('fund_id', fundId)
     .maybeSingle()
   if (!data?.api_key_encrypted) return null
 
-  const dek = await getFundDek(admin, (data as any).fund_id as string)
+  const dek = await getFundDek(admin, fundId)
   if (!dek) return null
 
   try {
@@ -121,14 +123,15 @@ export async function getAffinityKeyForDeal(
 ): Promise<{ apiKey: string; userId: string } | null> {
   const { data: deal } = await admin
     .from('diligence_deals')
-    .select('affinity_linked_by')
+    .select('affinity_linked_by, fund_id')
     .eq('id', dealId)
     .maybeSingle()
 
   const userId = (deal as any)?.affinity_linked_by as string | null | undefined
-  if (!userId) return null
+  const fundId = (deal as any)?.fund_id as string | null | undefined
+  if (!userId || !fundId) return null
 
-  const apiKey = await getAffinityKey(admin, userId)
+  const apiKey = await getAffinityKey(admin, userId, fundId)
   if (!apiKey) return null
   return { apiKey, userId }
 }
@@ -137,18 +140,21 @@ export async function getAffinityKeyForDeal(
 export async function markAffinityKeyError(
   admin: SupabaseClient,
   userId: string,
+  fundId: string,
   message: string
 ): Promise<void> {
   await (admin as any)
     .from('affinity_credentials')
     .update({ last_error: message.slice(0, 500), updated_at: new Date().toISOString() })
     .eq('user_id', userId)
+    .eq('fund_id', fundId)
 }
 
 /** Clear the error flag after a call succeeds. */
 export async function markAffinityKeyOk(
   admin: SupabaseClient,
-  userId: string
+  userId: string,
+  fundId: string
 ): Promise<void> {
   await (admin as any)
     .from('affinity_credentials')
@@ -158,11 +164,17 @@ export async function markAffinityKeyOk(
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId)
+    .eq('fund_id', fundId)
 }
 
 export async function deleteAffinityKey(
   admin: SupabaseClient,
-  userId: string
+  userId: string,
+  fundId: string
 ): Promise<void> {
-  await (admin as any).from('affinity_credentials').delete().eq('user_id', userId)
+  await (admin as any)
+    .from('affinity_credentials')
+    .delete()
+    .eq('user_id', userId)
+    .eq('fund_id', fundId)
 }

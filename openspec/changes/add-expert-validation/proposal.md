@@ -29,7 +29,7 @@ None.
 
 ## Impact
 
-- Adds a reporting-owned expert directory with global and fund-private entries, plus a fund- and deal-scoped expert-validation persistence model and internal APIs/UI on the existing Research surface.
+- Adds a reporting-owned expert directory with global and fund-private entries, plus a fund- and deal-scoped expert-validation persistence model and internal APIs/UI on a dedicated workspace tab immediately after Research.
 - Adds manual directory selection and server-side `pgvector` exact cosine Top K matching. Automatic matching recommends candidates only; an authorized fund member confirms one expert before invitation.
 - Adds server-side embedding generation when an expert profile changes and when a user requests automatic matching, using one fixed deployment model and vector dimension in the first version.
 - Adds a fragment-token external response surface with no access to the rest of the Deal or fund, one atomic submission, no expert account or session, no analytics, and no cacheable sensitive response.

@@ -158,7 +158,7 @@ export async function runChecklistAssessment(params: {
   }
 
   await note('Building system prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'ingest', outputLanguage })
 
   const { provider, model, providerType } = await getStageProvider(admin, fundId, 'checklist_assessment')
 

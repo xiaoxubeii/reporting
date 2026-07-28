@@ -103,3 +103,22 @@ The institutional platform landing MUST render from localized static content, va
 #### Scenario: Product services are unavailable
 - **WHEN** Fund product APIs, feed services, expert services, or external metrics are unavailable
 - **THEN** the platform landing still renders its complete narrative and all configuration-valid actions
+
+### Requirement: Platform landing uses a compact executive narrative
+The platform landing MUST present one five-section narrative for fund founders and managing partners: Hero, Management Outcomes, Connected Workflow, Trusted Decision Making, and Closing Conversion.
+
+#### Scenario: Visitor scans the page
+- **WHEN** a visitor opens the hosted platform root
+- **THEN** the page presents the five sections in narrative order
+- **AND** the page does not render the connected-surfaces grid or a second floating navigation
+
+#### Scenario: Visitor chooses a next step
+- **WHEN** a safe demo URL is configured
+- **THEN** Request demo and Enter workspace are presented as equally prominent actions in the Hero and closing section
+- **WHEN** the demo URL is absent
+- **THEN** Enter workspace remains available without an empty demo-action placeholder
+
+#### Scenario: Visitor reviews the workflow
+- **WHEN** the visitor operates the workflow selector with pointer or keyboard
+- **THEN** five stages are available and only one verified product view is exposed at a time
+- **AND** expert validation is described as needs-based

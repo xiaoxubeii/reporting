@@ -23,7 +23,7 @@
     "review": "审核",
     "pendingActions": "待处理操作",
     "inbound": "收件箱",
-    "deals": "项目",
+    "deals": "机会",
     "feeds": "订阅",
     "search": "搜索",
     "today": "今日",
@@ -134,7 +134,7 @@
     "asks": "资源需求",
     "notes": "备注",
     "interactions": "互动记录",
-    "deals": "项目",
+    "deals": "机会",
     "feeds": "订阅",
     "today": "今日",
     "followSources": "关注来源",
@@ -360,6 +360,12 @@
     "yesterday": "昨天",
     "daysAgo": "{count, number} 天前",
     "deleteConversation": "删除对话",
+    "currentProject": "当前项目：{project}",
+    "evidenceSources": "证据来源",
+    "legacyDiligenceHistory": "旧版尽调问答",
+    "readOnly": "只读",
+    "legacyReadOnlyNotice": "这是保留的旧版历史，不能作为同一对话继续发送。",
+    "startFromLegacy": "新建当前项目对话",
     "you": "你",
     "saving": "正在保存…",
     "saveAsSummary": "保存为摘要",
@@ -420,6 +426,7 @@
       "company": "可以询问这家公司的指标、经营表现、文档或投资组合位置，也可以让 AI 起草摘要。",
       "vehicle": "可以询问 {vehicle} 的财务情况，或让我起草一笔日记账分录供你审核。你也可以添加资本调用通知、发票或汇款确认，我会据此起草分录。",
       "lps": "可以询问有限合伙人的出资进度、最大未缴认缴额，以及基金的 DPI 和 TVPI 表现。",
+      "diligenceProject": "可以询问有关 {project} 的任何问题。回答会结合该项目的资料室、研究、问答库和清单，并在答案下方展示证据来源。",
       "diligence": "可以询问尽调管线中的活跃项目、中途停滞的备忘录，以及项目的行业或阶段分布。",
       "portfolio": "可以询问投资组合、比较不同公司，或获取所有投资的总体洞察。"
     },
@@ -428,6 +435,7 @@
       "company": "询问这家公司…",
       "vehicle": "询问 {vehicle}…",
       "lps": "询问有限合伙人…",
+      "diligenceProject": "询问 {project}…",
       "diligence": "询问尽调管线…",
       "portfolio": "询问投资组合…"
     },
@@ -436,6 +444,7 @@
       "messageTooLong": "消息内容过长，请缩短后重试。",
       "requestFailed": "请求失败",
       "network": "网络错误，请重试。",
+      "historyNotSaved": "答案已返回，但本轮对话未能保存到历史记录。",
       "saveSummary": "摘要保存失败"
     }
   },
@@ -1959,8 +1968,8 @@
     }
   },
   "Deals": {
-    "metadata": { "title": "交易机会" },
-    "title": "交易机会",
+    "metadata": { "title": "机会" },
+    "title": "机会",
     "description": "根据基金投资逻辑筛选收到的项目推介。",
     "views": { "table": "表格", "board": "看板" },
     "searchPlaceholder": "搜索公司、创始人或邮箱",
@@ -1974,7 +1983,7 @@
       "allSources": "全部来源",
       "noStatuses": "未选状态",
       "allStatuses": "全部状态",
-      "activeDeals": "活跃项目",
+      "activeDeals": "活跃机会",
       "statusCount": "{count} 个状态",
       "active": "活跃",
       "all": "全部",
@@ -1989,14 +1998,14 @@
       "status": "状态"
     },
     "empty": {
-      "noStatuses": "未选择任何状态——请至少选择一个状态以查看项目。",
-      "noMatchesBefore": "没有符合此筛选条件的项目。",
+      "noStatuses": "未选择任何状态——请至少选择一个状态以查看机会。",
+      "noMatchesBefore": "没有符合此筛选条件的机会。",
       "showAllStatuses": "显示全部状态",
-      "noDeals": "尚无项目。收到项目推介后会显示在此处。"
+      "noDeals": "尚无机会。收到项目推介后会显示在此处。"
     },
     "board": { "dropHere": "拖放到此处" },
     "labels": {
-      "new": "新项目",
+      "new": "新机会",
       "reviewing": "审核中",
       "advancing": "推进中",
       "met": "已会面",
@@ -2031,9 +2040,9 @@
       "status": "状态"
     },
     "newDeal": {
-      "button": "新建项目",
-      "title": "新建项目",
-      "description": "直接录入项目推介。系统将运行与入站邮件相同的 AI 筛选，包括投资逻辑契合度、去重及历史项目检查。",
+      "button": "新建机会",
+      "title": "新建机会",
+      "description": "直接录入项目推介。系统将运行与入站邮件相同的 AI 筛选，包括投资逻辑契合度、去重及历史机会检查。",
       "companyName": "公司名称",
       "companyUrl": "公司网址",
       "founderName": "创始人姓名",
@@ -2049,21 +2058,21 @@
       "filesSelected": "已选择 {count} 个文件",
       "attachmentHelp": "可上传项目材料、单页简介或财务模型；最多 10 个文件，每个不超过 10 MB。",
       "cancel": "取消",
-      "create": "创建项目",
+      "create": "创建机会",
       "createFailed": "创建失败。"
     }
   },
   "DealDetail": {
-    "metadata": { "title": "项目详情" },
-    "backToDeals": "返回交易机会",
+    "metadata": { "title": "机会详情" },
+    "backToDeals": "返回机会",
     "unknownCompany": "未知公司",
     "openDiligence": "打开尽调",
-    "confirmPromote": "将此项目移至尽调？系统将创建尽调记录并预填该项目的信息。",
-    "confirmReroute": "将此邮件重新路由到“{destination}”？当前项目记录将被删除。",
+    "confirmPromote": "将此机会移至尽调？系统将创建尽调记录并预填该机会的信息。",
+    "confirmReroute": "将此邮件重新路由到“{destination}”？当前机会记录将被删除。",
     "referrerAdded": "已添加到已知推荐人",
     "unknownDate": "未知日期",
-    "priorPitch": "该创始人／公司曾在 {date} 提交过<strong>历史项目</strong>。",
-    "viewPriorDeal": "查看历史项目 →",
+    "priorPitch": "该创始人／公司曾在 {date} 提交过<strong>历史机会</strong>。",
+    "viewPriorDeal": "查看历史机会 →",
     "addKnownReferrer": "添加到已知推荐人",
     "errors": { "promote": "推进到尽调失败。", "reroute": "重新路由失败。" },
     "details": {
@@ -2094,10 +2103,10 @@
     },
     "reroute": {
       "button": "重新路由",
-      "description": "如果这不是交易项目，请将邮件交给其他流程处理；当前项目记录将被删除。"
+      "description": "如果这不是投资机会，请将邮件交给其他流程处理；当前机会记录将被删除。"
     },
     "labels": {
-      "new": "新项目",
+      "new": "新机会",
       "reviewing": "审核中",
       "advancing": "推进中",
       "met": "已会面",
@@ -2124,13 +2133,13 @@
     "research": {
       "title": "外部研究",
       "rerun": "重新运行",
-      "run": "研究此项目",
+      "run": "研究此机会",
       "queueFailed": "无法将研究任务加入队列。",
       "running": "正在网上研究创始人和公司——任务将在后台运行，通常会在十分钟内完成。",
-      "skipped": "未自动研究——该项目未达到基金的投资逻辑契合度门槛。如认为值得进一步了解，可手动运行研究。",
+      "skipped": "未自动研究——该机会未达到基金的投资逻辑契合度门槛。如认为值得进一步了解，可手动运行研究。",
       "failed": "研究失败：{error}",
       "unknownError": "未知错误",
-      "notRun": "尚未对该项目运行外部研究。",
+      "notRun": "尚未对该机会运行外部研究。",
       "previously": "过往经历：{companies}",
       "researchedAt": "研究时间：{date}",
       "sections": {
@@ -2878,7 +2887,24 @@
         "saved": "基金业务邮箱已创建。"
       },
       "security": { "title": "账户安全", "description": "为您的外部登录账户启用双重身份验证。" },
-      "preferences": { "title": "语言与显示", "description": "当前账户在此浏览器上的个人偏好。", "language": "语言", "theme": "颜色模式", "themeHelp": "在跟随系统、浅色和深色之间切换。" }
+      "preferences": {
+        "title": "语言与显示",
+        "description": "当前账户在此浏览器上的个人偏好。",
+        "language": "语言",
+        "theme": "颜色模式",
+        "themeHelp": "在跟随系统、浅色和深色之间切换。",
+        "timeZone": {
+          "label": "时区",
+          "help": "自动模式使用此浏览器检测到的时区（{detected}）。手动选择会应用到您账户的所有设备。",
+          "automatic": "自动",
+          "manual": "手动时区",
+          "manualHelp": "请输入有效的 IANA 时区，例如 UTC 或 Asia/Shanghai。",
+          "placeholder": "UTC 或 Asia/Shanghai",
+          "save": "保存时区",
+          "invalid": "请输入有效的 IANA 时区。",
+          "saveError": "无法保存时区。"
+        }
+      }
     }
   },
   "Setup": {
@@ -4873,7 +4899,8 @@
       "sectionEditor": { "label": "章节", "add": "添加章节", "drag": "拖动排序", "included": "已包含", "omitted": "已省略", "depthHelp": "本章节的深度与篇幅", "depthFor": "{title} 的深度", "custom": "自定义", "remove": "移除章节", "coverPlaceholder": "智能体应在本章节涵盖什么？", "help": "拖动排序，取消勾选可省略章节，并可单独设置章节深度。" }, "schema": { "title": "基础备忘录架构", "description": "起草时使用的章节结构、指引和来源规则。" }
     },
     "dealDetail": {
-      "back": "返回尽职调查", "comingSoon": "将在 {phase} 推出。", "tabs": { "checklist": "清单", "dataRoom": "资料室", "research": "研究", "founders": "创始人", "scoring": "评分", "memo": "投资备忘录", "settings": "设置" }, "statuses": { "invested": "已投资", "active": "进行中", "passed": "已放弃" }, "common": { "save": "保存", "cancel": "取消", "edit": "编辑", "delete": "删除" }, "header": { "rename": "重命名项目", "sectorPlaceholder": "行业/类型", "stagePlaceholder": "阶段", "created": "创建于 {date}", "editMeta": "编辑行业和阶段", "outputLanguage": "投研语言", "languages": { "en": "英语", "zh-CN": "简体中文" }, "languageVersionConfirm": { "title": "生成{language}版本？", "description": "当前版本及其证据会完整保留。系统将创建新版本，并按所选语言重新运行尽调流程。", "confirm": "生成{language}版本" }, "languageVersionCreated": "已保留原版本，并关联新的{language}版本。", "languageRegenerationStarted": "已创建新的{language}版本，并开始完整分析。", "languageRegenerationFailed": "新语言版本已保留，但未能启动重新生成：{reason}", "languageSaved": "投研语言已切换为{language}。", "languageSwitchFailed": "无法切换投研语言。", "finalizeBeforeDecision": "请先定稿投资备忘录，再记录最终投决。", "statusUpdateFailed": "无法更新投资决策。", "unknownError": "未知错误" },
+      "tabListLabel": "尽职调查工作区",
+      "back": "返回尽职调查", "comingSoon": "将在 {phase} 推出。", "tabs": { "checklist": "清单", "dataRoom": "资料室", "research": "研究", "expertValidation": "专家验证", "scoring": "评分", "memo": "投资备忘录", "settings": "设置" }, "statuses": { "invested": "已投资", "active": "进行中", "passed": "已放弃" }, "common": { "save": "保存", "cancel": "取消", "edit": "编辑", "delete": "删除" }, "header": { "rename": "重命名项目", "sectorPlaceholder": "行业/类型", "stagePlaceholder": "阶段", "created": "创建于 {date}", "editMeta": "编辑行业和阶段", "outputLanguage": "投研语言", "languages": { "en": "英语", "zh-CN": "简体中文" }, "languageVersionConfirm": { "title": "生成{language}版本？", "description": "当前版本及其证据会完整保留。系统将创建新版本，并按所选语言重新运行尽调流程。", "confirm": "生成{language}版本" }, "languageVersionCreated": "已保留原版本，并关联新的{language}版本。", "languageRegenerationStarted": "已创建新的{language}版本，并开始完整分析。", "languageRegenerationFailed": "新语言版本已保留，但未能启动重新生成：{reason}", "languageSaved": "投研语言已切换为{language}。", "languageSwitchFailed": "无法切换投研语言。", "finalizeBeforeDecision": "请先定稿投资备忘录，再记录最终投决。", "statusUpdateFailed": "无法更新投资决策。", "unknownError": "未知错误" },
       "checklist": {
         "common": { "save": "保存", "cancel": "取消", "edit": "编辑", "delete": "删除" }, "loading": "正在加载清单…", "empty": "本项目还没有尽调清单。", "emptyHelp": "应用基金默认清单，或粘贴您自己的清单。", "hideCompleted": "隐藏已完成项", "applyDefault": "应用基金默认清单", "resetDefault": "按基金默认值重置", "queued": "排队中…", "errors": { "addSection": "无法添加章节。", "assessment": "无法将评估加入队列。" },
         "deleteSection": { "title": "删除章节？", "withItems": "将从本项目删除该章节及其中的 {count} 个项目。", "empty": "将从本项目删除该章节。" }, "deleteItem": { "title": "删除项目？", "description": "仅从本项目删除此行。", "confirm": "删除" }, "assessment": { "queued": "已排队，工作进程通常会在一分钟内开始", "running": "AI 评估进行中", "failed": "AI 评估失败", "noDetail": "未记录错误详情，请检查工作进程日志。", "retry": "重试", "typical": "通常约需 {duration}" },
@@ -4890,12 +4917,13 @@
         "analysis": { "errors": { "enqueue": "无法将资料室分析加入队列。" }, "title": "资料室分析", "help": "读取文档、核对清单，并找出缺口和不一致。", "reanalyze": "重新分析资料室", "options": "重新分析选项", "incremental": { "title": "重新分析新增和未完成内容", "description": "仅处理新文件和未完成清单项。" }, "full": { "title": "重新分析全部内容", "description": "重新解析所有文件并核对每个项目。" }, "analyze": "分析资料室", "uploadFirst": "请至少上传一份文档后再进行分析。", "failedFiles": "上次有 {count} 个文件解析失败，请重新分析以重试。" }
       },
       "research": {
-        "notes": { "title": "备注", "help": "基金团队针对此项目记录的备注和研究。" }, "runAnalysisFirst": "请先运行资料室分析。", "internal": { "title": "内部尽调", "inconsistencies": "不一致与矛盾", "noInconsistencies": "未发现矛盾或跨文档不一致。", "across": "涉及：{sources}", "gaps": "研究缺口与待确认问题", "noGaps": "没有重大缺口；可选跟进项位于“外部研究”。" }, "expert": { "title": "专家验证", "help": "将研究缺口或矛盾转为一个聚焦的外部专家问题。" }, "external": { "title": "外部研究", "help": "通过网络研究核实发现、识别竞品并列出缺口。", "searchOff": "上次运行：网络搜索关闭。", "searchOn": "上次运行：网络搜索开启。" }, "competitive": { "title": "竞争格局", "empty": "尚未识别竞品，请运行外部研究。", "namedByCompany": "公司提及", "foundByResearch": "研究发现" }, "dismissed": { "title": "已忽略", "hidden": "已隐藏 {count} 项" }, "restore": "恢复", "dismiss": "忽略", "agent": { "title": "智能体工作方式", "subtitle": "研究", "description": "外部研究的来源、核实方法和证据质量评级。" }, "kinds": { "contradiction": "矛盾", "crossDoc": "跨文档标记", "gap": "研究缺口", "finding": "发现", "competitor": "竞品" }, "levels": { "blocker": "阻断项", "high": "高", "material": "重大", "important": "重要", "medium": "中", "minor": "轻微", "nice_to_have": "可选", "low": "低" }, "diagnostic": { "title": "网络搜索诊断", "searches": "搜索次数：{count}", "urls": "引用网址：{count}", "sourced": "含网址的发现：{count}/{total}", "noUrls": "已执行搜索，但输出中没有网址，请重新运行。", "sources": "已查阅来源（{count}）" }, "findings": "发现", "followUpGaps": "后续研究缺口", "verification": { "verified": "已验证", "contradicted": "存在矛盾", "company_stated": "公司陈述", "unverified": "未验证", "inconclusive": "无法得出结论" }
+        "notes": { "title": "备注", "help": "基金团队针对此项目记录的备注和研究。" }, "runAnalysisFirst": "请先运行资料室分析。", "internal": { "title": "内部尽调", "inconsistencies": "不一致与矛盾", "noInconsistencies": "未发现矛盾或跨文档不一致。", "across": "涉及：{sources}", "gaps": "研究缺口与待确认问题", "noGaps": "没有重大缺口；可选跟进项位于“外部研究”。" }, "expert": { "title": "专家验证", "help": "将研究缺口或矛盾转为一个聚焦的外部专家问题。" }, "external": { "title": "外部研究", "help": "对资料室中的陈述进行核验，并补充发现和研究缺口；启用网络搜索时会引用公开来源。", "notRun": "尚无外部研究结果。运行后将核验关键主张，并补充市场、竞品和团队背景。", "noEvidence": "本次研究未找到足够可信的外部证据。", "searchOff": "上次运行：网络搜索关闭。", "searchOn": "上次运行：网络搜索开启。" }, "competitive": { "title": "竞争格局", "empty": "本次研究未识别到明确竞品。", "namedByCompany": "公司提及", "foundByResearch": "研究发现" }, "team": { "title": "创始人与核心团队", "help": "作为研究证据生成的团队档案，用于核对履历、来源和仍待确认的问题。", "runResearchFirst": "请先运行研究，再生成或编辑团队档案。", "emptyEditable": "尚无团队档案，可添加创始人或核心成员。", "empty": "本次研究未生成团队档案。", "roleMissing": "未记录职位", "backgroundMissing": "尚无背景摘要。", "sourcesCount": "{count} 个来源", "questionsCount": "{count} 个待确认问题", "openProfile": "打开 {name} 的团队档案" }, "dismissed": { "title": "已忽略", "hidden": "已隐藏 {count} 项" }, "restore": "恢复", "dismiss": "忽略", "agent": { "title": "智能体工作方式", "subtitle": "研究", "description": "外部研究的来源、核实方法和证据质量评级。" }, "kinds": { "contradiction": "矛盾", "crossDoc": "跨文档标记", "gap": "研究缺口", "finding": "发现", "competitor": "竞品" }, "levels": { "blocker": "阻断项", "high": "高", "material": "重大", "important": "重要", "medium": "中", "minor": "轻微", "nice_to_have": "可选", "low": "低" }, "diagnostic": { "title": "网络搜索诊断", "searches": "搜索次数：{count}", "urls": "引用网址：{count}", "sourced": "含网址的发现：{count}/{total}", "noUrls": "已执行搜索，但输出中没有网址，请重新运行。", "sources": "已查阅来源（{count}）" }, "findings": "发现", "followUpGaps": "后续研究缺口", "verification": { "verified": "已验证", "contradicted": "存在矛盾", "company_stated": "公司陈述", "unverified": "未验证", "inconclusive": "无法得出结论" }
       },
+      "expertTab": { "runResearchFirst": "请先运行研究，识别可交由专家验证的研究缺口或矛盾。", "goToResearch": "前往研究" },
       "qaLibrary": { "delete": { "title": "删除问答条目？", "description": "永久删除此问题和回答。", "confirm": "删除" }, "errors": { "add": "无法添加问答。" }, "addTitle": "添加问答条目", "questionPlaceholder": "问题", "answerPlaceholder": "回答、判断或对话记录", "add": "添加问答", "empty": "还没有问答条目。", "excluded": "不参与评估", "includeHelp": "纳入备忘录和评分", "excludeHelp": "从备忘录和评分中排除", "include": "纳入", "exclude": "排除" },
       "job": { "elapsedRunning": "已运行 {duration}", "elapsedQueued": "已排队 {duration}", "queued": "已排队，工作进程通常会在一分钟内开始。", "running": "运行中…", "failed": "任务失败。", "finished": "上次 {kind} 运行完成于 {date}。", "justNow": "刚刚", "duration": { "seconds": "{count} 秒", "minutesSeconds": "{minutes} 分 {seconds} 秒", "hoursMinutes": "{hours} 小时 {minutes} 分" } },
       "chat": { "errors": { "load": "无法加载对话。", "send": "对话失败。" }, "clear": { "title": "清空对话？", "description": "删除所有聊天消息，但不会更改项目证据。", "confirm": "清空" }, "title": "询问有关此项目的任何问题", "description": "智能体会根据资料室、研究、问答库和清单作答。", "loading": "正在加载对话…", "empty": "还没有问题。可以询问指标、证据、研究或创始人。", "thinking": "思考中…", "placeholder": "输入问题。回车发送，Shift+回车换行", "send": "发送" },
-      "founders": { "newFounder": "新创始人", "loading": "加载中…", "title": "创始人", "help": "来自外部研究的创始人档案，可编辑并记录待确认问题。", "add": "添加创始人", "noDraft": "还没有研究草稿，请先运行外部研究。", "emptyEditable": "还没有创始人档案，可添加一位。", "empty": "还没有创始人档案。", "agent": { "title": "智能体工作方式", "subtitle": "创始人研究", "description": "智能体如何建立创始人档案并评估证据质量。" }, "unnamed": "未命名", "edit": "编辑", "openQuestions": "待确认问题", "namePlaceholder": "创始人姓名", "rolePlaceholder": "职位", "backgroundPlaceholder": "背景摘要…", "questionsLabel": "待确认问题（每行一个）", "questionsPlaceholder": "每行一个问题…", "remove": "移除", "cancel": "取消", "save": "保存" },
+      "founders": { "add": "添加成员", "editorTitle": "创始人与团队档案", "editorDescription": "核对研究摘要，保留来源上下文，并记录后续待确认问题。", "readOnly": "只读", "unnamed": "未命名", "nameLabel": "成员姓名", "nameRequired": "请输入成员姓名。", "roleLabel": "职位", "backgroundLabel": "背景摘要", "namePlaceholder": "成员姓名", "rolePlaceholder": "职位", "backgroundPlaceholder": "背景摘要…", "questionsLabel": "待确认问题（每行一个）", "questionsHelp": "每行填写一个仍需核验的问题。", "questionsPlaceholder": "每行一个问题…", "sourcesLabel": "研究来源", "sourcesEmpty": "该档案尚未记录来源链接。", "opensInNewTab": "在新标签页中打开。", "remove": "移除", "deleteTitle": "移除团队档案？", "deleteDescription": "从本次研究结果中移除{name}？", "deleteConfirm": "移除档案", "discardTitle": "放弃未保存的修改？", "discardDescription": "对此团队档案的修改尚未保存。", "discardConfirm": "放弃修改", "saveFailed": "无法保存团队档案，请重试。", "removeFailed": "无法移除团队档案，请重试。", "cancel": "取消", "saving": "正在保存…", "save": "保存" },
       "notes": { "placeholder": "输入备注。回车保存，Shift+回车换行", "add": "添加备注", "loading": "正在加载备注…", "empty": "还没有备注。", "unknown": "未知", "delete": "删除备注" },
       "settings": { "deleteConfirm": { "title": "删除项目？", "description": "永久删除 {name} 及其全部尽调数据？", "confirm": "删除项目" }, "usage": { "title": "AI 用量", "help": "本项目的 token、成本和处理用量。", "loading": "正在加载用量…", "empty": "此期间没有记录到本项目的 AI 用量。", "ranges": { "all": "全部时间", "days": "{count} 天" }, "duration": { "seconds": "{count} 秒", "minutesSeconds": "{minutes} 分 {seconds} 秒", "hoursMinutes": "{hours} 小时 {minutes} 分" }, "stats": { "cost": "成本", "cacheSaved": "缓存节省 {amount}", "tokens": "Token 总数", "inputOutput": "输入 {input} · 输出 {output}", "processing": "处理时长", "runs": "{count} 次运行", "calls": "AI 调用", "cached": "缓存 {count}" }, "table": { "stage": "阶段", "calls": "调用", "tokens": "Token", "cost": "成本", "model": "模型", "inputOutput": "输入/输出", "audioMinutes": "音频 {count} 分钟", "tokenPair": "{input} / {output}" } }, "danger": { "title": "危险操作", "deleteTitle": "删除此项目", "deleteDescription": "永久删除项目及全部文档、分析、草稿、备注和问答。", "deleteButton": "删除项目" } },
       "scoring": { "title": "评分", "help": "根据基金标准为项目评分。", "empty": "还没有评分卡，请运行评分。", "noRationale": "未提供理由。", "edit": "编辑", "scoreLabel": "{dimension} 的分数", "confidenceLabel": "{dimension} 的置信度", "rationalePlaceholder": "评分理由…", "cancel": "取消", "save": "保存", "agent": { "title": "智能体工作方式", "subtitle": "评分标准", "description": "用于评估此项目的评分标准和证据规则。" }, "confidence": { "low": "低", "medium": "中", "high": "高" } },
@@ -5224,6 +5252,43 @@
       "placeholder": "调整本阶段的语气、深度和重点。留空则使用系统默认设置。",
       "saved": "已保存",
       "save": "保存指引"
+    },
+    "analysisPreferences": {
+      "trigger": "分析偏好",
+      "title": "分析偏好",
+      "description": "设置当前项目尽调分析的重点和深度。",
+      "focus": {
+        "title": "重点关注",
+        "help": "选择需要额外关注的分析领域，可多选。",
+        "areas": {
+          "technology": "技术与产品",
+          "market": "市场与竞争",
+          "financials": "财务与单位经济",
+          "regulatory": "监管与合规"
+        }
+      },
+      "depth": {
+        "title": "分析深度",
+        "help": "控制智能体核验证据和识别风险的深入程度。",
+        "options": {
+          "quick": "快速",
+          "standard": "标准",
+          "deep": "深入"
+        }
+      },
+      "instructions": {
+        "title": "补充指引",
+        "help": "填写当前项目特有的背景或问题，系统评估规则不会因此改变。",
+        "placeholder": "例如：重点关注临床验证质量和监管申报路径……"
+      },
+      "scopeHelp": "这些偏好仅作用于当前项目，不会改变基金的默认分析规则。",
+      "save": "保存",
+      "saved": "已保存",
+      "saveAndReanalyze": "保存并重新分析",
+      "errors": {
+        "save": "无法保存分析偏好。",
+        "reanalyze": "偏好已保存，但无法启动重新分析。"
+      }
     },
     "emailIntake": {
       "addFailed": "无法将邮件加入资料室。",

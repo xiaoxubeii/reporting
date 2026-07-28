@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "entrypoint": "http://tz-1785220751986-22fcce.localhost:6300",
+  "browserTimeZone": "Asia/Shanghai",
+  "assertions": {
+    "automatic": {
+      "status": "passed",
+      "cookieMode": "auto",
+      "cookieTimeZone": "Asia/Shanghai",
+      "cookieHostOnly": true,
+      "boundaryInstant": "2026-07-25T18:00:00Z",
+      "renderedDate": "Jul 26, 2026",
+      "screenshots": [
+        "automatic-asia-shanghai.png",
+        "automatic-asia-shanghai-merge.png",
+        "boundary-date-asia-shanghai.png"
+      ]
+    },
+    "manualUtc": {
+      "status": "passed",
+      "cookieMode": "manual",
+      "cookieTimeZone": "UTC",
+      "renderedDate": "Jul 25, 2026",
+      "screenshot": "manual-utc-selection.png"
+    },
+    "reloadPersistence": {
+      "status": "passed",
+      "mode": "manual",
+      "timeZone": "UTC",
+      "renderedDateAfterReload": "Jul 25, 2026",
+      "screenshot": "manual-utc-reload.png"
+    },
+    "resetAutomatic": {
+      "status": "passed",
+      "patchBody": {
+        "timeZone": null
+      },
+      "syncBody": {
+        "mode": "auto",
+        "timeZone": "Asia/Shanghai"
+      },
+      "renderedDate": "Jul 26, 2026",
+      "screenshot": "reset-automatic-asia-shanghai.png"
+    },
+    "tenantHostIsolation": {
+      "status": "passed",
+      "secondHostStartedWithoutTimeZoneCookie": true,
+      "secondHostAuthenticated": false,
+      "cookieSharedAcrossHosts": false,
+      "screenshot": "tenant-host-isolation.png"
+    },
+    "console": {
+      "uncaughtErrorCount": 0,
+      "hydrationWarningCount": 0,
+      "dateTimeHydrationMismatchCount": 0,
+      "timeZoneReloadLoopObserved": false
+    },
+    "network": {
+      "timeZoneMutationFailures": 0,
+      "unexpectedTimeZoneRequests": 0
+    }
+  },
+  "acceptanceOpenReason": null
+}

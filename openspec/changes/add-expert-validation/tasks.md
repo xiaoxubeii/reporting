@@ -21,6 +21,7 @@
 - [x] 3.3 Add structured AI generation through the existing Fund-configured provider for one sanitized question, one expert profile, and one sanitized context snapshot; allow editing, confirmation, and complete manual fallback without modifying `research_output`.
 - [x] 3.4 Add the Research-page request/status UI without creating Attention or Q&A records.
 - [x] 3.5 Add manual directory search and Auto match Top 5 selection, requiring internal confirmation before invitation.
+- [x] 3.6 Move the request/status UI to a dedicated Expert Validation workspace tab immediately after Research without adding a new `DiligenceStageBar` or backend pipeline stage.
 
 ## 4. Invitation and Public Submission
 

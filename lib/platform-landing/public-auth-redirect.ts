@@ -15,7 +15,7 @@ export function startLegacyPublicAuthCheck({
   replace,
   revealPublicShell,
 }: LegacyPublicAuthCheckOptions): () => void {
-  if (surface === 'tenant-home') return noCleanup
+  if (surface === 'tenant-home' || surface === 'platform-landing') return noCleanup
 
   const controller = new AbortController()
 

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getLocale, getTranslations } from 'next-intl/server'
+import { getFormatter, getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -14,8 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SchemasIndexPage() {
-  const locale = await getLocale()
-  const t = await getTranslations('Settings.schemas')
+  const [t, format] = await Promise.all([getTranslations('Settings.schemas'), getFormatter()])
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth')
@@ -60,7 +59,7 @@ export default async function SchemasIndexPage() {
                   {row ? (
                     <>
                       <div className="font-mono">{row.schema_version}</div>
-                      <div>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(row.edited_at))}</div>
+                      <div>{format.dateTime(new Date(row.edited_at), { dateStyle: 'medium' })}</div>
                     </>
                   ) : (
                     <span className="italic">{t('notSeededYet')}</span>

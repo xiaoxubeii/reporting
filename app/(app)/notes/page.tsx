@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Building2, Lock, Send, Pencil, X, Check, Reply, Pin, PinOff } from 'lucide-react'
 import Link from 'next/link'
 import { NoteContent } from '@/components/note-content'
@@ -54,7 +54,7 @@ const KNOWN_CONTEXTS = ['lps', 'investments', 'interactions', 'compliance', 'dea
 
 export default function NotesPage() {
   const t = useTranslations('Notes')
-  const locale = useLocale()
+  const format = useFormatter()
   const fv = useFeatureVisibility()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
@@ -284,7 +284,7 @@ export default function NotesPage() {
           (() => {
             const relative = relativeTime(note.createdAt)
             const relativeLabel = relative.unit === 'date'
-              ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(relative.date)
+              ? format.dateTime(relative.date, { month: 'short', day: 'numeric' })
               : t(`relative.${relative.unit}`, { count: relative.count })
             return (
           <div

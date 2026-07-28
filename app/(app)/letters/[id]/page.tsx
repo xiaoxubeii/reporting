@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Loader2, Lock, Sparkles, Copy, Check, Save, FileText, Download, ExternalLink, ChevronDown, ChevronRight, MessageSquare, Pencil, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -84,6 +84,7 @@ interface PortfolioPreviewData {
 }
 
 export default function LetterEditorPage() {
+  const format = useFormatter()
   const t = useTranslations('Letters.editor')
   const locale = useLocale()
   const fv = useFeatureVisibility()
@@ -638,7 +639,7 @@ export default function LetterEditorPage() {
               </div>
 
               <p className="text-[10px] text-muted-foreground/50 mt-2">
-                {t('lastUpdated', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(n.updated_at)) })}
+                {t('lastUpdated', { date: format.dateTime(new Date(n.updated_at), { dateStyle: 'medium', timeStyle: 'short' }) })}
               </p>
             </div>
           ))}

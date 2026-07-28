@@ -59,9 +59,9 @@ Research 会生成 findings、contradictions、competitive map、founder dossier
 
 ## Decisions
 
-### 1. 专家验证是材料获取方式，不是新的 Diligence 阶段
+### 1. 专家验证使用独立工作区页签，但不是新的 Diligence 执行阶段
 
-专家验证从现有 Research 页面发起，提交后生成一种已有材料类型 `industry_expert`。它不出现在顶层 Diligence stage 列表中，也不改变现有阶段顺序。
+专家验证从紧邻 Research 的独立工作区页签发起，提交后生成一种已有材料类型 `industry_expert`。独立页签用于承载来源选择、专家匹配、邀请、回复状态和证据处理等完整交互，但它不出现在 `DiligenceStageBar` 执行阶段列表中，也不改变现有后台阶段顺序。
 
 ```text
 Research gap / contradiction

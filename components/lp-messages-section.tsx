@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Loader2, Check } from 'lucide-react'
 
 interface Msg {
@@ -16,7 +16,7 @@ interface Msg {
 
 export function LpMessagesSection() {
   const t = useTranslations('LPs.admin.messages')
-  const locale = useLocale()
+  const format = useFormatter()
   const [messages, setMessages] = useState<Msg[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
@@ -71,7 +71,7 @@ export function LpMessagesSection() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-muted-foreground">
-                      {m.created_at ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(m.created_at)) : ''}
+                      {m.created_at ? format.dateTime(new Date(m.created_at), { dateStyle: 'medium', timeStyle: 'short' }) : ''}
                       {m.investor_name ? ` · ${m.investor_name}` : ''}
                       {m.from_email ? ` · ${m.from_email}` : ''}
                       {m.status === 'resolved' ? ` · ${t('resolved')}` : ''}

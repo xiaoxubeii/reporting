@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 
 export interface AuditEmail {
@@ -20,6 +20,7 @@ const TARGETS = ['reporting', 'interactions', 'deals'] as const
 
 export function EmailAuditList({ emails: initial }: { emails: AuditEmail[] }) {
   const router = useRouter()
+  const format = useFormatter()
   const locale = useLocale()
   const t = useTranslations('Settings.emailRouting')
   const [emails, setEmails] = useState(initial)
@@ -54,7 +55,7 @@ export function EmailAuditList({ emails: initial }: { emails: AuditEmail[] }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{e.received_at ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(e.received_at)) : '—'}</span>
+                <span>{e.received_at ? format.dateTime(new Date(e.received_at), { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</span>
                 {e.routing_confidence !== null && <span>· {t('confidence', { value: new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(e.routing_confidence) })}</span>}
                 {e.routing_secondary_label && <span>· {t('secondary', { label: e.routing_secondary_label })}</span>}
               </div>

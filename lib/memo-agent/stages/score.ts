@@ -94,7 +94,7 @@ export async function runScore(params: {
   const dealStage = (dealRow as { stage_at_consideration: string | null } | null)?.stage_at_consideration ?? null
 
   await note('Building score prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'score', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'score', outputLanguage })
 
   const memoSummary = memo ? summarizeMemoForScoring(memo) : null
 

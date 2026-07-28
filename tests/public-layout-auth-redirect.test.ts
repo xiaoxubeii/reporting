@@ -13,9 +13,8 @@ function deferred<T>() {
 }
 
 describe('legacy public auth redirect', () => {
-  it('redirects an authenticated platform visitor to the dashboard', async () => {
-    const lookup = deferred<{ data: { user: { id: string } | null } }>()
-    const getUser = vi.fn(() => lookup.promise)
+  it('does not run the legacy auth redirect for the public platform landing', () => {
+    const getUser = vi.fn(async () => ({ data: { user: { id: 'user-1' } } }))
     const replace = vi.fn()
     const revealPublicShell = vi.fn()
 
@@ -26,20 +25,34 @@ describe('legacy public auth redirect', () => {
       revealPublicShell,
     })
 
-    expect(getUser).toHaveBeenCalledOnce()
+    expect(getUser).not.toHaveBeenCalled()
+    expect(replace).not.toHaveBeenCalled()
+    expect(revealPublicShell).not.toHaveBeenCalled()
+  })
+
+  it('keeps redirecting authenticated visitors from legacy public-shell pages', async () => {
+    const lookup = deferred<{ data: { user: { id: string } | null } }>()
+    const replace = vi.fn()
+
+    startLegacyPublicAuthCheck({
+      surface: 'public-shell',
+      getUser: () => lookup.promise,
+      replace,
+      revealPublicShell: vi.fn(),
+    })
+
     lookup.resolve({ data: { user: { id: 'user-1' } } })
     await lookup.promise
     await Promise.resolve()
 
     expect(replace).toHaveBeenCalledWith('/dashboard')
-    expect(revealPublicShell).not.toHaveBeenCalled()
   })
 
-  it('reveals the platform landing to an anonymous visitor', async () => {
+  it('reveals legacy public-shell pages to anonymous visitors', async () => {
     const revealPublicShell = vi.fn()
 
     startLegacyPublicAuthCheck({
-      surface: 'platform-landing',
+      surface: 'public-shell',
       getUser: async () => ({ data: { user: null } }),
       replace: vi.fn(),
       revealPublicShell,

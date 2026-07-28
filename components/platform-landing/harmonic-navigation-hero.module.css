@@ -36,17 +36,21 @@
 }
 
 .logoMark {
-  position: relative;
   display: block;
   width: 32px;
   height: 32px;
   flex: 0 0 32px;
-  overflow: hidden;
-}
-
-.logoImage {
-  object-fit: contain;
-  transform: scale(1.7);
+  background-image: -webkit-image-set(
+    url('/landing/fundworkspace-icon-32.png') 1x,
+    url('/landing/fundworkspace-icon-64.png') 2x
+  );
+  background-image: image-set(
+    url('/landing/fundworkspace-icon-32.png') 1x,
+    url('/landing/fundworkspace-icon-64.png') 2x
+  );
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 
 .nav {
@@ -168,6 +172,14 @@
   width: 24px;
   height: 24px;
   flex-basis: 24px;
+  background-image: -webkit-image-set(
+    url('/landing/fundworkspace-icon-24.png') 1x,
+    url('/landing/fundworkspace-icon-48.png') 2x
+  );
+  background-image: image-set(
+    url('/landing/fundworkspace-icon-24.png') 1x,
+    url('/landing/fundworkspace-icon-48.png') 2x
+  );
 }
 
 .floatingLinks {
@@ -452,6 +464,14 @@
     width: 26px;
     height: 26px;
     flex-basis: 26px;
+    background-image: -webkit-image-set(
+      url('/landing/fundworkspace-icon-26.png') 1x,
+      url('/landing/fundworkspace-icon-52.png') 2x
+    );
+    background-image: image-set(
+      url('/landing/fundworkspace-icon-26.png') 1x,
+      url('/landing/fundworkspace-icon-52.png') 2x
+    );
   }
 
   .headerActions {

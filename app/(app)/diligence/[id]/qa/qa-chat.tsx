@@ -123,7 +123,7 @@ export function QAChat({ dealId, dealName }: { dealId: string; dealName: string 
       const res = await fetch(`/api/diligence/${dealId}/agent/qa/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: state.session_id, answers }),
+        body: JSON.stringify({ session_id: state.session_id, draft_id: state.draft_id, answers }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))

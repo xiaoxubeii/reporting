@@ -25,3 +25,11 @@
 - [x] 4.3 Run real browser acceptance on the platform root in English/Chinese desktop and 390px mobile, including configured/unconfigured demo CTA, keyboard workspace entry, reduced motion, console/network inspection, and screenshot capture.
 - [ ] 4.4 Run real browser regression on a valid tenant public homepage, tenant `/auth`, an authenticated GP workspace, LP Portal, and one non-root public explainer route.
 - [x] 4.5 Complete correctness, accessibility/design, and security reviews; resolve all in-scope high/critical findings and record final evidence in HarnessKit state.
+
+## 5. Simplified Executive Landing
+
+- [ ] 5.1 Replace the floating navigation and connected-surfaces Hero with one compact navigation, dual CTA Hero, and one verified product view.
+- [ ] 5.2 Replace repeated capability stories with three management outcomes and one accessible five-step workflow.
+- [ ] 5.3 Consolidate expert validation, traceability, closing conversion, and footer content.
+- [ ] 5.4 Update English and Simplified Chinese copy and focused contract tests.
+- [ ] 5.5 Run changed-scope, build, browser, and platform/tenant regression verification.

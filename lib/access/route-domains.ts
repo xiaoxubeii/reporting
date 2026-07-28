@@ -399,6 +399,7 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/auth/logout': 'Ends a session.',
   'api/auth/signup': 'Pre-auth by definition.',
   'api/locale': 'Public UI preference only; same-origin handler validates the fixed locale allowlist.',
+  'api/time-zone': 'Public device preference; handler enforces same-origin input and authenticates manual mode.',
   'api/setup': 'First-run bootstrap, before any fund exists.',
   'api/onboarding/check-domain': 'Pre-fund: is this email domain claimed.',
   'api/onboarding/fund': 'Creates the fund and its first admin.',

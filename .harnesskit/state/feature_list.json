@@ -20,12 +20,13 @@
         "OpenSpec proposal, design, comprehensive acceptance specification, and implementation tasks created and strict validation passes",
         "The final serial Playwright matrix passes 29/29 with zero failed, skipped, timed out, interrupted, flaky, or unexpected results across Search, subscriptions, full investment decision, tenant denial, mail boundaries, GP/public/LP routes, desktop, and mobile",
         "Final HTML and JSON reports are retained under .harnesskit/evidence/comprehensive-site-e2e/",
-        "Full Vitest passes 338 files and 2280 tests; TypeScript, HarnessKit fast, changed-scope ESLint, and production compilation/276-page generation pass",
+        "Before main reconciliation, full Vitest passed 338 files and 2280 tests; after reconciliation 360 files / 2501 tests pass, the two environment-mutating Host tests pass in isolation, and only four inherited platform-landing assertions remain",
+        "Post-main changed-scope ESLint passes 176 files with zero diagnostics; production compilation and 277-page generation pass",
         ".harnesskit/evidence/comprehensive-site-e2e/verification.md records the final run ID, capability boundary, inherited baselines, and exact fixture cleanup",
         "Disposable local fixtures and historic E2E identities were removed; current Investment E2E Fund and user counts are both zero"
       ],
       "blocked_by": [],
-      "notes": "Capability-aware verification is complete. Loopback-only deterministic Ollama-compatible and Resend-compatible providers exercise the real Fund-scoped orchestration and mail boundaries without claiming production-model quality or public-internet delivery. HarnessKit fast passes; normal build/targeted verification remain blocked by inherited repository-wide lint debt, and the existing production dependency audit reports 19 advisories."
+      "notes": "Capability-aware verification is complete. Loopback-only deterministic Ollama-compatible and Resend-compatible providers exercise the real Fund-scoped orchestration and mail boundaries without claiming production-model quality or public-internet delivery. HarnessKit fast passes; normal build/targeted verification remain blocked by inherited repository-wide lint debt, TypeScript has one inherited platform-landing target error, and the existing production dependency audit reports 19 advisories."
     },
     {
       "id": "global-assistant-context",
@@ -232,6 +233,37 @@
       ],
       "blocked_by": [],
       "notes": "The earlier isolated CardioSignal fixture completed the system workflow, but current-main revalidation and browser evidence are still required. No outbound email provider is configured, so invitation acceptance must verify the product's documented copy-link fallback without claiming provider delivery."
+    },
+    {
+      "id": "user-timezone-preferences",
+      "title": "UTC storage with automatic and user-overridden display timezone",
+      "status": "passing",
+      "current_task": "Implementation, browser acceptance, and merge verification complete",
+      "definition_of_done": [
+        "Stored timestamps remain unchanged UTC instants",
+        "Server and hydrated client rendering use the same explicit validated IANA timezone",
+        "Automatic browser detection synchronizes once without a reload loop",
+        "Authenticated users can save a manual timezone or reset to Automatic across devices",
+        "Host-only cookies remain isolated between tenant hostnames",
+        "Every client-native date presentation path is either migrated to next-intl or explicitly classified as timezone detection or business calendar UTC",
+        "Focused tests, review, browser acceptance, and repository release gates are recorded"
+      ],
+      "evidence": [
+        "openspec/changes/add-user-timezone-preferences/verification-report.md",
+        "tests/time-zone-profile.integration.test.ts passed against local Supabase with disposable cleanup",
+        "tests/time-zone-compliance-route.test.ts covers UTC year/month and west-of-UTC January boundary",
+        ".harnesskit/evidence/add-user-timezone-preferences/browser-assertions.json",
+        ".harnesskit/evidence/add-user-timezone-preferences/automatic-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/manual-utc-selection.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/manual-utc-reload.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/reset-automatic-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/tenant-host-isolation.png",
+        "tests/root-layout-hydration.test.ts covers the accepted zero-hydration-warning root layout contract",
+        "Final focused verification passed 13 files / 185 tests; changed-scope ESLint passed with zero errors; production no-lint build generated 277 pages"
+      ],
+      "blocked_by": [],
+      "notes": "All OpenSpec tasks are complete. Full-suite platform-landing assertions, repository-wide ESLint debt, one platform-landing TypeScript target error, and 19 existing dependency advisories are recorded as unrelated baselines in the verification report; this branch changes no dependency manifest or lockfile."
     },
     {
       "id": "harness-bootstrap",
@@ -495,6 +527,30 @@
       ],
       "blocked_by": [],
       "notes": "Implementation is complete in /home/ubuntu/workspace/reporting.worktrees/add-fund-subdomain-isolation on codex/add-fund-subdomain-isolation because it directly depends on the completed but uncommitted Host/Fund isolation contract. Browser evidence is local and untracked. Production rollout still requires the Fund-subdomain wildcard DNS/TLS, trusted Host proxy, redirect allowlist, and migration gates."
+    },
+    {
+      "id": "diligence-research-team",
+      "title": "Founder and core-team dossiers inside Diligence Research",
+      "status": "passing",
+      "current_task": "Implementation and authenticated browser verification complete; ready to archive the OpenSpec change",
+      "definition_of_done": [
+        "Diligence navigation no longer exposes a top-level Founders tab",
+        "Research contains a compact localized Founders and Core Team section after Competitive Landscape",
+        "Authorized editors add, edit, and remove dossiers in an accessible right-side sheet through the existing Research draft contract",
+        "The pre-Research state exposes no ineffective add action",
+        "Research reruns preserve stored dossier values and order, merge unique sources, and append newly discovered founders",
+        "Focused checks, correctness and UI review, and authenticated English and Chinese browser verification pass"
+      ],
+      "evidence": [
+        "OpenSpec merge-founder-dossiers-into-research proposal, design, capability spec, and tasks pass strict validation",
+        "Focused navigation, localization, and deterministic rerun merge tests pass 2 files and 7 tests",
+        "Changed-scope ESLint, feature-scoped TypeScript, and git diff check pass",
+        "Authenticated English and Simplified Chinese Chromium verifies pre-Research state, section order, add/edit/remove through the existing draft API, localized side sheet, and 390px layout without overflow",
+        "Browser verification restores the original research_output in finally and records no feature-scope page error or same-origin 4xx/5xx response",
+        "Production Next.js compilation, type validation, page-data collection, and route generation pass with next build --no-lint"
+      ],
+      "blocked_by": [],
+      "notes": "Implemented directly in the current main checkout because it contains overlapping uncommitted Diligence, locale, and Research changes that were preserved. The production build and all changed-scope checks pass. The repository-wide test suite retains unrelated failures in auth/host, platform landing, middleware, locale, OAuth, tenant, and expert-validation areas; HarnessKit targeted reaches unrelated global lint debt, while HarnessKit fast is blocked by the legacy feed-discovery status value 'complete'. The authenticated app shell also retains its known portal/me 404 and accounting/vehicle-index 403 baselines outside this feature."
     },
     {
       "id": "fund-subdomain-isolation",

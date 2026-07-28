@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import { Hanken_Grotesk, Plus_Jakarta_Sans } from 'next/font/google'
-import { getLocale, getMessages, getTranslations } from 'next-intl/server'
+import { getLocale, getMessages, getTimeZone, getTranslations } from 'next-intl/server'
 import { I18nClientProvider } from '@/i18n/client-provider'
 import { DEFAULT_LOCALE, isSupportedLocale } from '@/i18n/locales'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/toaster'
 import { ConfirmProvider } from '@/components/confirm-dialog'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getTrustedRequestTenant, trustedTenantSlugFromHeaders } from '@/lib/tenancy/request'
 import { themeCssVars, type FundTheme } from '@/lib/theme'
@@ -14,6 +14,7 @@ import { TenantBrandingProvider } from '@/components/tenant-branding-provider'
 import { PlatformTelemetry } from '@/components/platform-telemetry'
 import { isPlatformTelemetryEnabled } from '@/lib/platform-telemetry'
 import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
+import { resolveTimeZone, TIME_ZONE_COOKIE_NAME } from '@/i18n/time-zone'
 import './globals.css'
 
 // Curated UI font options. Loaded as CSS variables so the per-fund theme can
@@ -56,9 +57,13 @@ export default async function RootLayout({
   const telemetryEnabled = isPlatformTelemetryEnabled(process.env)
   const requestHeaders = new Headers(headers())
   const tenantSlug = trustedTenantSlugFromHeaders(requestHeaders)
-  const [locale, messages, tenant] = await Promise.all([
+  const { source: timeZoneSource } = resolveTimeZone(
+    cookies().get(TIME_ZONE_COOKIE_NAME)?.value,
+  )
+  const [locale, messages, timeZone, tenant] = await Promise.all([
     getLocale(),
     getMessages(),
+    getTimeZone(),
     tenantSlug
       ? getTrustedRequestTenant(createClient() as never, requestHeaders)
       : Promise.resolve(null),
@@ -73,7 +78,12 @@ export default async function RootLayout({
     <html lang={resolvedLocale} suppressHydrationWarning className={`${hankenGrotesk.variable} ${plusJakarta.variable}`}>
       <body className="font-sans">
         {tenantTheme && <style dangerouslySetInnerHTML={{ __html: `:root{${tenantTheme}}` }} />}
-        <I18nClientProvider locale={resolvedLocale} messages={messages}>
+        <I18nClientProvider
+          locale={resolvedLocale}
+          messages={messages}
+          timeZone={timeZone}
+          timeZoneSource={timeZoneSource}
+        >
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
