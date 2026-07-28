@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { loadPersonalProfile, savePersonalProfile } from '@/lib/identity/profile'
+import { loadPersonalProfile, savePersonalProfile, savePersonalTimeZone } from '@/lib/identity/profile'
 import { identityErrorResponse, readIdentityJson } from '@/lib/identity/http'
 import { getTrustedRequestTenant } from '@/lib/tenancy/request'
 import { setCurrentUserMailbox } from '@/lib/email/mailboxes'
@@ -86,11 +86,16 @@ export async function PATCH(req: NextRequest) {
     const input = body as Record<string, unknown>
     const hasName = Object.hasOwn(input, 'fullName')
     const hasMailbox = Object.hasOwn(input, 'mailboxLocalPart')
-    if (hasName === hasMailbox) {
+    const hasTimeZone = Object.hasOwn(input, 'timeZone')
+    if (Object.keys(input).length !== 1 || Number(hasName) + Number(hasMailbox) + Number(hasTimeZone) !== 1) {
       return NextResponse.json({ error: 'Update one personal setting at a time.' }, { status: 400 })
     }
     if (hasName) {
       const profile = await savePersonalProfile(admin, { userId: user.id, fullName: input.fullName })
+      return NextResponse.json({ profile })
+    }
+    if (hasTimeZone) {
+      const profile = await savePersonalTimeZone(admin, { userId: user.id, timeZone: input.timeZone })
       return NextResponse.json({ profile })
     }
 

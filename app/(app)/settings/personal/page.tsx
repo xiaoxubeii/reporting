@@ -15,10 +15,11 @@ import { LanguageSwitcher } from '@/components/language-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { AffinityConnect } from '@/components/settings/affinity-connect'
 import { PersonalNotificationPreferences } from '@/components/settings/personal-notification-preferences'
+import { TimeZonePreference } from '@/components/settings/time-zone-preference'
 
 interface PersonalState {
   externalEmail: string | null
-  profile: { fullName: string | null }
+  profile: { fullName: string | null; timeZone: string | null }
   currentFund: null | { name: string; slug: string; emailDomain: string | null; role: 'admin' | 'member' }
   mailbox: null | { localPart: string; address: string | null; displayName: string; active: boolean }
 }
@@ -120,6 +121,7 @@ export default function PersonalSettingsPage() {
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border p-3"><p className="mb-2 text-xs font-medium text-muted-foreground">{t('preferences.language')}</p><LanguageSwitcher className="w-full border bg-background" /></div>
               <div className="flex items-center justify-between rounded-lg border p-3"><div><p className="text-xs font-medium text-muted-foreground">{t('preferences.theme')}</p><p className="mt-1 text-xs text-muted-foreground">{t('preferences.themeHelp')}</p></div><ThemeToggle /></div>
+              <TimeZonePreference timeZone={data.profile.timeZone} />
             </CardContent>
           </Card>
           {data.currentFund && <AffinityConnect />}

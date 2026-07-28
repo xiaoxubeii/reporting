@@ -2887,7 +2887,24 @@
         "saved": "Your Fund business email was created."
       },
       "security": { "title": "Account security", "description": "Protect your external login account with two-factor authentication." },
-      "preferences": { "title": "Language and display", "description": "Personal browser preferences for this account.", "language": "Language", "theme": "Color mode", "themeHelp": "Cycle between system, light, and dark." }
+      "preferences": {
+        "title": "Language and display",
+        "description": "Personal browser preferences for this account.",
+        "language": "Language",
+        "theme": "Color mode",
+        "themeHelp": "Cycle between system, light, and dark.",
+        "timeZone": {
+          "label": "Time zone",
+          "help": "Automatic uses this browser's detected time zone ({detected}). A manual choice applies to your account on every device.",
+          "automatic": "Automatic",
+          "manual": "Manual time zone",
+          "manualHelp": "Enter a valid IANA time zone, such as UTC or Asia/Shanghai.",
+          "placeholder": "UTC or Asia/Shanghai",
+          "save": "Save time zone",
+          "invalid": "Enter a valid IANA time zone.",
+          "saveError": "Unable to save the time zone."
+        }
+      }
     }
   },
   "Setup": {

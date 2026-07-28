@@ -2877,7 +2877,24 @@
         "saved": "基金业务邮箱已创建。"
       },
       "security": { "title": "账户安全", "description": "为您的外部登录账户启用双重身份验证。" },
-      "preferences": { "title": "语言与显示", "description": "当前账户在此浏览器上的个人偏好。", "language": "语言", "theme": "颜色模式", "themeHelp": "在跟随系统、浅色和深色之间切换。" }
+      "preferences": {
+        "title": "语言与显示",
+        "description": "当前账户在此浏览器上的个人偏好。",
+        "language": "语言",
+        "theme": "颜色模式",
+        "themeHelp": "在跟随系统、浅色和深色之间切换。",
+        "timeZone": {
+          "label": "时区",
+          "help": "自动模式使用此浏览器检测到的时区（{detected}）。手动选择会应用到您账户的所有设备。",
+          "automatic": "自动",
+          "manual": "手动时区",
+          "manualHelp": "请输入有效的 IANA 时区，例如 UTC 或 Asia/Shanghai。",
+          "placeholder": "UTC 或 Asia/Shanghai",
+          "save": "保存时区",
+          "invalid": "请输入有效的 IANA 时区。",
+          "saveError": "无法保存时区。"
+        }
+      }
     }
   },
   "Setup": {

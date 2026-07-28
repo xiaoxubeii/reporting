@@ -32,6 +32,11 @@ describe('settings localization', () => {
     expect(flattenedKeys(chinese.Settings).sort()).toEqual(flattenedKeys(english.Settings).sort())
   })
 
+  it('keeps personal settings, including timezone preferences, structurally aligned', () => {
+    expect(flattenedKeys(chinese.SettingsIdentity.personal).sort())
+      .toEqual(flattenedKeys(english.SettingsIdentity.personal).sort())
+  })
+
   it('marks every visual Settings page localized', () => {
     for (const page of settingsPages) expect(LOCALIZED_PAGE_FILES).toContain(page)
   })
