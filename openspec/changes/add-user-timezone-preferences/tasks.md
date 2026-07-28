@@ -7,8 +7,8 @@
 
 ## 2. Request and Cookie Synchronization
 
-- [ ] 2.1 Add failing route tests for body bounds, exact mode/value validation, trusted Host/Origin, cookie flags, signed-out automatic writes, and authenticated manual lookup.
-- [ ] 2.2 Implement the timezone API using the existing locale route's request and cookie security boundaries.
+- [x] 2.1 Add failing route tests for body bounds, exact mode/value validation, trusted Host/Origin, cookie flags, signed-out automatic writes, and authenticated manual lookup.
+- [x] 2.2 Implement the timezone API using the existing locale route's request and cookie security boundaries.
 - [ ] 2.3 Add failing bootstrap tests for first detection, no-op matching state, manual precedence, remote manual synchronization, and reload-loop prevention.
 - [ ] 2.4 Implement the root timezone bootstrap and synchronize only validated changed preferences.
 
