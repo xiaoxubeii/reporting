@@ -71,7 +71,7 @@ function MagicLinkForm() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">{t('magicTitle')}</CardTitle>
+            <CardTitle className="text-lg" role="heading" aria-level={2}>{t('magicTitle')}</CardTitle>
             <CardDescription>
               {sent
                 ? t('magicSentDescription')

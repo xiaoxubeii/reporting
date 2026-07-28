@@ -1,12 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { handleResendInboundWebhook } from '@/lib/email/resend-webhook'
 import { createResendWebhookRuntime } from '@/lib/email/resend-webhook-runtime'
+import { admitsRegisteredSystemRequest } from '@/lib/tenancy/system-request'
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { routeToken: string } },
 ) {
+  if (!admitsRegisteredSystemRequest(request)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   const admin = createAdminClient()
   const result = await handleResendInboundWebhook(
     request,

@@ -101,15 +101,24 @@ describe('runDealResearch', () => {
     expect(deps.logUsage).toHaveBeenCalledWith(expect.objectContaining({ provider: 'openrouter' }))
   })
 
+  it('uses the tool loop exposed by an Ollama OpenAI-compatible provider', async () => {
+    const deps = dependencies({ providerType: 'ollama' })
+
+    await expect(runDealResearch({} as never, PARAMS, deps)).resolves.toEqual({ status: 'done' })
+
+    const provider = (await vi.mocked(deps.getProvider)({} as never, '')).provider
+    expect(provider.createToolLoop).toHaveBeenCalledOnce()
+    expect(deps.persist).toHaveBeenCalledWith(CONTEXT, expect.objectContaining({
+      status: 'done',
+      sources: [SOURCE],
+    }))
+    expect(deps.logUsage).toHaveBeenCalledWith(expect.objectContaining({ provider: 'ollama' }))
+  })
+
   it('fails closed for unsupported providers and zero-tool or empty-evidence runs', async () => {
     const unsupported = dependencies({ provider: { supportsToolLoop: false, createToolLoop: undefined } })
     await expect(runDealResearch({} as never, PARAMS, unsupported)).resolves.toEqual({ status: 'skipped' })
     expect(unsupported.persist).toHaveBeenCalledWith(CONTEXT, expect.objectContaining({ status: 'skipped' }))
-
-    const ollama = dependencies({ providerType: 'ollama' })
-    await expect(runDealResearch({} as never, PARAMS, ollama)).resolves.toEqual({ status: 'skipped' })
-    const ollamaProvider = (await vi.mocked(ollama.getProvider)({} as never, '')).provider
-    expect(ollamaProvider.createToolLoop).not.toHaveBeenCalled()
 
     const zeroTool = dependencies({ loopResult: result({ toolCalls: [] }) })
     await expect(runDealResearch({} as never, PARAMS, zeroTool)).resolves.toEqual({ status: 'skipped' })
@@ -132,5 +141,29 @@ describe('runDealResearch', () => {
 
     const stale = dependencies({ persistResult: false })
     await expect(runDealResearch({} as never, PARAMS, stale)).resolves.toMatchObject({ status: 'failed', error: 'stale attempt' })
+  })
+
+  it('marks only transport/provider availability failures as retryable', async () => {
+    const transient = dependencies({
+      provider: {
+        createToolLoop: vi.fn(async () => {
+          throw Object.assign(new Error('upstream throttled'), { status: 429 })
+        }),
+      },
+    })
+    await expect(runDealResearch({} as never, PARAMS, transient)).resolves.toEqual({
+      status: 'failed',
+      error: 'transient provider failure',
+      retryable: true,
+    })
+
+    const deterministic = dependencies({
+      loopResult: result({ text: '{not-json' }),
+    })
+    await expect(runDealResearch({} as never, PARAMS, deterministic)).resolves.toEqual({
+      status: 'failed',
+      error: 'invalid grounded result',
+      retryable: false,
+    })
   })
 })

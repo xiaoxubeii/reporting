@@ -24,6 +24,7 @@ function dependencies(settings = snapshot(), overrides: Record<string, unknown> 
     loadSnapshot: vi.fn(async () => settings),
     decryptKey: vi.fn(() => 'api-key-test-secret'),
     validateCustomUrl: vi.fn(async (url: string) => ({ ok: true as const, url })),
+    validateOllamaEgressUrl: vi.fn(async (url: string) => ({ ok: true as const, url, publicOnly: false })),
     createProvider: vi.fn(() => provider),
     ...overrides,
   }
@@ -70,11 +71,41 @@ describe('Discovery current-fund provider resolver', () => {
     expect(deps.validateCustomUrl).not.toHaveBeenCalled()
   })
 
-  it('rejects Ollama before provider creation', async () => {
-    const deps = dependencies(snapshot({ default_ai_provider: 'ollama' }))
+  it('accepts a validated Ollama endpoint without requiring an encrypted Fund key', async () => {
+    const deps = dependencies(snapshot({
+      default_ai_provider: 'ollama',
+      encryption_key_encrypted: null,
+      ollama_base_url: 'http://127.0.0.1:11434/v1',
+      ollama_model: 'reporting-e2e',
+    }))
     await expect(resolveDiscoveryAIProvider({} as never, FUND_ID, deps as never))
-      .rejects.toThrow('Feed discovery AI configuration is unavailable')
-    expect(deps.createProvider).not.toHaveBeenCalled()
+      .resolves.toMatchObject({ providerType: 'ollama', model: 'reporting-e2e' })
+    expect(deps.decryptKey).not.toHaveBeenCalled()
+    expect(deps.createProvider).toHaveBeenCalledWith({
+      providerType: 'ollama',
+      apiKey: 'ollama',
+      model: 'reporting-e2e',
+      baseUrl: 'http://127.0.0.1:11434/v1',
+      publicEgressOnly: false,
+    })
+  })
+
+  it('pins production Ollama to public egress and rejects redirects', async () => {
+    const deps = dependencies(snapshot({
+      default_ai_provider: 'ollama',
+      encryption_key_encrypted: null,
+      ollama_base_url: 'https://93.184.216.34/v1',
+      ollama_model: 'hosted-model',
+    }), {
+      validateOllamaEgressUrl: vi.fn(async (url: string) => ({ ok: true as const, url, publicOnly: true })),
+    })
+
+    await resolveDiscoveryAIProvider({} as never, FUND_ID, deps as never)
+
+    expect(deps.createProvider).toHaveBeenCalledWith(expect.objectContaining({
+      providerType: 'ollama',
+      publicEgressOnly: true,
+    }))
   })
 
   it.each([

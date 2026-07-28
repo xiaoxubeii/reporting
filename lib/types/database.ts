@@ -4277,6 +4277,23 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      set_diligence_deal_status: {
+        Args: {
+          p_actor_user_id: string;
+          p_deal_id: string;
+          p_fund_id: string;
+          p_status: string;
+        };
+        Returns: string;
+      };
+      promote_inbound_deal_to_diligence: {
+        Args: {
+          p_deal_id: string;
+          p_fund_id: string;
+          p_user_id: string;
+        };
+        Returns: { created: boolean; diligence_id: string }[];
+      };
       accept_fund_member_invitation: {
         Args: { p_token_hash: string; p_user_id: string };
         Returns: { fund_id: string; invitation_id: string; role: string }[];

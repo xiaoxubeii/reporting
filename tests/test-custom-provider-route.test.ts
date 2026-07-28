@@ -52,6 +52,7 @@ describe('POST /api/test-custom-provider', () => {
       {
         requestParameters: { thinking: { type: 'disabled' } },
         rejectRedirects: true,
+        publicEgressOnly: true,
       },
     )
     expect(createMessage).toHaveBeenCalledWith({

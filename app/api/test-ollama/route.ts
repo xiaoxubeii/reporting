@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { OpenAIProvider } from '@/lib/ai/openai'
 import { rateLimit } from '@/lib/rate-limit'
-import { validateOllamaUrl } from '@/lib/validate-url'
+import { validateOllamaEgressUrl } from '@/lib/validate-url'
 
 export async function POST(req: NextRequest) {
   const supabase = createClient()
@@ -15,13 +15,16 @@ export async function POST(req: NextRequest) {
   const { baseUrl } = await req.json()
   const raw = baseUrl?.trim() || 'http://localhost:11434/v1'
 
-  const validation = validateOllamaUrl(raw)
+  const validation = await validateOllamaEgressUrl(raw)
   if (!validation.ok) {
     return NextResponse.json({ error: validation.error }, { status: 400 })
   }
 
   try {
-    const provider = new OpenAIProvider('ollama', validation.url)
+    const provider = new OpenAIProvider('ollama', validation.url, {
+      rejectRedirects: true,
+      publicEgressOnly: validation.publicOnly,
+    })
     await provider.testConnection()
     return NextResponse.json({ ok: true })
   } catch (err) {

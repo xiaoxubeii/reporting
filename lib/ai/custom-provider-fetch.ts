@@ -45,6 +45,11 @@ const safeCustomProviderDispatcher = new Agent({
 
 type DispatcherRequestInit = RequestInit & { dispatcher: Dispatcher }
 
+export const noRedirectFetch: typeof fetch = (input, init) => fetch(input, {
+  ...init,
+  redirect: 'error',
+})
+
 export const safeCustomProviderFetch: typeof fetch = (input, init) => fetch(input, {
   ...init,
   redirect: 'error',

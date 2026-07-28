@@ -162,6 +162,34 @@ describe('middleware Fund Host boundary', () => {
     expect(rpc).toHaveBeenCalledWith('resolve_my_lp_fund', {})
   })
 
+  it('lets a same-Fund GP probe dual LP identity without pretending the GP is already an LP', async () => {
+    rpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'resolve_public_fund_host') {
+        return {
+          data: [{ id: FUND_ALPHA, slug: args.p_slug, name: 'Alpha', logo_url: null, theme: null }],
+          error: null,
+        }
+      }
+      if (name === 'resolve_my_lp_fund') return { data: null, error: null }
+      if (name === 'access_context') {
+        return {
+          data: {
+            fund_id: FUND_ALPHA,
+            role: 'admin',
+            features: DEFAULT_FEATURE_VISIBILITY,
+            grants: {},
+            defaults: {},
+          },
+          error: null,
+        }
+      }
+      throw new Error(`unexpected RPC ${name}`)
+    })
+
+    expect((await middleware(request('alpha-fund.localhost', '/api/portal/me'))).status).toBe(200)
+    expect(rpc).not.toHaveBeenCalledWith('resolve_my_lp_fund', {})
+  })
+
   it('lets invited LP activation reach its route-level Host Fund check before the account is active', async () => {
     rpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
       if (name === 'resolve_public_fund_host') {

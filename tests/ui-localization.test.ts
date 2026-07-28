@@ -117,6 +117,11 @@ describe('UI locale contract', () => {
     await expect(loadMessages('../messages/zh-CN' as never)).rejects.toThrow('Unsupported locale')
   })
 
+  it('pins the client formatter time zone to avoid environment-dependent markup', () => {
+    const providerSource = readFileSync(resolve(process.cwd(), 'i18n/client-provider.tsx'), 'utf8')
+    expect(providerSource).toContain('timeZone="UTC"')
+  })
+
   it('keeps English and Simplified Chinese catalog keys in exact parity', () => {
     const english = JSON.parse(readFileSync(resolve(process.cwd(), 'messages/en.json'), 'utf8'))
     const chinese = JSON.parse(readFileSync(resolve(process.cwd(), 'messages/zh-CN.json'), 'utf8'))

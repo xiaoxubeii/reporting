@@ -65,6 +65,12 @@ export interface DealResearchDependencies {
   }): void
 }
 
+export type DealResearchRunResult = Readonly<{
+  status: 'done' | 'skipped' | 'failed'
+  error?: string
+  retryable?: boolean
+}>
+
 class ResearchGroundingError extends Error {}
 
 const FIT_RANK: Record<string, number> = {
@@ -117,7 +123,7 @@ export async function runDealResearch(
   supabase: Supabase,
   params: DealResearchParams,
   dependencies: DealResearchDependencies = defaultDependencies(supabase),
-): Promise<{ status: 'done' | 'skipped' | 'failed'; error?: string }> {
+): Promise<DealResearchRunResult> {
   const context = params.executionContext
   if (context.fundId !== params.fundId || context.payload.dealId !== params.dealId) {
     return { status: 'failed', error: 'context mismatch' }
@@ -126,7 +132,7 @@ export async function runDealResearch(
   let tool: ReportingSearchTool | null = null
   try {
     const { provider, providerType, model } = await dependencies.getProvider(supabase, params.fundId)
-    if (providerType === 'ollama' || !provider.supportsToolLoop || !provider.createToolLoop) {
+    if (!provider.supportsToolLoop || !provider.createToolLoop) {
       const persisted = await dependencies.persist(context, {
         status: 'skipped',
         sources: [],
@@ -200,10 +206,45 @@ export async function runDealResearch(
       sources,
       error: safeError,
     }).catch(() => false)
-    return persisted
-      ? { status: 'failed', error: 'invalid grounded result' }
-      : { status: 'failed', error: 'stale attempt' }
+    if (!persisted) return { status: 'failed', error: 'stale attempt', retryable: false }
+    const retryable = !(error instanceof ResearchGroundingError) && isTransientResearchFailure(error)
+    return retryable
+      ? { status: 'failed', error: 'transient provider failure', retryable: true }
+      : { status: 'failed', error: 'invalid grounded result', retryable: false }
   }
+}
+
+const TRANSIENT_ERROR_CODES = new Set([
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EAI_AGAIN',
+  'ENETDOWN',
+  'ENETUNREACH',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_SOCKET',
+])
+
+function isTransientResearchFailure(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const candidate = error as {
+    readonly name?: unknown
+    readonly status?: unknown
+    readonly code?: unknown
+    readonly cause?: unknown
+  }
+  if (candidate.name === 'AbortError' || candidate.name === 'TimeoutError') return true
+  if (typeof candidate.status === 'number') {
+    return candidate.status === 408
+      || candidate.status === 425
+      || candidate.status === 429
+      || candidate.status >= 500
+  }
+  if (typeof candidate.code === 'string' && TRANSIENT_ERROR_CODES.has(candidate.code)) return true
+  return candidate.cause !== error && isTransientResearchFailure(candidate.cause)
 }
 
 function researchPrompt(params: DealResearchParams): string {

@@ -207,6 +207,7 @@ export const ROUTE_DOMAINS: Record<string, RouteAccess> = {
   'api/feeds/entries/[id]/state': { domain: 'dealflow', feature: 'feeds', level: { PATCH: 'read' } },
   'api/feeds/explore/categories': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/discovery': { domain: 'dealflow', feature: 'feeds' },
+  'api/feeds/explore/discovery/refresh': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/entries/[id]': { domain: 'dealflow', feature: 'feeds' },
   'api/feeds/explore/following': { domain: 'dealflow', feature: 'feeds' },

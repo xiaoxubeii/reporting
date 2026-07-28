@@ -7,10 +7,17 @@ import { runPipeline } from '@/lib/pipeline/processEmail'
 import { checkFundMember } from '@/lib/pipeline/checkFundMember'
 import { isAuthorizedSender } from '@/lib/pipeline/isAuthorizedSender'
 import { decrypt } from '@/lib/crypto'
-import { scanFileAsync } from '@/lib/security/scan-file'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { emailFingerprint } from '@/lib/pipeline/emailFingerprint'
 import type { Json } from '@/lib/types/database'
+import {
+  attachmentFailureMessage,
+  persistLegacyInboundAttachments,
+  prepareLegacyInboundAttachments,
+} from '@/lib/email/legacy-inbound-attachments'
+import { readBoundedFormData } from '@/lib/http/read-bounded-body'
+
+const MAX_MAILGUN_BODY_BYTES = 32 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
   if (!admitsRegisteredSystemRequest(req)) {
@@ -30,10 +37,9 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleMailgunInbound(req: NextRequest) {
-  const supabase = createAdminClient()
-
   // Mailgun sends inbound emails as multipart/form-data
-  const formData = await req.formData()
+  const formData = await readBoundedFormData(req, MAX_MAILGUN_BODY_BYTES)
+  const supabase = createAdminClient()
   const fields: Record<string, string> = {}
   const attachments: Array<{ filename: string; contentType: string; content: Buffer }> = []
 
@@ -159,6 +165,11 @@ async function handleMailgunInbound(req: NextRequest) {
     }))
   }
 
+  const preparedAttachments = await prepareLegacyInboundAttachments(payload.Attachments ?? [])
+  const attachmentError = preparedAttachments.ok
+    ? null
+    : attachmentFailureMessage(preparedAttachments.code)
+
   // Persist raw email (without attachment content)
   const { data: emailRow, error: insertError } = await supabase
     .from('inbound_emails')
@@ -167,7 +178,8 @@ async function handleMailgunInbound(req: NextRequest) {
       from_address: fromAddress,
       subject: fields.subject ?? null,
       raw_payload: strippedPayload as unknown as Json,
-      processing_status: 'pending',
+      processing_status: attachmentError ? 'failed' : 'pending',
+      processing_error: attachmentError,
       attachments_count: attachments.length,
       email_fingerprint: fingerprint,
     })
@@ -181,50 +193,66 @@ async function handleMailgunInbound(req: NextRequest) {
 
   const emailId = emailRow.id
 
-  // Upload attachments to Storage and update payload with StoragePaths
-  if (payload.Attachments && payload.Attachments.length > 0) {
-    const updatedAttachments = []
-    for (const att of payload.Attachments) {
-      const buffer = Buffer.from(att.Content!, 'base64')
+  if (!preparedAttachments.ok) {
+    console.warn(`[inbound-email/mailgun] ${preparedAttachments.code}; refusing pipeline processing`)
+    return
+  }
 
-      // Scan attachment before uploading
-      const scanResult = await scanFileAsync(buffer, att.Name, att.ContentType)
-      if (!scanResult.safe) {
-        console.warn(`[inbound-email/mailgun] Skipping unsafe attachment "${att.Name}": ${scanResult.reason}`)
-        continue
-      }
-
-      const attIdx = payload.Attachments!.indexOf(att)
-      const safeName = `${attIdx}_${att.Name.replace(/[\/\\:*?"<>|]/g, '_').replace(/\.\./g, '_')}`
-      const storagePath = `${emailId}/${safeName}`
-      const { error: uploadError } = await supabase.storage
-        .from('email-attachments')
-        .upload(storagePath, buffer, { contentType: att.ContentType })
-
-      if (uploadError) {
-        console.error(`[inbound-email/mailgun] Failed to upload attachment "${att.Name}" to storage:`, uploadError.message)
-        updatedAttachments.push({
-          Name: att.Name,
-          ContentType: att.ContentType,
-          ContentLength: att.ContentLength,
-          Content: att.Content,
-        })
-      } else {
-        updatedAttachments.push({
-          Name: att.Name,
-          ContentType: att.ContentType,
-          ContentLength: att.ContentLength,
-          StoragePath: storagePath,
-        })
-      }
-    }
-
+  // Store the complete safe set or roll back. Never retain base64 in the row,
+  // and never invoke the pipeline after a partial storage failure.
+  const storedAttachments = await persistLegacyInboundAttachments(
+    preparedAttachments.attachments,
+    {
+      store: async ({ filename, contentType, bytes }) => {
+        const storagePath = `${emailId}/${filename}`
+        const { error } = await supabase.storage
+          .from('email-attachments')
+          .upload(storagePath, bytes, { contentType })
+        if (error) throw error
+        return storagePath
+      },
+      remove: async storagePath => {
+        const { error } = await supabase.storage
+          .from('email-attachments')
+          .remove([storagePath])
+        if (error) throw error
+      },
+    },
+  )
+  if (!storedAttachments.ok) {
     await supabase
       .from('inbound_emails')
       .update({
-        raw_payload: { ...strippedPayload, Attachments: updatedAttachments } as unknown as Json,
+        processing_status: 'failed',
+        processing_error: attachmentFailureMessage(storedAttachments.code),
       })
       .eq('id', emailId)
+    return
+  }
+
+  if (storedAttachments.attachments.length > 0) {
+    const { error: metadataError } = await supabase
+      .from('inbound_emails')
+      .update({
+        raw_payload: {
+          ...strippedPayload,
+          Attachments: storedAttachments.attachments,
+        } as unknown as Json,
+      })
+      .eq('id', emailId)
+    if (metadataError) {
+      await Promise.allSettled(storedAttachments.attachments.map(async attachment => {
+        await supabase.storage.from('email-attachments').remove([attachment.StoragePath])
+      }))
+      await supabase
+        .from('inbound_emails')
+        .update({
+          processing_status: 'failed',
+          processing_error: attachmentFailureMessage('attachment_storage_failed'),
+        })
+        .eq('id', emailId)
+      return
+    }
   }
 
   try {

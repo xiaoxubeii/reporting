@@ -104,6 +104,16 @@ export interface DealSignalItem {
 
 export type DiscoveryItem = TrendingItem | DealSignalItem
 
+export type DiscoveryRefreshState = 'ready' | 'queued' | 'running' | 'stale' | 'degraded'
+export type DiscoveryRefreshReason = 'provider_not_configured' | 'refresh_failed' | 'results_stale' | null
+
+export interface DiscoveryRefreshStatus {
+  readonly state: DiscoveryRefreshState
+  readonly reason: DiscoveryRefreshReason
+  readonly retryable: boolean
+  readonly lastAttemptAt: string | null
+}
+
 export interface RefreshSummary {
   readonly scanned: number
   readonly reused: number
@@ -120,6 +130,7 @@ export interface DiscoveryPage<T extends DiscoveryItem = DiscoveryItem> {
   readonly generationId: string | null
   readonly generatedAt: string | null
   readonly isStale: boolean
+  readonly refresh: DiscoveryRefreshStatus
   readonly total: number
   readonly limit: number
   readonly offset: number
@@ -352,11 +363,23 @@ export function parseDiscoveryItem(value: unknown): DiscoveryItem {
 
 export function parseDiscoveryPage(value: unknown): DiscoveryPage {
   const input = asObject(value, 'discovery page')
+  const refresh = asObject(input.refresh, 'refresh')
+  const state = asEnum(refresh.state, ['ready', 'queued', 'running', 'stale', 'degraded'] as const, 'refresh state')
+  const reason = refresh.reason === null
+    ? null
+    : asEnum(refresh.reason, ['provider_not_configured', 'refresh_failed', 'results_stale'] as const, 'refresh reason')
+  if (typeof refresh.retryable !== 'boolean') throw new Error('refresh.retryable must be a boolean')
   return deepFreeze({
     items: asArray(input.items, 'items', 100).map(parseDiscoveryItem),
     generationId: parseUuid(input.generationId, 'generationId', true),
     generatedAt: asIsoDate(input.generatedAt, 'generatedAt'),
     isStale: input.isStale === true,
+    refresh: {
+      state,
+      reason,
+      retryable: refresh.retryable,
+      lastAttemptAt: asIsoDate(refresh.lastAttemptAt, 'refresh.lastAttemptAt'),
+    },
     total: asCounter(input.total, 'total'),
     limit: asCounter(input.limit, 'limit'),
     offset: asCounter(input.offset, 'offset'),

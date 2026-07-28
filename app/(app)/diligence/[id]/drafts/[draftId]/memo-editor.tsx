@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/confirm-dialog'
 import { formatSource, type SourceLabel } from '@/lib/memo-agent/render/source-labels'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 
 interface Paragraph {
   id: string
@@ -343,12 +344,16 @@ export function MemoEditor({ dealId, dealName, draft: initial, initialAttention,
       const res = await fetch(`/api/diligence/${dealId}/drafts/${draft.id}/finalize`, { method: 'POST' })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        setError(typeof body.error === 'string' ? body.error : t('errors.finalize'))
+        const message = typeof body.error === 'string' ? body.error : t('errors.finalize')
+        setError(message)
+        toast.error(message)
         return
       }
       router.refresh()
     } catch {
-      setError(t('errors.finalize'))
+      const message = t('errors.finalize')
+      setError(message)
+      toast.error(message)
     } finally {
       setFinalizing(false)
     }

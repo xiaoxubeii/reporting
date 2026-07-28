@@ -2,7 +2,10 @@ import type { AccessContext } from '@/lib/access/effective'
 import { hasAccess } from '@/lib/access/effective'
 
 interface FeedConnectionReader {
-  connectionStatus(userId: string): Promise<{ readonly connected: boolean }>
+  connectionStatus(
+    userId: string,
+    options?: { readonly verifyUpstream?: boolean },
+  ): Promise<{ readonly connected: boolean }>
 }
 
 /**
@@ -19,7 +22,7 @@ export async function resolveSearchFeedStatus(
   if (!hasAccess(access, 'dealflow', 'read', 'feeds')) return null
 
   try {
-    const status = await reader.connectionStatus(userId)
+    const status = await reader.connectionStatus(userId, { verifyUpstream: false })
     return Object.freeze({ connected: status.connected })
   } catch {
     return null

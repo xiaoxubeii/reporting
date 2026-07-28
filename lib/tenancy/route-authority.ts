@@ -26,6 +26,7 @@ const PLATFORM_PAGE_PATHS = new Set([
   '/',
   '/contact',
   '/demo',
+  '/icon',
   '/license',
   '/pending',
   '/pricing',
@@ -43,6 +44,7 @@ const PLATFORM_API_PATHS = new Set([
   '/api/auth/branding',
   '/api/auth/logout',
   '/api/auth/signup',
+  '/api/contact',
 ])
 
 function hasPathPrefix(pathname: string, prefix: string): boolean {

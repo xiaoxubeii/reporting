@@ -49,6 +49,7 @@ describe('Feeds access contract', () => {
       'api/feeds/entries/[id]/state',
       'api/feeds/explore/categories',
       'api/feeds/explore/discovery',
+      'api/feeds/explore/discovery/refresh',
       'api/feeds/explore/entries',
       'api/feeds/explore/entries/[id]',
       'api/feeds/explore/following',
@@ -68,11 +69,12 @@ describe('Feeds access contract', () => {
     expect(ROUTE_DOMAINS['api/feeds/explore/sources/[id]/follow'].level).toMatchObject({ POST: 'read' })
   })
 
-  it('keeps the collector surface read-only except for a personal Follow orchestration route', () => {
+  it('keeps collector records read-only while allowing bounded personal Follow and Fund refresh orchestration', () => {
     const exploreRoutes = Object.keys(ROUTE_DOMAINS).filter(key => key.startsWith('api/feeds/explore/'))
     expect(exploreRoutes.sort()).toEqual([
       'api/feeds/explore/categories',
       'api/feeds/explore/discovery',
+      'api/feeds/explore/discovery/refresh',
       'api/feeds/explore/entries',
       'api/feeds/explore/entries/[id]',
       'api/feeds/explore/following',

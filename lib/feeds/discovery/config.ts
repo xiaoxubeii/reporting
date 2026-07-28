@@ -3,7 +3,7 @@ export const DEAL_CLASSIFIER_VERSION = 'deal-signal-v1'
 export const TRENDING_STRATEGY_VERSION = 'trending-v1'
 export const DEAL_SIGNAL_STRATEGY_VERSION = 'deal-signal-gate-v1'
 
-export type DiscoveryAIProviderType = 'anthropic' | 'openai' | 'gemini' | 'openrouter'
+export type DiscoveryAIProviderType = 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'openrouter'
 
 export interface DiscoveryVersions {
   readonly semantic: string

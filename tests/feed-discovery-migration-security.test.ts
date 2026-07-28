@@ -17,6 +17,10 @@ const schedulerCursorMigration = readFileSync(
   new URL('../supabase/migrations/20260726030000_feed_discovery_scheduler_cursor.sql', import.meta.url),
   'utf8',
 )
+const ollamaSchedulerMigration = readFileSync(
+  new URL('../supabase/migrations/20260727030000_feed_discovery_ollama_scheduler.sql', import.meta.url),
+  'utf8',
+)
 const databaseTypes = readFileSync(
   new URL('../lib/types/database.ts', import.meta.url),
   'utf8',
@@ -158,6 +162,19 @@ describe('Feed discovery migration contract', () => {
     expect(schedulerCursorMigration).toMatch(/revoke all on function public\.next_feed_discovery_funds\(integer\) from public, anon, authenticated/i)
     expect(schedulerCursorMigration).toMatch(/grant execute on function public\.next_feed_discovery_funds\(integer\) to service_role/i)
     expect(databaseTypes).toMatch(/next_feed_discovery_funds:[\s\S]*p_limit\?: number[\s\S]*fund_id: string/i)
+  })
+
+  it('schedules validated Ollama Funds without weakening encrypted-provider requirements', () => {
+    expect(ollamaSchedulerMigration).toMatch(/when 'ollama' then settings\.ollama_base_url is not null[\s\S]*settings\.ollama_model is not null/i)
+    for (const provider of ['anthropic', 'openai', 'gemini', 'openrouter']) {
+      expect(ollamaSchedulerMigration).toMatch(new RegExp(
+        `when '${provider}' then settings\\.encryption_key_encrypted is not null`,
+        'i',
+      ))
+    }
+    expect(ollamaSchedulerMigration).toMatch(/security definer[\s\S]*set search_path = ''/i)
+    expect(ollamaSchedulerMigration).toMatch(/revoke all on function public\.next_feed_discovery_funds\(integer\) from public, anon, authenticated/i)
+    expect(ollamaSchedulerMigration).toMatch(/grant execute on function public\.next_feed_discovery_funds\(integer\) to service_role/i)
   })
 
   it('denies Data API clients and exposes only reviewed service-role access', () => {

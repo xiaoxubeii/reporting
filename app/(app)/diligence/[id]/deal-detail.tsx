@@ -100,6 +100,8 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
   const [changingLanguage, setChangingLanguage] = useState(false)
   const [languageNotice, setLanguageNotice] = useState<string | null>(null)
   const [languageError, setLanguageError] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const [statusSaving, setStatusSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('Checklist')
   // Documents live here (not inside Data Room) so the Checklist tab's
   // doc-count gate and the Data Room list stay in sync after an import/upload.
@@ -255,13 +257,28 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
   }
 
   async function updateStatus(deal_status: Deal['deal_status']) {
-    setDeal(d => ({ ...d, deal_status }))
-    await fetch(`/api/diligence/${deal.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deal_status }),
-    })
-    router.refresh()
+    if (deal_status === deal.deal_status || statusSaving) return
+    setStatusSaving(true)
+    setStatusError(null)
+    try {
+      const response = await fetch(`/api/diligence/${deal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deal_status }),
+      })
+      const result = await response.json().catch(() => ({})) as { error?: string; code?: string }
+      if (!response.ok) {
+        throw new Error(result.code === 'finalized_memo_required'
+          ? t('header.finalizeBeforeDecision')
+          : (result.error ?? t('header.statusUpdateFailed')))
+      }
+      setDeal(current => ({ ...current, deal_status }))
+      router.refresh()
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : t('header.statusUpdateFailed'))
+    } finally {
+      setStatusSaving(false)
+    }
   }
 
   async function saveName() {
@@ -374,14 +391,15 @@ export function DealDetail({ deal: initial, initialDocuments, latestDraft, isAdm
               </SelectContent>
             </Select>
           </div>
-          <StatusDropdown value={deal.deal_status} onPick={updateStatus} />
+          <StatusDropdown value={deal.deal_status} disabled={statusSaving} onPick={updateStatus} />
         </div>
       </div>
 
-      {(languageNotice || languageError) && (
+      {(languageNotice || languageError || statusError) && (
         <div className="mb-4 space-y-1" aria-live="polite">
           {languageNotice && <p className="text-xs text-muted-foreground">{languageNotice}</p>}
           {languageError && <p className="text-xs text-destructive" role="alert">{languageError}</p>}
+          {statusError && <p className="text-xs text-destructive" role="alert">{statusError}</p>}
         </div>
       )}
 
@@ -1348,7 +1366,7 @@ function ChecklistRow({ item, findings, onDelete, onPatch, onJumpToDoc, dragHand
   )
 }
 
-function StatusDropdown({ value, onPick }: { value: Deal['deal_status']; onPick: (s: Deal['deal_status']) => void }) {
+function StatusDropdown({ value, disabled, onPick }: { value: Deal['deal_status']; disabled: boolean; onPick: (s: Deal['deal_status']) => void }) {
   const t = useTranslations('Diligence.dealDetail')
   const labels: Record<string, string> = {
     invested: t('statuses.invested'), active: t('statuses.active'), passed: t('statuses.passed'),
@@ -1360,6 +1378,7 @@ function StatusDropdown({ value, onPick }: { value: Deal['deal_status']; onPick:
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           className="inline-flex items-center h-8 px-3 rounded-md text-xs font-medium border bg-background hover:bg-muted"
         >
           {labels[value] ?? value}

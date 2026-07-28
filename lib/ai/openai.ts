@@ -7,11 +7,12 @@ import {
   parseCustomAIProviderRequestParameters,
   type CustomAIProviderRequestParameters,
 } from './custom-provider'
-import { safeCustomProviderFetch } from './custom-provider-fetch'
+import { noRedirectFetch, safeCustomProviderFetch } from './custom-provider-fetch'
 
 export interface OpenAIProviderOptions {
   requestParameters?: CustomAIProviderRequestParameters
   rejectRedirects?: boolean
+  publicEgressOnly?: boolean
 }
 
 export class OpenAIProvider implements AIProvider {
@@ -22,9 +23,11 @@ export class OpenAIProvider implements AIProvider {
   readonly supportsToolLoop = true
 
   constructor(apiKey: string, baseURL?: string, options: OpenAIProviderOptions = {}) {
-    const safeFetch: typeof fetch | undefined = options.rejectRedirects
+    const safeFetch: typeof fetch | undefined = options.publicEgressOnly
       ? safeCustomProviderFetch
-      : undefined
+      : options.rejectRedirects
+        ? noRedirectFetch
+        : undefined
     this.client = new OpenAI({
       apiKey,
       ...(baseURL ? { baseURL } : {}),

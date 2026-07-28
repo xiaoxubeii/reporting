@@ -108,7 +108,7 @@ function AuthForm() {
     >
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">{t('signInTitle')}</CardTitle>
+            <CardTitle className="text-lg" role="heading" aria-level={2}>{t('signInTitle')}</CardTitle>
             <CardDescription>{t('signInDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

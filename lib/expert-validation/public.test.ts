@@ -43,18 +43,33 @@ describe('public expert response service', () => {
     await expect(resolvePublicInvitation(admin, rawToken)).rejects.toThrow(PUBLIC_INVITATION_ERROR)
   })
 
-  it('allows exactly one concurrent submission and makes the duplicate idempotent', async () => {
+  it('allows exactly one concurrent submission and makes the identical duplicate idempotent', async () => {
     const credential = createInvitationToken()
     const { admin, state } = publicAdmin({ tokenHash: credential.tokenHash })
 
     const results = await Promise.all([
       submitPublicResponse({ admin, rawToken: credential.rawToken, responseMarkdown: 'Answer A' }),
-      submitPublicResponse({ admin, rawToken: credential.rawToken, responseMarkdown: 'Answer B' }),
+      submitPublicResponse({ admin, rawToken: credential.rawToken, responseMarkdown: 'Answer A' }),
     ])
 
     expect(results.filter(result => !result.alreadySubmitted)).toHaveLength(1)
     expect(results.filter(result => result.alreadySubmitted)).toHaveLength(1)
-    expect(['Answer A', 'Answer B']).toContain(state.responseMarkdown)
+    expect(state.responseMarkdown).toBe('Answer A')
+    expect(state.status).toBe('submitted')
+  })
+
+  it('rejects a different answer after submission instead of treating it as an idempotent retry', async () => {
+    const credential = createInvitationToken()
+    const { admin, state } = publicAdmin({ tokenHash: credential.tokenHash })
+
+    await submitPublicResponse({ admin, rawToken: credential.rawToken, responseMarkdown: 'Original answer' })
+
+    await expect(submitPublicResponse({
+      admin,
+      rawToken: credential.rawToken,
+      responseMarkdown: 'Replacement answer',
+    })).rejects.toThrow(PUBLIC_INVITATION_ERROR)
+    expect(state.responseMarkdown).toBe('Original answer')
     expect(state.status).toBe('submitted')
   })
 
@@ -181,6 +196,7 @@ function publicAdmin(overrides: Partial<PublicState>) {
               expires_at: state.expiresAt,
               status: state.status,
               submitted_at: state.submittedAt,
+              response_markdown: state.responseMarkdown,
             },
             error: null,
           }

@@ -21,16 +21,49 @@ export type FeedEntryView = FeedEntry
 export class FeedService {
   constructor(private readonly admin: SupabaseClient) {}
 
-  async connectionStatus(userId: string) {
+  async connectionStatus(
+    userId: string,
+    options: { readonly verifyUpstream?: boolean } = {},
+  ) {
     const metadata = await getMinifluxConnectionMetadata(this.admin, userId)
-    const readable = !metadata.connected || Boolean(await getMinifluxCredential(this.admin, userId))
+    const baseUrl = configuredMinifluxBaseUrl(false)
+    if (!metadata.connected) {
+      return { ...metadata, connected: false, baseUrlConfigured: Boolean(baseUrl) }
+    }
+    const credential = await getMinifluxCredential(this.admin, userId)
+    if (!credential || !baseUrl) {
+      return {
+        ...metadata,
+        connected: false,
+        lastError: !credential
+          ? 'Stored feed credential could not be read. Reconnect Miniflux.'
+          : 'The feed service is not configured.',
+        baseUrlConfigured: Boolean(baseUrl),
+      }
+    }
+    if (options.verifyUpstream === false) {
+      return {
+        ...metadata,
+        connected: true,
+        baseUrlConfigured: true,
+      }
+    }
+    let verified = false
+    try {
+      const user = await new MinifluxClient({ baseUrl, apiKey: credential.apiToken }).verifyConnection()
+      verified = !user.isAdmin
+        && user.id === credential.externalUserId
+        && user.username === credential.username
+    } catch {
+      verified = false
+    }
     return {
       ...metadata,
-      connected: metadata.connected && readable,
-      lastError: metadata.connected && !readable
-        ? 'Stored feed credential could not be read. Reconnect Miniflux.'
-        : metadata.lastError,
-      baseUrlConfigured: Boolean(configuredMinifluxBaseUrl(false)),
+      connected: verified,
+      lastError: verified
+        ? metadata.lastError
+        : 'The feed connection could not be verified. Reconnect Miniflux.',
+      baseUrlConfigured: true,
     }
   }
 

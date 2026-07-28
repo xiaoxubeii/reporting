@@ -22,14 +22,16 @@ export async function scheduleFeedDiscoveryJobs(
   try {
     const fundIds = await dependencies.claimEligibleFundIds(FUND_PAGE_SIZE)
     validateFundIds(fundIds)
-    await Promise.all(fundIds.map(fundId => dependencies.enqueue({
+    const enqueueResults = await Promise.allSettled(fundIds.map(fundId => dependencies.enqueue({
       kind: 'feed_discovery',
       payload: Object.freeze({}),
       fundId,
       actor: Object.freeze({ type: 'system' }),
       dedupeKey: `feed_discovery:${fundId}`,
     })))
-    return Object.freeze({ eligible: fundIds.length, scheduled: fundIds.length })
+    const scheduled = enqueueResults.filter(result => result.status === 'fulfilled').length
+    if (fundIds.length > 0 && scheduled === 0) throw new Error('No eligible Feed Discovery job could be scheduled')
+    return Object.freeze({ eligible: fundIds.length, scheduled })
   } catch {
     throw new Error('Feed Discovery scheduling failed')
   }

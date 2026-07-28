@@ -207,7 +207,7 @@ function PersonalTodayFeed() {
       <div className="mt-6">
         {loading && <FeedRowsSkeleton />}
         {!loading && !connected && (
-          <FeedsStatePanel title={t('states.connect.title')} description={t('states.connect.description')} actionLabel={t('states.connect.action')} actionHref="/feeds/sources" />
+          <FeedsStatePanel title={t('states.connect.title')} description={error ?? t('states.connect.description')} actionLabel={t('states.connect.action')} actionHref="/feeds/sources" />
         )}
         {!loading && connected && !hasSubscriptions && (
           <FeedsStatePanel title={t('states.noSources.title')} description={t('states.noSources.description')} actionLabel={t('states.noSources.action')} actionHref="/feeds/sources" />
@@ -241,7 +241,11 @@ function PersonalTodayFeed() {
                       {!entry.isRead && <span className="absolute -left-3 top-8 h-2 w-2 rounded-full bg-primary" aria-label={t('unread')} />}
                       <div className="flex h-[72px] w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/50 md:w-[112px]">
                         {entry.imageUrl
-                          ? <img src={entry.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                          ? <>
+                              {/* Feed images can come from arbitrary remote hosts, so Next Image allowlisting is not applicable here. */}
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={entry.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                            </>
                           : <Rss className="h-6 w-6 text-muted-foreground/60" aria-hidden="true" />}
                       </div>
                       <div className="min-w-0 flex-1">

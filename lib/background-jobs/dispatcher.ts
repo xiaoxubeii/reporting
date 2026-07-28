@@ -184,7 +184,7 @@ async function readBoundedResponse(response: Response): Promise<string> {
   }
 }
 
-function workerTerminalStatus(response: Response, text: string): 'done' | 'skipped' | null {
+function workerTerminalStatus(response: Response, text: string): 'done' | 'skipped' | 'failed' | null {
   if (response.status !== 200 && response.status !== 422) return null
   const contentType = response.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
   if (contentType !== 'application/json') return null
@@ -194,6 +194,7 @@ function workerTerminalStatus(response: Response, text: string): 'done' | 'skipp
   const status = (value as { status?: unknown }).status
   if (response.status === 200 && status === 'done') return 'done'
   if (response.status === 422 && status === 'skipped') return 'skipped'
+  if (response.status === 422 && status === 'failed') return 'failed'
   return null
 }
 

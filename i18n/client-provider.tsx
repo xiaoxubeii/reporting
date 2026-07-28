@@ -17,6 +17,7 @@ export function I18nClientProvider({
     <NextIntlClientProvider
       locale={locale}
       messages={messages}
+      timeZone="UTC"
       onError={reportTranslationError}
       getMessageFallback={translationFallback}
     >

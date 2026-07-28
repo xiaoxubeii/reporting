@@ -134,7 +134,9 @@ function dynamicRuntimeEnv(context) {
     NEXT_DIST_DIR: '.next-devctl',
     FUND_WORKSPACE_DEV_PORT: String(context.ports.web),
     CRON_RUNNER_BASE_URL: `http://127.0.0.1:${context.ports.web}`,
-    BACKGROUND_JOB_INTERNAL_ORIGIN: `http://127.0.0.1:${context.ports.web}`,
+    // Middleware recognizes localhost as the platform host used for worker
+    // authority. A numeric loopback Host is intentionally not a tenant alias.
+    BACKGROUND_JOB_INTERNAL_ORIGIN: `http://localhost:${context.ports.web}`,
     CRON_RUNNER_HEALTH_HOST: '127.0.0.1',
     CRON_RUNNER_HEALTH_PORT: String(context.ports.cron),
   })

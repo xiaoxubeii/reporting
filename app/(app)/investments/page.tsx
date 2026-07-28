@@ -48,6 +48,7 @@ interface PortfolioData {
   portfolioIRR: number | null
   companies: CompanySummary[]
   groups: GroupSummary[]
+  vintages: { name: string; vintage_year: number | null }[]
 }
 
 type SortKey = 'companyName' | 'status' | 'portfolioGroup' | 'totalInvested' | 'currentCost' | 'proceedsReceived' | 'proceedsEscrow' | 'unrealizedValue' | 'totalValue' | 'realizedGL' | 'unrealizedGL' | 'totalGL' | 'moic' | 'realizedMoic' | 'unrealizedMoic' | 'irr' | 'pctUnrealized' | 'pctTotalValue'
@@ -173,14 +174,13 @@ export default function InvestmentsPage() {
     async function load() {
       setLoading(true)
       try {
-        const [invRes, vehRes] = await Promise.all([
-          fetch(`/api/portfolio/investments?asOf=${asOfDate}`),
-          fetch('/api/vehicles'),
-        ])
-        if (invRes.ok) setData(await invRes.json())
-        if (vehRes.ok) {
-          const vs = await vehRes.json()
-          setVintages(new Map((vs ?? []).map((v: { name: string; vintage_year: number | null }) => [v.name, v.vintage_year ?? null])))
+        const response = await fetch(`/api/portfolio/investments?asOf=${asOfDate}`)
+        if (response.ok) {
+          const payload = await response.json() as PortfolioData
+          setData(payload)
+          setVintages(new Map(
+            payload.vintages.map(vehicle => [vehicle.name, vehicle.vintage_year ?? null]),
+          ))
         }
       } finally {
         setLoading(false)

@@ -6,6 +6,12 @@ type ValidationResult =
   | { ok: true; url: string }
   | { ok: false; error: string }
 
+export type RuntimeEnvironment = Readonly<Record<string, string | undefined>>
+
+export type OllamaEgressValidationResult =
+  | { ok: true; url: string; publicOnly: boolean }
+  | { ok: false; error: string }
+
 /**
  * Validates an Ollama base URL to prevent SSRF attacks.
  *
@@ -74,6 +80,33 @@ export function validateOllamaUrl(input: string): ValidationResult {
   }
 
   return { ok: true, url: input }
+}
+
+/**
+ * Ollama is commonly loopback-only for local/self-hosted installs, but a Fund
+ * administrator must not be able to turn a shared production deployment into
+ * a general-purpose server-side request proxy. Production therefore defaults
+ * to the same public-only, HTTPS, DNS-checked policy as a custom provider.
+ * Operators of a private self-hosted Ollama deployment must opt in explicitly.
+ */
+export async function validateOllamaEgressUrl(
+  input: string,
+  environment: RuntimeEnvironment = process.env,
+): Promise<OllamaEgressValidationResult> {
+  const privateEgressAllowed = environment.NODE_ENV === 'development'
+    || environment.NODE_ENV === 'test'
+    || environment.ALLOW_PRIVATE_OLLAMA_EGRESS === 'true'
+  if (privateEgressAllowed) {
+    const validation = validateOllamaUrl(input)
+    return validation.ok
+      ? { ...validation, publicOnly: false }
+      : validation
+  }
+
+  const validation = await validateCustomProviderUrl(input)
+  return validation.ok
+    ? { ...validation, publicOnly: true }
+    : validation
 }
 
 /**

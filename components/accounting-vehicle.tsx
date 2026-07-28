@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { usePathname, useRouter } from 'next/navigation'
 import { ChevronsUpDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useCanRead } from '@/components/access-context'
 
 /** One selectable vehicle: its name (the portfolio_group the ledger keys on) and its
  *  stable registry id. `id` is null for legacy vehicles that exist only as a name. */
@@ -37,6 +38,7 @@ export { FUND_SUBPAGE_SLUGS } from './fund-subpages'
  * page — so the Funds subnav can build fund-first hrefs from the current vehicle's id.
  */
 export function VehicleProvider({ children }: { children: React.ReactNode }) {
+  const canReadAccounting = useCanRead('accounting')
   const [group, setGroupState] = useState<string | null>(null)
   const [vehicleId, setVehicleIdState] = useState<string | null>(null)
 
@@ -59,6 +61,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
   // Hydrate from localStorage; if nothing is saved, default to the fund's first vehicle so
   // the sidebar always has an id to build Funds links from.
   useEffect(() => {
+    if (!canReadAccounting) return
     let name: string | null = null
     let id: string | null = null
     try {
@@ -73,7 +76,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         if (first) setVehicle(first.name, first.id ?? null)
       })
       .catch(() => { /* non-accounting user or no vehicles — leave unset */ })
-  }, [setVehicle])
+  }, [canReadAccounting, setVehicle])
 
   return (
     <VehicleContext.Provider value={{ group, vehicleId, setVehicle, setGroup }}>

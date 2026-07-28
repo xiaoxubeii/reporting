@@ -9,6 +9,7 @@ import {
  * Croner authenticates here with CRON_SECRET. This endpoint claims jobs from
  * the code-owned registry and gives every HTTP worker call a short-lived token.
  */
+export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 export async function GET(request: NextRequest) {

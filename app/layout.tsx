@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Script from 'next/script'
 import { Hanken_Grotesk, Plus_Jakarta_Sans } from 'next/font/google'
 import { getLocale, getMessages, getTranslations } from 'next-intl/server'
 import { I18nClientProvider } from '@/i18n/client-provider'
@@ -13,6 +12,8 @@ import { getTrustedRequestTenant, trustedTenantSlugFromHeaders } from '@/lib/ten
 import { themeCssVars, type FundTheme } from '@/lib/theme'
 import { TenantBrandingProvider } from '@/components/tenant-branding-provider'
 import { PlatformTelemetry } from '@/components/platform-telemetry'
+import { isPlatformTelemetryEnabled } from '@/lib/platform-telemetry'
+import { ServiceWorkerCleanup } from '@/components/service-worker-cleanup'
 import './globals.css'
 
 // Curated UI font options. Loaded as CSS variables so the per-fund theme can
@@ -52,6 +53,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const telemetryEnabled = isPlatformTelemetryEnabled(process.env)
   const requestHeaders = new Headers(headers())
   const tenantSlug = trustedTenantSlugFromHeaders(requestHeaders)
   const [locale, messages, tenant] = await Promise.all([
@@ -86,15 +88,8 @@ export default async function RootLayout({
             <Toaster />
           </ThemeProvider>
         </I18nClientProvider>
-        <PlatformTelemetry />
-        {/* Unregister any stale service workers from prior deployments */}
-        <Script id="sw-cleanup" strategy="afterInteractive">{`
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-              regs.forEach(function(r) { r.unregister(); });
-            });
-          }
-        `}</Script>
+        <PlatformTelemetry enabled={telemetryEnabled} />
+        <ServiceWorkerCleanup />
       </body>
     </html>
   )

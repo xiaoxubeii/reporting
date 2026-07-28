@@ -16,6 +16,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "node scripts/e2e/run-comprehensive.mjs",
+    "test:e2e:headed": "node scripts/e2e/run-comprehensive.mjs --headed",
+    "test:e2e:ui": "node scripts/e2e/run-comprehensive.mjs --ui",
     "generate:types": "node scripts/generate-memo-agent-types.mjs"
   },
   "dependencies": {
@@ -70,6 +73,7 @@
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.15.8",
+    "@playwright/test": "^1.62.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/js-yaml": "^4.0.9",

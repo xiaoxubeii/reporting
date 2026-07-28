@@ -36,11 +36,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const { data: emailRow } = await admin
     .from('inbound_emails')
     .select('id, from_address, subject, received_at, raw_payload, routing_label, routing_confidence, routing_reasoning')
-    .eq('id', (deal as any).email_id)
+    .eq('id', deal.email_id)
     .maybeSingle()
   let email: typeof emailRow = emailRow
   if (emailRow) {
-    const rp = (emailRow as any).raw_payload as { TextBody?: string; Attachments?: Array<{ Name?: string; ContentType?: string; ContentLength?: number }> } | null
+    const rp = emailRow.raw_payload as unknown as { TextBody?: string; Attachments?: Array<{ Name?: string; ContentType?: string; ContentLength?: number }> } | null
     const safePayload = rp ? {
       TextBody: rp.TextBody ?? '',
       Attachments: (rp.Attachments ?? []).map(a => ({
@@ -49,16 +49,16 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         ContentLength: a?.ContentLength ?? 0,
       })),
     } : null
-    email = { ...(emailRow as any), raw_payload: safePayload } as typeof emailRow
+    email = { ...emailRow, raw_payload: safePayload }
   }
 
   // Pull prior deal summary for the lineage card.
   let priorDeal: { id: string; company_name: string | null; created_at: string | null } | null = null
-  if ((deal as any).prior_deal_id) {
+  if (deal.prior_deal_id) {
     const { data } = await admin
       .from('inbound_deals')
       .select('id, company_name, created_at')
-      .eq('id', (deal as any).prior_deal_id)
+      .eq('id', deal.prior_deal_id)
       .maybeSingle()
     priorDeal = data as typeof priorDeal
   }
@@ -99,12 +99,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   updates.updated_at = new Date().toISOString()
 
-  const { error } = await admin
+  const { data: updatedDeal, error } = await admin
     .from('inbound_deals')
     .update(updates)
     .eq('id', params.id)
     .eq('fund_id', membership.fund_id)
+    .select('id')
+    .maybeSingle()
 
   if (error) return dbError(error, 'deals-id')
+  if (!updatedDeal) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ ok: true })
 }

@@ -33,6 +33,7 @@ export async function POST(_request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({
       queued: true,
       already: result.already,
+      job_id: result.jobId,
       research_status: 'pending',
     })
   } catch (error) {

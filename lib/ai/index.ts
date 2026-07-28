@@ -50,11 +50,14 @@ async function createProviderForType(
     }
     case 'ollama': {
       const config = await getOllamaConfig(supabase, fundId)
-      const { validateOllamaUrl } = await import('@/lib/validate-url')
-      const validation = validateOllamaUrl(config.baseUrl)
+      const { validateOllamaEgressUrl } = await import('@/lib/validate-url')
+      const validation = await validateOllamaEgressUrl(config.baseUrl)
       if (!validation.ok) throw new Error(validation.error)
       return {
-        provider: new OpenAIProvider('ollama', validation.url),
+        provider: new OpenAIProvider('ollama', validation.url, {
+          rejectRedirects: true,
+          publicEgressOnly: validation.publicOnly,
+        }),
         model: config.model,
         providerType: 'ollama',
       }
@@ -69,6 +72,7 @@ async function createProviderForType(
         provider: new OpenAIProvider(apiKey, validation.url, {
           requestParameters: config.requestParameters,
           rejectRedirects: true,
+          publicEgressOnly: true,
         }),
         model: config.model,
         providerType: 'openrouter',

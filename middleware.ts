@@ -146,6 +146,7 @@ export async function middleware(request: NextRequest) {
   const isOnboardingRoute = pathname === '/onboarding' || pathname.startsWith('/onboarding/')
   const isLpApiRoute = pathname.startsWith('/api/portal/')
   const isLpActivationApi = pathname === '/api/portal/activate'
+  const isLpIdentityProbe = pathname === '/api/portal/me'
 
   // OAuth discovery (RFC 8414 / RFC 9728). An MCP client fetches these BEFORE it
   // has any credential, so they must answer to an anonymous caller — bouncing them
@@ -204,7 +205,7 @@ export async function middleware(request: NextRequest) {
   // Reads use the caller's own session (RLS-scoped), so the edge never holds a service-role key:
   // fund_settings, fund_member_access, and fund_domain_defaults are all readable by their owner.
   if (user && isApiRoute) {
-    if (tenant && isLpApiRoute && !isLpActivationApi) {
+    if (tenant && isLpApiRoute && !isLpActivationApi && !isLpIdentityProbe) {
       const { data: lpFundId, error: lpFundError } = await supabase.rpc('resolve_my_lp_fund', {})
       if (lpFundError || lpFundId !== tenant.id) return hostNotFound()
     }

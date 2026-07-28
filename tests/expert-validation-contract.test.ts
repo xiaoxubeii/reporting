@@ -47,6 +47,15 @@ describe('expert validation persistence contract', () => {
     expect(publicSubmit).toContain(".is('response_markdown', null)")
   })
 
+  it('locks the invited questionnaire and submitted answer snapshots', () => {
+    expect(migration).toContain("old.status in ('invited', 'submitted')")
+    expect(migration).toContain('new.question is distinct from old.question')
+    expect(migration).toContain('new.expert_profile is distinct from old.expert_profile')
+    expect(migration).toContain('new.context_snapshot is distinct from old.context_snapshot')
+    expect(migration).toContain('new.response_markdown is distinct from old.response_markdown')
+    expect(migration).toContain('new.submitted_at is distinct from old.submitted_at')
+  })
+
   it('protects every expert mutation with same-origin JSON checks and bounded rate limits', () => {
     for (const route of [expertCreateRoute, expertUpdateRoute, candidateConfirmRoute, candidateRejectRoute]) {
       expect(route).toContain('assertSameOriginSearchRequest')
