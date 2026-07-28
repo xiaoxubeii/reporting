@@ -40,8 +40,7 @@ describe('personal timezone profile repository', () => {
   it.each([
     [null, null],
     [{ full_name: null, time_zone: null }, null],
-    [{ full_name: null, time_zone: 'Not/A_Time_Zone' }, null],
-  ])('maps absent, automatic, or stale profile timezone to Automatic', async (row, expected) => {
+  ])('maps an absent profile or genuine SQL null timezone to Automatic', async (row, expected) => {
     const { admin } = createProfileLoader(row)
 
     await expect(profileRepository.loadPersonalProfile(admin, 'user-1')).resolves.toMatchObject({
@@ -49,21 +48,32 @@ describe('personal timezone profile repository', () => {
     })
   })
 
-  it('canonicalizes and saves a manual timezone through the service RPC', async () => {
+  it('maps a non-null invalid stored timezone to the UTC fallback', async () => {
+    const { admin } = createProfileLoader({
+      full_name: null,
+      time_zone: 'Not/A_Time_Zone',
+    })
+
+    await expect(profileRepository.loadPersonalProfile(admin, 'user-1')).resolves.toMatchObject({
+      timeZone: 'UTC',
+    })
+  })
+
+  it('canonicalizes a supported alias before saving through the service RPC', async () => {
     const rpc = vi.fn().mockResolvedValue({
-      data: { time_zone: 'Asia/Shanghai' },
+      data: { time_zone: 'UTC' },
       error: null,
     })
 
     await expect(
       getSavePersonalTimeZone()({ rpc } as never, {
         userId: 'user-1',
-        timeZone: 'Asia/Shanghai',
+        timeZone: 'Etc/UTC',
       }),
-    ).resolves.toEqual({ timeZone: 'Asia/Shanghai' })
+    ).resolves.toEqual({ timeZone: 'UTC' })
     expect(rpc).toHaveBeenCalledWith('update_user_time_zone', {
       p_user_id: 'user-1',
-      p_time_zone: 'Asia/Shanghai',
+      p_time_zone: 'UTC',
     })
   })
 
@@ -77,6 +87,20 @@ describe('personal timezone profile repository', () => {
       p_user_id: 'user-1',
       p_time_zone: null,
     })
+  })
+
+  it('maps a non-null invalid RPC-returned timezone to the UTC fallback', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { time_zone: 'Not/A_Time_Zone' },
+      error: null,
+    })
+
+    await expect(
+      getSavePersonalTimeZone()({ rpc } as never, {
+        userId: 'user-1',
+        timeZone: 'Asia/Shanghai',
+      }),
+    ).resolves.toEqual({ timeZone: 'UTC' })
   })
 
   it.each([undefined, '', 'Not/A_Time_Zone', 'x'.repeat(129)])(

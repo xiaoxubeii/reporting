@@ -1,11 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { canonicalizeTimeZone } from '@/i18n/time-zone'
+import { canonicalizeTimeZone, DEFAULT_TIME_ZONE } from '@/i18n/time-zone'
 import type { Database } from '@/lib/types/database'
 import { IdentityOnboardingError, identityStorageError } from './errors'
 
 export interface PersonalProfile {
   fullName: string | null
   timeZone: string | null
+}
+
+function normalizeStoredTimeZone(value: string | null | undefined): string | null {
+  if (value == null) return null
+  return canonicalizeTimeZone(value) ?? DEFAULT_TIME_ZONE
 }
 
 export function normalizePersonalFullName(input: unknown): string {
@@ -31,7 +36,7 @@ export async function loadPersonalProfile(
   if (result.error) throw identityStorageError()
   return {
     fullName: result.data?.full_name ?? null,
-    timeZone: canonicalizeTimeZone(result.data?.time_zone),
+    timeZone: normalizeStoredTimeZone(result.data?.time_zone),
   }
 }
 
@@ -62,5 +67,5 @@ export async function savePersonalTimeZone(
     p_time_zone: timeZone,
   })
   if (result.error || !result.data) throw identityStorageError()
-  return { timeZone: canonicalizeTimeZone(result.data.time_zone) }
+  return { timeZone: normalizeStoredTimeZone(result.data.time_zone) }
 }
