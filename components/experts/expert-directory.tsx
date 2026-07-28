@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type { ExpertCandidate } from '@/lib/expert-discovery/types'
 import type { DiscoverySourceOutcome } from '@/lib/expert-discovery/types'
@@ -146,13 +149,23 @@ export function ExpertDirectory(props: {
             <div className="mb-4 flex justify-end"><Button onClick={() => setManualOpen(value => !value)}>{t('manual.add')}</Button></div>
           )}
           {tab === 'fund' && manualOpen && <ManualExpertForm busy={Boolean(busy)} onSubmit={addManual} />}
-          <Label className="sr-only" htmlFor="expert-directory-search">{t('directorySearch')}</Label>
-          <Input id="expert-directory-search" className="mb-4 max-w-md" value={directoryQuery} onChange={event => setDirectoryQuery(event.target.value)} placeholder={t('directorySearch')} />
+          <DirectorySearchToolbar
+            value={directoryQuery}
+            onChange={setDirectoryQuery}
+            countLabel={t('results.count', { count: visibleExperts.length })}
+            label={t('directorySearch')}
+          />
           <div className="grid gap-3 md:grid-cols-2">
             {visibleExperts.map(expert => expert.scope === 'fund' && props.isAdmin
               ? <EditableExpertCard key={expert.id} expert={expert} busy={busy === `edit:${expert.id}`} onUpdate={updateExpert} />
               : <ExpertCard key={expert.id} expert={expert} />)}
-            {visibleExperts.length === 0 && <Empty>{tab === 'fund' ? t('empty.fund') : t('empty.platform')}</Empty>}
+            {visibleExperts.length === 0 && (
+              <Empty>
+                {directoryQuery.trim()
+                  ? t('empty.search')
+                  : tab === 'fund' ? t('empty.fund') : t('empty.platform')}
+              </Empty>
+            )}
           </div>
         </section>
       )}
@@ -161,22 +174,102 @@ export function ExpertDirectory(props: {
         <section id="expert-panel-discovery" aria-labelledby="expert-tab-discovery" className="mt-6" role="tabpanel">
           <div className="rounded-lg border p-4">
             <Label htmlFor="expert-discovery-query">{t('discovery.query')}</Label>
-            <div className="mt-2 flex gap-2"><Input id="expert-discovery-query" value={query} onChange={event => setQuery(event.target.value)} placeholder={t('discovery.placeholder')} onKeyDown={event => { if (event.key === 'Enter') void discover() }} /><Button disabled={Boolean(busy) || !query.trim()} onClick={discover}>{busy === 'discover' ? t('discovery.searching') : t('discovery.search')}</Button></div>
-            <fieldset className="mt-3 flex flex-wrap gap-5 text-sm">
-              <legend className="mb-2 font-medium">{t('discovery.sources')}</legend>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={sources.pubmed} onChange={event => setSources(current => ({ ...current, pubmed: event.target.checked }))} /> PubMed</label>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={sources.clinical_trials} onChange={event => setSources(current => ({ ...current, clinical_trials: event.target.checked }))} /> ClinicalTrials.gov</label>
-            </fieldset>
+            <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  id="expert-discovery-query"
+                  className="h-10 pl-9"
+                  value={query}
+                  onChange={event => setQuery(event.target.value)}
+                  placeholder={t('discovery.placeholder')}
+                  onKeyDown={event => { if (event.key === 'Enter') void discover() }}
+                />
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button className="h-10 justify-between" type="button" variant="outline">{t('discovery.sources')}</Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  aria-labelledby="expert-discovery-sources-label"
+                  className="w-64 p-3"
+                >
+                  <p id="expert-discovery-sources-label" className="text-sm font-medium">{t('discovery.sources')}</p>
+                  <div className="mt-2 space-y-2">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={sources.pubmed}
+                        onChange={event => setSources(current => ({ ...current, pubmed: event.target.checked }))}
+                      />
+                      <span>PubMed</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={sources.clinical_trials}
+                        onChange={event => setSources(current => ({ ...current, clinical_trials: event.target.checked }))}
+                      />
+                      <span>ClinicalTrials.gov</span>
+                    </label>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button className="h-10" disabled={Boolean(busy) || !query.trim()} onClick={discover}>
+                {busy === 'discover' ? t('discovery.searching') : t('discovery.search')}
+              </Button>
+            </div>
             <p className="mt-2 text-xs text-muted-foreground">{t('discovery.hint')}</p>
           </div>
           <div className="mt-5 space-y-4">
             {outcomes.some(outcome => outcome.status === 'error') && <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm" role="status">{t('discovery.partial')}</div>}
-            <Label className="flex items-center gap-2 text-sm" htmlFor="expert-candidate-status"><span className="text-muted-foreground">{t('discovery.status')}</span><select id="expert-candidate-status" className="rounded-md border bg-background px-2 py-1.5" value={candidateStatus} onChange={event => setCandidateStatus(event.target.value as typeof candidateStatus)}><option value="pending">{t('badges.pending')}</option><option value="confirmed">{t('badges.confirmed')}</option><option value="rejected">{t('badges.rejected')}</option><option value="all">{t('discovery.allStatuses')}</option></select></Label>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-medium" aria-live="polite">
+                {t('discovery.candidateCount', { count: visibleCandidates.length })}
+              </p>
+              <Select value={candidateStatus} onValueChange={value => setCandidateStatus(value as typeof candidateStatus)}>
+                <SelectTrigger id="expert-candidate-status" className="h-10 w-full sm:w-44" aria-label={t('discovery.status')}>
+                  <SelectValue placeholder={t('discovery.status')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">{t('badges.pending')}</SelectItem>
+                  <SelectItem value="confirmed">{t('badges.confirmed')}</SelectItem>
+                  <SelectItem value="rejected">{t('badges.rejected')}</SelectItem>
+                  <SelectItem value="all">{t('discovery.allStatuses')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {visibleCandidates.map(candidate => <CandidateCard key={candidate.id} candidate={candidate} busy={Boolean(busy)} onConfirm={confirm} onReject={reject} />)}
             {visibleCandidates.length === 0 && <Empty>{t('empty.candidates')}</Empty>}
           </div>
         </section>
       )}
+    </div>
+  )
+}
+
+function DirectorySearchToolbar(props: {
+  value: string
+  onChange: (value: string) => void
+  countLabel: string
+  label: string
+}) {
+  return (
+    <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+      <div className="relative w-full min-w-0 sm:max-w-md sm:flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Input
+          aria-label={props.label}
+          className="h-10 pl-9"
+          value={props.value}
+          onChange={event => props.onChange(event.target.value)}
+          placeholder={props.label}
+        />
+      </div>
+      <span className="text-sm text-muted-foreground" aria-live="polite">{props.countLabel}</span>
     </div>
   )
 }
