@@ -1,7 +1,7 @@
 ## 1. Timezone Contract and Persistence
 
-- [ ] 1.1 Add failing tests for IANA validation, cookie parsing, resolution precedence, invalid fallback, and cross-midnight deterministic formatting.
-- [ ] 1.2 Implement the shared timezone contract with UTC fallback and immutable resolver results.
+- [x] 1.1 Add failing tests for IANA validation, cookie parsing, resolution precedence, invalid fallback, and cross-midnight deterministic formatting.
+- [x] 1.2 Implement the shared timezone contract with UTC fallback and immutable resolver results.
 - [ ] 1.3 Add a failing migration/security contract test for nullable manual timezone persistence and a narrow service RPC.
 - [ ] 1.4 Add the user-profile migration, generated database types, and identity profile load/save support.
 
