@@ -62,6 +62,8 @@ function streamedRequest(chunks: string[], headers: Record<string, string> = {})
 }
 
 beforeEach(() => {
+  vi.stubEnv('FUND_WORKSPACE_ROOT_DOMAIN', '')
+  vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
   getUser.mockResolvedValue({ data: { user: null }, error: null })
   loadPersonalProfile.mockResolvedValue({ fullName: 'Hidden Name', timeZone: 'Asia/Shanghai' })
 })
@@ -115,11 +117,25 @@ describe('GET /api/time-zone', () => {
     expect(response.status).toBe(500)
     await expect(response.json()).resolves.toEqual({ error: 'Unable to load time zone preference' })
   })
+
+  it('treats a resolved authentication error as a sanitized failure, not Automatic', async () => {
+    getUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'session provider and token detail' },
+    })
+
+    const response = await GET()
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toEqual({ error: 'Unable to load time zone preference' })
+    expect(createAdminClient).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST /api/time-zone', () => {
   it('allows signed-out Automatic mode and writes a secure host-only preference cookie', async () => {
     vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'http://localhost')
 
     const response = await POST(preferenceRequest({ mode: 'auto', timeZone: 'Etc/UTC' }))
 
@@ -171,12 +187,26 @@ describe('POST /api/time-zone', () => {
       changed: true,
     })
     expect(response.cookies.get('REPORTING_TIME_ZONE')?.value).toBe('manual%3AAsia%2FShanghai')
+    expect(response.headers.get('set-cookie')).not.toContain('Secure')
     expect(createAdminClient).not.toHaveBeenCalled()
     expect(loadPersonalProfile).not.toHaveBeenCalled()
   })
 
   it('returns a sanitized authentication failure without writing a manual cookie', async () => {
     getUser.mockRejectedValue(new Error('session provider and token detail'))
+
+    const response = await POST(preferenceRequest({ mode: 'manual', timeZone: 'UTC' }))
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toEqual({ error: 'Unable to update time zone preference' })
+    expect(response.headers.get('set-cookie')).toBeNull()
+  })
+
+  it('treats a resolved manual authentication error as a sanitized failure without a cookie', async () => {
+    getUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'session provider and token detail' },
+    })
 
     const response = await POST(preferenceRequest({ mode: 'manual', timeZone: 'UTC' }))
 
@@ -235,6 +265,52 @@ describe('POST /api/time-zone', () => {
     expect(trusted.status).toBe(200)
     expect(sibling.status).toBe(403)
     expect(untrustedHost.status).toBe(403)
+  })
+
+  it('accepts only the configured self-host authority when Next uses an internal origin', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://portfolio.example.com/app')
+    const body = { mode: 'auto', timeZone: 'UTC' }
+    const trusted = await POST(preferenceRequest(body, {
+      host: 'portfolio.example.com',
+      origin: 'https://portfolio.example.com',
+    }, 'http://internal-app:3000/api/time-zone'))
+    const attackerSameOrigin = await POST(preferenceRequest(body, {
+      host: 'attacker.example',
+      origin: 'https://attacker.example',
+    }, 'https://attacker.example/api/time-zone'))
+    const attackerHost = await POST(preferenceRequest(body, {
+      host: 'attacker.example',
+      origin: 'https://portfolio.example.com',
+    }, 'http://internal-app:3000/api/time-zone'))
+
+    expect(trusted.status).toBe(200)
+    expect(attackerSameOrigin.status).toBe(403)
+    expect(attackerHost.status).toBe(403)
+  })
+
+  it('rejects an attacker-controlled same-origin Host in unconfigured development', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+
+    const response = await POST(preferenceRequest(
+      { mode: 'auto', timeZone: 'UTC' },
+      { host: 'attacker.example', origin: 'http://attacker.example' },
+      'http://attacker.example/api/time-zone',
+    ))
+
+    expect(response.status).toBe(403)
+    expect(response.headers.get('set-cookie')).toBeNull()
+  })
+
+  it('fails closed in production without a trusted root or public origin', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+
+    const response = await POST(preferenceRequest(
+      { mode: 'auto', timeZone: 'UTC' },
+      { host: 'localhost', origin: 'http://localhost' },
+    ))
+
+    expect(response.status).toBe(403)
+    expect(response.headers.get('set-cookie')).toBeNull()
   })
 
   it('rejects malformed, declared-oversized, and streamed-oversized bodies', async () => {

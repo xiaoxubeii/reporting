@@ -9,7 +9,6 @@ import {
 import { loadPersonalProfile } from '@/lib/identity/profile'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { isDevelopmentLoopbackForward } from '@/i18n/origin'
 import { canonicalFundRequestOrigin } from '@/lib/tenancy/host'
 
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365
@@ -37,6 +36,27 @@ function getHttpOrigin(value: string): string | null {
   }
 }
 
+function getRequestAuthority(request: NextRequest): string | null {
+  const rawAuthority = request.headers.get('host') ?? request.nextUrl.host
+  if (
+    !rawAuthority ||
+    rawAuthority !== rawAuthority.trim() ||
+    /[\s,\\/@]/.test(rawAuthority) ||
+    rawAuthority.includes('://')
+  ) {
+    return null
+  }
+
+  try {
+    const parsed = new URL(`${request.nextUrl.protocol}//${rawAuthority}`)
+    return parsed.host.toLowerCase() === rawAuthority.toLowerCase()
+      ? parsed.host.toLowerCase()
+      : null
+  } catch {
+    return null
+  }
+}
+
 function isSameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin')
   if (!origin) return false
@@ -52,16 +72,25 @@ function isSameOrigin(request: NextRequest): boolean {
     }
   }
 
-  const allowedOrigins = new Set([request.nextUrl.origin])
-  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  const requestAuthority = getRequestAuthority(request)
+  if (!requestAuthority) return false
+
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
   if (configuredSiteUrl) {
     const configuredOrigin = getHttpOrigin(configuredSiteUrl)
-    if (configuredOrigin) allowedOrigins.add(configuredOrigin)
+    if (!configuredOrigin) return false
+    const configuredAuthority = new URL(configuredOrigin).host.toLowerCase()
+    return requestAuthority === configuredAuthority && requestOrigin === configuredOrigin
   }
 
+  if (process.env.NODE_ENV === 'production') return false
+
+  const originUrl = new URL(requestOrigin)
+  const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]'])
   return (
-    allowedOrigins.has(requestOrigin) ||
-    isDevelopmentLoopbackForward(requestOrigin, request.nextUrl.origin)
+    loopbackHosts.has(originUrl.hostname) &&
+    originUrl.host.toLowerCase() === requestAuthority &&
+    originUrl.protocol === request.nextUrl.protocol
   )
 }
 
@@ -162,7 +191,8 @@ async function readPreferenceBody(request: NextRequest): Promise<
 export async function GET() {
   try {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error) throw new Error('Authentication unavailable')
     if (!user) return jsonResponse({ manualTimeZone: null })
 
     const profile = await loadPersonalProfile(createAdminClient(), user.id)
@@ -183,7 +213,8 @@ export async function POST(request: NextRequest) {
   if (input.mode === 'manual') {
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error) throw new Error('Authentication unavailable')
       if (!user) return jsonResponse({ error: 'Unauthorized' }, 401)
     } catch {
       return jsonResponse({ error: 'Unable to update time zone preference' }, 500)
