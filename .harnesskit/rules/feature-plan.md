@@ -21,6 +21,7 @@ dependency and ownership checks.
 | institutional-platform-landing | Redesign the platform root as an institutional FundWorkspace investment-decision landing with real product evidence, optional expert validation, a configured demo CTA, and a non-enumerating workspace entry | feature-planning | `openspec/changes/redesign-platform-landing` | Platform `/` communicates Signal → Research → optional Expert Validation → IC → Portfolio/LP in English and Chinese with real screenshots and accessible responsive behavior; configured demo links are HTTPS-only; workspace entry performs syntax-only canonical tenant `/auth` navigation; tenant `/`, auth/app/portal, other public pages, and private-data boundaries remain unchanged; focused, build, review, and real browser verification pass | main-agent-only | current platform/tenant root split, public layout/auth redirect, next-intl, canonical Fund host helpers, verified expert-validation evidence | main-agent | current checkout | in_progress |
 | multi-tenant-resend-mail | Add isolated FundWorkspace platform mail and per-Fund BYOK Resend business mail with secure outbound threads, tokenized replies, inbound routing, Pitch intake, and expert invitations | feature-planning | `openspec/changes/add-multi-tenant-resend-mail` | Platform and Fund credentials never cross; each Fund has an exact derived subdomain and Fund-scoped mailboxes; signed/idempotent Resend inbound routes deterministic replies; Pitch enters Deal screening; expert replies remain thread mail; Settings, focused tests, security review, and real local flows pass | serial-required | current email adapters, Fund envelope encryption, Supabase Auth SMTP operations, Deal intake, expert validation, local Supabase | main-agent | current checkout | in_progress |
 | background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
+| memo-research-reporting-search | Replace Anthropic-native Memo Research web search with the provider-neutral Reporting Search tool and source-ID grounding | feature-planning | `openspec/changes/replace-memo-research-web-search` | The diligence Research button enqueues a real generalized attempt; tool-capable providers autonomously call fund-scoped Reporting Search under the initiating user's live authorization; three parallel sub-calls share one budget; private data-room text is not exposed as arbitrary queries; only collected source IDs ground persisted findings; unsupported providers fail visibly to no-search mode | main-agent-only | completed background-job-http-context and search-product, current Memo Agent jobs/providers, local Supabase | main-agent | `/home/ubuntu/workspace/reporting.worktrees/replace-memo-research-web-search` | passing |
 | investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
 | expert-validation | Close the Research gap/contradiction → expert answer → industry_expert → existing evidence pipeline loop | feature-planning | `openspec/changes/add-expert-validation` | Real internal and public browser flow works; one immutable submitted answer is materialized and enqueued with the documented security boundaries | single-feature | existing Diligence, email, AI, storage, job pipeline | main-agent | current checkout | in_progress |
 | custom-ai-provider | Configure one generic OpenAI-compatible provider such as MiniMax or codex-lb | feature-planning | `openspec/changes/add-custom-ai-provider` | Admin can save key/base URL/model, select the complete provider as default, and existing AI factory uses it | main-agent-only | existing settings encryption, URL validation, OpenAI provider factory | main-agent | current checkout | complete |
@@ -439,6 +440,64 @@ contract for self-check, review, testing, and merge.
 - verification: HarnessKit fast, strict OpenSpec, `git diff --check`, generated-state parsing, focused tests, TypeScript, live HTTP replay rejection, and database object inspection pass. HarnessKit targeted remains blocked by existing repository-wide ESLint debt; file-level lint of the touched Anthropic provider reports six pre-existing `any` usages outside this change's diff.
 - reviews: final correctness and security re-reviews found no remaining MEDIUM/HIGH/CRITICAL after generic lifecycle/domain projection separation, registry invariant hardening, POST-only bypass, required-kind binding, and Cron/Job secret separation.
 - risks: the accepted at-least-once provider billing window remains; the configured OpenRouter model may emit citations that fail server provenance validation, which produces a safe terminal Research failure rather than ungrounded output.
+
+### Feature: memo-research-reporting-search
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this is a security-sensitive, provider-facing, asynchronous contract change spanning Memo Agent lifecycle, generalized background identity, Search authorization, citations, limits, and browser-visible diagnostics.
+- Change: `openspec/changes/replace-memo-research-web-search`
+- Classification: `main-agent-only`; background identity, Search tool execution, persistence, and compatibility behavior must land as one serial contract.
+
+#### Acceptance
+
+- The diligence “Run research” action preserves its existing user flow while enqueueing a real `memo_research` generalized background attempt tied to the initiating user, fund, deal, draft, and compatibility Memo job.
+- With external Search enabled, Anthropic and tool-capable OpenAI-compatible/custom providers autonomously call the code-owned `reporting_search`; provider-native web search is disabled by default.
+- Providers without a custom tool loop run explicit no-search mode with a visible warning and cannot represent model-memory conclusions as externally verified.
+- Claims, competitors, and founders sub-calls share one database-enforced Search budget and collision-free tool-call namespaces.
+- Tool inputs use a bounded topic vocabulary and server-built queries from public identifiers; private files, emails, claims, projections, and arbitrary model-authored query strings do not leave the diligence boundary.
+- Persisted citations use only source IDs returned by the active Search attempt; unsupported IDs/URLs/titles cannot ground a finding.
+- Existing progress, research output, diagnostics, downstream memo stages, and transitional `web_sources` / `web_search_count` consumers remain functional.
+
+#### Allowed Change Scope
+
+- `openspec/changes/replace-memo-research-web-search/**`, this feature contract, focused progress/evidence.
+- Generalized background-job registry/payload/worker/route contracts and focused migration/type updates.
+- Memo Research launch, worker, stage-provider, prompts, output parsing/persistence, settings copy, and diagnostics.
+- Search-owned agent tool abstraction plus unchanged Deal Research adapter behavior.
+- Focused unit/integration/security tests and authenticated diligence Research browser evidence.
+
+#### Shared Contract Changes
+
+- Adds one registered `memo_research` background-job kind with fixed worker path/audience/scope, required Diligence/Search access, bounded Search capability, and validated payload.
+- Keeps `memo_agent_jobs` as the compatibility progress record during migration while the generalized attempt is authoritative for Search identity and tool-call accounting.
+- Replaces Anthropic `enableWebSearch` capability resolution with provider-neutral `supportsToolLoop` and a server-only legacy rollback flag.
+- Adds provider-neutral Search source/count fields while mirroring legacy web source/count fields during compatibility.
+
+#### Verification Plan
+
+- TDD: registry/payload/token/context, launch/compatibility lifecycle, Search adapter topic validation, shared call limit, tool-loop provider parity, citation validation, and fallback behavior.
+- Targeted: focused Vitest suites, migration/type validation, TypeScript, changed-file lint, strict OpenSpec, HarnessKit fast/targeted, secret and diff checks.
+- Full: production build/full relevant suite, code/security review, and authenticated browser flow from ingestion through “Run research” to terminal Search diagnostics and grounded source display.
+
+#### Review Required
+
+- planner/architect: yes, completed before implementation and reflected in the OpenSpec design.
+- reviewer: yes, queue compatibility, retries, concurrency, provider loops, output compatibility, and no duplicated Search path.
+- security-reviewer: yes, user/fund restoration, live entitlement, confused-deputy/replay/SSRF boundaries, prompt injection, private query leakage, and source-ID grounding.
+- browser/QA: yes, the existing Research action and diagnostics are browser-visible and cross frontend/backend/background boundaries.
+
+#### Progress / Evidence
+
+- status: complete
+- branch/worktree: `codex/replace-memo-research-web-search` in `/home/ubuntu/workspace/reporting.worktrees/replace-memo-research-web-search`; unrelated dirty `main` changes are preserved.
+- implementation: generalized Memo Research job execution, provider-neutral Reporting Search tool loops, bounded public-identity queries, source-ID grounding, compatibility fields, diagnostics, migration, and localized UI are implemented.
+- focused verification: the final security-focused slice passes 21 files / 123 tests; the changed implementation passes focused lint review, strict OpenSpec, migration contracts, `git diff --check`, and secret scanning. TypeScript reports only the pre-existing `tests/platform-landing-logo-assets.test.ts` iterator target error.
+- full verification: excluding the two known stale platform-landing test files, Vitest passes 313 files / 2162 tests with 4 files / 8 environment-gated tests skipped. `next build --no-lint` completes compilation, type validation, all 277 static pages, and route generation with the real local environment. The default build remains blocked by repository-wide existing ESLint debt.
+- independent review: final correctness, TypeScript/React, and security reviews report zero remaining critical/high/medium findings after strict Search-envelope parsing, legacy-worker exclusion, provider-side blocked domains, internal-origin-only kicks, provider-neutral UI grounding, and hosted-localhost output corrections.
+- browser: a disposable authenticated Fund and ingested draft completed the real Research action through the generalized worker and configured external model. Three `reporting_search` calls returned nine accepted sources; the final page displayed Reporting Search diagnostics and `0/6` grounded findings because the model returned no accepted source IDs, proving fail-closed grounding. No LinkedIn source entered the registry, and the fixture, user, jobs, and credential link were removed.
+- baseline blockers: HarnessKit fast/full stop on the pre-existing invalid `feed-discovery: complete` clean-state value; the default all-repository test/lint/type gates also retain unrelated platform-landing and lint debt. Feature-scoped tests, production build, reviews, and the real browser path pass.
 
 ### Feature: investment-decision-e2e
 

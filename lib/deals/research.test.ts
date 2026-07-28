@@ -75,6 +75,8 @@ function dependencies(options: {
       definition: { name: 'reporting_search', description: 'Search', inputSchema: { type: 'object' } },
       execute: vi.fn(async () => '{}'),
       collectedSources: () => options.sources ?? [SOURCE],
+      allowedSourceIds: () => (options.sources ?? [SOURCE]).map(source => source.id),
+      searchCount: () => 1,
     })),
     persist: vi.fn(async () => options.persistResult ?? true),
     logUsage: vi.fn(),

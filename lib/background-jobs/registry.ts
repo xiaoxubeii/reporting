@@ -25,6 +25,28 @@ function parseDealResearchPayload(value: unknown): Readonly<BackgroundJobPayload
   return Object.freeze({ dealId: value.dealId })
 }
 
+function parseMemoResearchPayload(value: unknown): Readonly<BackgroundJobPayloadByKind['memo_research']> {
+  if (!isPlainObject(value)) throw new Error('Invalid memo_research payload')
+  const keys = Object.keys(value)
+  if (
+    keys.length !== 3
+    || !keys.every(key => key === 'memoJobId' || key === 'dealId' || key === 'draftId')
+    || typeof value.memoJobId !== 'string'
+    || typeof value.dealId !== 'string'
+    || typeof value.draftId !== 'string'
+    || !UUID_PATTERN.test(value.memoJobId)
+    || !UUID_PATTERN.test(value.dealId)
+    || !UUID_PATTERN.test(value.draftId)
+  ) {
+    throw new Error('Invalid memo_research payload')
+  }
+  return Object.freeze({
+    memoJobId: value.memoJobId,
+    dealId: value.dealId,
+    draftId: value.draftId,
+  })
+}
+
 function parseFeedDiscoveryPayload(value: unknown): Readonly<BackgroundJobPayloadByKind['feed_discovery']> {
   if (!isPlainObject(value) || Object.keys(value).length !== 0) {
     throw new Error('Invalid feed_discovery payload')
@@ -37,6 +59,9 @@ const DEAL_RESEARCH_SEARCH = Object.freeze({
   scope: 'search:execute',
   maxCalls: 3,
   allowPersonalSources: false,
+  requiredUserAccess: Object.freeze([
+    Object.freeze({ domain: 'dealflow', need: 'read', feature: 'search' }),
+  ]),
 } satisfies BackgroundJobSearchCapability)
 
 const DEAL_RESEARCH_POLICY = Object.freeze({
@@ -48,13 +73,28 @@ const DEAL_RESEARCH_POLICY = Object.freeze({
   workerScope: 'deal-research:execute',
   requiredUserAccess: Object.freeze([
     Object.freeze({ domain: 'dealflow', need: 'write' }),
-    Object.freeze({ domain: 'dealflow', need: 'read', feature: 'search' }),
   ]),
   search: DEAL_RESEARCH_SEARCH,
   maxAttempts: 3,
   leaseSeconds: 300,
   requestTimeoutMs: 270_000,
 } satisfies BackgroundJobPolicy<'deal_research'>)
+
+const MEMO_RESEARCH_POLICY = Object.freeze({
+  kind: 'memo_research',
+  actors: Object.freeze(['user'] as const),
+  parsePayload: parseMemoResearchPayload,
+  workerPath: '/api/internal/background-jobs/memo-research/run',
+  workerAudience: 'reporting-memo-research-worker',
+  workerScope: 'memo-research:execute',
+  requiredUserAccess: Object.freeze([
+    Object.freeze({ domain: 'diligence', need: 'write' }),
+  ]),
+  search: DEAL_RESEARCH_SEARCH,
+  maxAttempts: 3,
+  leaseSeconds: 300,
+  requestTimeoutMs: 270_000,
+} satisfies BackgroundJobPolicy<'memo_research'>)
 
 const FEED_DISCOVERY_POLICY = Object.freeze({
   kind: 'feed_discovery',
@@ -74,7 +114,7 @@ export interface BackgroundJobRegistry {
   get(kind: string): BackgroundJobPolicy
 }
 
-const POLICIES = Object.freeze([DEAL_RESEARCH_POLICY, FEED_DISCOVERY_POLICY] as const)
+const POLICIES = Object.freeze([DEAL_RESEARCH_POLICY, MEMO_RESEARCH_POLICY, FEED_DISCOVERY_POLICY] as const)
 export const backgroundJobRegistry = createBackgroundJobRegistry(POLICIES)
 export const BACKGROUND_JOB_KINDS = Object.freeze(backgroundJobRegistry.list().map(policy => policy.kind))
 
@@ -164,6 +204,7 @@ function validateBackgroundJobPolicies(policies: readonly BackgroundJobPolicy[])
     }
     validateRequiredUserAccess(policy.requiredUserAccess)
     if (policy.search) {
+      validateRequiredUserAccess(policy.search.requiredUserAccess)
       const priorScope = searchAudiences.get(policy.search.audience)
       if (
         !AUDIENCE_PATTERN.test(policy.search.audience)
@@ -224,7 +265,12 @@ function freezeBackgroundJobPolicy(policy: BackgroundJobPolicy): BackgroundJobPo
     requiredUserAccess: Object.freeze(policy.requiredUserAccess.map(requirement => Object.freeze({
       ...requirement,
     }))),
-    search: policy.search ? Object.freeze({ ...policy.search }) : undefined,
+    search: policy.search ? Object.freeze({
+      ...policy.search,
+      requiredUserAccess: Object.freeze(policy.search.requiredUserAccess.map(requirement => Object.freeze({
+        ...requirement,
+      }))),
+    }) : undefined,
   })
 }
 

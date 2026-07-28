@@ -19,6 +19,7 @@ import { AffinityPanel } from '@/components/diligence/affinity-panel'
 import { EmailIntakeTray } from '@/components/diligence/email-intake-tray'
 import type { IngestionOutput } from '@/lib/memo-agent/stages/ingest'
 import type { ResearchOutput } from '@/lib/memo-agent/stages/research'
+import { summarizeResearchDiagnostics } from '@/lib/memo-agent/research-diagnostics'
 import { uploadDiligenceDocument } from '@/lib/diligence/upload-document'
 import { MemoEditor } from './drafts/[draftId]/memo-editor'
 import { MemoConfigPanel } from '@/components/diligence/memo-config-panel'
@@ -2707,9 +2708,19 @@ function ExternalResearchView({ research, editable, onToggleFinding, onToggleGap
     company_stated: 'verification.company_stated',
     inconclusive: 'verification.unverified',
   } as const
-  const sourcedFindings = research.findings.filter(f => f.sources.some(s => !!s.url)).length
-  const searchCount = research.web_search_count ?? null
-  const webSources = research.web_sources ?? []
+  const searchBackend = research.search_backend ?? (research.research_mode === 'with_web_search' ? 'anthropic' : 'none')
+  const searchCount = research.search_count ?? research.web_search_count ?? null
+  const diagnostics = summarizeResearchDiagnostics({
+    backend: searchBackend,
+    findings: research.findings,
+    searchSources: research.search_sources,
+    legacyWebSources: research.web_sources,
+  })
+  const sourcedFindings = diagnostics.groundedFindings
+  const searchSources = diagnostics.sources
+  const backendLabel = searchBackend === 'reporting'
+    ? t('diagnostic.backendReporting')
+    : t('diagnostic.backendAnthropic')
   const activeFindings = research.findings.map((f, i) => ({ f, i })).filter(x => !x.f.dismissed).slice(0, 50)
   const followUpGaps = research.research_gaps.map((g, i) => ({ g, i })).filter(x => !x.g.dismissed && x.g.criticality === 'nice_to_have')
   return (
@@ -2718,18 +2729,23 @@ function ExternalResearchView({ research, editable, onToggleFinding, onToggleGap
         <div className="rounded-md bg-muted/40 px-3 py-2 text-xs space-y-1">
           <div className="font-medium">{t('diagnostic.title')}</div>
           <div className="text-muted-foreground">
+            {t('diagnostic.backend', { backend: backendLabel })} ·{' '}
             {searchCount !== null && <>{t('diagnostic.searches', { count: searchCount })} · </>}
-            {t('diagnostic.urls', { count: webSources.length })} · {t('diagnostic.sourced', { count: sourcedFindings, total: research.findings.length })}
+            {t('diagnostic.urls', { count: searchSources.length })} · {t('diagnostic.sourced', { count: sourcedFindings, total: research.findings.length })}
           </div>
-          {searchCount !== null && searchCount > 0 && webSources.length === 0 && sourcedFindings === 0 && (
+          {searchCount !== null && searchCount > 0 && searchSources.length === 0 && sourcedFindings === 0 && (
             <div className="text-amber-700 dark:text-amber-400 text-[11px]">{t('diagnostic.noUrls')}</div>
           )}
-          {webSources.length > 0 && (
+          {searchSources.length > 0 && (
             <details className="mt-1">
-              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('diagnostic.sources', { count: webSources.length })}</summary>
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('diagnostic.sources', { count: searchSources.length })}</summary>
               <ul className="mt-1 space-y-0.5 pl-3">
-                {webSources.slice(0, 30).map((s, i) => (
-                  <li key={i} className="truncate"><a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.title || s.url}</a></li>
+                {searchSources.slice(0, 30).map((s, i) => (
+                  <li key={i} className="truncate">
+                    {s.url
+                      ? <a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.title || s.url}</a>
+                      : <span>{s.title}</span>}
+                  </li>
                 ))}
               </ul>
             </details>

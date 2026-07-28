@@ -135,7 +135,6 @@ describe('requireBackgroundExecutionContext', () => {
       { validateResource: vi.fn(async () => { throw new Error('cross-fund') }) },
       { validateResource: vi.fn(async () => { throw new Error('disabled') }) },
       { loadMembership: vi.fn(async () => null) },
-      { loadAccess: vi.fn(async () => ({ ...ACCESS, features: { search: 'off' } as AccessContext['features'] })) },
       { loadAccess: vi.fn(async () => ({ ...ACCESS, role: 'viewer' as const })) },
     ]) {
       await expect(requireBackgroundExecutionContext({
@@ -147,6 +146,37 @@ describe('requireBackgroundExecutionContext', () => {
         repository: repository(overrides),
       })).rejects.toThrow('Background execution is not authorized')
     }
+  })
+
+  it('allows no-Search worker execution but checks Search entitlement on the Search hop', async () => {
+    const noSearchAccess = { ...ACCESS, features: { search: 'off' } as AccessContext['features'] }
+    const workerContext = await requireBackgroundExecutionContext({
+      authorization: `Bearer ${await workerToken()}`,
+      audience: 'reporting-deal-research-worker',
+      requiredScope: 'deal-research:execute',
+      now: NOW,
+      secret: SIGNING_KEY_FIXTURE,
+      repository: repository({ loadAccess: vi.fn(async () => noSearchAccess) }),
+    })
+    expect(workerContext.scope).toBe('deal-research:execute')
+
+    const searchToken = await issueBackgroundJobToken({
+      jobId: JOB_ID,
+      attemptId: ATTEMPT_ID,
+      audience: 'reporting-search',
+      tokenId: 'search-call-1',
+      leaseExpiresAt: new Date(NOW.getTime() + 300_000),
+      now: NOW,
+      secret: SIGNING_KEY_FIXTURE,
+    })
+    await expect(requireBackgroundExecutionContext({
+      authorization: `Bearer ${searchToken}`,
+      audience: 'reporting-search',
+      requiredScope: 'search:execute',
+      now: NOW,
+      secret: SIGNING_KEY_FIXTURE,
+      repository: repository({ loadAccess: vi.fn(async () => noSearchAccess) }),
+    })).rejects.toThrow('Background execution is not authorized')
   })
 
   it('does not touch storage when bearer verification fails', async () => {
@@ -241,6 +271,7 @@ describe('requireBackgroundExecutionContext', () => {
       actor: { type: 'system' },
     })
     expect(repo.validateResource).toHaveBeenCalledWith({
+      jobId: JOB_ID,
       kind: policy.kind,
       payload: { messageId: 'message-1' },
       fundId: FUND_ID,

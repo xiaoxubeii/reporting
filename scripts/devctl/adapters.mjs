@@ -48,6 +48,12 @@ export function webBindHost(env) {
   return host
 }
 
+export function platformHost(env = {}) {
+  return env.FUND_WORKSPACE_ROOT_DOMAIN?.trim().toLowerCase() === 'localhost'
+    ? 'localhost'
+    : '127.0.0.1'
+}
+
 function createProcessAdapter(options) {
   return Object.freeze({
     async start(context) {
@@ -127,14 +133,15 @@ function createProcessAdapter(options) {
 }
 
 function dynamicRuntimeEnv(context) {
+  const webOrigin = `http://${platformHost(context.env)}:${context.ports.web}`
   return Object.freeze({
     PORT: String(context.ports.web),
-    NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${context.ports.web}`,
-    NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${context.ports.web}`,
+    NEXT_PUBLIC_APP_URL: webOrigin,
+    NEXT_PUBLIC_SITE_URL: webOrigin,
     NEXT_DIST_DIR: '.next-devctl',
     FUND_WORKSPACE_DEV_PORT: String(context.ports.web),
-    CRON_RUNNER_BASE_URL: `http://127.0.0.1:${context.ports.web}`,
-    BACKGROUND_JOB_INTERNAL_ORIGIN: `http://127.0.0.1:${context.ports.web}`,
+    CRON_RUNNER_BASE_URL: webOrigin,
+    BACKGROUND_JOB_INTERNAL_ORIGIN: webOrigin,
     CRON_RUNNER_HEALTH_HOST: '127.0.0.1',
     CRON_RUNNER_HEALTH_PORT: String(context.ports.cron),
   })

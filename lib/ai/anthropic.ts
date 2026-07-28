@@ -27,6 +27,9 @@ export class AnthropicProvider implements AIProvider {
           type: 'web_search_20250305' as const,
           name: 'web_search',
           max_uses: params.webSearchMaxUses ?? 5,
+          ...(params.webSearchBlockedDomains?.length
+            ? { blocked_domains: [...params.webSearchBlockedDomains] }
+            : {}),
         }]
       : undefined
 
@@ -182,6 +185,9 @@ export class AnthropicProvider implements AIProvider {
         type: 'web_search_20250305',
         name: 'web_search',
         max_uses: params.webSearchMaxUses ?? 5,
+        ...(params.webSearchBlockedDomains?.length
+          ? { blocked_domains: [...params.webSearchBlockedDomains] }
+          : {}),
       })
     }
 

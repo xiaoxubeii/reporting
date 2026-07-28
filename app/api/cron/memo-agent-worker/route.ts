@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
     } as any)
     .eq('status', 'running')
     .is('external_job_id', null)
+    .is('background_job_id', null)
     .lt('started_at', staleCutoff)
 
   // Transcribe jobs stuck awaiting an external callback for >1h are presumed
@@ -73,6 +74,7 @@ export async function GET(req: NextRequest) {
     } as any)
     .eq('status', 'running')
     .not('external_job_id', 'is', null)
+    .is('background_job_id', null)
     .lt('started_at', callbackCutoff)
 
   // Drain the queue: process jobs back-to-back until it's empty or we approach

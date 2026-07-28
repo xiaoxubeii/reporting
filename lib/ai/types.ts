@@ -26,6 +26,8 @@ export interface CreateMessageParams {
    * is true. Defaults to 5 if omitted.
    */
   webSearchMaxUses?: number
+  /** Domains that provider-side web search must never return or visit. */
+  webSearchBlockedDomains?: readonly string[]
 }
 
 export interface AIModel { id: string; name: string }
