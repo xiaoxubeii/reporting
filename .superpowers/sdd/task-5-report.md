@@ -102,3 +102,68 @@ assigns unsupported status `complete` to `feed-discovery`.
   cookie synchronization fails, the UI reports failure without reloading; the
   existing bootstrap will reconcile the persisted profile on a subsequent
   load.
+
+## Post-review reconciliation
+
+Review identified that the original bootstrap returned immediately for a
+manual cookie, so it could not actually fulfill the reconciliation claim above
+after a partial write. This was fixed in `30a1d952`
+(`fix: reconcile timezone partial writes`).
+
+### Resolution
+
+- `GET /api/time-zone` now returns an explicit `authenticated` boolean with the
+  nullable manual preference. Authentication provider/storage failures remain
+  sanitized 500 responses.
+- Bootstrap now checks authenticated profile state even when the rendered
+  cookie is manual. A changed account-wide manual preference replaces a stale
+  manual cookie; an authenticated null preference restores Automatic using the
+  validated detected zone.
+- Signed-out browsers retain an existing manual cookie because null without an
+  authenticated account is not evidence that the preference was cleared.
+- A matching authenticated manual preference performs only the GET lookup: no
+  browser detection, cookie POST, or reload.
+- Added successful `fullName` and `mailboxLocalPart` PATCH regression tests
+  through the exact-one-mutation discriminator.
+- OpenSpec tasks 4.1–4.4 were checked only after the complete covering suite
+  passed.
+
+### Reconciliation TDD evidence
+
+RED:
+
+```text
+npx vitest run tests/time-zone-route.test.ts tests/time-zone-bootstrap.test.tsx tests/time-zone-personal-settings.test.tsx
+```
+
+- FAIL: 2 files, 8 tests; the route omitted authentication state and bootstrap
+  skipped all manual-cookie reconciliation cases.
+- PASS: the personal suite, including the new legacy name/mailbox regressions.
+
+Focused GREEN:
+
+```text
+npx vitest run tests/time-zone-route.test.ts tests/time-zone-bootstrap.test.tsx tests/time-zone-personal-settings.test.tsx
+```
+
+- PASS: 3 files, 61 tests.
+
+Complete covering GREEN:
+
+```text
+npx vitest run tests/time-zone-*.test.ts tests/time-zone-*.test.tsx tests/settings-localization.test.ts tests/fund-identity-onboarding-ui.test.ts tests/onboarding-setup-localization.test.ts
+```
+
+- PASS: 10 files, 117 tests.
+
+Static/spec evidence:
+
+- PASS: changed-file ESLint for route, bootstrap, personal API/UI, and tests.
+- PASS: `npx openspec validate add-user-timezone-preferences --strict`.
+- PASS: `git diff --check`.
+- `npx tsc --noEmit` remains blocked only by the unrelated existing
+  `tests/platform-landing-logo-assets.test.ts:39` TS2802 error.
+
+Independent re-review was clean with no blocker, high, medium, or minor
+findings. The earlier partial-write concern and both minor review findings are
+resolved.
