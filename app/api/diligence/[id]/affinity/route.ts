@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { AffinityClient, AffinityError } from '@/lib/affinity/client'
 import { getAffinityKey, markAffinityKeyError, markAffinityKeyOk } from '@/lib/affinity/credentials'
 import { dbError } from '@/lib/api-error'
+import { hasAccess, loadAccessContext } from '@/lib/access/effective'
 
 /**
  * Link a diligence deal to an Affinity organization.
@@ -18,14 +19,14 @@ import { dbError } from '@/lib/api-error'
  */
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const guard = await ensureDeal(params.id)
+  const guard = await ensureDeal(params.id, 'read', true)
   if ('error' in guard) return guard.error
   const { admin, fundId, userId, deal } = guard
 
   const term = req.nextUrl.searchParams.get('search')
 
   if (term !== null) {
-    const apiKey = await getAffinityKey(admin, userId)
+    const apiKey = await getAffinityKey(admin, userId, fundId)
     if (!apiKey) {
       return NextResponse.json(
         { error: 'Connect your Affinity account in Settings first.', needs_connection: true },
@@ -36,12 +37,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     try {
       const orgs = await new AffinityClient(apiKey).searchOrganizations(term.trim())
-      await markAffinityKeyOk(admin, userId)
+      await markAffinityKeyOk(admin, userId, fundId)
       return NextResponse.json({ organizations: orgs })
     } catch (err) {
       const message = err instanceof AffinityError ? err.message : 'Affinity search failed'
       if (err instanceof AffinityError && err.status === 401) {
-        await markAffinityKeyError(admin, userId, message)
+        await markAffinityKeyError(admin, userId, fundId, message)
       }
       return NextResponse.json({ error: message }, { status: 502 })
     }
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // Link status. Also report whether the *caller* can sync — the deal may be
   // linked by a colleague whose key the caller can't use.
   const linkedBy = (deal as any).affinity_linked_by as string | null
-  const callerKey = await getAffinityKey(admin, userId)
+  const callerKey = await getAffinityKey(admin, userId, fundId)
 
   let linkerHasKey = false
   if (linkedBy) {
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       .from('affinity_credentials')
       .select('user_id')
       .eq('user_id', linkedBy)
+      .eq('fund_id', fundId)
       .maybeSingle()
     linkerHasKey = !!data
   }
@@ -75,7 +77,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const guard = await ensureDeal(params.id)
+  const guard = await ensureDeal(params.id, 'write', true)
   if ('error' in guard) return guard.error
   const { admin, fundId, userId } = guard
 
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     ? Number(body.opportunity_id)
     : null
 
-  const apiKey = await getAffinityKey(admin, userId)
+  const apiKey = await getAffinityKey(admin, userId, fundId)
   if (!apiKey) {
     return NextResponse.json(
       { error: 'Connect your Affinity account in Settings first.', needs_connection: true },
@@ -100,7 +102,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // link the sync can't follow.
   try {
     await new AffinityClient(apiKey).getOrganization(organizationId)
-    await markAffinityKeyOk(admin, userId)
+    await markAffinityKeyOk(admin, userId, fundId)
   } catch (err) {
     const message = err instanceof AffinityError ? err.message : 'Affinity lookup failed'
     return NextResponse.json({ error: message }, { status: 502 })
@@ -126,7 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const guard = await ensureDeal(params.id)
+  const guard = await ensureDeal(params.id, 'write', true)
   if ('error' in guard) return guard.error
   const { admin, fundId } = guard
 
@@ -147,7 +149,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   return NextResponse.json({ linked: false })
 }
 
-async function ensureDeal(dealId: string) {
+async function ensureDeal(
+  dealId: string,
+  diligenceLevel: 'read' | 'write',
+  requireRelationships: boolean,
+) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
@@ -155,11 +161,21 @@ async function ensureDeal(dealId: string) {
   const admin = createAdminClient()
   const { data: membership } = await admin
     .from('fund_members')
-    .select('fund_id')
+    .select('fund_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return { error: NextResponse.json({ error: 'No fund found' }, { status: 403 }) }
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
+  const access = await loadAccessContext(admin, fundId, user.id, membership.role)
+  if (
+    !hasAccess(access, 'diligence', diligenceLevel)
+    || (requireRelationships && (
+      !hasAccess(access, 'relationships', 'read', 'interactions')
+      || !hasAccess(access, 'relationships', 'read', 'notes')
+    ))
+  ) {
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
+  }
 
   const { data: deal } = await admin
     .from('diligence_deals')

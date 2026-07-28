@@ -16,12 +16,13 @@ import { saveAffinityKey, deleteAffinityKey } from '@/lib/affinity/credentials'
 export async function GET() {
   const guard = await ensureMember()
   if ('error' in guard) return guard.error
-  const { admin, userId } = guard
+  const { admin, fundId, userId } = guard
 
   const { data } = await (admin as any)
     .from('affinity_credentials')
     .select('affinity_user_email, affinity_user_name, last_verified_at, last_error')
     .eq('user_id', userId)
+    .eq('fund_id', fundId)
     .maybeSingle()
 
   return NextResponse.json({
@@ -80,9 +81,9 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   const guard = await ensureMember()
   if ('error' in guard) return guard.error
-  const { admin, userId } = guard
+  const { admin, fundId, userId } = guard
 
-  await deleteAffinityKey(admin, userId)
+  await deleteAffinityKey(admin, userId, fundId)
 
   // Deals this user linked keep their affinity_organization_id — the link is
   // still correct, it just has no key to sync with until someone reconnects.

@@ -77,6 +77,11 @@ export const AFFINITY_TOOLS: ToolDefinition[] = [
   },
 ]
 
+/** Read-only Affinity tools that cannot leave the organization bound to a project. */
+export const PROJECT_AFFINITY_TOOLS: ToolDefinition[] = AFFINITY_TOOLS.filter(
+  tool => tool.name !== 'affinity_search_companies'
+)
+
 /**
  * Build an executor bound to one user's Affinity key. What the assistant can see
  * is exactly what that user can see in Affinity — the key carries their
@@ -141,6 +146,32 @@ export function makeAffinityExecutor(apiKey: string): ToolExecutor {
       if (err instanceof AffinityError) return `Affinity error: ${err.message}`
       return err instanceof Error ? `Affinity error: ${err.message}` : 'Affinity lookup failed.'
     }
+  }
+}
+
+export function makeProjectAffinityExecutor(
+  apiKey: string,
+  projectOrganizationId: number
+): ToolExecutor {
+  const execute = makeAffinityExecutor(apiKey)
+
+  return async (call: ToolInvocation): Promise<string> => {
+    if (call.name === 'affinity_search_companies') {
+      return 'Affinity company search is not available inside a bound diligence project.'
+    }
+    if (call.name !== 'affinity_get_notes' && call.name !== 'affinity_list_files') {
+      return `Unknown tool: ${call.name}`
+    }
+
+    const requestedOrganizationId = Number(call.input.organization_id)
+    if (
+      !Number.isFinite(requestedOrganizationId)
+      || requestedOrganizationId !== projectOrganizationId
+    ) {
+      return 'The requested Affinity organization is outside the current diligence project.'
+    }
+
+    return execute(call)
   }
 }
 

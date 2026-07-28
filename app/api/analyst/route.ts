@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createFundAIProviderWithOverride } from '@/lib/ai'
@@ -18,6 +19,9 @@ import { buildAnalystTools, type StagedActionRecord } from '@/lib/ai/analyst-too
 import type { ActionType } from '@/lib/pending-actions/types'
 import { buildLpContext, LP_ANALYST_GUIDE } from '@/lib/ai/lp-fund-context'
 import { buildDiligenceContext, DILIGENCE_ANALYST_GUIDE } from '@/lib/diligence/analyst-context'
+import { answerDealQuestion } from '@/lib/diligence/qa-answer'
+import { promoteDiligenceChatEvidence } from '@/lib/diligence/promote-chat-evidence'
+import { appendAnalystConversationTurn } from '@/lib/analyst/conversation-store'
 import { extractText } from '@/lib/memo-agent/extract-text'
 import { hasAccess, loadAccessContext } from '@/lib/access/effective'
 import { rateLimit } from '@/lib/rate-limit'
@@ -25,11 +29,16 @@ import { DEFAULT_LOCALE, isSupportedLocale, type Locale } from '@/i18n/locales'
 import {
   AssistantContextValidationError,
   ASSISTANT_CONTEXT_SYSTEM_POLICY,
+  MAX_ANALYST_CITATION_DOCUMENT_ID,
+  MAX_ANALYST_CITATION_LABEL,
+  MAX_ANALYST_CITATION_SUMMARY,
   MAX_ANALYST_REPLY_CONTENT,
   normalizeAnalystMessages,
   prepareAnalystMessagesForRequest,
   prepareAnalystMessagesForStorage,
   toProviderMessages,
+  tryNormalizeStoredAnalystMessages,
+  type AnalystCitation,
   type AnalystConversationMessage,
 } from '@/lib/analyst/context-snapshot'
 
@@ -37,6 +46,9 @@ const RESPONSE_LANGUAGE_LABELS: Readonly<Record<Locale, string>> = Object.freeze
   en: 'English (en)',
   'zh-CN': 'Simplified Chinese (zh-CN)',
 })
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export const maxDuration = 60
 
 // A 10 MB source document expands by roughly one third when base64 encoded. Bound the complete
 // HTTP body before JSON parsing so ignored top-level fields cannot consume unbounded memory.
@@ -114,6 +126,8 @@ export async function POST(req: NextRequest) {
     document?: { name?: string; format?: string; base64?: string }
     /** Which section the user is in, for the domains that have no id of their own. */
     domain?: 'lps' | 'diligence'
+    /** Diligence project scope; separate from dealId, whose FK targets inbound_deals. */
+    diligenceDealId?: string
     model?: { id: string; provider: string }
     conversationId?: string
     /** Untrusted UI hint. The latest user message remains authoritative for response language. */
@@ -133,6 +147,7 @@ export async function POST(req: NextRequest) {
   }
 
   let conversationMessages: readonly AnalystConversationMessage[]
+  let existingConversationMessageCount: number | null = null
   try {
     conversationMessages = prepareAnalystMessagesForRequest(normalizeAnalystMessages(body.messages))
   } catch (error) {
@@ -142,7 +157,13 @@ export async function POST(req: NextRequest) {
     throw error
   }
 
-  const latestUserMessage = [...conversationMessages].reverse().find(message => message.role === 'user')
+  const latestUserMessage = conversationMessages.at(-1)
+  if (!latestUserMessage || latestUserMessage.role !== 'user') {
+    return NextResponse.json({ error: 'The latest message must be from the user.' }, { status: 400 })
+  }
+  // New threads begin with one server-trusted user turn. Prior assistant messages and citations
+  // are restored only from a verified stored conversation, never accepted from the client.
+  if (!body.conversationId) conversationMessages = Object.freeze([latestUserMessage])
   const hasAttachedSnapshots = Boolean(latestUserMessage?.contexts?.length)
   const hasUntrustedAttachment = hasAttachedSnapshots || Boolean(body.document?.base64)
   const explicitDraftIntent = detectExplicitDraftIntent(latestUserMessage?.content ?? '')
@@ -165,11 +186,46 @@ export async function POST(req: NextRequest) {
   // MCP server use, so the Analyst cannot drift into answering from data the app itself refuses.
   const access = await loadAccessContext(admin, membership.fund_id, user.id, membership.role)
 
+  let diligenceProjectScope: string | null = null
+  if (body.diligenceDealId !== undefined) {
+    if (
+      typeof body.diligenceDealId !== 'string'
+      || !UUID_PATTERN.test(body.diligenceDealId)
+      || body.domain !== 'diligence'
+      || body.companyId
+      || body.dealId
+      || body.vehicle
+    ) {
+      return NextResponse.json({ error: 'Invalid diligence project scope.' }, { status: 400 })
+    }
+    if (!hasAccess(access, 'diligence', 'read')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    const { data: diligenceProject } = await admin
+      .from('diligence_deals')
+      .select('id, fund_id')
+      .eq('id', body.diligenceDealId)
+      .eq('fund_id', membership.fund_id)
+      .maybeSingle()
+    if (!diligenceProject || diligenceProject.fund_id !== membership.fund_id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+    diligenceProjectScope = `diligence:${diligenceProject.id}`
+  }
+
+  const canReadPortfolio = hasAccess(access, 'portfolio', 'read')
+  const canReadRelationships =
+    hasAccess(access, 'relationships', 'read', 'interactions')
+    && hasAccess(access, 'relationships', 'read', 'notes')
+  const canWriteDiligence = hasAccess(access, 'diligence', 'write')
+
   // Build a case-insensitive lookup map of company names/aliases → company IDs
-  const { data: allFundCompanies } = await admin
-    .from('companies')
-    .select('id, name, aliases')
-    .eq('fund_id', membership.fund_id)
+  const { data: allFundCompanies } = canReadPortfolio
+    ? await admin
+      .from('companies')
+      .select('id, name, aliases')
+      .eq('fund_id', membership.fund_id)
+    : { data: [] }
 
   const companyNameLookup = new Map<string, string>()
   const companyIdToName = new Map<string, string>()
@@ -221,6 +277,7 @@ export async function POST(req: NextRequest) {
     systemPrompt += `\n\n=== DEAL ===\n${ctx.dealBlock}`
     if (ctx.emailBlock) systemPrompt += `\n\n=== ORIGINATING EMAIL ===\n${ctx.emailBlock}`
   } else if (body.companyId) {
+    if (!canReadPortfolio) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     // Verify company belongs to fund
     const { data: companyCheck } = await admin
       .from('companies')
@@ -245,11 +302,15 @@ export async function POST(req: NextRequest) {
     if (ctx.portfolioBlock) systemPrompt += `\n\n=== PORTFOLIO PEERS (for comparison) ===\n${ctx.portfolioBlock}`
     if (ctx.teamNotesBlock) systemPrompt += `\n\n=== TEAM DISCUSSION NOTES ===\nRecent internal team notes and discussions about this company:\n${ctx.teamNotesBlock}`
   } else {
-    const ctx = await buildPortfolioContext(admin, membership.fund_id, contextOptions)
-    systemPrompt = ctx.systemPrompt
-    if (ctx.portfolioBlock) systemPrompt += `\n\n=== PORTFOLIO DATA ===\n${ctx.portfolioBlock}`
-    if (ctx.teamNotesBlock) systemPrompt += `\n\n=== TEAM DISCUSSION NOTES ===\nRecent internal team notes and discussions across the portfolio:\n${ctx.teamNotesBlock}`
-    systemPrompt += `\n\nIf detailed data about a specific company is included below in a "REFERENCED COMPANY" section, use that data to answer questions about that company.`
+    if (canReadPortfolio) {
+      const ctx = await buildPortfolioContext(admin, membership.fund_id, contextOptions)
+      systemPrompt = ctx.systemPrompt
+      if (ctx.portfolioBlock) systemPrompt += `\n\n=== PORTFOLIO DATA ===\n${ctx.portfolioBlock}`
+      if (ctx.teamNotesBlock) systemPrompt += `\n\n=== TEAM DISCUSSION NOTES ===\nRecent internal team notes and discussions across the portfolio:\n${ctx.teamNotesBlock}`
+      systemPrompt += `\n\nIf detailed data about a specific company is included below in a "REFERENCED COMPANY" section, use that data to answer questions about that company.`
+    } else {
+      systemPrompt = 'You are the fund assistant. Use only the access-scoped domain context supplied below.'
+    }
   }
 
   // === Access-scoped domain context ===
@@ -344,16 +405,17 @@ export async function POST(req: NextRequest) {
   // What thread this belongs to. Company/deal already carve out their own; this separates the
   // domain threads from each other and from the portfolio one. Derived from what was GRANTED, so
   // a denied domain falls back to the portfolio thread rather than opening one it can't fill.
-  const scope: string | null = accountingGroup
-    ? `accounting:${accountingGroup}`
-    : lpScoped
-      ? 'lps'
-      : diligenceScoped
-        ? 'diligence'
-        : null
+  const scope: string | null = diligenceProjectScope
+    ?? (accountingGroup
+      ? `accounting:${accountingGroup}`
+      : lpScoped
+        ? 'lps'
+        : diligenceScoped
+          ? 'diligence'
+          : null)
 
-  const conversationCompanyId = body.dealId ? null : body.companyId ?? null
-  const conversationDealId = body.dealId ?? null
+  const conversationCompanyId = diligenceProjectScope ? null : (body.dealId ? null : body.companyId ?? null)
+  const conversationDealId = diligenceProjectScope ? null : body.dealId ?? null
 
   // Continuing a thread must not let client-controlled IDs retarget stored history to another
   // company, deal, Fund, or granted domain. Verify the complete trusted scope before the model
@@ -361,7 +423,7 @@ export async function POST(req: NextRequest) {
   if (body.conversationId) {
     const { data: existingConversation, error: existingConversationError } = await admin
       .from('analyst_conversations')
-      .select('id, fund_id, user_id, company_id, deal_id, scope')
+      .select('id, fund_id, user_id, company_id, deal_id, scope, messages, server_trusted_at')
       .eq('id', body.conversationId)
       .eq('user_id', user.id)
       .eq('fund_id', membership.fund_id)
@@ -380,6 +442,15 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json({ error: 'Conversation scope does not match the current page.' }, { status: 409 })
     }
+    if (diligenceProjectScope && !existingConversation.server_trusted_at) {
+      return NextResponse.json(
+        { error: 'This legacy project conversation cannot be continued. Start a new conversation.' },
+        { status: 409 },
+      )
+    }
+    const storedMessages = tryNormalizeStoredAnalystMessages(existingConversation.messages)
+    existingConversationMessageCount = storedMessages.length
+    conversationMessages = prepareAnalystMessagesForRequest([...storedMessages, latestUserMessage])
   }
 
   // Dynamic context: detect company references in messages and inject their data
@@ -389,7 +460,7 @@ export async function POST(req: NextRequest) {
     body.companyId ?? null
   )
 
-  if (referencedCompanyIds.length > 0) {
+  if (canReadPortfolio && referencedCompanyIds.length > 0) {
     // Tighter rate limit for cross-company lookups (heavier DB load)
     const crossCompanyLimit = await rateLimit({
       key: `ai-analyst-xref:${user.id}`,
@@ -483,13 +554,49 @@ export async function POST(req: NextRequest) {
     let text: string
     let usage: { inputTokens: number; outputTokens: number }
     let toolCalls: { name: string }[] = []
+    let citations: AnalystCitation[] = []
+    let affinityLookups: string[] = []
+    let usageAlreadyLogged = false
     const stagedActions: StagedActionRecord[] = []
 
+    // A diligence detail page is a bound project Q&A capability. Reuse the same evidence builder,
+    // citation validation, output-language policy, and Affinity boundary as the former inline chat.
+    // This direct adapter also works for providers without a general-purpose tool loop.
+    if (diligenceProjectScope && body.diligenceDealId) {
+      const question = latestUserMessage?.content.trim() ?? ''
+      if (!question) return NextResponse.json({ error: 'Question is required.' }, { status: 400 })
+      const history = conversationMessages
+        .slice(0, -1)
+        .map(message => ({ role: message.role, content: message.content }))
+        .slice(-12)
+      const grounded = await answerDealQuestion({
+        admin,
+        fundId: membership.fund_id,
+        dealId: body.diligenceDealId,
+        question,
+        history,
+        userId: user.id,
+        allowAffinity: canReadRelationships,
+        feature: 'analyst_diligence_project',
+      })
+      const documentName = new Map(grounded.citableDocs.map(document => [document.id, document.file_name]))
+      text = grounded.answer
+      citations = grounded.citations.map(citation => {
+        const documentId = citation.document_id.trim().slice(0, MAX_ANALYST_CITATION_DOCUMENT_ID)
+        const label = (documentName.get(citation.document_id) ?? documentId).trim().slice(0, MAX_ANALYST_CITATION_LABEL) || documentId
+        const summary = citation.summary.trim().slice(0, MAX_ANALYST_CITATION_SUMMARY) || label
+        return { documentId, label, summary }
+      })
+      affinityLookups = grounded.affinityLookups
+      aiModel = grounded.model
+      usage = { inputTokens: 0, outputTokens: 0 }
+      usageAlreadyLogged = true
+      toolCalls = [{ name: 'diligence_ask' }]
     // Run as a live tool loop when the fund's provider supports it; otherwise fall back to the
     // old single-shot context-injection chat (OpenAI/Gemini/Ollama). Tools are the access-filtered
     // read registry — scope narrows what's exposed, never widens it. Write actions are exposed as
     // DRAFTS: a call stages a pending_action for human approval, never posts.
-    if (provider.supportsToolLoop && provider.createToolLoop) {
+    } else if (provider.supportsToolLoop && provider.createToolLoop) {
       const { tools, executeTool } = buildAnalystTools({
         admin,
         fundId: membership.fund_id,
@@ -524,14 +631,16 @@ export async function POST(req: NextRequest) {
       usage = result.usage
     }
 
-    logAIUsage(admin, {
-      fundId: membership.fund_id,
-      userId: user.id,
-      provider: aiProviderType,
-      model: aiModel,
-      feature: 'analyst',
-      usage,
-    })
+    if (!usageAlreadyLogged) {
+      logAIUsage(admin, {
+        fundId: membership.fund_id,
+        userId: user.id,
+        provider: aiProviderType,
+        model: aiModel,
+        feature: 'analyst',
+        usage,
+      })
+    }
 
     // Drafted entries come back as ```proposal fences alongside the prose. Only parse them when
     // accounting scope was actually granted — otherwise the protocol was never in the prompt and
@@ -543,30 +652,42 @@ export async function POST(req: NextRequest) {
 
     // Persist conversation
     let conversationId = body.conversationId ?? null
+    let conversationPersisted = false
     const lastUserMsg = conversationMessages[conversationMessages.length - 1]
+    const assistantStorageMessage = Object.freeze({
+      role: 'assistant' as const,
+      content: reply,
+      ...(citations.length > 0 ? { citations } : {}),
+    })
     const allMessages = prepareAnalystMessagesForStorage([
       ...conversationMessages,
-      Object.freeze({ role: 'assistant' as const, content: reply }),
+      assistantStorageMessage,
     ])
+    const appendedTurn = prepareAnalystMessagesForStorage([lastUserMsg, assistantStorageMessage])
 
     try {
       if (conversationId) {
-        // Update existing conversation
-        await admin
-          .from('analyst_conversations')
-          .update({
-            messages: allMessages as unknown as Json,
-            message_count: allMessages.length,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', conversationId)
-          .eq('user_id', user.id)
-          .eq('fund_id', membership.fund_id)
+        const appendResult = await appendAnalystConversationTurn({
+          admin,
+          conversationId,
+          fundId: membership.fund_id,
+          userId: user.id,
+          expectedMessageCount: existingConversationMessageCount ?? 0,
+          expectedCompanyId: conversationCompanyId,
+          expectedDealId: conversationDealId,
+          expectedScope: scope,
+          userMessage: appendedTurn[0] as unknown as Json,
+          assistantMessage: appendedTurn[1] as unknown as Json,
+        })
+        conversationPersisted = appendResult === 'persisted'
+        if (!conversationPersisted) {
+          console.error('[analyst] conversation append failed', { conversationId, result: appendResult })
+        }
       } else {
         // Create new conversation with title from first message
         const title = (lastUserMsg?.content ?? 'New conversation').slice(0, 60)
 
-        const { data: newConv } = await admin
+        const { data: newConv, error: insertError } = await admin
           .from('analyst_conversations')
           .insert({
             fund_id: membership.fund_id,
@@ -574,6 +695,7 @@ export async function POST(req: NextRequest) {
             company_id: conversationCompanyId,
             deal_id: conversationDealId,
             scope,
+            server_trusted_at: new Date().toISOString(),
             title,
             messages: allMessages as unknown as Json,
             message_count: allMessages.length,
@@ -583,6 +705,7 @@ export async function POST(req: NextRequest) {
 
         if (newConv) {
           conversationId = newConv.id
+          conversationPersisted = true
 
           // Fire-and-forget: summarize previous unsummarized conversation
           summarizePreviousConversation(
@@ -596,15 +719,57 @@ export async function POST(req: NextRequest) {
             scope,
             conversationId,
           ).catch(() => {})
+        } else {
+          console.error('[analyst] conversation insert failed', { error: insertError?.message })
         }
       }
-    } catch {
-      // Non-critical — response still succeeds
+    } catch (persistenceError) {
+      console.error('[analyst] conversation persistence threw', persistenceError)
+    }
+
+    if (
+      diligenceProjectScope
+      && body.diligenceDealId
+      && conversationId
+      && conversationPersisted
+      && canWriteDiligence
+      && citations.length > 0
+      && affinityLookups.length === 0
+    ) {
+      const stableId = `analyst_${conversationId}_${createHash('sha256')
+        .update(`${lastUserMsg.content}\0${reply}`)
+        .digest('hex')
+        .slice(0, 20)}`
+      const promotion = await promoteDiligenceChatEvidence({
+        admin,
+        fundId: membership.fund_id,
+        dealId: body.diligenceDealId,
+        userId: user.id,
+        question: lastUserMsg?.content ?? '',
+        answer: reply,
+        citations: citations.map(citation => ({
+          document_id: citation.documentId,
+          summary: citation.summary,
+        })),
+        stableId,
+        conversationId,
+        model: aiModel,
+      })
+      if (promotion === 'failed' || promotion === 'limit') {
+        console.error('[analyst] diligence evidence promotion failed', {
+          dealId: body.diligenceDealId,
+          conversationId,
+          result: promotion,
+        })
+      }
     }
 
     return NextResponse.json({
       reply,
       conversationId,
+      historyPersisted: conversationPersisted,
+      citations,
+      affinityLookups,
       proposals,
       vehicle: accountingGroup,
       scope,

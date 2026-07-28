@@ -18,6 +18,7 @@ const expertCreateRoute = readFileSync(path.join(root, 'app/api/experts/route.ts
 const expertUpdateRoute = readFileSync(path.join(root, 'app/api/experts/[expertId]/route.ts'), 'utf8')
 const candidateConfirmRoute = readFileSync(path.join(root, 'app/api/experts/discovery/[candidateId]/confirm/route.ts'), 'utf8')
 const candidateRejectRoute = readFileSync(path.join(root, 'app/api/experts/discovery/[candidateId]/reject/route.ts'), 'utf8')
+const diligenceDetail = readFileSync(path.join(root, 'app/(app)/diligence/[id]/deal-detail.tsx'), 'utf8')
 
 describe('expert validation persistence contract', () => {
   it('keeps the validation request lifecycle separate from discovery review', () => {
@@ -110,7 +111,7 @@ describe('existing pipeline reuse', () => {
   it('keeps Research manual and overwrites the existing single output', () => {
     const researchStage = readFileSync(path.join(root, 'lib/memo-agent/stages/research.ts'), 'utf8')
     const materializer = readFileSync(path.join(root, 'lib/expert-validation/materialize.ts'), 'utf8')
-    expect(researchStage).toContain('.update({ research_output: output as any })')
+    expect(researchStage).toContain('.update({ research_output: persistedOutput as any })')
     expect(materializer).not.toMatch(/runResearch|kind:\s*['"]research['"]/)
   })
 
@@ -119,5 +120,22 @@ describe('existing pipeline reuse', () => {
     expect(ingestJob).toContain('payload.document_ids')
     expect(ingestJob).toContain('replaceExisting = !isExplicit')
     expect(ingestJob).toContain("kind: 'ingest_synthesis'")
+  })
+})
+
+describe('internal expert validation workspace', () => {
+  it('places expert validation in its own tab immediately after Research', () => {
+    expect(diligenceDetail).toContain("'Research', 'Expert Validation', 'Scoring'")
+    expect(diligenceDetail).toContain("activeTab === 'Expert Validation'")
+    expect(diligenceDetail).toContain('<ExpertValidationTab dealId={deal.id}')
+    expect(diligenceDetail).toContain('status?.latest_draft?.has_research')
+    expect(diligenceDetail).toContain('onJumpToResearch')
+    expect(diligenceDetail).toContain("aria-current={activeTab === t ? 'page' : undefined}")
+
+    const researchTab = diligenceDetail.slice(
+      diligenceDetail.indexOf('function ResearchTab('),
+      diligenceDetail.indexOf('function ExpertValidationTab('),
+    )
+    expect(researchTab).not.toContain('<ExpertValidationPanel')
   })
 })

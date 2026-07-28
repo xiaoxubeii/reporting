@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { startQASession, getNextBatch, loadSessionState } from '@/lib/memo-agent/stages/qa'
+import {
+  getNextBatch,
+  loadSessionState,
+  QAConcurrentSessionError,
+  startQASession,
+} from '@/lib/memo-agent/stages/qa'
+import { hasAccess, loadAccessContext } from '@/lib/access/effective'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -11,11 +17,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const admin = createAdminClient()
   const { data: membership } = await admin
     .from('fund_members')
-    .select('fund_id')
+    .select('fund_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return NextResponse.json({ error: 'No fund found' }, { status: 403 })
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
+  const access = await loadAccessContext(admin, fundId, user.id, membership.role)
+  if (!hasAccess(access, 'diligence', 'write')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   // Find the latest in-progress draft.
   const { data: draft } = await admin
@@ -30,20 +40,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!draft) {
     return NextResponse.json({ error: 'Run Stage 1 ingest first.' }, { status: 409 })
   }
-  if (!(draft as any).ingestion_output) {
+  if (!draft.ingestion_output) {
     return NextResponse.json({ error: 'Run Stage 1 ingest first.' }, { status: 409 })
   }
 
-  const draftId = (draft as any).id as string
-  const sessionId = await startQASession({ admin, fundId, dealId: params.id, draftId, userId: user.id })
-
-  let batch
+  const draftId = draft.id
   try {
-    batch = await getNextBatch({ admin, fundId, dealId: params.id, draftId, sessionId })
+    const sessionId = await startQASession({ admin, fundId, dealId: params.id, draftId, userId: user.id })
+    const batch = await getNextBatch({ admin, fundId, dealId: params.id, draftId, sessionId })
+    const state = await loadSessionState(admin, sessionId, fundId, params.id, draftId)
+    return NextResponse.json({ session_id: sessionId, draft_id: draftId, ...batch, state })
   } catch (err) {
+    if (err instanceof QAConcurrentSessionError) {
+      return NextResponse.json({ error: err.message }, { status: 409 })
+    }
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Q&A failed' }, { status: 500 })
   }
-
-  const state = await loadSessionState(admin, sessionId, fundId, draftId)
-  return NextResponse.json({ session_id: sessionId, draft_id: draftId, ...batch, state })
 }

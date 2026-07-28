@@ -1,0 +1,18 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "target": "ES2020",
+    "downlevelIteration": true
+  },
+  "include": [
+    "../../../next-env.d.ts",
+    "../../../app/(app)/diligence/[id]/deal-detail.tsx",
+    "../../../components/ui/sheet.tsx",
+    "../../../lib/memo-agent/stages/research.ts",
+    "../../../lib/memo-agent/stages/research-founder-dossiers.ts",
+    "../../../lib/memo-agent/stages/research-founder-dossiers.test.ts",
+    "../../../tests/diligence-research-team.test.ts"
+  ],
+  "exclude": ["../../../node_modules"]
+}

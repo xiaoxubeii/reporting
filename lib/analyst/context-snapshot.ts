@@ -13,6 +13,10 @@ export const MAX_ANALYST_MESSAGE_TOTAL_CONTENT = 100_000
 export const MAX_ANALYST_HISTORY_CONTEXT_TEXT = 100_000
 export const MAX_ANALYST_MESSAGES_JSON_BYTES = 256_000
 export const MAX_ANALYST_REPLY_CONTENT = 8_000
+export const MAX_ANALYST_CITATIONS = 20
+export const MAX_ANALYST_CITATION_DOCUMENT_ID = 160
+export const MAX_ANALYST_CITATION_LABEL = 200
+export const MAX_ANALYST_CITATION_SUMMARY = 1_000
 export const ASSISTANT_DRAG_TOKEN_TTL_MS = 60_000
 export const MAX_ASSISTANT_DRAG_TOKENS = 32
 
@@ -47,10 +51,17 @@ export interface AssistantContextSnapshot {
   readonly capturedAt: string
 }
 
+export interface AnalystCitation {
+  readonly documentId: string
+  readonly label: string
+  readonly summary: string
+}
+
 export interface AnalystConversationMessage {
   readonly role: 'user' | 'assistant'
   readonly content: string
   readonly contexts?: readonly AssistantContextSnapshot[]
+  readonly citations?: readonly AnalystCitation[]
 }
 
 export type AssistantContextAddResult = 'added' | 'duplicate' | 'limit'
@@ -176,6 +187,33 @@ export function normalizeAssistantContexts(value: unknown): readonly AssistantCo
   return Object.freeze(contexts)
 }
 
+export function normalizeAnalystCitations(value: unknown): readonly AnalystCitation[] {
+  if (!Array.isArray(value)) {
+    throw new AssistantContextValidationError('Citations must be an array.')
+  }
+  if (value.length > MAX_ANALYST_CITATIONS) {
+    throw new AssistantContextValidationError(`A message can include at most ${MAX_ANALYST_CITATIONS} citations.`)
+  }
+  const citations = value.map((item, index) => {
+    const input = objectValue(item, `Citation ${index + 1}`)
+    return Object.freeze({
+      documentId: boundedString(input.documentId, {
+        label: `Citation ${index + 1} document ID`,
+        max: MAX_ANALYST_CITATION_DOCUMENT_ID,
+      }),
+      label: boundedString(input.label, {
+        label: `Citation ${index + 1} label`,
+        max: MAX_ANALYST_CITATION_LABEL,
+      }),
+      summary: boundedString(input.summary, {
+        label: `Citation ${index + 1} summary`,
+        max: MAX_ANALYST_CITATION_SUMMARY,
+      }),
+    })
+  })
+  return Object.freeze(citations)
+}
+
 export function addAssistantContext(
   current: readonly AssistantContextSnapshot[],
   candidate: unknown,
@@ -286,7 +324,11 @@ export function normalizeAnalystMessages(value: unknown): readonly AnalystConver
     if (input.role === 'assistant' && input.contexts !== undefined) {
       throw new AssistantContextValidationError('Context snapshots are not allowed on assistant messages.')
     }
+    if (input.role === 'user' && input.citations !== undefined) {
+      throw new AssistantContextValidationError('Citations are not allowed on user messages.')
+    }
     const contexts = input.contexts === undefined ? undefined : normalizeAssistantContexts(input.contexts)
+    const citations = input.citations === undefined ? undefined : normalizeAnalystCitations(input.citations)
     totalContextText += contexts?.reduce((sum, context) => sum + context.text.length, 0) ?? 0
     if (totalContextText > MAX_ANALYST_HISTORY_CONTEXT_TEXT) {
       throw new AssistantContextValidationError(`Conversation context text total exceeds ${MAX_ANALYST_HISTORY_CONTEXT_TEXT} characters.`)
@@ -295,6 +337,7 @@ export function normalizeAnalystMessages(value: unknown): readonly AnalystConver
       role: input.role,
       content: input.content,
       ...(contexts === undefined ? {} : { contexts }),
+      ...(citations === undefined ? {} : { citations }),
     })
   })
   const serializedBytes = new TextEncoder().encode(JSON.stringify(messages)).byteLength
@@ -400,10 +443,19 @@ export function tryNormalizeStoredAnalystMessages(value: unknown): readonly Anal
         contexts = undefined
       }
     }
+    let citations: readonly AnalystCitation[] | undefined
+    if (input.role === 'assistant' && input.citations !== undefined) {
+      try {
+        citations = normalizeAnalystCitations(input.citations)
+      } catch {
+        citations = undefined
+      }
+    }
     messages.push(Object.freeze({
       role: input.role,
       content: input.content,
       ...(contexts === undefined ? {} : { contexts }),
+      ...(citations === undefined ? {} : { citations }),
     }))
   }
   return Object.freeze(messages)

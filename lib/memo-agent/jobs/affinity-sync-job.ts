@@ -57,7 +57,7 @@ export async function runAffinitySyncJob(admin: Admin, job: AffinitySyncJob): Pr
       userId: cred.userId,
     })
 
-    await markAffinityKeyOk(admin, cred.userId)
+    await markAffinityKeyOk(admin, cred.userId, job.fund_id)
 
     let ingestQueued = false
     if (result.documentIds.length > 0) {
@@ -83,7 +83,7 @@ export async function runAffinitySyncJob(admin: Admin, job: AffinitySyncJob): Pr
     if (err instanceof AffinityError && (err.status === 401 || err.status === 403)) {
       // Flag the credential so the owner sees "reconnect Affinity" in Settings
       // instead of wondering why nothing has synced.
-      await markAffinityKeyError(admin, cred.userId, err.message)
+      await markAffinityKeyError(admin, cred.userId, job.fund_id, err.message)
     }
     throw err
   }

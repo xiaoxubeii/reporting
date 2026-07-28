@@ -23,6 +23,7 @@ dependency and ownership checks.
 | background-job-http-context | Preserve and enforce the initiating user or system identity across Cron-triggered HTTP-only background execution, then let Deal Research use the existing Reporting Search as an LLM-directed provider tool | feature-planning | `openspec/changes/add-background-job-http-context` | A Session-attributed Research request becomes a leased generic job; Croner authenticates only the dispatcher; every worker/Search hop carries an attempt-scoped short Job Token; each receiver restores and live-authorizes the actor; configured Anthropic or tool-capable OpenAI-compatible Deal Research chooses when to call existing `/api/search`; stale, forged, cross-fund, revoked, unsupported-tool, and replay cases fail closed | main-agent-only | current Croner/Deal Research, Search product, fund access, AI provider factory, local Supabase | main-agent | current checkout | complete |
 | investment-decision-e2e | Prove and repair the real Pitch → Deal → research → Diligence → expert collaboration → evidence loop in an isolated worktree | feature-planning | Existing `add-expert-validation` and current Deal/Diligence contracts; create a new change only if a contract must change | One uniquely tagged public pitch becomes one fund-scoped Deal, Deal Research reaches a terminal result, promotion preserves the link to one Diligence record, Diligence Research exposes an expert-validation source, one public expert answer is submitted and materialized as immutable `industry_expert` evidence, and all discovered blockers receive focused regression coverage | single-feature | local Supabase and Storage, configured AI provider, Cron runner, existing Deal/Diligence/Expert Validation implementation | main-agent | `/home/ubuntu/workspace/reporting.worktrees/investment-decision-e2e` | in_progress |
 | expert-validation | Close the Research gap/contradiction → expert answer → industry_expert → existing evidence pipeline loop | feature-planning | `openspec/changes/add-expert-validation` | Real internal and public browser flow works; one immutable submitted answer is materialized and enqueued with the documented security boundaries | single-feature | existing Diligence, email, AI, storage, job pipeline | main-agent | current checkout | in_progress |
+| diligence-research-team | Move founder dossiers into the Research evidence workspace and protect partner edits across Research reruns | feature-planning | `openspec/changes/merge-founder-dossiers-into-research` | The top-level Founders tab is removed; a compact localized Founders & Core Team section supports contextual add/edit/remove through the existing Research contract; reruns preserve stored dossiers; focused and real browser verification pass | main-agent-only | current Diligence Research UI/output contract, existing draft PATCH endpoint, current dirty main worktree | main-agent | current checkout | in_progress |
 | custom-ai-provider | Configure one generic OpenAI-compatible provider such as MiniMax or codex-lb | feature-planning | `openspec/changes/add-custom-ai-provider` | Admin can save key/base URL/model, select the complete provider as default, and existing AI factory uses it | main-agent-only | existing settings encryption, URL validation, OpenAI provider factory | main-agent | current checkout | complete |
 | ui-localization | Add persistent English/Simplified Chinese UI switching without changing application URLs | feature-planning | `openspec/changes/add-zh-en-i18n` | Every user-visible page and shared chrome switch languages on the same URL, persist on reload, render the correct document language, and preserve business/access semantics | serial-required | all App Router visual pages and page-level components, shared navigation/authentication, current pathname-based middleware | main-agent | current checkout | in_progress |
 | feed-category-popover | Select or create a Miniflux category from an anchored menu when following a personal source | feature-planning | `openspec/changes/add-feed-category-popover` | Follow opens a responsive accessible theme-aware folder picker for Uncategorized, existing categories, or inline new category creation; success refreshes the catalog and failure remains recoverable in context | serial-required | feeds-product, current Feeds localization slice, existing subscription mutation | main-agent | current checkout | complete |
@@ -526,6 +527,58 @@ contract for self-check, review, testing, and merge.
 - self-check: pending
 - tests: pending
 - risks: Supabase extension/provider availability, cross-storage materialization recovery, public token leakage, large existing Diligence component
+
+### Feature: diligence-research-team
+
+#### OpenSpec Decision
+
+- Required: yes
+- Reason: this changes a user-visible diligence navigation and evidence-editing workflow and also changes Research rerun merge semantics.
+- Change: `openspec/changes/merge-founder-dossiers-into-research`
+- Classification: `main-agent-only`; the active main worktree already contains overlapping Diligence UI, Research stage, locale, and focused test edits that must be preserved serially.
+
+#### Acceptance
+
+- Diligence top-level navigation omits Founders and retains Checklist, Data Room, Research, Expert Validation, Scoring, Memo, and Settings in that order.
+- Research shows Founders & Core Team after Competitive Landscape as a compact section with localized summary cards/rows.
+- Selecting an existing dossier or adding one opens an accessible right-side editing sheet; saves and deletes patch the current draft `research_output.founder_dossiers` through the existing endpoint and Research state owner.
+- Before Research output exists, the compact section explains that Research must run and exposes no ineffective add action.
+- Research reruns preserve stored dossier values and order, merge unique sources, and append newly discovered founders without a schema or API change.
+- English and Simplified Chinese authenticated browser flows pass without new console errors or failed in-scope requests.
+
+#### Allowed Change Scope
+
+- `openspec/changes/merge-founder-dossiers-into-research/**` and focused HarnessKit planning/evidence.
+- `app/(app)/diligence/[id]/deal-detail.tsx`, existing shared UI primitives only if required, and focused locale catalogs.
+- Memo-agent Research stage/helper and focused tests for merge behavior.
+- Existing diligence navigation/localization contract tests.
+
+#### Shared Contract Changes
+
+- No database, public API, worker, authorization, or pipeline-stage change.
+- Research rerun persistence changes from full replacement of `founder_dossiers` to deterministic preservation/merge when a stored array already exists.
+
+#### Verification Plan
+
+- fast: OpenSpec validation, HarnessKit fast, focused source/locale contract tests.
+- targeted: founder merge unit tests, TypeScript, targeted lint/test commands.
+- full: real authenticated English and Simplified Chinese browser flow; production build/full HarnessKit only if the repository's current dirty baseline permits it.
+
+#### Review Required
+
+- reviewer: yes, overlapping dirty Diligence component and persistence behavior
+- security-reviewer: no, no authorization, token, external input, or data-boundary change
+- docs-researcher: no, current code and approved UX direction are authoritative
+- browser/QA: yes, navigation, responsive section density, sheet interaction, localization, and console/network behavior
+
+#### Progress / Evidence
+
+- status: in_progress
+- branch/worktree: `main`, current checkout; unrelated dirty changes must be preserved
+- implementation: pending
+- focused verification: pending
+- browser: pending
+- review: pending
 
 ### Feature: custom-ai-provider
 

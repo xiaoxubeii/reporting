@@ -12,6 +12,8 @@ export interface QARecord {
   question_text?: string
   /** Partner-excluded from deal evaluation — filtered out before draft/scoring. */
   excluded?: boolean
+  source_kind?: 'assistant_derived' | string
+  verification_status?: 'unverified' | 'verified' | string
 }
 
 /** A planned (not-yet-written) paragraph from the outline pass. */
@@ -455,8 +457,10 @@ function summarizeQA(records: QARecord[]): string {
   return records.map(r => {
     // Partner-authored questions carry their own text; agent questions are
     // identified by id. Tag partner questions so the draft can weight them.
-    const label = r.question_text
-      ? `Partner question — "${r.question_text}"`
+    const label = r.source_kind === 'assistant_derived'
+      ? `Assistant-derived secondary evidence (${r.verification_status ?? 'unverified'}) — "${r.question_text ?? r.question_id}"`
+      : r.question_text
+        ? `Partner question — "${r.question_text}"`
       : `${r.question_id}${r.category ? ` [${r.category}]` : ''}`
     return `${label}: ${r.answer_text}`
   }).join('\n')

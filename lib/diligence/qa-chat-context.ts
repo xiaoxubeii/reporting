@@ -46,7 +46,11 @@ export async function buildQAChatContext(params: {
     .maybeSingle()
   const ingestion = ((draftRow as any)?.ingestion_output ?? {}) as Partial<IngestionOutput>
   const research = ((draftRow as any)?.research_output ?? null) as ResearchOutput | null
-  const qaAnswers = Array.isArray((draftRow as any)?.qa_answers) ? (draftRow as any).qa_answers as any[] : []
+  // Unverified assistant-derived records are archived with `excluded: true`; do not feed them
+  // back into the next answer and accidentally turn model output into self-reinforcing evidence.
+  const qaAnswers = Array.isArray((draftRow as any)?.qa_answers)
+    ? ((draftRow as any).qa_answers as any[]).filter(answer => !answer?.excluded)
+    : []
 
   // Resolve human file names — ingestion_output only carries document_ids.
   const docIds = (ingestion.documents ?? []).map(d => d.document_id).filter(Boolean)
@@ -141,7 +145,7 @@ export async function buildQAChatContext(params: {
     lines.push('')
   }
 
-  // Q&A library (partner-authored + agent-answered)
+  // Q&A library (only entries explicitly included in evaluation)
   if (qaAnswers.length > 0) {
     lines.push('### Q&A LIBRARY')
     for (const q of qaAnswers.slice(0, 30)) {

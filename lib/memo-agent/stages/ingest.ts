@@ -128,7 +128,7 @@ export async function runIngestDocs(params: {
     dealId,
     draftId: params.draftId,
   })
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'ingest', outputLanguage })
 
   await note('Loading deal record…')
   const { data: dealRow } = await admin
@@ -352,7 +352,7 @@ export async function runIngestSynthesis(params: {
   }
 
   await note('Building system prompt…')
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'ingest', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'ingest', outputLanguage })
 
   await note('Loading deal record…')
   const { data: dealRow } = await admin

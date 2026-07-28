@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dbError } from '@/lib/api-error'
+import { hasAccess, loadAccessContext } from '@/lib/access/effective'
+import {
+  MAX_QA_ENTRY_BODY_BYTES,
+  QARequestBodyError,
+  readBoundedJsonRequest,
+} from '@/lib/diligence/qa-input'
 
 /**
  * Manage a single Q&A entry on the deal's latest draft.
@@ -21,15 +27,19 @@ async function resolve(req: NextRequest, dealId: string) {
   const admin = createAdminClient()
   const { data: membership } = await admin
     .from('fund_members')
-    .select('fund_id')
+    .select('fund_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) return { error: NextResponse.json({ error: 'No fund found' }, { status: 403 }) }
-  const fundId = (membership as any).fund_id as string
+  const fundId = membership.fund_id
+  const access = await loadAccessContext(admin, fundId, user.id, membership.role)
+  if (!hasAccess(access, 'diligence', 'write')) {
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
+  }
 
   const { data: draft } = await admin
     .from('diligence_memo_drafts')
-    .select('id, qa_answers')
+    .select('id')
     .eq('deal_id', dealId)
     .eq('fund_id', fundId)
     .eq('is_draft', true)
@@ -38,44 +48,63 @@ async function resolve(req: NextRequest, dealId: string) {
     .maybeSingle()
   if (!draft) return { error: NextResponse.json({ error: 'No draft found.' }, { status: 404 }) }
 
-  const entries = Array.isArray((draft as any).qa_answers) ? (draft as any).qa_answers as any[] : []
-  return { admin, fundId, draftId: (draft as any).id as string, entries }
+  return { admin, fundId, draftId: draft.id }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const r = await resolve(req, params.id)
   if ('error' in r) return r.error
-  const { admin, fundId, draftId, entries } = r
+  const { admin, fundId, draftId } = r
 
-  const body = await req.json().catch(() => ({}))
+  let body: Record<string, unknown>
+  try {
+    const parsed = await readBoundedJsonRequest(req, MAX_QA_ENTRY_BODY_BYTES)
+    body = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {}
+  } catch (error) {
+    if (error instanceof QARequestBodyError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
   const questionId = typeof body.question_id === 'string' ? body.question_id : ''
   if (!questionId) return NextResponse.json({ error: 'question_id is required' }, { status: 400 })
+  if (questionId.length > 256) {
+    return NextResponse.json({ error: 'question_id is too long' }, { status: 413 })
+  }
   const excluded = !!body.excluded
 
-  const next = entries.map(e => (e?.question_id === questionId ? { ...e, excluded } : e))
-  const { error } = await admin
-    .from('diligence_memo_drafts')
-    .update({ qa_answers: next as any })
-    .eq('id', draftId)
-    .eq('fund_id', fundId)
+  const { data, error } = await admin.rpc('set_diligence_qa_answer_excluded', {
+    p_fund_id: fundId,
+    p_deal_id: params.id,
+    p_draft_id: draftId,
+    p_question_id: questionId,
+    p_excluded: excluded,
+  })
   if (error) return dbError(error, 'diligence-qa-entry-update')
+  if (data !== 'updated') return NextResponse.json({ error: 'Q&A entry not found.' }, { status: 404 })
   return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const r = await resolve(req, params.id)
   if ('error' in r) return r.error
-  const { admin, fundId, draftId, entries } = r
+  const { admin, fundId, draftId } = r
 
   const questionId = new URL(req.url).searchParams.get('question_id') ?? ''
   if (!questionId) return NextResponse.json({ error: 'question_id is required' }, { status: 400 })
+  if (questionId.length > 256) {
+    return NextResponse.json({ error: 'question_id is too long' }, { status: 413 })
+  }
 
-  const next = entries.filter(e => e?.question_id !== questionId)
-  const { error } = await admin
-    .from('diligence_memo_drafts')
-    .update({ qa_answers: next as any })
-    .eq('id', draftId)
-    .eq('fund_id', fundId)
+  const { data, error } = await admin.rpc('delete_diligence_qa_answer', {
+    p_fund_id: fundId,
+    p_deal_id: params.id,
+    p_draft_id: draftId,
+    p_question_id: questionId,
+  })
   if (error) return dbError(error, 'diligence-qa-entry-delete')
+  if (data !== 'deleted') return NextResponse.json({ error: 'Q&A entry not found.' }, { status: 404 })
   return NextResponse.json({ ok: true })
 }

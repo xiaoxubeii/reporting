@@ -43,3 +43,15 @@ export function AnalystCompanyScope({ companyId }: { companyId: string }) {
 
   return null
 }
+
+/** Scopes the global Assistant to one diligence project without rendering a local host. */
+export function AnalystDiligenceScope({ dealId, dealName }: { dealId: string; dealName: string }) {
+  const { setDiligenceProject } = useAnalystContext()
+
+  useEffect(() => {
+    setDiligenceProject({ id: dealId, name: dealName })
+  }, [dealId, dealName, setDiligenceProject])
+  useEffect(() => () => setDiligenceProject(null), [setDiligenceProject])
+
+  return null
+}

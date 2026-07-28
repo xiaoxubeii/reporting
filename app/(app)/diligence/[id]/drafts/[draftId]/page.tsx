@@ -6,6 +6,7 @@ import { resolvePageAccess, canViewPage } from '@/lib/access/page-gate'
 import { MemoEditor } from './memo-editor'
 import { buildSourceLabels } from '@/lib/memo-agent/render/source-labels'
 import { getTranslations } from 'next-intl/server'
+import { AnalystDiligenceScope } from '@/components/analyst-scope'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Diligence.metadata')
@@ -82,13 +83,16 @@ export default async function DraftPage({ params }: { params: { id: string; draf
   )
 
   return (
-    <MemoEditor
-      dealId={params.id}
-      dealName={(deal as any).name}
-      draft={draft as any}
-      initialAttention={(attention as any) ?? []}
-      sourceLabels={sourceLabels}
-      isAdmin={isAdmin}
-    />
+    <>
+      <AnalystDiligenceScope dealId={params.id} dealName={(deal as any).name} />
+      <MemoEditor
+        dealId={params.id}
+        dealName={(deal as any).name}
+        draft={draft as any}
+        initialAttention={(attention as any) ?? []}
+        sourceLabels={sourceLabels}
+        isAdmin={isAdmin}
+      />
+    </>
   )
 }

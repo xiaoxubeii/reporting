@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   AssistantDragRegistry,
   AssistantContextValidationError,
+  MAX_ANALYST_CITATIONS,
+  MAX_ANALYST_CITATION_DOCUMENT_ID,
+  MAX_ANALYST_CITATION_LABEL,
+  MAX_ANALYST_CITATION_SUMMARY,
   activeContextsFromMessages,
   addAssistantContext,
   normalizeAnalystMessages,
@@ -11,6 +15,8 @@ import {
   renderAssistantContexts,
   removeAssistantContext,
   toProviderMessages,
+  tryNormalizeStoredAnalystMessages,
+  type AnalystCitation,
   type AssistantContextSnapshot,
 } from './context-snapshot'
 
@@ -23,6 +29,13 @@ const snapshot = (overrides: Partial<AssistantContextSnapshot> = {}): AssistantC
   sourceLabel: 'PubMed',
   sourceUrl: 'https://pubmed.ncbi.nlm.nih.gov/123/',
   capturedAt: '2026-07-26T10:00:00.000Z',
+  ...overrides,
+})
+
+const citation = (overrides: Partial<AnalystCitation> = {}): AnalystCitation => Object.freeze({
+  documentId: 'document-1',
+  label: 'Investment memo.pdf',
+  summary: 'Supports the revenue-growth claim.',
   ...overrides,
 })
 
@@ -132,6 +145,78 @@ describe('normalizeAssistantContexts', () => {
 })
 
 describe('Analyst conversation context conversion', () => {
+  it('retains normalized assistant citations through storage and legacy reload', () => {
+    const input = [{
+      role: 'assistant',
+      content: 'Grounded answer.',
+      citations: [{ ...citation(), ignored: 'must-not-survive' }],
+    }]
+    const before = structuredClone(input)
+
+    const normalized = normalizeAnalystMessages(input)
+    const stored = prepareAnalystMessagesForStorage(normalized)
+    const reloaded = tryNormalizeStoredAnalystMessages(JSON.parse(JSON.stringify(stored)))
+
+    expect(reloaded).toEqual([{ role: 'assistant', content: 'Grounded answer.', citations: [citation()] }])
+    expect(input).toEqual(before)
+    expect(Object.isFrozen(reloaded)).toBe(true)
+    expect(Object.isFrozen(reloaded[0]?.citations)).toBe(true)
+    expect(Object.isFrozen(reloaded[0]?.citations?.[0])).toBe(true)
+  })
+
+  it('rejects citations on user messages', () => {
+    expect(() => normalizeAnalystMessages([
+      { role: 'user', content: 'Question', citations: [citation()] },
+    ])).toThrow('user messages')
+  })
+
+  it('drops malformed citation metadata while recovering legacy stored messages', () => {
+    const reloaded = tryNormalizeStoredAnalystMessages([
+      { role: 'assistant', content: 'Valid legacy answer.' },
+      { role: 'assistant', content: 'Malformed citations.', citations: [{ ...citation(), summary: '' }] },
+      { role: 'user', content: 'Unexpected user citations.', citations: [citation()] },
+    ])
+
+    expect(reloaded).toEqual([
+      { role: 'assistant', content: 'Valid legacy answer.' },
+      { role: 'assistant', content: 'Malformed citations.' },
+      { role: 'user', content: 'Unexpected user citations.' },
+    ])
+  })
+
+  it('enforces explicit citation count and field bounds', () => {
+    expect(normalizeAnalystMessages([{
+      role: 'assistant',
+      content: 'At the boundary.',
+      citations: [citation({
+        documentId: 'd'.repeat(MAX_ANALYST_CITATION_DOCUMENT_ID),
+        label: 'l'.repeat(MAX_ANALYST_CITATION_LABEL),
+        summary: 's'.repeat(MAX_ANALYST_CITATION_SUMMARY),
+      })],
+    }])[0]?.citations).toHaveLength(1)
+
+    expect(() => normalizeAnalystMessages([{
+      role: 'assistant',
+      content: 'Too many.',
+      citations: Array.from({ length: MAX_ANALYST_CITATIONS + 1 }, (_, index) => citation({ documentId: `doc-${index}` })),
+    }])).toThrow(`at most ${MAX_ANALYST_CITATIONS}`)
+    expect(() => normalizeAnalystMessages([{
+      role: 'assistant',
+      content: 'Long ID.',
+      citations: [citation({ documentId: 'd'.repeat(MAX_ANALYST_CITATION_DOCUMENT_ID + 1) })],
+    }])).toThrow('document ID')
+    expect(() => normalizeAnalystMessages([{
+      role: 'assistant',
+      content: 'Long label.',
+      citations: [citation({ label: 'l'.repeat(MAX_ANALYST_CITATION_LABEL + 1) })],
+    }])).toThrow('label')
+    expect(() => normalizeAnalystMessages([{
+      role: 'assistant',
+      content: 'Long summary.',
+      citations: [citation({ summary: 's'.repeat(MAX_ANALYST_CITATION_SUMMARY + 1) })],
+    }])).toThrow('summary')
+  })
+
   it('normalizes user contexts while keeping provider ChatMessage unchanged', () => {
     const messages = normalizeAnalystMessages([
       { role: 'user', content: 'Compare these.', contexts: [snapshot()], ignored: true },
@@ -148,6 +233,18 @@ describe('Analyst conversation context conversion', () => {
     expect(providerMessages[2].content).toContain('What changed?')
     expect(providerMessages[2].content).toContain('UNTRUSTED PAGE SNAPSHOTS')
     expect(providerMessages[2].content).toContain('Cardiovascular AI study')
+  })
+
+  it('strips assistant citation metadata from provider messages', () => {
+    const messages = normalizeAnalystMessages([
+      { role: 'user', content: 'What supports this?' },
+      { role: 'assistant', content: 'The memo does.', citations: [citation()] },
+    ])
+
+    expect(toProviderMessages(messages)).toEqual([
+      { role: 'user', content: 'What supports this?' },
+      { role: 'assistant', content: 'The memo does.' },
+    ])
   })
 
   it('rejects contexts on assistant messages', () => {

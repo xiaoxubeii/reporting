@@ -415,7 +415,9 @@ describe('UI locale contract', () => {
     expect(languageSwitcher).toContain('localeHashRestoreUrl(pendingLocation, window.location)')
     expect(languageSwitcher).toContain('router.refresh()')
     expect(languageSwitcher).toContain("compact && 'w-11 justify-center px-0")
-    expect(appSidebar).toContain('<LanguageSwitcher compact className="h-9 w-full" />')
+    expect(appSidebar).toContain(
+      '<LanguageSwitcher compact className="h-9 w-full hover:text-muted-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring" />',
+    )
     expect(publicLayout).toContain('<LanguageSwitcher compact className="h-9 w-full" />')
     expect(languageSwitcher).not.toContain('document.documentElement.lang = nextLocale')
     expect(languageSwitcher).not.toContain('window.location.reload()')
@@ -424,6 +426,24 @@ describe('UI locale contract', () => {
     expect(appHeader).toContain("closeLabel={t('closeMenu')}")
     expect(appHeader).toContain('menuButtonRef.current?.focus()')
     expect(publicLayout).toContain("closeLabel={t('closeMenu')}")
+  })
+
+  it('uses opportunity terminology for the Chinese Deal interface', () => {
+    const messages = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'messages/zh-CN.json'), 'utf8'),
+    )
+
+    expect(messages.Navigation.deals).toBe('机会')
+    expect(messages.PublicChrome.deals).toBe('机会')
+    expect(messages.Deals.title).toBe('机会')
+    expect(messages.Deals.newDeal.button).toBe('新建机会')
+    expect(messages.DealDetail.metadata.title).toBe('机会详情')
+    expect(messages.DealDetail.backToDeals).toBe('返回机会')
+
+    expect(messages.Navigation.investments).toBe('投资项目')
+    expect(messages.Deals.newDeal.pitch).toBe('项目推介／说明')
+    expect(messages.Deals.newDeal.description).toContain('直接录入项目推介')
+    expect(messages.Deals.newDeal.attachmentHelp).toContain('项目材料')
   })
 
   it('restores only a refresh-dropped hash without overriding navigation or redirects', () => {

@@ -8,8 +8,12 @@ import { buildQAUserContent, type QAQuestion, type PriorAnswer } from '@/lib/mem
 import type { IngestionOutput } from './ingest'
 import type { ResearchOutput } from './research'
 import { loadDiligenceOutputLanguage } from '@/lib/diligence/output-language-store'
+import type { Json } from '@/lib/types/database'
 
 type Admin = ReturnType<typeof createAdminClient>
+
+export class QAConcurrentSessionError extends Error {}
+export class QAResponseLimitError extends Error {}
 
 export interface QABatchItem {
   question_id: string
@@ -51,16 +55,26 @@ interface SessionRow {
   id: string
   fund_id: string
   deal_id: string
+  draft_id: string
   stage: string | null
   messages: SessionMessage[]
 }
 
-async function loadSession(admin: Admin, sessionId: string, fundId: string): Promise<SessionRow | null> {
+async function loadSession(
+  admin: Admin,
+  sessionId: string,
+  fundId: string,
+  dealId: string,
+  draftId: string,
+): Promise<SessionRow | null> {
   const { data } = await admin
     .from('diligence_agent_sessions')
-    .select('id, fund_id, deal_id, stage, messages')
+    .select('id, fund_id, deal_id, draft_id, stage, messages')
     .eq('id', sessionId)
     .eq('fund_id', fundId)
+    .eq('deal_id', dealId)
+    .eq('draft_id', draftId)
+    .eq('stage', 'qa')
     .maybeSingle()
   if (!data) return null
   const row = data as any
@@ -70,12 +84,30 @@ async function loadSession(admin: Admin, sessionId: string, fundId: string): Pro
   }
 }
 
-async function saveMessages(admin: Admin, sessionId: string, fundId: string, messages: SessionMessage[]) {
-  await admin
-    .from('diligence_agent_sessions')
-    .update({ messages: messages as any })
-    .eq('id', sessionId)
-    .eq('fund_id', fundId)
+async function appendMessages(
+  admin: Admin,
+  sessionId: string,
+  fundId: string,
+  dealId: string,
+  draftId: string,
+  expectedMessageCount: number,
+  messages: SessionMessage[],
+) {
+  if (messages.length === 0) return
+  const { data, error } = await admin.rpc('append_diligence_qa_session_messages', {
+    p_fund_id: fundId,
+    p_deal_id: dealId,
+    p_session_id: sessionId,
+    p_draft_id: draftId,
+    p_expected_message_count: expectedMessageCount,
+    p_messages: messages as unknown as Json,
+  })
+  if (error) throw new Error(`Failed to append QA session messages: ${error.message}`)
+  if (data === 'not-found') throw new Error('QA session is no longer active')
+  if (data === 'stale-draft') throw new QAConcurrentSessionError('A newer project draft is active; refresh before continuing Q&A')
+  if (data === 'conflict') throw new QAConcurrentSessionError('QA session changed; request the next batch again')
+  if (data === 'limit') throw new Error('QA session message limit exceeded')
+  if (data !== 'appended') throw new Error('Could not append QA session messages')
 }
 
 function extractAskedIds(messages: SessionMessage[]): Set<string> {
@@ -114,8 +146,14 @@ function extractAnswers(messages: SessionMessage[]): Record<string, { answer_tex
 // Public API: state introspection
 // ---------------------------------------------------------------------------
 
-export async function loadSessionState(admin: Admin, sessionId: string, fundId: string, draftId: string): Promise<QASessionState | null> {
-  const session = await loadSession(admin, sessionId, fundId)
+export async function loadSessionState(
+  admin: Admin,
+  sessionId: string,
+  fundId: string,
+  dealId: string,
+  draftId: string,
+): Promise<QASessionState | null> {
+  const session = await loadSession(admin, sessionId, fundId, dealId, draftId)
   if (!session) return null
   const askedIds = extractAskedIds(session.messages)
   const answers = extractAnswers(session.messages)
@@ -191,7 +229,7 @@ export async function getNextBatch(params: {
   const lib = await loadQuestionLibrary(admin, fundId)
 
   // Existing session state.
-  const session = await loadSession(admin, sessionId, fundId)
+  const session = await loadSession(admin, sessionId, fundId, dealId, draftId)
   if (!session) throw new Error('Session not found')
   const askedIds = extractAskedIds(session.messages)
   const answers = extractAnswers(session.messages)
@@ -243,7 +281,7 @@ export async function getNextBatch(params: {
   const dealName = (dealRow as { name: string } | null)?.name ?? 'this deal'
 
   const outputLanguage = await loadDiligenceOutputLanguage({ admin, fundId, dealId, draftId })
-  const { prompt: system } = await buildSystemPrompt({ admin, fundId, stage: 'qa', outputLanguage })
+  const { prompt: system } = await buildSystemPrompt({ admin, fundId, dealId, stage: 'qa', outputLanguage })
   const userContent = buildQAUserContent({
     dealName,
     ingestion,
@@ -266,10 +304,10 @@ export async function getNextBatch(params: {
   const parsed = parseQAResponse(text, candidatePool)
 
   // Persist this exchange.
-  const newMessages: SessionMessage[] = [...session.messages]
+  const newMessages: SessionMessage[] = []
   if (parsed.batch.length > 0) newMessages.push({ role: 'agent_batch', ts: new Date().toISOString(), data: { batch: parsed.batch } })
   if (parsed.covered.length > 0) newMessages.push({ role: 'agent_covered', ts: new Date().toISOString(), data: { covered: parsed.covered } })
-  await saveMessages(admin, sessionId, fundId, newMessages)
+  await appendMessages(admin, sessionId, fundId, dealId, draftId, session.messages.length, newMessages)
 
   const remainingAfter = candidatesOrdered.length - parsed.batch.length - parsed.covered.length
   return { ...parsed, total_remaining: Math.max(0, remainingAfter) }
@@ -321,21 +359,26 @@ function parseQAResponse(raw: string, candidates: QAQuestion[]): { batch: QABatc
 export async function recordResponses(params: {
   admin: Admin
   fundId: string
+  dealId: string
+  draftId: string
   sessionId: string
   partnerId: string
   answers: Array<{ question_id: string; answer_text: string }>
 }): Promise<{ recorded: number }> {
-  const { admin, fundId, sessionId, partnerId, answers } = params
-  const session = await loadSession(admin, sessionId, fundId)
-  if (!session) throw new Error('Session not found')
-
-  const newMsg: SessionMessage = {
-    role: 'partner_answer',
-    ts: new Date().toISOString(),
-    data: { answers: answers.map(a => ({ ...a, partner_id: partnerId })) },
-  }
-  const updated = [...session.messages, newMsg]
-  await saveMessages(admin, sessionId, fundId, updated)
+  const { admin, fundId, dealId, draftId, sessionId, partnerId, answers } = params
+  const { data, error } = await admin.rpc('append_diligence_partner_answers', {
+    p_fund_id: fundId,
+    p_deal_id: dealId,
+    p_draft_id: draftId,
+    p_session_id: sessionId,
+    p_partner_id: partnerId,
+    p_answers: answers,
+  })
+  if (error) throw new Error(`Failed to record QA responses: ${error.message}`)
+  if (data === 'not-found') throw new Error('Session not found')
+  if (data === 'stale-draft') throw new QAConcurrentSessionError('A newer project draft is active; refresh before continuing Q&A')
+  if (data === 'limit') throw new QAResponseLimitError('QA response limit exceeded')
+  if (data !== 'recorded') throw new Error('Could not record QA responses')
   return { recorded: answers.length }
 }
 
@@ -351,55 +394,32 @@ export async function finishQA(params: {
   draftId: string
 }): Promise<{ qa_count: number }> {
   const { admin, fundId, dealId, sessionId, draftId } = params
-  const session = await loadSession(admin, sessionId, fundId)
-  if (!session) throw new Error('Session not found')
-
-  const answers = extractAnswers(session.messages)
-  // Look up question metadata so we can preserve feeds_dimensions on the draft.
   const lib = await loadQuestionLibrary(admin, fundId)
-  const byId = new Map(lib.questions.map(q => [q.id, q]))
-
-  const records = Object.entries(answers).map(([qid, a]) => ({
-    question_id: qid,
-    answer_text: a.answer_text,
-    partner_id: a.partner_id,
-    answered_at: a.answered_at,
-    feeds_dimensions: byId.get(qid)?.feeds_dimensions ?? [],
-    category: byId.get(qid)?.category ?? null,
-  }))
-
-  // Preserve partner-authored Q&A entries (added directly via the
-  // add-question endpoint) — they aren't part of the agent session so the
-  // session-derived records above would otherwise drop them.
-  const { data: draftRow } = await admin
-    .from('diligence_memo_drafts')
-    .select('qa_answers')
-    .eq('id', draftId)
-    .eq('deal_id', dealId)
-    .eq('fund_id', fundId)
-    .eq('is_draft', true)
-    .maybeSingle()
-  if (!draftRow) throw new Error('Draft not found or already finalized')
-  const existing = Array.isArray((draftRow as any)?.qa_answers) ? (draftRow as any).qa_answers as any[] : []
-  const partnerAuthored = existing.filter(r => typeof r?.question_id === 'string' && r.question_id.startsWith('partner_q_'))
-  const merged = [...records, ...partnerAuthored]
-
-  await admin
-    .from('diligence_memo_drafts')
-    .update({ qa_answers: merged as any })
-    .eq('id', draftId)
-    .eq('deal_id', dealId)
-    .eq('fund_id', fundId)
-    .eq('is_draft', true)
-
-  await admin
-    .from('diligence_deals')
-    .update({ current_memo_stage: 'draft' })
-    .eq('id', dealId)
-    .eq('fund_id', fundId)
-    .eq('current_memo_stage', 'qa')
-
-  return { qa_count: merged.length }
+  const questionMetadata = Object.fromEntries(lib.questions.map(question => [
+    question.id,
+    {
+      feeds_dimensions: question.feeds_dimensions ?? [],
+      category: question.category ?? null,
+    },
+  ]))
+  const { data, error } = await admin.rpc('finish_diligence_qa_session', {
+    p_fund_id: fundId,
+    p_deal_id: dealId,
+    p_session_id: sessionId,
+    p_draft_id: draftId,
+    p_question_metadata: questionMetadata,
+  })
+  if (error) throw new Error(`Failed to finish QA session: ${error.message}`)
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Could not finish QA session')
+  }
+  const result = data as { status?: unknown; answers?: unknown }
+  if (result.status === 'not-found') throw new Error('Session not found for this project')
+  if (result.status === 'stale-draft') throw new QAConcurrentSessionError('A newer project draft is active; refresh before finishing Q&A')
+  if (result.status !== 'completed' || !Array.isArray(result.answers)) {
+    throw new Error('Could not finish QA session')
+  }
+  return { qa_count: result.answers.length }
 }
 
 // ---------------------------------------------------------------------------
@@ -414,39 +434,17 @@ export async function startQASession(params: {
   userId: string
 }): Promise<string> {
   const { admin, fundId, dealId, draftId, userId } = params
-
-  // Reuse most recent open Q&A session if one exists for this draft.
-  const { data: existing } = await admin
-    .from('diligence_agent_sessions')
-    .select('id, messages')
-    .eq('deal_id', dealId)
-    .eq('fund_id', fundId)
-    .eq('stage', 'qa')
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (existing) return (existing as any).id
-
-  const { data: created, error } = await admin
-    .from('diligence_agent_sessions')
-    .insert({
-      deal_id: dealId,
-      fund_id: fundId,
-      stage: 'qa',
-      title: `Stage 3 Q&A`,
-      messages: [],
-      created_by: userId,
-    } as any)
-    .select('id')
-    .single()
-  if (error || !created) throw new Error(`Failed to create Q&A session: ${error?.message ?? 'unknown'}`)
-
-  // Mark deal stage.
-  await admin
-    .from('diligence_deals')
-    .update({ current_memo_stage: 'qa' })
-    .eq('id', dealId)
-    .eq('fund_id', fundId)
-
-  return (created as any).id
+  const { data, error } = await admin.rpc('start_diligence_qa_session', {
+    p_fund_id: fundId,
+    p_deal_id: dealId,
+    p_draft_id: draftId,
+    p_user_id: userId,
+  })
+  if (!error && data === null) {
+    throw new QAConcurrentSessionError('A newer project draft is active; refresh before starting Q&A')
+  }
+  if (error || typeof data !== 'string') {
+    throw new Error(`Failed to start Q&A session: ${error?.message ?? 'invalid project draft'}`)
+  }
+  return data
 }
