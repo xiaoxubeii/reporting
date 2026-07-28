@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import { AuthSessionMissingError } from '@supabase/auth-js'
 
 const getUser = vi.hoisted(() => vi.fn())
 const createAdminClient = vi.hoisted(() => vi.fn(() => ({ admin: true })))
@@ -64,7 +65,10 @@ function streamedRequest(chunks: string[], headers: Record<string, string> = {})
 beforeEach(() => {
   vi.stubEnv('FUND_WORKSPACE_ROOT_DOMAIN', '')
   vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
-  getUser.mockResolvedValue({ data: { user: null }, error: null })
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthSessionMissingError(),
+  })
   loadPersonalProfile.mockResolvedValue({ fullName: 'Hidden Name', timeZone: 'Asia/Shanghai' })
 })
 

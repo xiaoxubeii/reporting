@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isAuthSessionMissingError } from '@supabase/auth-js'
 import {
   canonicalizeTimeZone,
   parseTimeZoneCookie,
@@ -192,7 +193,7 @@ export async function GET() {
   try {
     const supabase = createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
-    if (error) throw new Error('Authentication unavailable')
+    if (error && !isAuthSessionMissingError(error)) throw new Error('Authentication unavailable')
     if (!user) return jsonResponse({ manualTimeZone: null })
 
     const profile = await loadPersonalProfile(createAdminClient(), user.id)
@@ -214,7 +215,7 @@ export async function POST(request: NextRequest) {
     try {
       const supabase = createClient()
       const { data: { user }, error } = await supabase.auth.getUser()
-      if (error) throw new Error('Authentication unavailable')
+      if (error && !isAuthSessionMissingError(error)) throw new Error('Authentication unavailable')
       if (!user) return jsonResponse({ error: 'Unauthorized' }, 401)
     } catch {
       return jsonResponse({ error: 'Unable to update time zone preference' }, 500)
