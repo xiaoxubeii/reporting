@@ -15,6 +15,13 @@ const browserZoneDetection = Object.freeze({
     'detects the local IANA zone only inside the synchronization effect',
 })
 
+const numericLocaleString = Object.freeze({
+  'app/(app)/dashboard/dashboard-companies.tsx': 2,
+  'app/(app)/dashboard/dashboard-table.tsx': 1,
+  'components/analyst-pending-actions.tsx': 1,
+  'components/currency-context.tsx': 3,
+})
+
 const businessCalendarUtc = Object.freeze([
   'app/(app)/compliance/page.tsx',
   'app/(app)/dashboard/dashboard-companies.tsx',
@@ -44,9 +51,8 @@ describe('hydrated timestamp formatter inventory', () => {
       const nativePresentation = [
         ...(source.match(/\.toLocaleDateString\s*\(/g) ?? []),
         ...(source.match(/\.toLocaleTimeString\s*\(/g) ?? []),
-        ...(source.match(/new Date\([^\n]*\)\.toLocaleString\s*\(/g) ?? []),
-        ...(source.match(/\b(?:date|now|d)\.toLocaleString\s*\(/gi) ?? []),
       ]
+      const localeStringCalls = source.match(/\.toLocaleString\s*\(/g) ?? []
 
       if (file in browserZoneDetection) {
         expect(nativeDateFormat, file).toHaveLength(1)
@@ -55,6 +61,8 @@ describe('hydrated timestamp formatter inventory', () => {
         expect(nativeDateFormat, file).toHaveLength(0)
       }
       expect(nativePresentation, file).toHaveLength(0)
+      expect(localeStringCalls, `${file}: every toLocaleString call must be explicitly classified as numeric`)
+        .toHaveLength(numericLocaleString[file as keyof typeof numericLocaleString] ?? 0)
     }
   })
 
@@ -78,5 +86,13 @@ describe('hydrated timestamp formatter inventory', () => {
 
     expect(formatter).toContain('format.dateTime(')
     expect(formatter).not.toContain("timeZone: 'UTC'")
+  })
+
+  it('formats every LP Activity absolute instant at its exact use site', () => {
+    const source = read('app/(app)/lp-activity/lp-activity-dashboard.tsx')
+
+    expect(source).not.toContain('formatDateTime(')
+    expect(source).toContain('title={format.dateTime(new Date(p.lastSeen)')
+    expect(source).toContain('title={format.dateTime(new Date(e.createdAt)')
   })
 })

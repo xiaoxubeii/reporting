@@ -188,7 +188,14 @@ export function LpActivityDashboard() {
                         <td className="px-4 py-2.5 text-right tabular-nums">{p.logins}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{p.views}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{p.downloads}</td>
-                        <td className="px-4 py-2.5 text-muted-foreground" title={formatDateTime(p.lastSeen, locale)}>{formatRelative(p.lastSeen)}</td>
+                        <td
+                          className="px-4 py-2.5 text-muted-foreground"
+                          title={format.dateTime(new Date(p.lastSeen), {
+                            month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+                          })}
+                        >
+                          {formatRelative(p.lastSeen)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -243,7 +250,14 @@ export function LpActivityDashboard() {
                   const Icon = meta?.icon ?? Eye
                   return (
                     <tr key={e.id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap" title={formatDateTime(e.createdAt, locale)}>{formatRelative(e.createdAt)}</td>
+                      <td
+                        className="px-4 py-2.5 text-muted-foreground whitespace-nowrap"
+                        title={format.dateTime(new Date(e.createdAt), {
+                          month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+                        })}
+                      >
+                        {formatRelative(e.createdAt)}
+                      </td>
                       <td className="px-4 py-2.5">
                         <div className="font-medium">{e.personName}</div>
                         {e.personKind === 'authorized_user' && <div className="text-xs text-muted-foreground">{t('roles.authorizedUser')}</div>}

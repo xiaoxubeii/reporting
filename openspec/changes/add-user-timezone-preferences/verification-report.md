@@ -11,8 +11,8 @@ authenticated user can override or reset that preference.
 
 - `npx vitest run tests/time-zone-*.test.ts tests/time-zone-*.test.tsx tests/settings-localization.test.ts tests/fund-identity-onboarding-ui.test.ts tests/onboarding-setup-localization.test.ts`
   passed 10 files and 117 tests during the final reconciliation pass.
-- `npx vitest run tests/time-zone-hydrated-formatters.test.ts` passed 15 tests;
-  the covering provider/bootstrap/settings run passed 4 files and 49 tests.
+- `npx vitest run tests/time-zone-hydrated-formatters.test.ts` passed 16 tests;
+  the covering provider/bootstrap/settings run passed 4 files and 50 tests.
 - Changed-file ESLint passed across the complete hydrated timestamp audit with
   zero errors and one inherited `no-img-element` warning in Settings.
 - `npx openspec validate add-user-timezone-preferences --strict` passed.
@@ -27,7 +27,15 @@ It rejects native `Intl.DateTimeFormat`, `toLocaleDateString`, and
 Deals, LP Messages/Activity/Documents, Pending Actions, Letters, Notes,
 Compliance, Email/Review, Search, Invitations, Settings, and Memo Agent now use
 the request-scoped next-intl formatter. Calendar-only and business-period
-values use the same formatter with explicit UTC semantics.
+values use the same formatter with explicit UTC semantics. Every client-side
+`toLocaleString` call is also counted and must match one of four explicitly
+classified numeric-formatting modules. LP Activity has a dedicated source
+contract that rejects the removed `formatDateTime` helper and asserts both
+`lastSeen` and event `createdAt` call `format.dateTime` at their exact use sites.
+
+`npx tsc --noEmit` reports only the known unrelated
+`tests/platform-landing-logo-assets.test.ts:39` TS2802 baseline error; it reports
+no LP Activity or timezone-audit error.
 
 ## Browser verification
 

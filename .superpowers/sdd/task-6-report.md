@@ -10,7 +10,7 @@ Implemented and verified with repository-baseline concerns recorded.
   bypass through the request-scoped next-intl formatter. The only allowed
   native DateTimeFormat calls are two explicitly classified browser-IANA
   detection calls.
-- Added comprehensive scanner coverage plus explicit instant and business
+- Added a conservative full-client scanner plus explicit instant and business
   calendar UTC classifications, preventing another handpicked-file false
   completeness claim.
 - Verified Automatic Asia/Shanghai, manual UTC, reset-to-Automatic, reload
@@ -25,8 +25,8 @@ Implemented and verified with repository-baseline concerns recorded.
 npx vitest run tests/time-zone-hydrated-formatters.test.ts
 ```
 
-PASS: 1 file, 15 tests. A covering provider/bootstrap/settings run passes four
-files and 49 tests.
+PASS: 1 file, 16 tests. A covering provider/bootstrap/settings run passes four
+files and 50 tests.
 
 ```text
 npx eslint <all changed TypeScript/TSX files>
@@ -38,6 +38,13 @@ PASS: all scoped checks.
 
 The complete timezone reconciliation suite previously passed 10 files and 117
 tests. Database reset also passed with the final migration sequence.
+
+Final critical-fix evidence: both LP Activity absolute-title call sites now use
+`format.dateTime` directly; the source contract rejects any remaining
+`formatDateTime(` call. Changed-file ESLint, strict OpenSpec, and diff-check
+pass. TypeScript reports only the known unrelated platform-landing TS2802
+baseline at `tests/platform-landing-logo-assets.test.ts:39`, with no LP Activity
+diagnostic.
 
 ## Browser evidence
 
