@@ -20,10 +20,10 @@
 
 ## 4. Personal Manual Override
 
-- [ ] 4.1 Add failing personal API/profile tests for manual save, automatic reset, invalid input, and mutation exclusivity.
-- [ ] 4.2 Extend the personal settings API with authenticated manual timezone persistence.
-- [ ] 4.3 Add failing localized UI tests for Automatic/manual controls, supported IANA choices, error state, and keyboard-accessible labels.
-- [ ] 4.4 Implement the personal timezone control and localized English/Chinese copy, synchronizing the current device after save.
+- [x] 4.1 Add failing personal API/profile tests for manual save, automatic reset, invalid input, and mutation exclusivity.
+- [x] 4.2 Extend the personal settings API with authenticated manual timezone persistence.
+- [x] 4.3 Add failing localized UI tests for Automatic/manual controls, supported IANA choices, error state, and keyboard-accessible labels.
+- [x] 4.4 Implement the personal timezone control and localized English/Chinese copy, synchronizing the current device after save.
 
 ## 5. Verification and Review
 

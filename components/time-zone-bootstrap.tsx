@@ -26,14 +26,24 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-function remoteManualTimeZone(value: unknown): string | null | undefined {
+type RemoteTimeZonePreference = Readonly<{
+  authenticated: boolean
+  manualTimeZone: string | null
+}>
+
+function remoteTimeZonePreference(value: unknown): RemoteTimeZonePreference | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return undefined
+    return null
   }
 
-  const manualTimeZone = (value as Record<string, unknown>).manualTimeZone
-  if (manualTimeZone === null) return null
-  return canonicalizeTimeZone(manualTimeZone) ?? undefined
+  const result = value as Record<string, unknown>
+  if (typeof result.authenticated !== 'boolean') return null
+  if (result.manualTimeZone === null) {
+    return Object.freeze({ authenticated: result.authenticated, manualTimeZone: null })
+  }
+  const manualTimeZone = canonicalizeTimeZone(result.manualTimeZone)
+  if (manualTimeZone === null || !result.authenticated) return null
+  return Object.freeze({ authenticated: true, manualTimeZone })
 }
 
 function confirmedPreferenceChange(
@@ -84,8 +94,6 @@ export async function synchronizeTimeZone(
   { timeZone, timeZoneSource }: TimeZoneBootstrapProps,
   dependencies: TimeZoneBootstrapDependencies,
 ): Promise<void> {
-  if (timeZoneSource === 'manual') return
-
   try {
     const manualResponse = await dependencies.fetch('/api/time-zone', {
       cache: 'no-store',
@@ -95,10 +103,12 @@ export async function synchronizeTimeZone(
     })
     if (!manualResponse.ok) return
 
-    const manualTimeZone = remoteManualTimeZone(await readJson(manualResponse))
-    if (manualTimeZone === undefined) return
-    if (manualTimeZone !== null) {
-      await writePreference('manual', manualTimeZone, timeZone, dependencies)
+    const remotePreference = remoteTimeZonePreference(await readJson(manualResponse))
+    if (remotePreference === null) return
+    if (!remotePreference.authenticated && timeZoneSource === 'manual') return
+    if (remotePreference.manualTimeZone !== null) {
+      if (timeZoneSource === 'manual' && remotePreference.manualTimeZone === timeZone) return
+      await writePreference('manual', remotePreference.manualTimeZone, timeZone, dependencies)
       return
     }
 

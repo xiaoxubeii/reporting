@@ -82,7 +82,7 @@ describe('GET /api/time-zone', () => {
     const response = await GET()
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ manualTimeZone: null })
+    await expect(response.json()).resolves.toEqual({ authenticated: false, manualTimeZone: null })
     expect(createAdminClient).not.toHaveBeenCalled()
     expect(loadPersonalProfile).not.toHaveBeenCalled()
     expect(response.headers.get('cache-control')).toBe('no-store')
@@ -99,7 +99,7 @@ describe('GET /api/time-zone', () => {
     const response = await GET()
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ manualTimeZone: expected })
+    await expect(response.json()).resolves.toEqual({ authenticated: true, manualTimeZone: expected })
     expect(loadPersonalProfile).toHaveBeenCalledWith({ admin: true }, 'user-1')
   })
 

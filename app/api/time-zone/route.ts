@@ -194,10 +194,10 @@ export async function GET() {
     const supabase = createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
     if (error && !isAuthSessionMissingError(error)) throw new Error('Authentication unavailable')
-    if (!user) return jsonResponse({ manualTimeZone: null })
+    if (!user) return jsonResponse({ authenticated: false, manualTimeZone: null })
 
     const profile = await loadPersonalProfile(createAdminClient(), user.id)
-    return jsonResponse({ manualTimeZone: profile.timeZone })
+    return jsonResponse({ authenticated: true, manualTimeZone: profile.timeZone })
   } catch {
     return jsonResponse({ error: 'Unable to load time zone preference' }, 500)
   }

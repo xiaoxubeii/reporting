@@ -14,6 +14,8 @@ const getUser = vi.hoisted(() => vi.fn())
 const loadPersonalProfile = vi.hoisted(() => vi.fn())
 const savePersonalProfile = vi.hoisted(() => vi.fn())
 const savePersonalTimeZone = vi.hoisted(() => vi.fn())
+const setCurrentUserMailbox = vi.hoisted(() => vi.fn())
+const getTrustedRequestTenant = vi.hoisted(() => vi.fn())
 const createAdminClient = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -25,6 +27,9 @@ vi.mock('@/lib/identity/profile', () => ({
   savePersonalProfile,
   savePersonalTimeZone,
 }))
+vi.mock('@/lib/email/mailboxes', () => ({ setCurrentUserMailbox }))
+vi.mock('@/lib/tenancy/request', () => ({ getTrustedRequestTenant }))
+vi.mock('@/lib/email/domain', () => ({ deriveFundEmailDomain: () => 'alpha.mail.example.test' }))
 vi.mock('next/headers', () => ({ headers: () => new Headers() }))
 
 import { GET, PATCH } from '@/app/api/settings/personal/route'
@@ -79,6 +84,12 @@ beforeEach(() => {
   getUser.mockResolvedValue({ data: { user: { id: 'user-1', email: 'user@example.test' } } })
   loadPersonalProfile.mockResolvedValue({ fullName: 'Example User', timeZone: 'Asia/Shanghai' })
   savePersonalProfile.mockResolvedValue({ fullName: 'Example User' })
+  setCurrentUserMailbox.mockResolvedValue({
+    localPart: 'example',
+    displayName: 'Example User',
+    active: true,
+  })
+  getTrustedRequestTenant.mockResolvedValue(null)
   savePersonalTimeZone.mockImplementation(async (_admin, input: { timeZone: unknown }) => {
     if (input.timeZone !== null && input.timeZone !== 'Asia/Shanghai') {
       throw new IdentityOnboardingError('invalid_profile', 'Select a valid time zone.', 400)
@@ -122,6 +133,52 @@ describe('personal settings timezone API', () => {
       timeZone,
     })
     expect(savePersonalProfile).not.toHaveBeenCalled()
+  })
+
+  it('preserves the successful fullName mutation through exact PATCH dispatch', async () => {
+    const result = await PATCH(personalRequest({ fullName: 'Example User' }))
+
+    expect(result.status).toBe(200)
+    await expect(result.json()).resolves.toEqual({ profile: { fullName: 'Example User' } })
+    expect(savePersonalProfile).toHaveBeenCalledWith(expect.anything(), {
+      userId: 'user-1',
+      fullName: 'Example User',
+    })
+    expect(savePersonalTimeZone).not.toHaveBeenCalled()
+    expect(setCurrentUserMailbox).not.toHaveBeenCalled()
+  })
+
+  it('preserves the successful mailboxLocalPart mutation through exact PATCH dispatch', async () => {
+    const admin = {
+      from: vi.fn((table: string) => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => table === 'fund_members'
+            ? { maybeSingle: vi.fn().mockResolvedValue({ data: { fund_id: 'fund-1' }, error: null }) }
+            : { single: vi.fn().mockResolvedValue({ data: { email_subdomain: 'alpha' }, error: null }) }),
+        })),
+      })),
+    }
+    createAdminClient.mockReturnValue(admin)
+
+    const result = await PATCH(personalRequest({ mailboxLocalPart: 'example' }))
+
+    expect(result.status).toBe(200)
+    await expect(result.json()).resolves.toEqual({
+      mailbox: {
+        localPart: 'example',
+        address: 'example@alpha.mail.example.test',
+        displayName: 'Example User',
+        active: true,
+      },
+    })
+    expect(setCurrentUserMailbox).toHaveBeenCalledWith(admin, {
+      fundId: 'fund-1',
+      userId: 'user-1',
+      localPart: 'example',
+      displayName: 'Example User',
+    })
+    expect(savePersonalProfile).not.toHaveBeenCalled()
+    expect(savePersonalTimeZone).not.toHaveBeenCalled()
   })
 
   it.each([
