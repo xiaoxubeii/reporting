@@ -10,7 +10,7 @@ import {
 import { loadPersonalProfile } from '@/lib/identity/profile'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { canonicalFundRequestOrigin } from '@/lib/tenancy/host'
+import { isTrustedSameOriginRequest } from '@/lib/http/trusted-origin'
 
 const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365
 const MAX_BODY_BYTES = 256
@@ -26,73 +26,6 @@ function jsonResponse(body: object, status = 200) {
     status,
     headers: { 'Cache-Control': 'no-store' },
   })
-}
-
-function getHttpOrigin(value: string): string | null {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.origin : null
-  } catch {
-    return null
-  }
-}
-
-function getRequestAuthority(request: NextRequest): string | null {
-  const rawAuthority = request.headers.get('host') ?? request.nextUrl.host
-  if (
-    !rawAuthority ||
-    rawAuthority !== rawAuthority.trim() ||
-    /[\s,\\/@]/.test(rawAuthority) ||
-    rawAuthority.includes('://')
-  ) {
-    return null
-  }
-
-  try {
-    const parsed = new URL(`${request.nextUrl.protocol}//${rawAuthority}`)
-    return parsed.host.toLowerCase() === rawAuthority.toLowerCase()
-      ? parsed.host.toLowerCase()
-      : null
-  } catch {
-    return null
-  }
-}
-
-function isSameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get('origin')
-  if (!origin) return false
-
-  const requestOrigin = getHttpOrigin(origin)
-  if (!requestOrigin) return false
-
-  if (process.env.FUND_WORKSPACE_ROOT_DOMAIN?.trim()) {
-    try {
-      return requestOrigin === canonicalFundRequestOrigin(request)
-    } catch {
-      return false
-    }
-  }
-
-  const requestAuthority = getRequestAuthority(request)
-  if (!requestAuthority) return false
-
-  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-  if (configuredSiteUrl) {
-    const configuredOrigin = getHttpOrigin(configuredSiteUrl)
-    if (!configuredOrigin) return false
-    const configuredAuthority = new URL(configuredOrigin).host.toLowerCase()
-    return requestAuthority === configuredAuthority && requestOrigin === configuredOrigin
-  }
-
-  if (process.env.NODE_ENV === 'production') return false
-
-  const originUrl = new URL(requestOrigin)
-  const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]'])
-  return (
-    loopbackHosts.has(originUrl.hostname) &&
-    originUrl.host.toLowerCase() === requestAuthority &&
-    originUrl.protocol === request.nextUrl.protocol
-  )
 }
 
 async function readBoundedBody(request: NextRequest): Promise<
@@ -204,7 +137,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) {
+  if (!isTrustedSameOriginRequest(request)) {
     return jsonResponse({ error: 'Forbidden' }, 403)
   }
 

@@ -244,6 +244,7 @@
       ],
       "evidence": [
         "openspec/changes/add-user-timezone-preferences/verification-report.md",
+        "tests/time-zone-profile.integration.test.ts passed against local Supabase with disposable cleanup",
         ".harnesskit/evidence/add-user-timezone-preferences/browser-assertions.json",
         ".harnesskit/evidence/add-user-timezone-preferences/automatic-asia-shanghai.png",
         ".harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png"

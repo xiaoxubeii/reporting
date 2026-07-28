@@ -46,6 +46,23 @@ pass. TypeScript reports only the known unrelated platform-landing TS2802
 baseline at `tests/platform-landing-logo-assets.test.ts:39`, with no LP Activity
 diagnostic.
 
+## Whole-branch review follow-up
+
+- Email Detail and Memo Schema server timestamps now use request-scoped
+  `getFormatter()` rather than native Intl.
+- A pure explicit-IANA calendar helper drives Compliance current month, New
+  Letter current year, and Add Data Point default year; boundary tests cover
+  UTC versus Asia/Shanghai across New Year.
+- Personal Settings GET/PATCH now share the trusted Host/origin validator with
+  the timezone route and distinguish missing sessions from operational auth
+  failures before service-role access.
+- A disposable local-Supabase integration test passed nullable service RPC
+  updates, `full_name` preservation, owner/cross-user RLS behavior, direct-write
+  denial, authenticated RPC denial, and service-role RPC success.
+- Final focused suite: 8 files, 109 tests. Database integration: 1 test. ESLint,
+  strict OpenSpec, and diff-check pass. TypeScript has only the known
+  platform-landing TS2802 baseline.
+
 ## Browser evidence
 
 - Automatic `Asia/Shanghai`: boundary timestamp rendered July 26.

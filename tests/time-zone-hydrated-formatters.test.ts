@@ -95,4 +95,27 @@ describe('hydrated timestamp formatter inventory', () => {
     expect(source).toContain('title={format.dateTime(new Date(p.lastSeen)')
     expect(source).toContain('title={format.dateTime(new Date(e.createdAt)')
   })
+
+  it.each([
+    ['app/(app)/emails/[id]/page.tsx', 'email.received_at'],
+    ['app/(app)/settings/memo-agent/schemas/page.tsx', 'row.edited_at'],
+  ])('%s formats server timestamp %s through getFormatter', (file, field) => {
+    const source = read(file)
+    expect(source).toContain('getFormatter')
+    expect(source).toContain(field)
+    expect(source).toContain('format.dateTime(')
+    expect(source).not.toContain('new Intl.DateTimeFormat(')
+  })
+
+  it.each([
+    ['app/(app)/compliance/page.tsx', 'currentMonth'],
+    ['app/(app)/letters/new/page.tsx', 'currentYear'],
+    ['app/(app)/companies/[id]/add-data-point-dialog.tsx', 'periodYear'],
+  ])('%s derives %s using the request timezone calendar helper', (file, field) => {
+    const source = read(file)
+    expect(source).toContain('useTimeZone')
+    expect(source).toContain('calendarPartsInTimeZone(')
+    expect(source).toContain(field)
+    expect(source).not.toMatch(/new Date\(\)\.get(?:Month|FullYear)\(/)
+  })
 })

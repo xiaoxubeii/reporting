@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getLocale, getTranslations } from 'next-intl/server'
+import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
@@ -81,11 +81,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function EmailDetailPage({ params }: { params: { id: string } }) {
-  const t = await getTranslations('Emails')
-  const locale = await getLocale()
-  const dateFormatter = new Intl.DateTimeFormat(locale, {
-    month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
+  const [t, locale, format] = await Promise.all([
+    getTranslations('Emails'), getLocale(), getFormatter(),
+  ])
   const numberFormatter = new Intl.NumberFormat(locale)
   const supabase = createClient()
 
@@ -181,7 +179,9 @@ export default async function EmailDetailPage({ params }: { params: { id: string
           <p>
             {t.rich('detail.from', { address: () => <span className="font-medium text-foreground">{email.from_address}</span> })}
           </p>
-          <p>{dateFormatter.format(new Date(email.received_at ?? ''))}</p>
+          <p>{format.dateTime(new Date(email.received_at ?? ''), {
+            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
+          })}</p>
           {company && (
             <p>
               {t.rich('detail.company', { company: () => <span className="font-medium text-foreground">{company.name}</span> })}

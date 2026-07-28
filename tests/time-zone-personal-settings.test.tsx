@@ -6,6 +6,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import { AuthSessionMissingError } from '@supabase/supabase-js'
 import { IdentityOnboardingError } from '@/lib/identity/errors'
 import englishMessages from '@/messages/en.json'
 import chineseMessages from '@/messages/zh-CN.json'
@@ -41,9 +42,18 @@ import {
 function personalRequest(body: unknown) {
   return new NextRequest('http://localhost/api/settings/personal', {
     method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      host: 'localhost',
+      origin: 'http://localhost',
+      'sec-fetch-site': 'same-origin',
+    },
     body: JSON.stringify(body),
   })
+}
+
+function personalGetRequest(host = 'localhost') {
+  return new NextRequest('http://localhost/api/settings/personal', { headers: { host } })
 }
 
 function response(body: object, ok = true): Response {
@@ -112,12 +122,55 @@ afterEach(() => {
 
 describe('personal settings timezone API', () => {
   it('includes the nullable timezone in the existing personal profile response', async () => {
-    const result = await GET()
+    const result = await GET(personalGetRequest())
 
     expect(result.status).toBe(200)
     await expect(result.json()).resolves.toMatchObject({
       profile: { fullName: 'Example User', timeZone: 'Asia/Shanghai' },
     })
+  })
+
+  it('rejects an untrusted GET Host before service-role profile access', async () => {
+    const result = await GET(personalGetRequest('attacker.example'))
+
+    expect(result.status).toBe(403)
+    expect(createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it('rejects cross-origin PATCH before service-role mutation', async () => {
+    const request = personalRequest({ timeZone: 'Asia/Shanghai' })
+    request.headers.set('origin', 'https://attacker.example')
+
+    const result = await PATCH(request)
+
+    expect(result.status).toBe(403)
+    expect(savePersonalTimeZone).not.toHaveBeenCalled()
+    expect(createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['GET', async () => GET(personalGetRequest())],
+    ['PATCH', async () => PATCH(personalRequest({ timeZone: 'Asia/Shanghai' }))],
+  ])('returns a sanitized service error for operational %s authentication failures', async (_method, invoke) => {
+    getUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('provider detail') })
+
+    const result = await invoke()
+
+    expect(result.status).toBe(503)
+    await expect(result.json()).resolves.not.toMatchObject({ error: expect.stringContaining('provider detail') })
+    expect(createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['GET', async () => GET(personalGetRequest())],
+    ['PATCH', async () => PATCH(personalRequest({ timeZone: 'Asia/Shanghai' }))],
+  ])('treats a missing %s auth session as Unauthorized', async (_method, invoke) => {
+    getUser.mockResolvedValueOnce({ data: { user: null }, error: new AuthSessionMissingError() })
+
+    const result = await invoke()
+
+    expect(result.status).toBe(401)
+    expect(createAdminClient).not.toHaveBeenCalled()
   })
 
   it.each([

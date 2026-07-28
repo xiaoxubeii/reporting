@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useLocale, useTimeZone, useTranslations } from 'next-intl'
 import { ArrowLeft, ArrowRight, Loader2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { getCurrencySymbol } from '@/components/currency-context'
 import { useFeatureVisibility } from '@/components/feature-visibility-context'
+import { calendarPartsInTimeZone } from '@/lib/date/calendar-parts'
 
 interface Template {
   id: string
@@ -57,11 +58,12 @@ export default function NewLetterPage() {
   const t = useTranslations('Letters.new')
   const locale = useLocale()
   const fv = useFeatureVisibility()
+  const timeZone = useTimeZone()
   const router = useRouter()
   const [step, setStep] = useState(1)
 
   // Step 1: Period selection
-  const currentYear = new Date().getFullYear()
+  const currentYear = calendarPartsInTimeZone(new Date(), timeZone ?? 'UTC').year
   const [year, setYear] = useState(String(currentYear))
   const [quarter, setQuarter] = useState('4')
   const [isYearEnd, setIsYearEnd] = useState(false)

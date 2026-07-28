@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useFormatter, useTranslations } from 'next-intl'
+import { useFormatter, useTimeZone, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Check, AlertTriangle, X, ExternalLink, Clock, Loader2, Link as LinkIcon } from 'lucide-react'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
 import { evaluateAll, type ComplianceProfile, type Applicability } from '@/lib/compliance/applicability'
 import { ComplianceNav, type ComplianceTab } from './compliance-nav'
+import { calendarPartsInTimeZone } from '@/lib/date/calendar-parts'
 
 interface ComplianceItem {
   id: string
@@ -684,9 +685,10 @@ function CalendarView({
   links: ComplianceLink[]
 }) {
   const format = useFormatter()
+  const timeZone = useTimeZone()
   const t = useTranslations('Compliance')
   const now = new Date()
-  const currentMonth = now.getMonth() + 1
+  const currentMonth = calendarPartsInTimeZone(now, timeZone ?? 'UTC').month
   // Track which entry is expanded (item id + optional group)
   const [expandedEntry, setExpandedEntry] = useState<{ itemId: string; group?: string } | null>(null)
   // Months that have entries

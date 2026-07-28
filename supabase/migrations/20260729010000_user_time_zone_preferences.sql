@@ -1,5 +1,8 @@
 -- Additive account-level manual timezone preference. NULL keeps Automatic
 -- device detection; application boundaries validate actual IANA support.
+-- This file is a ledger-managed, one-shot Supabase migration. Replays are
+-- performed by rebuilding the database from the migration ledger, not by
+-- executing an already-recorded migration against the same schema.
 
 alter table public.user_profiles
   add column time_zone text

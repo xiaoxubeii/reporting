@@ -37,6 +37,15 @@ contract that rejects the removed `formatDateTime` helper and asserts both
 `tests/platform-landing-logo-assets.test.ts:39` TS2802 baseline error; it reports
 no LP Activity or timezone-audit error.
 
+The final whole-branch review added two server-rendered timestamp contracts:
+Email Detail `received_at` and Memo Schema `edited_at` now use next-intl
+`getFormatter()`, so their server output consumes the same request timezone.
+Three client calendar decisions (Compliance current month, New Letter year, and
+Add Data Point year) use `calendarPartsInTimeZone()` with `useTimeZone()` and a
+UTC fallback. Pure tests prove the same instant resolves to December 2026 in
+UTC and January 2027 in Asia/Shanghai. The audit claims only these enumerated
+server paths plus the scanned client presentation patterns.
+
 ## Browser verification
 
 The real tenant application was exercised through an isolated development
@@ -71,6 +80,23 @@ require authentication; origins/hosts are checked; invalid zones fail closed;
 and cookies are host-only, HttpOnly, SameSite=Lax, finite-lived, and Secure in
 production. The migration remains additive and does not rewrite stored
 timestamps. No dependency or lockfile changed.
+
+Personal Settings GET now rejects an untrusted Host before service-role reads;
+PATCH requires the same reusable trusted Host/same-origin boundary used by the
+timezone route. Missing sessions remain 401, while operational authentication
+errors return a sanitized 503 before an admin client is created.
+
+`TIME_ZONE_PROFILE_INTEGRATION=true npx vitest run tests/time-zone-profile.integration.test.ts`
+passed against local Supabase. Its disposable users prove nullable manual/reset
+RPC updates preserve `full_name`, owner SELECT remains effective, cross-user
+SELECT is empty, authenticated direct UPDATE and RPC execution are denied, and
+the service-role RPC succeeds. Cleanup removed both users. The migration is
+documented as a ledger-managed one-shot Supabase migration.
+
+Final focused verification passed 8 files and 109 tests; the environment-gated
+database integration passed 1 additional test. Changed-file ESLint, strict
+OpenSpec, and `git diff --check` pass. TypeScript reports only the known
+platform-landing TS2802 baseline.
 
 ## Remaining repository baselines
 
