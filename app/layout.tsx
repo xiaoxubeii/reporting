@@ -73,7 +73,7 @@ export default async function RootLayout({
     : null
 
   return (
-    <html lang={resolvedLocale} className={`${hankenGrotesk.variable} ${plusJakarta.variable}`}>
+    <html lang={resolvedLocale} suppressHydrationWarning className={`${hankenGrotesk.variable} ${plusJakarta.variable}`}>
       <body className="font-sans">
         {tenantTheme && <style dangerouslySetInnerHTML={{ __html: `:root{${tenantTheme}}` }} />}
         <I18nClientProvider

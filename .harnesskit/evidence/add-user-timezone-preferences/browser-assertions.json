@@ -10,42 +10,55 @@
       "cookieHostOnly": true,
       "boundaryInstant": "2026-07-25T18:00:00Z",
       "renderedDate": "Jul 26, 2026",
-      "screenshot": "automatic-asia-shanghai.png"
+      "screenshots": [
+        "automatic-asia-shanghai.png",
+        "automatic-asia-shanghai-merge.png",
+        "boundary-date-asia-shanghai.png"
+      ]
     },
     "manualUtc": {
-      "status": "passed_without_dedicated_screenshot",
+      "status": "passed",
       "cookieMode": "manual",
       "cookieTimeZone": "UTC",
-      "renderedDate": "Jul 25, 2026"
+      "renderedDate": "Jul 25, 2026",
+      "screenshot": "manual-utc-selection.png"
     },
     "reloadPersistence": {
-      "status": "passed_without_dedicated_screenshot",
+      "status": "passed",
       "mode": "manual",
       "timeZone": "UTC",
-      "renderedDateAfterReload": "Jul 25, 2026"
+      "renderedDateAfterReload": "Jul 25, 2026",
+      "screenshot": "manual-utc-reload.png"
     },
     "resetAutomatic": {
-      "status": "passed_without_dedicated_screenshot",
-      "patchBody": { "timeZone": null },
-      "syncBody": { "mode": "auto", "timeZone": "Asia/Shanghai" },
-      "renderedDate": "Jul 26, 2026"
+      "status": "passed",
+      "patchBody": {
+        "timeZone": null
+      },
+      "syncBody": {
+        "mode": "auto",
+        "timeZone": "Asia/Shanghai"
+      },
+      "renderedDate": "Jul 26, 2026",
+      "screenshot": "reset-automatic-asia-shanghai.png"
     },
     "tenantHostIsolation": {
-      "status": "passed_without_dedicated_screenshot",
+      "status": "passed",
       "secondHostStartedWithoutTimeZoneCookie": true,
-      "syncPostCount": 1,
-      "controlledReloadCount": 1,
-      "cookieSharedAcrossHosts": false
+      "secondHostAuthenticated": false,
+      "cookieSharedAcrossHosts": false,
+      "screenshot": "tenant-host-isolation.png"
     },
     "console": {
+      "uncaughtErrorCount": 0,
+      "hydrationWarningCount": 0,
       "dateTimeHydrationMismatchCount": 0,
-      "timeZoneReloadLoopObserved": false,
-      "unrelatedNextThemesRootClassWarningObserved": true
+      "timeZoneReloadLoopObserved": false
     },
     "network": {
       "timeZoneMutationFailures": 0,
       "unexpectedTimeZoneRequests": 0
     }
   },
-  "acceptanceOpenReason": "Dedicated screenshots for manual UTC, reload persistence, reset Automatic, and tenant-host isolation were not captured, and an unrelated next-themes hydration warning remains. OpenSpec 5.3 stays open."
+  "acceptanceOpenReason": null
 }

@@ -111,7 +111,7 @@ describe('existing pipeline reuse', () => {
   it('keeps Research manual and overwrites the existing single output', () => {
     const researchStage = readFileSync(path.join(root, 'lib/memo-agent/stages/research.ts'), 'utf8')
     const materializer = readFileSync(path.join(root, 'lib/expert-validation/materialize.ts'), 'utf8')
-    expect(researchStage).toContain('.update({ research_output: persistedOutput as any })')
+    expect(researchStage).toContain('.update({ research_output: persistedOutput as unknown as Json })')
     expect(materializer).not.toMatch(/runResearch|kind:\s*['"]research['"]/)
   })
 

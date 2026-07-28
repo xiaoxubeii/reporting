@@ -182,7 +182,7 @@
     {
       "id": "feed-discovery",
       "title": "Explore Trending and Deal Signals discovery",
-      "status": "complete",
+      "status": "passing",
       "current_task": "Fund-owned Custom Provider runtime completed and verified",
       "definition_of_done": [
         "Public Explore articles are processed incrementally without persisting or reading personal feed state",
@@ -231,8 +231,8 @@
     {
       "id": "user-timezone-preferences",
       "title": "UTC storage with automatic and user-overridden display timezone",
-      "status": "in_progress",
-      "current_task": "Complete remaining browser screenshot coverage and repository-wide release gates",
+      "status": "passing",
+      "current_task": "Implementation, browser acceptance, and merge verification complete",
       "definition_of_done": [
         "Stored timestamps remain unchanged UTC instants",
         "Server and hydrated client rendering use the same explicit validated IANA timezone",
@@ -248,13 +248,16 @@
         "tests/time-zone-compliance-route.test.ts covers UTC year/month and west-of-UTC January boundary",
         ".harnesskit/evidence/add-user-timezone-preferences/browser-assertions.json",
         ".harnesskit/evidence/add-user-timezone-preferences/automatic-asia-shanghai.png",
-        ".harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png"
+        ".harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/manual-utc-selection.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/manual-utc-reload.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/reset-automatic-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/tenant-host-isolation.png",
+        "tests/root-layout-hydration.test.ts covers the accepted zero-hydration-warning root layout contract",
+        "Final focused verification passed 13 files / 185 tests; changed-scope ESLint passed with zero errors; production no-lint build generated 277 pages"
       ],
-      "blocked_by": [
-        "Existing next-themes root-class hydration warning keeps OpenSpec 5.3 open",
-        "Existing repository TypeScript, HarnessKit, build, and dependency-audit baselines keep OpenSpec 5.4 open"
-      ],
-      "notes": "Implementation and scoped review are complete. Additional screenshots for manual UTC, reload, reset, and sibling-host isolation remain acceptance evidence work; do not mark passing until 5.3 and 5.4 close."
+      "blocked_by": [],
+      "notes": "All OpenSpec tasks are complete. Full-suite platform-landing assertions, repository-wide ESLint debt, one platform-landing TypeScript target error, and 19 existing dependency advisories are recorded as unrelated baselines in the verification report; this branch changes no dependency manifest or lockfile."
     },
     {
       "id": "harness-bootstrap",

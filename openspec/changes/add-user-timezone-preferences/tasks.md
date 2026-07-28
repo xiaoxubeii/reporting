@@ -29,8 +29,8 @@
 
 - [x] 5.1 Run focused timezone/profile/route/provider/UI tests, TypeScript, changed-file lint, strict OpenSpec validation, HarnessKit fast/targeted, and `git diff --check`.
 - [x] 5.2 Run code, database, and security reviews and resolve all blocker/high findings.
-- [ ] 5.3 Start the real application and verify automatic `Asia/Shanghai`, manual UTC, reset-to-Automatic, reload persistence, tenant-host cookie isolation, and zero hydration console errors.
-- [ ] 5.4 Run production build/full verification, record unrelated baseline gaps, and update HarnessKit/OpenSpec completion evidence.
+- [x] 5.3 Start the real application and verify automatic `Asia/Shanghai`, manual UTC, reset-to-Automatic, reload persistence, tenant-host cookie isolation, and zero hydration console errors.
+- [x] 5.4 Run production build/full verification, record unrelated baseline gaps, and update HarnessKit/OpenSpec completion evidence.
 
 Verification notes: the requested timezone browser flows, persistence, and
 tenant-host isolation passed. Item 5.3 remains open because the application

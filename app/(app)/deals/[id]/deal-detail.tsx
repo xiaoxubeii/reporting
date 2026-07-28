@@ -59,7 +59,7 @@ interface EmailRow {
   from_address: string
   subject: string | null
   received_at: string | null
-  raw_payload: any
+  raw_payload: unknown
   routing_label: string | null
   routing_confidence: number | null
   routing_reasoning: string | null
