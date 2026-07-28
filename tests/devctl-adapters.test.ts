@@ -75,6 +75,18 @@ describe('devctl real adapter contracts', () => {
     }
   })
 
+  it('targets the platform localhost Host when Fund workspace routing is enabled locally', () => {
+    const env = dynamicRuntimeEnv({
+      env: { FUND_WORKSPACE_ROOT_DOMAIN: 'localhost' },
+      ports: { web: 5000, cron: 5001 },
+    })
+
+    expect(env.NEXT_PUBLIC_APP_URL).toBe('http://localhost:5000')
+    expect(env.NEXT_PUBLIC_SITE_URL).toBe('http://localhost:5000')
+    expect(env.CRON_RUNNER_BASE_URL).toBe('http://localhost:5000')
+    expect(env.BACKGROUND_JOB_INTERNAL_ORIGIN).toBe('http://localhost:5000')
+  })
+
   it('keeps the stop timeout beyond the configured Cron shutdown grace', () => {
     expect(cronStopTimeout({})).toBe(35_000)
     expect(cronStopTimeout({ CRON_RUNNER_SHUTDOWN_GRACE_MS: '120000' })).toBe(125_000)

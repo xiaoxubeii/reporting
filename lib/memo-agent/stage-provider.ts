@@ -11,17 +11,12 @@ export interface StageProvider {
   model: string
   providerType: string
   /**
-   * True only for the research stage when (a) the fund has opted in via
-   * fund_settings.memo_agent_web_search_enabled and (b) the resolved provider
-   * is Anthropic (the only provider currently wired through `createMessage`).
-   * Other stages and other providers always get false.
+   * Legacy native-search capability. The default Research path now uses the
+   * provider-neutral Reporting Search tool through `createToolLoop`.
    */
   webSearchAvailable: boolean
   /**
-   * Whether the fund opted into web search, independent of whether it's
-   * actually available. When this is true but webSearchAvailable is false,
-   * the stage isn't running on Anthropic — surfaced as a warning so the
-   * opt-in doesn't silently do nothing.
+   * Existing database opt-in, now interpreted as external Search generally.
    */
   webSearchOptIn: boolean
 }
@@ -50,8 +45,8 @@ export async function getStageProvider(admin: Admin, fundId: string, stage: Agen
     .eq('fund_id', fundId)
     .maybeSingle()
 
-  const overrides = ((settings as any)?.memo_agent_stage_models as Record<string, StageOverride | null> | null) ?? {}
-  const webSearchOptIn = !!(settings as any)?.memo_agent_web_search_enabled
+  const overrides = (settings?.memo_agent_stage_models as Record<string, StageOverride | null> | null) ?? {}
+  const webSearchOptIn = !!settings?.memo_agent_web_search_enabled
   const fallbackStage = STAGE_OVERRIDE_FALLBACK[stage]
   const override = overrides[stage] ?? (fallbackStage ? overrides[fallbackStage] : null) ?? null
 

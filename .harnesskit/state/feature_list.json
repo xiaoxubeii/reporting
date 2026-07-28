@@ -3,6 +3,28 @@
   "status_values": ["not_started", "in_progress", "blocked", "passing"],
   "features": [
     {
+      "id": "memo-research-reporting-search",
+      "title": "Provider-neutral Memo Research through Reporting Search",
+      "status": "passing",
+      "current_task": "Implementation, real external-model browser verification, review, and cleanup complete; ready for commit",
+      "definition_of_done": [
+        "The existing Research action enqueues one generalized memo_research attempt with authoritative user, Fund, deal, draft, and compatibility-job identity",
+        "Tool-capable providers call code-owned Reporting Search with bounded public topics, a shared three-call budget, and live Fund/user authorization",
+        "Only exact server-collected source IDs ground persisted Memo Research findings, while unsupported providers degrade visibly to no-search",
+        "Compatibility progress, downstream stages, localized diagnostics, provider rollback, retry fencing, and legacy worker isolation remain functional",
+        "Focused/full relevant tests, production build, independent correctness/security reviews, real browser flow, and fixture cleanup pass"
+      ],
+      "evidence": [
+        "OpenSpec replace-memo-research-web-search is task-complete and strict-valid",
+        "Final security-focused verification passes 21 files and 123 tests; relevant full Vitest passes 313 files and 2162 tests with only environment-gated skips",
+        "Production next build --no-lint completes compilation, type validation, 277 static pages, and route generation with the real local environment",
+        "Disposable authenticated browser flow completed three Reporting Search calls, collected nine accepted sources, displayed provider-neutral diagnostics, and failed closed at zero grounded findings when the model omitted accepted IDs",
+        "Correctness, TypeScript/React, and security reviews report zero remaining Critical, High, or Medium findings; the disposable Fund, user, jobs, and credential link were removed"
+      ],
+      "blocked_by": [],
+      "notes": "Repository-wide default lint/build, standalone tsc, and two platform-landing tests retain pre-existing debt outside this feature. HarnessKit fast stops on the unrelated feed-discovery status value. Detailed evidence is under .harnesskit/20260728-memo-research-browser/."
+    },
+    {
       "id": "comprehensive-site-e2e",
       "title": "Comprehensive interface-driven site acceptance and repair",
       "status": "passing",

@@ -48,6 +48,12 @@ export function webBindHost(env) {
   return host
 }
 
+export function platformHost(env = {}) {
+  return env.FUND_WORKSPACE_ROOT_DOMAIN?.trim().toLowerCase() === 'localhost'
+    ? 'localhost'
+    : '127.0.0.1'
+}
+
 function createProcessAdapter(options) {
   return Object.freeze({
     async start(context) {
@@ -127,13 +133,14 @@ function createProcessAdapter(options) {
 }
 
 function dynamicRuntimeEnv(context) {
+  const webOrigin = `http://${platformHost(context.env)}:${context.ports.web}`
   return Object.freeze({
     PORT: String(context.ports.web),
-    NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${context.ports.web}`,
-    NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${context.ports.web}`,
+    NEXT_PUBLIC_APP_URL: webOrigin,
+    NEXT_PUBLIC_SITE_URL: webOrigin,
     NEXT_DIST_DIR: '.next-devctl',
     FUND_WORKSPACE_DEV_PORT: String(context.ports.web),
-    CRON_RUNNER_BASE_URL: `http://127.0.0.1:${context.ports.web}`,
+    CRON_RUNNER_BASE_URL: webOrigin,
     // Middleware recognizes localhost as the platform host used for worker
     // authority. A numeric loopback Host is intentionally not a tenant alias.
     BACKGROUND_JOB_INTERNAL_ORIGIN: `http://localhost:${context.ports.web}`,

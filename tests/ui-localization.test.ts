@@ -475,4 +475,20 @@ describe('UI locale contract', () => {
       hash: '#activity',
     })).toBeNull()
   })
+
+  it('uses provider-neutral Memo Research Search diagnostics in both locales', () => {
+    const english = JSON.parse(readFileSync(resolve(process.cwd(), 'messages/en.json'), 'utf8'))
+    const chinese = JSON.parse(readFileSync(resolve(process.cwd(), 'messages/zh-CN.json'), 'utf8'))
+    const detail = readFileSync(resolve(process.cwd(), 'app/(app)/diligence/[id]/deal-detail.tsx'), 'utf8')
+    const enResearch = english.Diligence.dealDetail.research
+    const zhResearch = chinese.Diligence.dealDetail.research
+
+    expect(enResearch.external.searchOn).toContain('External Search')
+    expect(enResearch.diagnostic.title).toBe('External Search diagnostic')
+    expect(enResearch.diagnostic.backendReporting).toBe('Reporting Search')
+    expect(zhResearch.external.searchOn).toContain('外部搜索')
+    expect(zhResearch.diagnostic.backendReporting).toBe('Reporting Search')
+    expect(detail).toContain('research.search_count ?? research.web_search_count')
+    expect(detail).toContain('research.search_sources')
+  })
 })

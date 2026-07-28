@@ -27,6 +27,27 @@ describe('AnthropicProvider.createToolLoop', () => {
     expect(stream.mock.calls[0][1]).toEqual({ signal: controller.signal })
   })
 
+  it('passes blocked domains to native web search at the provider boundary', async () => {
+    const provider = new AnthropicProvider('test-key')
+    const stream = vi.fn().mockReturnValue({ finalMessage: async () => message([{ type: 'text', text: 'done' }]) })
+    ;(provider as unknown as { client: { messages: { stream: typeof stream } } }).client.messages.stream = stream
+
+    await provider.createMessage({
+      model: 'claude',
+      maxTokens: 10,
+      content: 'x',
+      enableWebSearch: true,
+      webSearchBlockedDomains: ['linkedin.com', 'lnkd.in'],
+    })
+
+    expect(stream.mock.calls[0][0].tools).toEqual([
+      expect.objectContaining({
+        name: 'web_search',
+        blocked_domains: ['linkedin.com', 'lnkd.in'],
+      }),
+    ])
+  })
+
   it('propagates abort, executes ordered multi-calls with ids, and aggregates usage', async () => {
     const provider = new AnthropicProvider('test-key')
     const stream = vi.fn()

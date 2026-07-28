@@ -11,6 +11,7 @@ import { runTranscribeJob, isAwaitingCallback } from '@/lib/memo-agent/jobs/tran
 import { runChecklistAssessmentJob } from '@/lib/memo-agent/jobs/checklist-assessment-job'
 import { runAffinitySyncJob } from '@/lib/memo-agent/jobs/affinity-sync-job'
 import { kickWorker } from '@/lib/memo-agent/kick'
+import type { Json } from '@/lib/types/database'
 
 /**
  * Memo Agent worker. Triggered by the persistent Croner service every three
@@ -54,9 +55,10 @@ export async function GET(req: NextRequest) {
       error: 'killed: worker timed out (no progress for >6m)',
       finished_at: new Date().toISOString(),
       progress_message: 'killed: timeout',
-    } as any)
+    })
     .eq('status', 'running')
     .is('external_job_id', null)
+    .is('background_job_id', null)
     .lt('started_at', staleCutoff)
 
   // Transcribe jobs stuck awaiting an external callback for >1h are presumed
@@ -70,9 +72,10 @@ export async function GET(req: NextRequest) {
       error: 'killed: external callback never arrived (>1h)',
       finished_at: new Date().toISOString(),
       progress_message: 'killed: callback timeout',
-    } as any)
+    })
     .eq('status', 'running')
     .not('external_job_id', 'is', null)
+    .is('background_job_id', null)
     .lt('started_at', callbackCutoff)
 
   // Drain the queue: process jobs back-to-back until it's empty or we approach
@@ -86,8 +89,8 @@ export async function GET(req: NextRequest) {
   let processed = 0
 
   while (Date.now() - startedAt < DRAIN_BUDGET_MS) {
-    const { data: claimed, error: claimErr } = await (admin as any)
-      .rpc('memo_agent_claim_next_job') as { data: any; error: any }
+    const { data: claimed, error: claimErr } = await (admin as unknown as ClaimNextJobRpc)
+      .rpc('memo_agent_claim_next_job')
     if (claimErr) {
       console.error('[memo-agent-worker] claim error:', claimErr)
       return NextResponse.json({ error: 'An unexpected error occurred.', processed }, { status: 500 })
@@ -114,6 +117,13 @@ interface Job {
   kind: 'ingest' | 'ingest_synthesis' | 'research' | 'qa' | 'draft' | 'draft_review' | 'score' | 'render' | 'transcribe' | 'checklist_assessment' | 'affinity_sync'
   payload: Record<string, unknown>
   enqueued_by: string | null
+}
+
+interface ClaimNextJobRpc {
+  rpc(name: 'memo_agent_claim_next_job'): PromiseLike<{
+    data: Job | null
+    error: { message: string } | null
+  }>
 }
 
 /** Run one claimed job and write its outcome back. Never throws. */
@@ -149,7 +159,7 @@ async function processJob(admin: ReturnType<typeof createAdminClient>, job: Job)
       .from('memo_agent_jobs')
       .update({
         status: 'success',
-        result: result as any,
+        result: result as Json,
         finished_at: new Date().toISOString(),
         progress_message: 'completed',
       })

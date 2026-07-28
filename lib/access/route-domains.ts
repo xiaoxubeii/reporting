@@ -438,6 +438,7 @@ export const UNGATED_ROUTES: Record<string, string> = {
   'api/cron/memo-agent-worker': 'Cron: CRON_SECRET.',
   'api/internal/background-jobs/deal-research/run': 'Internal HTTP worker: exact-audience, attempt-bound Job Token and live context restoration.',
   'api/internal/background-jobs/feed-discovery/run': 'Internal system worker: exact-audience, attempt-bound Job Token and verified persisted fund context.',
+  'api/internal/background-jobs/memo-research/run': 'Internal Memo Research worker: exact-audience, attempt-bound Job Token, live Diligence and Search access, and linked projection validation.',
 
   // Inbound from third parties, authenticated by a token in the path or a provider signature.
   'api/webhooks/heartbeat/[token]': 'Inbound webhook: high-entropy path token.',
