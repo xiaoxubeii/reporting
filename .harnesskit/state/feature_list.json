@@ -18,13 +18,14 @@
       ],
       "evidence": [
         "OpenSpec proposal, design, comprehensive acceptance specification, and implementation tasks created and strict validation passes",
-        "The final serial Playwright matrix passes 27/27 with zero skipped, flaky, or unexpected results across Search, subscriptions, full investment decision, tenant denial, mail boundaries, GP/public/LP routes, desktop, and mobile",
+        "The final serial Playwright matrix passes 29/29 with zero failed, skipped, timed out, interrupted, flaky, or unexpected results across Search, subscriptions, full investment decision, tenant denial, mail boundaries, GP/public/LP routes, desktop, and mobile",
         "Final HTML and JSON reports are retained under .harnesskit/evidence/comprehensive-site-e2e/",
-        "Full Vitest passes 331 files and 2242 tests; TypeScript, HarnessKit fast, and production compilation/page generation pass",
+        "Full Vitest passes 338 files and 2280 tests; TypeScript, HarnessKit fast, changed-scope ESLint, and production compilation/276-page generation pass",
+        ".harnesskit/evidence/comprehensive-site-e2e/verification.md records the final run ID, capability boundary, inherited baselines, and exact fixture cleanup",
         "Disposable local fixtures and historic E2E identities were removed; current Investment E2E Fund and user counts are both zero"
       ],
       "blocked_by": [],
-      "notes": "Capability-aware verification is complete. AI is intentionally unconfigured, so the suite proves truthful AI failure/retry and uses a labeled non-AI prerequisite only for deterministic downstream workflow coverage; no live AI content success is claimed. External mail delivery is disabled, so signed inbound and documented no-delivery/copy-link paths pass without claiming delivery. HarnessKit fast passes; normal build/targeted verification remain blocked by inherited repository-wide lint debt."
+      "notes": "Capability-aware verification is complete. Loopback-only deterministic Ollama-compatible and Resend-compatible providers exercise the real Fund-scoped orchestration and mail boundaries without claiming production-model quality or public-internet delivery. HarnessKit fast passes; normal build/targeted verification remain blocked by inherited repository-wide lint debt, and the existing production dependency audit reports 19 advisories."
     },
     {
       "id": "global-assistant-context",
