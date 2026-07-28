@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { ArrowDownAZ, ArrowUpZA, ArrowDown, ArrowUp, LayoutGrid, Table2, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DashboardTable } from './dashboard-table'
@@ -195,6 +195,7 @@ export function DashboardCompanies({ companies }: Props) {
 
 function CompanyGrid({ companies }: { companies: Company[] }) {
   const t = useTranslations('Dashboard')
+  const format = useFormatter()
   const locale = useLocale()
   const fundCurrency = useCurrency()
   // Cache of fetched metric values: { [metricId]: number | null }
@@ -297,7 +298,7 @@ function CompanyGrid({ companies }: { companies: Company[] }) {
                 </div>
               ) : c.firstInvestmentDate ? (
                 <div className="text-[10px] text-muted-foreground mt-2">
-                  {t('cards.invested', { date: new Date(`${c.firstInvestmentDate}T00:00:00Z`).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) })}
+                  {t('cards.invested', { date: format.dateTime(new Date(`${c.firstInvestmentDate}T00:00:00Z`), { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) })}
                 </div>
               ) : null}
           </Link>

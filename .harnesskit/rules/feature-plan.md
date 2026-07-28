@@ -1362,6 +1362,9 @@ unmerged worktrees intact if a merge or verification fails.
 
 - status: in_progress
 - branch/worktree: `codex/user-timezone-preferences` at `/home/ubuntu/workspace/reporting-timezone`
-- baseline: 2,115 tests pass; four unrelated platform-landing tests fail because current main has uncommitted component/assets/test changes that are intentionally absent from the isolated worktree
-- planning: OpenSpec proposal created; design/spec/tasks pending
-- implementation: pending
+- planning: OpenSpec proposal, design, specification, and task plan are strict-valid
+- implementation: resolver, secure host-only cookie synchronization, additive profile persistence, root request/client provider, manual Personal Settings override, and the complete hydrated client timestamp audit are implemented
+- timestamp audit: all 218 `use client` modules are scanned; native date presentation is rejected except two explicitly classified browser-IANA detection calls, while calendar-only/business-period values retain explicit UTC semantics
+- focused verification: timezone reconciliation passed 117 tests; the comprehensive formatter inventory and requested timestamp fields are covered by `tests/time-zone-hydrated-formatters.test.ts`
+- browser: Automatic Asia/Shanghai, manual UTC, reload persistence, reset, and sibling-tenant cookie isolation were observed; compact assertions and screenshots are under `.harnesskit/evidence/add-user-timezone-preferences/`
+- open acceptance: 5.3 remains open because the app emits the unrelated existing `next-themes` root-class hydration warning and the captured screenshots do not cover every state; 5.4 remains open for repository baseline TypeScript/HarnessKit/build/audit gates

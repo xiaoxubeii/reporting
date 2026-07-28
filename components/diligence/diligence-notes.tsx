@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useFormatter } from 'next-intl'
 import { MessageSquare, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MobileDrawerPanel } from '@/components/mobile-drawer-panel'
@@ -73,7 +74,7 @@ export function DiligenceNotesPanel() {
   )
 }
 
-function formatRelativeTime(dateStr: string) {
+function formatRelativeTime(dateStr: string, format: ReturnType<typeof useFormatter>) {
   const date = new Date(dateStr)
   const now = new Date()
   const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000)
@@ -83,10 +84,11 @@ function formatRelativeTime(dateStr: string) {
   if (diffHr < 24) return `${diffHr}h ago`
   const diffDay = Math.floor(diffHr / 24)
   if (diffDay < 7) return `${diffDay}d ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return format.dateTime(date, { month: 'short', day: 'numeric' })
 }
 
 function NotesPanelInner() {
+  const format = useFormatter()
   const { dealId, userId, isAdmin, setOpen } = useDiligenceNotes()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(false)
@@ -160,7 +162,7 @@ function NotesPanelInner() {
               <div key={note.id} className="group">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-xs font-medium">{displayName}</span>
-                  <span className="text-xs text-muted-foreground">{formatRelativeTime(note.createdAt)}</span>
+                  <span className="text-xs text-muted-foreground">{formatRelativeTime(note.createdAt, format)}</span>
                   {canDelete && (
                     <button
                       onClick={() => handleDelete(note.id)}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, type DragEvent } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Sparkles, Send, X, Save, Clock, Plus, Trash2, ArrowLeft, Paperclip } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ interface Scope {
 }
 
 export function AnalystPanel() {
+  const format = useFormatter()
   const locale = useLocale()
   const t = useTranslations('Analyst')
   const {
@@ -246,7 +247,7 @@ export function AnalystPanel() {
     if (diffDays === 0) return t('today')
     if (diffDays === 1) return t('yesterday')
     if (diffDays < 7) return t('daysAgo', { count: diffDays })
-    return d.toLocaleDateString(locale)
+    return format.dateTime(d)
   }
 
   const modelKey = selectedModel ? `${selectedModel.provider}:${selectedModel.id}` : 'auto'

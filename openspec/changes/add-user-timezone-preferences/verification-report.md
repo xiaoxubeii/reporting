@@ -11,17 +11,23 @@ authenticated user can override or reset that preference.
 
 - `npx vitest run tests/time-zone-*.test.ts tests/time-zone-*.test.tsx tests/settings-localization.test.ts tests/fund-identity-onboarding-ui.test.ts tests/onboarding-setup-localization.test.ts`
   passed 10 files and 117 tests during the final reconciliation pass.
-- `npx vitest run tests/time-zone-hydrated-formatters.test.ts` passed 5 tests.
-- Changed-file ESLint passed for the audited hydrated timestamp components and
-  their regression test.
+- `npx vitest run tests/time-zone-hydrated-formatters.test.ts` passed 15 tests;
+  the covering provider/bootstrap/settings run passed 4 files and 49 tests.
+- Changed-file ESLint passed across the complete hydrated timestamp audit with
+  zero errors and one inherited `no-img-element` warning in Settings.
 - `npx openspec validate add-user-timezone-preferences --strict` passed.
 - `git diff --check` passed.
 - `supabase db reset` passed after the additive timezone migration was made
   safe for the existing `current_utc_time()` return-type change.
 
-The hydrated formatter audit removed local-browser and pinned-UTC formatting
-from timestamp paths in Deals, Relationships, Email Routing, and Memo Agent.
-Calendar-only values continue to use explicit timezone-neutral semantics.
+The final hydrated formatter audit inventories all 218 `use client` modules.
+It rejects native `Intl.DateTimeFormat`, `toLocaleDateString`, and
+`toLocaleTimeString` presentation paths, except for two explicitly classified
+`resolvedOptions().timeZone` browser-detection calls. Timestamp paths across
+Deals, LP Messages/Activity/Documents, Pending Actions, Letters, Notes,
+Compliance, Email/Review, Search, Invitations, Settings, and Memo Agent now use
+the request-scoped next-intl formatter. Calendar-only and business-period
+values use the same formatter with explicit UTC semantics.
 
 ## Browser verification
 
@@ -43,6 +49,11 @@ Screenshots:
 
 - `.harnesskit/evidence/add-user-timezone-preferences/automatic-asia-shanghai.png`
 - `.harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png`
+
+Machine-readable assertions, including explicit missing-screenshot status for
+manual UTC, reload, reset, and tenant isolation, are recorded at
+`.harnesskit/evidence/add-user-timezone-preferences/browser-assertions.json`.
+Those missing dedicated screenshots are one reason item 5.3 remains open.
 
 ## Review and security
 

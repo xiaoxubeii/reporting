@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Building2, CheckCircle2, Loader2, Mail, ShieldCheck, XCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +23,7 @@ type ViewState = 'loading' | 'ready' | 'invalid' | 'accepting' | 'accepted' | 'd
 
 export default function FundInvitationPage() {
   const t = useTranslations('FundInvitation')
+  const format = useFormatter()
   const [state, setState] = useState<ViewState>('loading')
   const [token, setToken] = useState<string | null>(null)
   const [invitation, setInvitation] = useState<InvitationPreview | null>(null)
@@ -157,7 +158,7 @@ export default function FundInvitationPage() {
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
             <p>{authenticated ? t('verifiedAccount') : t('signInGuidance')}</p>
           </div>
-          <p className="text-xs text-muted-foreground">{t('expires', { date: invitation ? new Date(invitation.expiresAt).toLocaleString() : '' })}</p>
+          <p className="text-xs text-muted-foreground">{t('expires', { date: invitation ? format.dateTime(new Date(invitation.expiresAt), { dateStyle: 'medium', timeStyle: 'short' }) : '' })}</p>
         </CardContent>
         <CardFooter className="flex flex-col-reverse gap-2 border-t bg-muted/20 sm:flex-row sm:justify-end">
           <Button variant="ghost" onClick={decline} className="w-full sm:w-auto">{t('decline')}</Button>

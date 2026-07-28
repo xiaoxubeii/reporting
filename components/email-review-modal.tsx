@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -88,8 +88,8 @@ export function EmailReviewModal({
   onOpenChange: (open: boolean) => void
 }) {
   const t = useTranslations('Review.modal')
+  const format = useFormatter()
   const locale = useLocale()
-  const dateFormatter = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' })
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [emailInfo, setEmailInfo] = useState<EmailInfo | null>(null)
@@ -491,7 +491,7 @@ export function EmailReviewModal({
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                     <span>{t('from', { address: emailInfo.from_address })}</span>
                     {emailInfo.received_at && (
-                      <span>{dateFormatter.format(new Date(emailInfo.received_at))}</span>
+                      <span>{format.dateTime(new Date(emailInfo.received_at), { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                     )}
                   </div>
                   {emailInfo.body_text && (

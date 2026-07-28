@@ -1,38 +1,82 @@
 import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
 
 const read = (file: string) => readFileSync(file, 'utf8')
+const clientFiles = execFileSync('rg', [
+  '-l', '--glob', '*.ts', '--glob', '*.tsx',
+  "^('use client'|\"use client\")", 'app', 'components',
+], { encoding: 'utf8' }).trim().split('\n').filter(Boolean).sort()
 
-describe('hydrated timestamp formatters', () => {
-  it.each([
-    'app/(app)/interactions/relationships-list.tsx',
-    'app/(app)/settings/email-routing/email-audit-list.tsx',
-    'app/(app)/settings/memo-agent/style-anchors/[id]/editor.tsx',
-  ])('%s delegates timestamp presentation to the request timezone', (file) => {
-    const source = read(file)
+const browserZoneDetection = Object.freeze({
+  'components/settings/time-zone-preference.tsx':
+    'detects the local IANA zone only after hydration',
+  'components/time-zone-bootstrap.tsx':
+    'detects the local IANA zone only inside the synchronization effect',
+})
 
-    expect(source).toContain('useFormatter')
-    expect(source).toContain('format.dateTime(')
-    expect(source).not.toContain('new Intl.DateTimeFormat(')
-    expect(source).not.toContain('.toLocaleDateString(')
+const businessCalendarUtc = Object.freeze([
+  'app/(app)/compliance/page.tsx',
+  'app/(app)/dashboard/dashboard-companies.tsx',
+  'app/(app)/settings/memo-agent/defaults/editor.tsx',
+  'app/(app)/usage/usage-dashboard.tsx',
+  'app/(app)/lps/preview/page.tsx',
+  'components/lp-documents-settings.tsx',
+])
+
+const requiredInstantFields = Object.freeze({
+  'app/(app)/pending-actions/page.tsx': 'row.created_at',
+  'app/(app)/letters/[id]/page.tsx': 'n.updated_at',
+  'app/(app)/lp-activity/lp-activity-dashboard.tsx': 'new Date(iso)',
+  'app/(app)/settings/memo-agent/schemas/[name]/schema-editor.tsx': 'entry.edited_at',
+  'app/(app)/settings/memo-agent/style-anchors/[id]/editor.tsx': 'a.extracted_at',
+  'components/lp-messages-section.tsx': 'm.created_at',
+  'components/settings/fund-email-settings.tsx': 'status.lastVerifiedAt',
+})
+
+describe('hydrated timestamp formatter inventory', () => {
+  it('scans every client module and permits native DateTimeFormat only for browser-zone detection', () => {
+    expect(clientFiles.length).toBeGreaterThan(200)
+
+    for (const file of clientFiles) {
+      const source = read(file)
+      const nativeDateFormat = source.match(/Intl\.DateTimeFormat/g) ?? []
+      const nativePresentation = [
+        ...(source.match(/\.toLocaleDateString\s*\(/g) ?? []),
+        ...(source.match(/\.toLocaleTimeString\s*\(/g) ?? []),
+        ...(source.match(/new Date\([^\n]*\)\.toLocaleString\s*\(/g) ?? []),
+        ...(source.match(/\b(?:date|now|d)\.toLocaleString\s*\(/gi) ?? []),
+      ]
+
+      if (file in browserZoneDetection) {
+        expect(nativeDateFormat, file).toHaveLength(1)
+        expect(source, file).toContain('Intl.DateTimeFormat().resolvedOptions().timeZone')
+      } else {
+        expect(nativeDateFormat, file).toHaveLength(0)
+      }
+      expect(nativePresentation, file).toHaveLength(0)
+    }
   })
 
-  it('does not pin hydrated deal timestamps to UTC', () => {
+  it.each(Object.entries(requiredInstantFields))('%s formats %s through the request timezone', (file, field) => {
+    const source = read(file)
+    expect(source).toContain('useFormatter')
+    expect(source).toContain(field)
+    expect(source).toContain('format.dateTime(')
+  })
+
+  it.each(businessCalendarUtc)('%s classifies calendar-only values with explicit UTC semantics', (file) => {
+    const source = read(file)
+    expect(source).toContain('format.dateTime(')
+    expect(source).toMatch(/timeZone:\s*'UTC'/)
+  })
+
+  it('does not pin hydrated deal instants to UTC', () => {
     const source = read('app/(app)/deals/[id]/deal-detail.tsx')
     const start = source.indexOf('const formatDealDate')
     const formatter = source.slice(start, source.indexOf('\n\n  return (', start))
 
     expect(formatter).toContain('format.dateTime(')
     expect(formatter).not.toContain("timeZone: 'UTC'")
-  })
-
-  it('keeps calendar dates timezone-neutral instead of applying user-zone conversion', () => {
-    const dashboard = read('app/(app)/dashboard/dashboard-companies.tsx')
-    const usage = read('app/(app)/usage/usage-dashboard.tsx')
-
-    expect(dashboard).toContain("`${c.firstInvestmentDate}T00:00:00Z`")
-    expect(dashboard).toContain("timeZone: 'UTC'")
-    expect(usage).toContain("new Date(`${row.date}T00:00:00Z`)")
-    expect(usage).toContain("new Date(Date.UTC(parseInt(y), parseInt(m) - 1))")
   })
 })

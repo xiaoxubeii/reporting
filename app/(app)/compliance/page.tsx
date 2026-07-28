@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Check, AlertTriangle, X, ExternalLink, Clock, Loader2, Link as LinkIcon } from 'lucide-react'
 import { PortfolioNotesProvider, PortfolioNotesButton, PortfolioNotesPanel } from '@/components/portfolio-notes'
@@ -683,7 +683,7 @@ function CalendarView({
   onMarkComplete: (id: string, completed: boolean, note?: string, link?: string, group?: string) => void
   links: ComplianceLink[]
 }) {
-  const locale = useLocale()
+  const format = useFormatter()
   const t = useTranslations('Compliance')
   const now = new Date()
   const currentMonth = now.getMonth() + 1
@@ -709,7 +709,7 @@ function CalendarView({
                 className={`rounded-lg border p-3 ${isPast ? 'opacity-60' : ''}`}
               >
                 <p className={`text-base font-semibold mb-2 ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  {new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, month - 1, 1))}
+                  {format.dateTime(new Date(Date.UTC(2024, month - 1, 1)), { month: 'short', timeZone: 'UTC' })}
                 </p>
                 <div className="space-y-1">
                   {entries.map(entry => {
@@ -734,7 +734,7 @@ function CalendarView({
                           {group && <span className="ml-1 opacity-70">· {group}</span>}
                           {item.deadline_day && item.deadline_month && !group && (
                             <span className="ml-1 opacity-70">
-                              ({new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(new Date(2024, item.deadline_month - 1, item.deadline_day))})
+                              ({format.dateTime(new Date(Date.UTC(2024, item.deadline_month - 1, item.deadline_day)), { month: 'numeric', day: 'numeric', timeZone: 'UTC' })})
                             </span>
                           )}
                         </button>
@@ -965,7 +965,7 @@ function ItemDetail({
   onMarkComplete: (id: string, completed: boolean, note?: string, link?: string, group?: string) => void
   links?: ComplianceLink[]
 }) {
-  const locale = useLocale()
+  const format = useFormatter()
   const t = useTranslations('Compliance')
   const categoryLabels = {
     'SEC Filings': t('categories.secFilings'),
@@ -1016,7 +1016,7 @@ function ItemDetail({
         <div className="text-sm px-2.5 py-1.5 rounded mb-3 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
           <span className="font-medium">{t('statuses.completed')}</span>
           {setting?.completed_at && (
-            <span> {t('detail.completedOn', { date: new Intl.DateTimeFormat(locale).format(new Date(setting.completed_at)) })}</span>
+            <span> {t('detail.completedOn', { date: format.dateTime(new Date(setting.completed_at)) })}</span>
           )}
           {setting?.completed_note && <p className="mt-1">{setting.completed_note}</p>}
           {setting?.completed_link && (

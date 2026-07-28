@@ -229,6 +229,32 @@
       "notes": "The earlier isolated CardioSignal fixture completed the system workflow, but current-main revalidation and browser evidence are still required. No outbound email provider is configured, so invitation acceptance must verify the product's documented copy-link fallback without claiming provider delivery."
     },
     {
+      "id": "user-timezone-preferences",
+      "title": "UTC storage with automatic and user-overridden display timezone",
+      "status": "in_progress",
+      "current_task": "Complete remaining browser screenshot coverage and repository-wide release gates",
+      "definition_of_done": [
+        "Stored timestamps remain unchanged UTC instants",
+        "Server and hydrated client rendering use the same explicit validated IANA timezone",
+        "Automatic browser detection synchronizes once without a reload loop",
+        "Authenticated users can save a manual timezone or reset to Automatic across devices",
+        "Host-only cookies remain isolated between tenant hostnames",
+        "Every client-native date presentation path is either migrated to next-intl or explicitly classified as timezone detection or business calendar UTC",
+        "Focused tests, review, browser acceptance, and repository release gates are recorded"
+      ],
+      "evidence": [
+        "openspec/changes/add-user-timezone-preferences/verification-report.md",
+        ".harnesskit/evidence/add-user-timezone-preferences/browser-assertions.json",
+        ".harnesskit/evidence/add-user-timezone-preferences/automatic-asia-shanghai.png",
+        ".harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png"
+      ],
+      "blocked_by": [
+        "Existing next-themes root-class hydration warning keeps OpenSpec 5.3 open",
+        "Existing repository TypeScript, HarnessKit, build, and dependency-audit baselines keep OpenSpec 5.4 open"
+      ],
+      "notes": "Implementation and scoped review are complete. Additional screenshots for manual UTC, reload, reset, and sibling-host isolation remain acceptance evidence work; do not mark passing until 5.3 and 5.4 close."
+    },
+    {
       "id": "harness-bootstrap",
       "title": "Initialize HarnessKit",
       "status": "in_progress",

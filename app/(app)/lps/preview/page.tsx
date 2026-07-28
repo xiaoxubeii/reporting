@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useLocale, useTranslations } from 'next-intl'
 import { Loader2, FileText, Mail, Download, ArrowLeft, Eye, ExternalLink, ShieldCheck, MessageSquare, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { OverviewView } from '@/components/portal/overview-view'
@@ -21,10 +21,14 @@ function fmtSize(b: number | null, locale: string): string {
   if (b < 1024 * 1024) return `${format(b / 1024, 0)} KB`
   return `${format(b / 1024 / 1024, 1)} MB`
 }
-function fmtDate(s: string | null, locale: string): string {
+function fmtDate(s: string | null, format: ReturnType<typeof useFormatter>): string {
   if (!s) return ''
-  const d = new Date(s.length <= 10 ? `${s}T00:00:00` : s)
-  return isNaN(d.getTime()) ? '' : new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(d)
+  const isDateOnly = s.length <= 10
+  const d = new Date(isDateOnly ? `${s}T00:00:00Z` : s)
+  return isNaN(d.getTime()) ? '' : format.dateTime(d, {
+    dateStyle: 'medium',
+    ...(isDateOnly ? { timeZone: 'UTC' as const } : {}),
+  })
 }
 const effective = (d: Doc) => d.doc_date || d.uploaded_at || ''
 
@@ -42,6 +46,7 @@ function Empty({ label }: { label: string }) {
 
 export default function LpPortalPreviewPage() {
   const t = useTranslations('LPs.preview')
+  const format = useFormatter()
   const locale = useLocale()
   const [investors, setInvestors] = useState<Investor[]>([])
   const [investorId, setInvestorId] = useState('sample')
@@ -104,7 +109,7 @@ export default function LpPortalPreviewPage() {
   }, [data])
 
   const docRow = (d: Doc) => {
-    const meta = [d.category?.trim(), d.file_name, d.size_bytes ? fmtSize(d.size_bytes, locale) : null, effective(d) ? fmtDate(effective(d), locale) : null].filter(Boolean).join(' · ')
+    const meta = [d.category?.trim(), d.file_name, d.size_bytes ? fmtSize(d.size_bytes, locale) : null, effective(d) ? fmtDate(effective(d), format) : null].filter(Boolean).join(' · ')
     const inner = (
       <>
         <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -252,7 +257,7 @@ export default function LpPortalPreviewPage() {
                             <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="font-medium text-sm truncate">{s.name}</div>
-                              {s.as_of_date && <div className="text-xs text-muted-foreground">{t('asOf', { date: fmtDate(s.as_of_date, locale) })}</div>}
+                              {s.as_of_date && <div className="text-xs text-muted-foreground">{t('asOf', { date: fmtDate(s.as_of_date, format) })}</div>}
                             </div>
                           </>
                         )

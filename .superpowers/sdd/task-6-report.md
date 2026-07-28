@@ -6,10 +6,13 @@ Implemented and verified with repository-baseline concerns recorded.
 
 ## Completed
 
-- Audited hydrated timestamp presentation and routed bypasses through the
-  request-scoped next-intl formatter.
-- Added static regression coverage for timestamp versus calendar-date
-  semantics.
+- Audited all 218 hydrated client modules and routed every date-presentation
+  bypass through the request-scoped next-intl formatter. The only allowed
+  native DateTimeFormat calls are two explicitly classified browser-IANA
+  detection calls.
+- Added comprehensive scanner coverage plus explicit instant and business
+  calendar UTC classifications, preventing another handpicked-file false
+  completeness claim.
 - Verified Automatic Asia/Shanghai, manual UTC, reset-to-Automatic, reload
   persistence, and tenant-host cookie isolation through the real app.
 - Reviewed route validation, cookie scope, authentication, migration safety,
@@ -22,10 +25,11 @@ Implemented and verified with repository-baseline concerns recorded.
 npx vitest run tests/time-zone-hydrated-formatters.test.ts
 ```
 
-PASS: 1 file, 5 tests.
+PASS: 1 file, 15 tests. A covering provider/bootstrap/settings run passes four
+files and 49 tests.
 
 ```text
-npx eslint <four audited timestamp components> tests/time-zone-hydrated-formatters.test.ts
+npx eslint <all changed TypeScript/TSX files>
 npx openspec validate add-user-timezone-preferences --strict
 git diff --check
 ```
@@ -48,10 +52,14 @@ Evidence:
 
 - `.harnesskit/evidence/add-user-timezone-preferences/automatic-asia-shanghai.png`
 - `.harnesskit/evidence/add-user-timezone-preferences/boundary-date-asia-shanghai.png`
+- `.harnesskit/evidence/add-user-timezone-preferences/browser-assertions.json`
 
 ## Concerns
 
-Repository-wide TypeScript, HarnessKit, production-build, dependency-audit, and
+Dedicated screenshots were not captured for manual UTC, reload persistence,
+Automatic reset, or sibling-host isolation; the machine-readable evidence marks
+that limitation instead of implying otherwise. Repository-wide TypeScript,
+HarnessKit, production-build, dependency-audit, and
 the existing `next-themes` root-class hydration warning remain baseline
 blockers. They are documented in the OpenSpec verification report and were not
 expanded into unrelated changes. OpenSpec items 5.3 and 5.4 therefore remain

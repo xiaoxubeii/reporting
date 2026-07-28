@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import { ArrowLeft, Save, Loader2, AlertCircle, Clock, RotateCcw, Check, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/confirm-dialog'
@@ -50,7 +50,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
 }) {
   const router = useRouter()
   const confirm = useConfirm()
-  const locale = useLocale()
+  const format = useFormatter()
   const t = useTranslations('Settings.schemaEditor')
   const [content, setContent] = useState(initialContent)
   const [version, setVersion] = useState(initialVersion)
@@ -140,7 +140,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
     const ok = await confirm({
       title: t('rollbackTitle', { version: entry.schema_version }),
       description: t('rollbackDescription', {
-        date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(entry.edited_at)),
+        date: format.dateTime(new Date(entry.edited_at), { dateStyle: 'medium', timeStyle: 'short' }),
       }),
       confirmLabel: t('rollback'),
       variant: 'destructive',
@@ -286,7 +286,7 @@ export function SchemaEditor({ schemaName, initialContent, initialVersion, embed
                       {h.is_active && <span className="text-[9px] uppercase text-muted-foreground">{t('active')}</span>}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                      {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(h.edited_at))}
+                      {format.dateTime(new Date(h.edited_at), { dateStyle: 'medium', timeStyle: 'short' })}
                     </div>
                     {h.edit_note && <div className="text-[11px] text-muted-foreground italic mt-0.5">&quot;{h.edit_note}&quot;</div>}
                     <div className="flex gap-1 mt-1.5">
